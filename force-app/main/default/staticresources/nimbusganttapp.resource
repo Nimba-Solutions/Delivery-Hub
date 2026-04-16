@@ -233,10 +233,24 @@ var NimbusGanttApp = function(exports) {
     "Ready for Sizing": true,
     "Ready for Development": true
   };
+  const BACKLOG_OR_EXPANSION_STAGES = {
+    "Backlog": true,
+    "Scoping In Progress": true
+  };
   function applyFilter(tasks, filter, q) {
     let r = tasks;
     if (filter === "active") {
-      r = r.filter((t) => !DONE_STAGES[t.stage || ""] && !t.isInactive);
+      const cutoff = addDays(todayISO(), -30);
+      r = r.filter((t) => {
+        if (t.isInactive) return false;
+        const stage = t.stage || "";
+        if (BACKLOG_OR_EXPANSION_STAGES[stage]) return false;
+        if (DONE_STAGES[stage]) {
+          return !!(t.endDate && t.endDate >= cutoff);
+        }
+        if (t.endDate && t.endDate < cutoff) return false;
+        return true;
+      });
     } else if (filter === "proposal") {
       r = r.filter((t) => PROPOSAL_STAGES$1[t.stage || ""] || t.priorityGroup === "proposed");
     } else if (filter === "done") {
@@ -823,7 +837,8 @@ var NimbusGanttApp = function(exports) {
     sidebarOpen: false,
     statsOpen: false,
     detailOpen: false,
-    auditPanelOpen: false,
+    auditPanelOpen: true,
+    // v9 parity — Audit strip defaults to open
     fullscreen: false,
     selectedTaskId: null,
     pendingPatchCount: 0
@@ -888,9 +903,10 @@ var NimbusGanttApp = function(exports) {
     "StatsPanel",
     "FilterBar",
     "ZoomBar",
+    "AuditPanel",
     "HrsWkStrip",
     "ContentArea"
-    // wraps Sidebar + main + DetailPanel + AuditPanel
+    // wraps Sidebar + main + DetailPanel
   ];
   const MARKER_ATTR = "data-nga-template-css";
   async function ensureTemplateCss(container, stylesheet) {
@@ -2146,806 +2162,7 @@ var NimbusGanttApp = function(exports) {
       }
     };
   }
-  const inlineStyles = `\r
-/* === LWS-safe Tailwind v4 token defaults (replaces stripped @property regs) === */\r
-:root, .nga-root {\r
-  --spacing: 0.25rem;\r
-  --color-white: #ffffff;\r
-  --color-black: #000000;\r
-  --container-md: 28rem;\r
-  --blur-sm: 8px;\r
-  --radius-sm: 0.125rem;\r
-  --radius-md: 0.375rem;\r
-  --radius-lg: 0.5rem;\r
-  --radius-xl: 0.75rem;\r
-  --text-xs: 0.75rem;       --text-xs--line-height: calc(1 / 0.75);\r
-  --text-sm: 0.875rem;      --text-sm--line-height: calc(1.25 / 0.875);\r
-  --text-base: 1rem;        --text-base--line-height: 1.5;\r
-  --text-lg: 1.125rem;      --text-lg--line-height: calc(1.75 / 1.125);\r
-  --text-xl: 1.25rem;       --text-xl--line-height: calc(1.75 / 1.25);\r
-  --text-2xl: 1.5rem;       --text-2xl--line-height: calc(2 / 1.5);\r
-  --font-weight-normal: 400;\r
-  --font-weight-medium: 500;\r
-  --font-weight-semibold: 600;\r
-  --font-weight-bold: 700;\r
-  --font-geist-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;\r
-  --font-geist-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;\r
-  --tracking-tighter: -0.05em;\r
-  --tracking-tight: -0.025em;\r
-  --tracking-normal: 0em;\r
-  --tracking-wide: 0.025em;\r
-  --tracking-wider: 0.05em;\r
-  --tracking-widest: 0.1em;\r
-  --leading-tight: 1.25;\r
-  --leading-snug: 1.375;\r
-  --leading-normal: 1.5;\r
-  --leading-relaxed: 1.625;\r
-  --leading-loose: 2;\r
-  --default-transition-duration: 150ms;\r
-  --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);\r
-  --ease-linear: linear;\r
-  --ease-in: cubic-bezier(0.4, 0, 1, 1);\r
-  --ease-out: cubic-bezier(0, 0, 0.2, 1);\r
-  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);\r
-  --tw-border-style: solid;\r
-  --tw-divide-y-reverse: 0;\r
-  --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0;\r
-  --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1;\r
-  --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ;\r
-  --tw-scroll-snap-strictness: proximity;\r
-  --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ;\r
-  --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff;\r
-  --tw-ring-color: rgba(59, 130, 246, 0.5); --tw-ring-offset-shadow: 0 0 #0000;\r
-  --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000;\r
-  --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ;\r
-  --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ;\r
-  --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ;\r
-  --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ;\r
-  --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ;\r
-  --tw-content: '';\r
-}\r
-\r
-/* Semantic chrome class layout fallbacks (in case nga-* class layouts depend on Tailwind specificity) */\r
-.nga-root { display: flex; flex-direction: column; height: 100%; width: 100%; overflow: hidden; }\r
-/* Fullscreen escape — covers Salesforce header/nav/footer with one click */\r
-.nga-fullscreen { position: fixed !important; inset: 0 !important; z-index: 9999 !important; width: 100vw !important; height: 100vh !important; background: #f8fafc !important; }\r
-.nga-titlebar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding: 6px 12px; background: #fff; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }\r
-.nga-filterbar { display: block; padding: 6px 12px; background: #fff; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; }\r
-.nga-zoombar { display: flex; align-items: center; gap: 0.5rem; }\r
-.nga-stats { padding: 12px; background: #fff; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; }\r
-.nga-sidebar { display: flex; flex-direction: column; height: 100%; background: #fff; border-right: 1px solid #e2e8f0; }\r
-.nga-content-outer { flex: 1 1 auto; display: flex; overflow: hidden; min-width: 0; min-height: 0; }\r
-.nga-content { flex: 1 1 auto; position: relative; min-width: 0; min-height: 0; }\r
-.nga-detail { position: fixed; z-index: 9999; background: #fff; border: 2px solid #e2e8f0; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; }\r
-.nga-audit { padding: 8px 12px; background: rgba(253, 244, 255, 0.6); border-bottom: 1px solid #f5d0fe; }\r
-.nga-hrswkstrip { display: flex; align-items: flex-end; gap: 4px; padding: 6px 12px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; overflow-x: auto; flex-shrink: 0; }\r
-\r
-/* === nimbus-gantt cloudnimbus template.css ===\r
- * Extracted from cloudnimbusllc.com Next.js build output (Tailwind v4).\r
- * Contains the reset + theme variables + only the utilities used by\r
- * DeliveryTimelineV5 and gantt-demo components (see v10-used-tailwind-classes.txt).\r
- * Plus .ng-* overrides for the gantt library. Ship alongside @nimbus-gantt/app\r
- * for pixel parity between v10 (Next.js) and Salesforce deployments.\r
- * No Tailwind runtime dependency. */\r
-\r
-@media (prefers-reduced-motion:reduce){.cloud,.cloud:before,.cloud:after{animation:none!important}}\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-\r
-@supports (((-webkit-hyphens:none)) and (not (margin-trim:inline))) or ((-moz-orient:inline) and (not (color:rgb(from red r g b)))){*,:before,:after,::backdrop{--tw-translate-x:0;--tw-translate-y:0;--tw-translate-z:0;--tw-scale-x:1;--tw-scale-y:1;--tw-scale-z:1;--tw-rotate-x:initial;--tw-rotate-y:initial;--tw-rotate-z:initial;--tw-skew-x:initial;--tw-skew-y:initial;--tw-space-y-reverse:0;--tw-divide-x-reverse:0;--tw-border-style:solid;--tw-divide-y-reverse:0;--tw-gradient-position:initial;--tw-gradient-from:#0000;--tw-gradient-via:#0000;--tw-gradient-to:#0000;--tw-gradient-stops:initial;--tw-gradient-via-stops:initial;--tw-gradient-from-position:0%;--tw-gradient-via-position:50%;--tw-gradient-to-position:100%;--tw-leading:initial;--tw-font-weight:initial;--tw-tracking:initial;--tw-ordinal:initial;--tw-slashed-zero:initial;--tw-numeric-figure:initial;--tw-numeric-spacing:initial;--tw-numeric-fraction:initial;--tw-shadow:0 0 #0000;--tw-shadow-color:initial;--tw-shadow-alpha:100%;--tw-inset-shadow:0 0 #0000;--tw-inset-shadow-color:initial;--tw-inset-shadow-alpha:100%;--tw-ring-color:initial;--tw-ring-shadow:0 0 #0000;--tw-inset-ring-color:initial;--tw-inset-ring-shadow:0 0 #0000;--tw-ring-inset:initial;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-offset-shadow:0 0 #0000;--tw-outline-style:solid;--tw-blur:initial;--tw-brightness:initial;--tw-contrast:initial;--tw-grayscale:initial;--tw-hue-rotate:initial;--tw-invert:initial;--tw-opacity:initial;--tw-saturate:initial;--tw-sepia:initial;--tw-drop-shadow:initial;--tw-drop-shadow-color:initial;--tw-drop-shadow-alpha:100%;--tw-drop-shadow-size:initial;--tw-backdrop-blur:initial;--tw-backdrop-brightness:initial;--tw-backdrop-contrast:initial;--tw-backdrop-grayscale:initial;--tw-backdrop-hue-rotate:initial;--tw-backdrop-invert:initial;--tw-backdrop-opacity:initial;--tw-backdrop-saturate:initial;--tw-backdrop-sepia:initial;--tw-duration:initial;--tw-ease:initial}}\r
-\r
-:root,:host{--color-red-50:#fef2f2;--color-red-500:#fb2c36;--color-red-600:#e40014;--color-orange-50:#fff7ed;--color-orange-600:#f05100;--color-amber-50:#fffbeb;--color-amber-100:#fef3c6;--color-amber-300:#ffd236;--color-amber-500:#f99c00;--color-amber-600:#dd7400;--color-amber-700:#b75000;--color-amber-800:#953d00;--color-emerald-50:#ecfdf5;--color-emerald-100:#d0fae5;--color-emerald-200:#a4f4cf;--color-emerald-500:#00bb7f;--color-emerald-600:#009767;--color-emerald-700:#007956;--color-emerald-800:#005f46;--color-sky-50:#f0f9ff;--color-sky-100:#dff2fe;--color-sky-600:#0084cc;--color-sky-700:#0069a4;--color-blue-50:#eff6ff;--color-blue-100:#dbeafe;--color-blue-200:#bedbff;--color-blue-300:#90c5ff;--color-blue-400:#54a2ff;--color-blue-500:#3080ff;--color-blue-600:#155dfc;--color-blue-700:#1447e6;--color-blue-800:#193cb8;--color-indigo-50:#eef2ff;--color-indigo-100:#e0e7ff;--color-indigo-200:#c7d2ff;--color-indigo-300:#a4b3ff;--color-indigo-400:#7d87ff;--color-indigo-500:#625fff;--color-indigo-600:#4f39f6;--color-indigo-700:#432dd7;--color-violet-50:#f5f3ff;--color-violet-200:#ddd6ff;--color-violet-300:#c4b4ff;--color-violet-600:#7f22fe;--color-purple-50:#faf5ff;--color-purple-100:#f3e8ff;--color-purple-200:#e9d5ff;--color-purple-300:#d9b3ff;--color-purple-500:#ac4bff;--color-purple-600:#9810fa;--color-purple-700:#8200da;--color-purple-800:#6e11b0;--color-fuchsia-50:#fdf4ff;--color-fuchsia-200:#f6cfff;--color-fuchsia-500:#e12afb;--color-fuchsia-600:#c600db;--color-fuchsia-700:#a600b5;--color-rose-50:#fff1f2;--color-rose-100:#ffe4e6;--color-rose-200:#ffccd3;--color-rose-300:#ffa2ae;--color-rose-400:#ff667f;--color-rose-500:#ff2357;--color-rose-600:#e70044;--color-rose-700:#c20039;--color-rose-800:#a30037;--color-slate-50:#f8fafc;--color-slate-100:#f1f5f9;--color-slate-200:#e2e8f0;--color-slate-300:#cad5e2;--color-slate-400:#90a1b9;--color-slate-500:#62748e;--color-slate-600:#45556c;--color-slate-700:#314158;--color-slate-800:#1d293d;--color-slate-900:#0f172b;--color-white:#fff;--spacing:.25rem;--container-md:28rem;--container-2xl:42rem;--container-3xl:48rem;--container-4xl:56rem;--text-xs:.75rem;--text-xs--line-height:calc(1/.75);--text-sm:.875rem;--text-sm--line-height:calc(1.25/.875);--text-lg:1.125rem;--text-lg--line-height:calc(1.75/1.125);--text-xl:1.25rem;--text-xl--line-height:calc(1.75/1.25);--font-weight-normal:400;--font-weight-medium:500;--font-weight-semibold:600;--font-weight-bold:700;--tracking-wide:.025em;--tracking-wider:.05em;--leading-relaxed:1.625;--radius-sm:.25rem;--radius-md:.375rem;--radius-lg:.5rem;--radius-xl:.75rem;--ease-in-out:cubic-bezier(.4,0,.2,1);--blur-sm:8px;--default-transition-duration:.15s;--default-transition-timing-function:cubic-bezier(.4,0,.2,1);--default-font-family:var(--font-geist-sans);}\r
-\r
-*,:after,:before,::backdrop{box-sizing:border-box;border:0 solid;margin:0;padding:0}::file-selector-button{box-sizing:border-box;border:0 solid;margin:0;padding:0}html,:host{-webkit-text-size-adjust:100%;tab-size:4;line-height:1.5;font-family:var(--default-font-family,ui-sans-serif,system-ui,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji");font-feature-settings:var(--default-font-feature-settings,normal);font-variation-settings:var(--default-font-variation-settings,normal);-webkit-tap-highlight-color:transparent}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;-webkit-text-decoration:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-family:var(--default-mono-font-family,ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace);font-feature-settings:var(--default-mono-font-feature-settings,normal);font-variation-settings:var(--default-mono-font-variation-settings,normal);font-size:1em}small{font-size:80%}sub,sup{vertical-align:baseline;font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}:-moz-focusring{outline:auto}progress{vertical-align:baseline}summary{display:list-item}ol,ul,menu{list-style:none}img,svg,video,canvas,audio,iframe,embed,object{vertical-align:middle;display:block}img,video{max-width:100%;height:auto}button,input,select,optgroup,textarea{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}::file-selector-button{font:inherit;font-feature-settings:inherit;font-variation-settings:inherit;letter-spacing:inherit;color:inherit;opacity:1;background-color:#0000;border-radius:0}:where(select:is([multiple],[size])) optgroup{font-weight:bolder}:where(select:is([multiple],[size])) optgroup option{padding-inline-start:20px}::file-selector-button{margin-inline-end:4px}::placeholder{opacity:1}@supports (not ((-webkit-appearance:-apple-pay-button))) or (contain-intrinsic-size:1px){::placeholder{color:currentColor}@supports (color:currentColor){::placeholder{color:currentColor}}}textarea{resize:vertical}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-date-and-time-value{min-height:1lh;text-align:inherit}::-webkit-datetime-edit{display:inline-flex}::-webkit-datetime-edit-fields-wrapper{padding:0}::-webkit-datetime-edit{padding-block:0}::-webkit-datetime-edit-year-field{padding-block:0}::-webkit-datetime-edit-month-field{padding-block:0}::-webkit-datetime-edit-day-field{padding-block:0}::-webkit-datetime-edit-hour-field{padding-block:0}::-webkit-datetime-edit-minute-field{padding-block:0}::-webkit-datetime-edit-second-field{padding-block:0}::-webkit-datetime-edit-millisecond-field{padding-block:0}::-webkit-datetime-edit-meridiem-field{padding-block:0}::-webkit-calendar-picker-indicator{line-height:1}:-moz-ui-invalid{box-shadow:none}button,input:where([type=button],[type=reset],[type=submit]){appearance:button}::file-selector-button{appearance:button}::-webkit-inner-spin-button{height:auto}::-webkit-outer-spin-button{height:auto}[hidden]:where(:not([hidden=until-found])){display:none!important}\r
-\r
-.pointer-events-none{pointer-events:none}\r
-.absolute{position:absolute}\r
-.fixed{position:fixed}\r
-.relative{position:relative}\r
-.top-0{top:calc(var(--spacing)*0)}\r
-.top-12{top:calc(var(--spacing)*12)}\r
-.top-\\[110px\\]{top:110px}\r
-.top-full{top:100%}\r
-.right-0{right:calc(var(--spacing)*0)}\r
-.right-2{right:calc(var(--spacing)*2)}\r
-.right-3{right:calc(var(--spacing)*3)}\r
-.right-4{right:calc(var(--spacing)*4)}\r
-.left-0{left:calc(var(--spacing)*0)}\r
-.left-2{left:calc(var(--spacing)*2)}\r
-.z-10{z-index:10}\r
-.z-20{z-index:20}\r
-.z-40{z-index:40}\r
-.z-50{z-index:50}\r
-.z-\\[60\\]{z-index:60}\r
-.z-\\[100\\]{z-index:100}\r
-.z-\\[110\\]{z-index:110}\r
-.z-\\[9999\\]{z-index:9999}\r
-.z-\\[10000\\]{z-index:10000}\r
-.mx-1{margin-inline:calc(var(--spacing)*1)}\r
-.mx-2{margin-inline:calc(var(--spacing)*2)}\r
-.mx-auto{margin-inline:auto}\r
-.my-0\\.5{margin-block:calc(var(--spacing)*.5)}\r
-.my-1{margin-block:calc(var(--spacing)*1)}\r
-.mt-0\\.5{margin-top:calc(var(--spacing)*.5)}\r
-.mt-1{margin-top:calc(var(--spacing)*1)}\r
-.mt-1\\.5{margin-top:calc(var(--spacing)*1.5)}\r
-.mt-2{margin-top:calc(var(--spacing)*2)}\r
-.mt-3{margin-top:calc(var(--spacing)*3)}\r
-.mr-1{margin-right:calc(var(--spacing)*1)}\r
-.mr-1\\.5{margin-right:calc(var(--spacing)*1.5)}\r
-.mr-2{margin-right:calc(var(--spacing)*2)}\r
-.mb-0\\.5{margin-bottom:calc(var(--spacing)*.5)}\r
-.mb-1{margin-bottom:calc(var(--spacing)*1)}\r
-.mb-2{margin-bottom:calc(var(--spacing)*2)}\r
-.mb-3{margin-bottom:calc(var(--spacing)*3)}\r
-.ml-0\\.5{margin-left:calc(var(--spacing)*.5)}\r
-.ml-1{margin-left:calc(var(--spacing)*1)}\r
-.ml-2{margin-left:calc(var(--spacing)*2)}\r
-.ml-auto{margin-left:auto}\r
-.line-clamp-2{-webkit-line-clamp:2;-webkit-box-orient:vertical;display:-webkit-box;overflow:hidden}\r
-.block{display:block}\r
-.flex{display:flex}\r
-.grid{display:grid}\r
-.inline-block{display:inline-block}\r
-.inline-flex{display:inline-flex}\r
-.h-0\\.5{height:calc(var(--spacing)*.5)}\r
-.h-1{height:calc(var(--spacing)*1)}\r
-.h-1\\.5{height:calc(var(--spacing)*1.5)}\r
-.h-2{height:calc(var(--spacing)*2)}\r
-.h-2\\.5{height:calc(var(--spacing)*2.5)}\r
-.h-3{height:calc(var(--spacing)*3)}\r
-.h-3\\.5{height:calc(var(--spacing)*3.5)}\r
-.h-full{height:100%}\r
-.h-screen{height:100vh}\r
-.max-h-0{max-height:calc(var(--spacing)*0)}\r
-.max-h-\\[90vh\\]{max-height:90vh}\r
-.max-h-\\[120px\\]{max-height:120px}\r
-.max-h-\\[400px\\]{max-height:400px}\r
-.max-h-\\[600px\\]{max-height:600px}\r
-.min-h-0{min-height:calc(var(--spacing)*0)}\r
-.w-1{width:calc(var(--spacing)*1)}\r
-.w-2{width:calc(var(--spacing)*2)}\r
-.w-2\\.5{width:calc(var(--spacing)*2.5)}\r
-.w-3{width:calc(var(--spacing)*3)}\r
-.w-3\\.5{width:calc(var(--spacing)*3.5)}\r
-.w-12{width:calc(var(--spacing)*12)}\r
-.w-14{width:calc(var(--spacing)*14)}\r
-.w-48{width:calc(var(--spacing)*48)}\r
-.w-56{width:calc(var(--spacing)*56)}\r
-.w-72{width:calc(var(--spacing)*72)}\r
-.w-\\[70px\\]{width:70px}\r
-.w-\\[100px\\]{width:100px}\r
-.w-\\[140px\\]{width:140px}\r
-.w-full{width:100%}\r
-.w-screen{width:100vw}\r
-.max-w-2xl{max-width:var(--container-2xl)}\r
-.max-w-3xl{max-width:var(--container-3xl)}\r
-.max-w-4xl{max-width:var(--container-4xl)}\r
-.max-w-\\[90px\\]{max-width:90px}\r
-.max-w-\\[280px\\]{max-width:280px}\r
-.max-w-\\[320px\\]{max-width:320px}\r
-.max-w-\\[1600px\\]{max-width:1600px}\r
-.max-w-full{max-width:100%}\r
-.max-w-md{max-width:var(--container-md)}\r
-.min-w-0{min-width:calc(var(--spacing)*0)}\r
-.min-w-\\[200px\\]{min-width:200px}\r
-.flex-1{flex:1}\r
-.flex-shrink-0,.shrink-0{flex-shrink:0}\r
-.cursor-col-resize{cursor:col-resize}\r
-.cursor-grab{cursor:grab}\r
-.cursor-not-allowed{cursor:not-allowed}\r
-.cursor-pointer{cursor:pointer}\r
-.resize-y{resize:vertical}\r
-.appearance-none{appearance:none}\r
-.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}\r
-.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}\r
-.flex-col{flex-direction:column}\r
-.flex-wrap{flex-wrap:wrap}\r
-.items-center{align-items:center}\r
-.items-end{align-items:flex-end}\r
-.items-start{align-items:flex-start}\r
-.justify-between{justify-content:space-between}\r
-.justify-center{justify-content:center}\r
-.gap-0{gap:calc(var(--spacing)*0)}\r
-.gap-0\\.5{gap:calc(var(--spacing)*.5)}\r
-.gap-1{gap:calc(var(--spacing)*1)}\r
-.gap-1\\.5{gap:calc(var(--spacing)*1.5)}\r
-.gap-2{gap:calc(var(--spacing)*2)}\r
-.gap-2\\.5{gap:calc(var(--spacing)*2.5)}\r
-.gap-3{gap:calc(var(--spacing)*3)}\r
-.gap-4{gap:calc(var(--spacing)*4)}\r
-:where(.space-y-0\\.5>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing)*.5)*var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing)*.5)*calc(1 - var(--tw-space-y-reverse)))}\r
-:where(.space-y-1>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing)*1)*var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing)*1)*calc(1 - var(--tw-space-y-reverse)))}\r
-:where(.space-y-1\\.5>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing)*1.5)*var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing)*1.5)*calc(1 - var(--tw-space-y-reverse)))}\r
-:where(.space-y-2>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing)*2)*var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing)*2)*calc(1 - var(--tw-space-y-reverse)))}\r
-:where(.space-y-3>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing)*3)*var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing)*3)*calc(1 - var(--tw-space-y-reverse)))}\r
-:where(.space-y-6>:not(:last-child)){--tw-space-y-reverse:0;margin-block-start:calc(calc(var(--spacing)*6)*var(--tw-space-y-reverse));margin-block-end:calc(calc(var(--spacing)*6)*calc(1 - var(--tw-space-y-reverse)))}\r
-.gap-x-4{column-gap:calc(var(--spacing)*4)}\r
-.gap-y-1\\.5{row-gap:calc(var(--spacing)*1.5)}\r
-:where(.divide-y>:not(:last-child)){--tw-divide-y-reverse:0;border-bottom-style:var(--tw-border-style);border-top-style:var(--tw-border-style);border-top-width:calc(1px*var(--tw-divide-y-reverse));border-bottom-width:calc(1px*calc(1 - var(--tw-divide-y-reverse)))}\r
-:where(.divide-slate-100>:not(:last-child)){border-color:var(--color-slate-100)}\r
-.self-center{align-self:center}\r
-.truncate{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}\r
-.overflow-auto{overflow:auto}\r
-.overflow-hidden{overflow:hidden}\r
-.overflow-x-auto{overflow-x:auto}\r
-.overflow-x-hidden{overflow-x:hidden}\r
-.overflow-y-auto{overflow-y:auto}\r
-.rounded{border-radius:.25rem}\r
-.rounded-full{border-radius:9999px}\r
-.rounded-lg{border-radius:var(--radius-lg)}\r
-.rounded-md{border-radius:var(--radius-md)}\r
-.rounded-sm{border-radius:var(--radius-sm)}\r
-.rounded-xl{border-radius:var(--radius-xl)}\r
-.rounded-b-lg{border-bottom-right-radius:var(--radius-lg);border-bottom-left-radius:var(--radius-lg)}\r
-.border{border-style:var(--tw-border-style);border-width:1px}\r
-.border-2{border-style:var(--tw-border-style);border-width:2px}\r
-.border-t{border-top-style:var(--tw-border-style);border-top-width:1px}\r
-.border-r{border-right-style:var(--tw-border-style);border-right-width:1px}\r
-.border-b{border-bottom-style:var(--tw-border-style);border-bottom-width:1px}\r
-.border-amber-500{border-color:var(--color-amber-500)}\r
-.border-blue-200{border-color:var(--color-blue-200)}\r
-.border-blue-600{border-color:var(--color-blue-600)}\r
-.border-emerald-200{border-color:var(--color-emerald-200)}\r
-.border-fuchsia-200{border-color:var(--color-fuchsia-200)}\r
-.border-indigo-100{border-color:var(--color-indigo-100)}\r
-.border-indigo-200{border-color:var(--color-indigo-200)}\r
-.border-indigo-600{border-color:var(--color-indigo-600)}\r
-.border-purple-200{border-color:var(--color-purple-200)}\r
-.border-purple-300{border-color:var(--color-purple-300)}\r
-.border-purple-600{border-color:var(--color-purple-600)}\r
-.border-rose-200{border-color:var(--color-rose-200)}\r
-.border-rose-300{border-color:var(--color-rose-300)}\r
-.border-rose-500{border-color:var(--color-rose-500)}\r
-.border-slate-50{border-color:var(--color-slate-50)}\r
-.border-slate-100{border-color:var(--color-slate-100)}\r
-.border-slate-200{border-color:var(--color-slate-200)}\r
-.border-slate-300{border-color:var(--color-slate-300)}\r
-.border-slate-700{border-color:var(--color-slate-700)}\r
-.border-slate-800{border-color:var(--color-slate-800)}\r
-.border-violet-200{border-color:var(--color-violet-200)}\r
-.border-violet-600{border-color:var(--color-violet-600)}\r
-.bg-amber-50{background-color:var(--color-amber-50)}\r
-.bg-amber-100{background-color:var(--color-amber-100)}\r
-.bg-amber-500{background-color:var(--color-amber-500)}\r
-.bg-blue-50{background-color:var(--color-blue-50)}\r
-.bg-blue-100{background-color:var(--color-blue-100)}\r
-.bg-blue-400{background-color:var(--color-blue-400)}\r
-.bg-blue-500{background-color:var(--color-blue-500)}\r
-.bg-blue-600{background-color:var(--color-blue-600)}\r
-.bg-emerald-50{background-color:var(--color-emerald-50)}\r
-.bg-emerald-50\\/30{background-color:#ecfdf54d}\r
-@supports (color:currentColor){.bg-emerald-50\\/30{background-color:var(--color-emerald-50)}}\r
-.bg-emerald-100{background-color:var(--color-emerald-100)}\r
-.bg-emerald-500{background-color:var(--color-emerald-500)}\r
-.bg-emerald-600{background-color:var(--color-emerald-600)}\r
-.bg-fuchsia-50\\/60{background-color:#fdf4ff99}\r
-@supports (color:currentColor){.bg-fuchsia-50\\/60{background-color:var(--color-fuchsia-50)}}\r
-.bg-fuchsia-600{background-color:var(--color-fuchsia-600)}\r
-.bg-indigo-50{background-color:var(--color-indigo-50)}\r
-.bg-indigo-500{background-color:var(--color-indigo-500)}\r
-.bg-indigo-600{background-color:var(--color-indigo-600)}\r
-.bg-purple-50{background-color:var(--color-purple-50)}\r
-.bg-purple-100{background-color:var(--color-purple-100)}\r
-.bg-purple-600{background-color:var(--color-purple-600)}\r
-.bg-red-500{background-color:var(--color-red-500)}\r
-.bg-rose-50{background-color:var(--color-rose-50)}\r
-.bg-rose-50\\/30{background-color:#fff1f24d}\r
-@supports (color:currentColor){.bg-rose-50\\/30{background-color:var(--color-rose-50)}}\r
-.bg-rose-50\\/50{background-color:#fff1f280}\r
-@supports (color:currentColor){.bg-rose-50\\/50{background-color:var(--color-rose-50)}}\r
-.bg-rose-100{background-color:var(--color-rose-100)}\r
-.bg-rose-500{background-color:var(--color-rose-500)}\r
-.bg-sky-50{background-color:var(--color-sky-50)}\r
-.bg-sky-100{background-color:var(--color-sky-100)}\r
-.bg-slate-50{background-color:var(--color-slate-50)}\r
-.bg-slate-100{background-color:var(--color-slate-100)}\r
-.bg-slate-200{background-color:var(--color-slate-200)}\r
-.bg-slate-400{background-color:var(--color-slate-400)}\r
-.bg-slate-700{background-color:var(--color-slate-700)}\r
-.bg-slate-800{background-color:var(--color-slate-800)}\r
-.bg-slate-800\\/80{background-color:#1d293dcc}\r
-@supports (color:currentColor){.bg-slate-800\\/80{background-color:var(--color-slate-800)}}\r
-.bg-slate-900{background-color:var(--color-slate-900)}\r
-.bg-slate-900\\/60{background-color:#0f172b99}\r
-@supports (color:currentColor){.bg-slate-900\\/60{background-color:var(--color-slate-900)}}\r
-.bg-transparent{background-color:#0000}\r
-.bg-violet-50{background-color:var(--color-violet-50)}\r
-.bg-violet-600{background-color:var(--color-violet-600)}\r
-.bg-white{background-color:var(--color-white)}\r
-.p-4{padding:calc(var(--spacing)*4)}\r
-.p-5{padding:calc(var(--spacing)*5)}\r
-.p-6{padding:calc(var(--spacing)*6)}\r
-.px-0\\.5{padding-inline:calc(var(--spacing)*.5)}\r
-.px-1{padding-inline:calc(var(--spacing)*1)}\r
-.px-1\\.5{padding-inline:calc(var(--spacing)*1.5)}\r
-.px-2{padding-inline:calc(var(--spacing)*2)}\r
-.px-2\\.5{padding-inline:calc(var(--spacing)*2.5)}\r
-.px-3{padding-inline:calc(var(--spacing)*3)}\r
-.px-4{padding-inline:calc(var(--spacing)*4)}\r
-.px-5{padding-inline:calc(var(--spacing)*5)}\r
-.px-6{padding-inline:calc(var(--spacing)*6)}\r
-.py-0\\.5{padding-block:calc(var(--spacing)*.5)}\r
-.py-1{padding-block:calc(var(--spacing)*1)}\r
-.py-1\\.5{padding-block:calc(var(--spacing)*1.5)}\r
-.py-2{padding-block:calc(var(--spacing)*2)}\r
-.py-2\\.5{padding-block:calc(var(--spacing)*2.5)}\r
-.py-3{padding-block:calc(var(--spacing)*3)}\r
-.py-4{padding-block:calc(var(--spacing)*4)}\r
-.py-6{padding-block:calc(var(--spacing)*6)}\r
-.py-12{padding-block:calc(var(--spacing)*12)}\r
-.pt-1{padding-top:calc(var(--spacing)*1)}\r
-.pt-2{padding-top:calc(var(--spacing)*2)}\r
-.pr-6{padding-right:calc(var(--spacing)*6)}\r
-.pl-6{padding-left:calc(var(--spacing)*6)}\r
-.text-center{text-align:center}\r
-.text-left{text-align:left}\r
-.text-right{text-align:right}\r
-.font-mono{font-family:var(--font-geist-mono)}\r
-.text-lg{font-size:var(--text-lg);line-height:var(--tw-leading,var(--text-lg--line-height))}\r
-.text-sm{font-size:var(--text-sm);line-height:var(--tw-leading,var(--text-sm--line-height))}\r
-.text-xl{font-size:var(--text-xl);line-height:var(--tw-leading,var(--text-xl--line-height))}\r
-.text-xs{font-size:var(--text-xs);line-height:var(--tw-leading,var(--text-xs--line-height))}\r
-.text-\\[8px\\]{font-size:8px}\r
-.text-\\[9px\\]{font-size:9px}\r
-.text-\\[10px\\]{font-size:10px}\r
-.text-\\[11px\\]{font-size:11px}\r
-.text-\\[12px\\]{font-size:12px}\r
-.leading-none{--tw-leading:1;line-height:1}\r
-.leading-relaxed{--tw-leading:var(--leading-relaxed);line-height:var(--leading-relaxed)}\r
-.font-bold{--tw-font-weight:var(--font-weight-bold);font-weight:var(--font-weight-bold)}\r
-.font-medium{--tw-font-weight:var(--font-weight-medium);font-weight:var(--font-weight-medium)}\r
-.font-normal{--tw-font-weight:var(--font-weight-normal);font-weight:var(--font-weight-normal)}\r
-.font-semibold{--tw-font-weight:var(--font-weight-semibold);font-weight:var(--font-weight-semibold)}\r
-.tracking-\\[0\\.15em\\]{--tw-tracking:.15em;letter-spacing:.15em}\r
-.tracking-wide{--tw-tracking:var(--tracking-wide);letter-spacing:var(--tracking-wide)}\r
-.tracking-wider{--tw-tracking:var(--tracking-wider);letter-spacing:var(--tracking-wider)}\r
-.break-words{overflow-wrap:break-word}\r
-.break-all{word-break:break-all}\r
-.whitespace-pre-wrap{white-space:pre-wrap}\r
-.text-amber-600{color:var(--color-amber-600)}\r
-.text-amber-700{color:var(--color-amber-700)}\r
-.text-amber-800{color:var(--color-amber-800)}\r
-.text-blue-500{color:var(--color-blue-500)}\r
-.text-blue-600{color:var(--color-blue-600)}\r
-.text-blue-700{color:var(--color-blue-700)}\r
-.text-blue-800{color:var(--color-blue-800)}\r
-.text-emerald-500{color:var(--color-emerald-500)}\r
-.text-emerald-600{color:var(--color-emerald-600)}\r
-.text-emerald-700{color:var(--color-emerald-700)}\r
-.text-emerald-800{color:var(--color-emerald-800)}\r
-.text-fuchsia-600{color:var(--color-fuchsia-600)}\r
-.text-fuchsia-700{color:var(--color-fuchsia-700)}\r
-.text-indigo-300{color:var(--color-indigo-300)}\r
-.text-indigo-500{color:var(--color-indigo-500)}\r
-.text-indigo-600{color:var(--color-indigo-600)}\r
-.text-indigo-700{color:var(--color-indigo-700)}\r
-.text-orange-600{color:var(--color-orange-600)}\r
-.text-purple-500{color:var(--color-purple-500)}\r
-.text-purple-600{color:var(--color-purple-600)}\r
-.text-purple-700{color:var(--color-purple-700)}\r
-.text-purple-800{color:var(--color-purple-800)}\r
-.text-red-600{color:var(--color-red-600)}\r
-.text-rose-500{color:var(--color-rose-500)}\r
-.text-rose-600{color:var(--color-rose-600)}\r
-.text-rose-700{color:var(--color-rose-700)}\r
-.text-rose-800{color:var(--color-rose-800)}\r
-.text-sky-600{color:var(--color-sky-600)}\r
-.text-sky-700{color:var(--color-sky-700)}\r
-.text-slate-200{color:var(--color-slate-200)}\r
-.text-slate-300{color:var(--color-slate-300)}\r
-.text-slate-400{color:var(--color-slate-400)}\r
-.text-slate-500{color:var(--color-slate-500)}\r
-.text-slate-600{color:var(--color-slate-600)}\r
-.text-slate-700{color:var(--color-slate-700)}\r
-.text-slate-800{color:var(--color-slate-800)}\r
-.text-slate-900{color:var(--color-slate-900)}\r
-.text-violet-600{color:var(--color-violet-600)}\r
-.text-white{color:var(--color-white)}\r
-.text-white\\/70{color:#ffffffb3}\r
-@supports (color:currentColor){.text-white\\/70{color:var(--color-white)}}\r
-.text-white\\/80{color:#fffc}\r
-@supports (color:currentColor){.text-white\\/80{color:var(--color-white)}}\r
-.uppercase{text-transform:uppercase}\r
-.italic{font-style:italic}\r
-.line-through{text-decoration-line:line-through}\r
-.underline{text-decoration-line:underline}\r
-.decoration-dotted{text-decoration-style:dotted}\r
-.accent-indigo-600{accent-color:var(--color-indigo-600)}\r
-.opacity-0{opacity:0}\r
-.opacity-20{opacity:.2}\r
-.opacity-40{opacity:.4}\r
-.opacity-60{opacity:.6}\r
-.opacity-70{opacity:.7}\r
-.opacity-75{opacity:.75}\r
-.opacity-100{opacity:1}\r
-.shadow-2xl{--tw-shadow:0 25px 50px -12px var(--tw-shadow-color,#00000040);box-shadow:var(--tw-inset-shadow),var(--tw-inset-ring-shadow),var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow)}\r
-.shadow-lg{--tw-shadow:0 10px 15px -3px var(--tw-shadow-color,#0000001a),0 4px 6px -4px var(--tw-shadow-color,#0000001a);box-shadow:var(--tw-inset-shadow),var(--tw-inset-ring-shadow),var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow)}\r
-.shadow-sm{--tw-shadow:0 1px 3px 0 var(--tw-shadow-color,#0000001a),0 1px 2px -1px var(--tw-shadow-color,#0000001a);box-shadow:var(--tw-inset-shadow),var(--tw-inset-ring-shadow),var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow)}\r
-.shadow-xl{--tw-shadow:0 20px 25px -5px var(--tw-shadow-color,#0000001a),0 8px 10px -6px var(--tw-shadow-color,#0000001a);box-shadow:var(--tw-inset-shadow),var(--tw-inset-ring-shadow),var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow)}\r
-.ring-4{--tw-ring-shadow:var(--tw-ring-inset,)0 0 0 calc(4px + var(--tw-ring-offset-width))var(--tw-ring-color,currentcolor);box-shadow:var(--tw-inset-shadow),var(--tw-inset-ring-shadow),var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow)}\r
-.ring-blue-400{--tw-ring-color:var(--color-blue-400)}\r
-.ring-offset-2{--tw-ring-offset-width:2px;--tw-ring-offset-shadow:var(--tw-ring-inset,)0 0 0 var(--tw-ring-offset-width)var(--tw-ring-offset-color)}\r
-.grayscale{--tw-grayscale:grayscale(100%);filter:var(--tw-blur,)var(--tw-brightness,)var(--tw-contrast,)var(--tw-grayscale,)var(--tw-hue-rotate,)var(--tw-invert,)var(--tw-saturate,)var(--tw-sepia,)var(--tw-drop-shadow,)}\r
-.backdrop-blur-sm{--tw-backdrop-blur:blur(var(--blur-sm));-webkit-backdrop-filter:var(--tw-backdrop-blur,)var(--tw-backdrop-brightness,)var(--tw-backdrop-contrast,)var(--tw-backdrop-grayscale,)var(--tw-backdrop-hue-rotate,)var(--tw-backdrop-invert,)var(--tw-backdrop-opacity,)var(--tw-backdrop-saturate,)var(--tw-backdrop-sepia,);backdrop-filter:var(--tw-backdrop-blur,)var(--tw-backdrop-brightness,)var(--tw-backdrop-contrast,)var(--tw-backdrop-grayscale,)var(--tw-backdrop-hue-rotate,)var(--tw-backdrop-invert,)var(--tw-backdrop-opacity,)var(--tw-backdrop-saturate,)var(--tw-backdrop-sepia,)}\r
-.transition-all{transition-property:all;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}\r
-.transition-colors{transition-property:color,background-color,border-color,outline-color,text-decoration-color,fill,stroke,--tw-gradient-from,--tw-gradient-via,--tw-gradient-to;transition-timing-function:var(--tw-ease,var(--default-transition-timing-function));transition-duration:var(--tw-duration,var(--default-transition-duration))}\r
-.duration-300{--tw-duration:.3s;transition-duration:.3s}\r
-.ease-in-out{--tw-ease:var(--ease-in-out);transition-timing-function:var(--ease-in-out)}\r
-.select-none{-webkit-user-select:none;user-select:none}\r
-.placeholder\\:text-slate-400::placeholder{color:var(--color-slate-400)}\r
-@media (hover:hover){.hover\\:border-amber-300:hover{border-color:var(--color-amber-300)}\r
-.hover\\:border-blue-300:hover{border-color:var(--color-blue-300)}\r
-.hover\\:border-indigo-400:hover{border-color:var(--color-indigo-400)}\r
-.hover\\:border-rose-300:hover{border-color:var(--color-rose-300)}\r
-.hover\\:border-rose-400:hover{border-color:var(--color-rose-400)}\r
-.hover\\:border-slate-400:hover{border-color:var(--color-slate-400)}\r
-.hover\\:border-violet-300:hover{border-color:var(--color-violet-300)}\r
-.hover\\:bg-blue-50:hover{background-color:var(--color-blue-50)}\r
-.hover\\:bg-blue-400:hover{background-color:var(--color-blue-400)}\r
-.hover\\:bg-blue-500:hover{background-color:var(--color-blue-500)}\r
-.hover\\:bg-blue-700:hover{background-color:var(--color-blue-700)}\r
-.hover\\:bg-emerald-50:hover{background-color:var(--color-emerald-50)}\r
-.hover\\:bg-emerald-700:hover{background-color:var(--color-emerald-700)}\r
-.hover\\:bg-fuchsia-700:hover{background-color:var(--color-fuchsia-700)}\r
-.hover\\:bg-indigo-100:hover{background-color:var(--color-indigo-100)}\r
-.hover\\:bg-indigo-700:hover{background-color:var(--color-indigo-700)}\r
-.hover\\:bg-orange-50:hover{background-color:var(--color-orange-50)}\r
-.hover\\:bg-purple-50:hover{background-color:var(--color-purple-50)}\r
-.hover\\:bg-red-50:hover{background-color:var(--color-red-50)}\r
-.hover\\:bg-rose-50:hover{background-color:var(--color-rose-50)}\r
-.hover\\:bg-slate-50:hover{background-color:var(--color-slate-50)}\r
-.hover\\:bg-slate-200:hover{background-color:var(--color-slate-200)}\r
-.hover\\:bg-slate-700:hover{background-color:var(--color-slate-700)}\r
-.hover\\:bg-slate-800:hover{background-color:var(--color-slate-800)}\r
-.hover\\:bg-white\\/20:hover{background-color:#fff3}\r
-@supports (color:currentColor){.hover\\:bg-white\\/20:hover{background-color:var(--color-white)}}\r
-.hover\\:text-blue-500:hover{color:var(--color-blue-500)}\r
-.hover\\:text-blue-800:hover{color:var(--color-blue-800)}\r
-.hover\\:text-fuchsia-600:hover{color:var(--color-fuchsia-600)}\r
-.hover\\:text-red-500:hover{color:var(--color-red-500)}\r
-.hover\\:text-rose-600:hover{color:var(--color-rose-600)}\r
-.hover\\:text-rose-700:hover{color:var(--color-rose-700)}\r
-.hover\\:text-rose-800:hover{color:var(--color-rose-800)}\r
-.hover\\:text-slate-500:hover{color:var(--color-slate-500)}\r
-.hover\\:text-slate-600:hover{color:var(--color-slate-600)}\r
-.hover\\:text-slate-700:hover{color:var(--color-slate-700)}\r
-.hover\\:text-slate-800:hover{color:var(--color-slate-800)}\r
-.hover\\:text-white:hover{color:var(--color-white)}\r
-.hover\\:underline:hover{text-decoration-line:underline}}\r
-.focus\\:border-blue-400:focus{border-color:var(--color-blue-400)}\r
-.focus\\:border-fuchsia-500:focus{border-color:var(--color-fuchsia-500)}\r
-.focus\\:border-transparent:focus{border-color:#0000}\r
-.focus\\:ring-1:focus{--tw-ring-shadow:var(--tw-ring-inset,)0 0 0 calc(1px + var(--tw-ring-offset-width))var(--tw-ring-color,currentcolor);box-shadow:var(--tw-inset-shadow),var(--tw-inset-ring-shadow),var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow)}\r
-.focus\\:ring-2:focus{--tw-ring-shadow:var(--tw-ring-inset,)0 0 0 calc(2px + var(--tw-ring-offset-width))var(--tw-ring-color,currentcolor);box-shadow:var(--tw-inset-shadow),var(--tw-inset-ring-shadow),var(--tw-ring-offset-shadow),var(--tw-ring-shadow),var(--tw-shadow)}\r
-.focus\\:ring-blue-400:focus{--tw-ring-color:var(--color-blue-400)}\r
-.focus\\:ring-blue-500:focus{--tw-ring-color:var(--color-blue-500)}\r
-.focus\\:ring-indigo-500:focus{--tw-ring-color:var(--color-indigo-500)}\r
-.focus\\:ring-slate-400:focus{--tw-ring-color:var(--color-slate-400)}\r
-.focus\\:outline-none:focus{--tw-outline-style:none;outline-style:none}\r
-.active\\:cursor-grabbing:active{cursor:grabbing}\r
-.disabled\\:cursor-not-allowed:disabled{cursor:not-allowed}\r
-.disabled\\:bg-slate-200:disabled{background-color:var(--color-slate-200)}\r
-.disabled\\:text-slate-500:disabled{color:var(--color-slate-500)}\r
-.disabled\\:opacity-50:disabled{opacity:.5}\r
-@media (min-width:40rem){.sm\\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}}\r
-@media (min-width:48rem){.md\\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}\r
-.md\\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}}\r
-@media (min-width:64rem){.lg\\:grid-cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}}\r
-\r
-\r
-/* === Default font stack + fallback vars (Salesforce-safe) === */\r
-/* Override font families for environments where the Geist font isn't loaded\r
-   (Salesforce Lightning, raw HTML). Use :where() for zero-specificity so the\r
-   marketing site's own --font-* vars from globals.css still win when both\r
-   stylesheets are present. */\r
-:where(:root) {\r
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;\r
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;\r
-  --font-geist-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;\r
-  --font-geist-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;\r
-}\r
-\r
-\r
-/* === Gantt library (.ng-*) overrides — copied from DeliveryTimelineV5.tsx === */\r
-\r
-        /* Grid panel font matching v3 canvas renderer */\r
-        .ng-grid {\r
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;\r
-          font-size: 12px !important;\r
-          color: #1f2937 !important;\r
-          letter-spacing: -0.01em;\r
-        }\r
-        /* Ensure grid table has no border-spacing that could affect row alignment */\r
-        .ng-grid table {\r
-          border-collapse: collapse !important;\r
-          border-spacing: 0 !important;\r
-        }\r
-        .ng-grid-header {\r
-          background: #f3f4f6 !important;\r
-          visibility: hidden !important;\r
-        }\r
-        .ng-grid-th {\r
-          font-size: 12px !important;\r
-          font-weight: 700 !important;\r
-          color: #1f2937 !important;\r
-          padding: 0 6px !important;\r
-        }\r
-        /* Parent/group rows: bold like v3 (but not priority-group header rows) */\r
-        .ng-grid-row:not(.ng-group-row) .ng-tree-cell .ng-expand-icon + .ng-grid-cell-text {\r
-          font-weight: 700 !important;\r
-          color: #1f2937 !important;\r
-        }\r
-        /* Child rows (indented): lighter/muted like v3 canvas */\r
-        .ng-grid-row .ng-tree-cell .ng-expand-spacer + .ng-grid-cell-text {\r
-          font-weight: 400 !important;\r
-          color: #6b7280 !important;\r
-          font-size: 11px !important;\r
-        }\r
-        .ng-grid-cell {\r
-          padding-top: 0 !important;\r
-          padding-right: 6px !important;\r
-          padding-bottom: 0 !important;\r
-          padding-left: 6px; /* no !important — JS depth-indent overrides this */\r
-          line-height: 32px !important;\r
-        }\r
-        /* Zero out the spacer so ≡ aligns with ▶ at the same depth */\r
-        .ng-expand-spacer {\r
-          width: 0 !important;\r
-          min-width: 0 !important;\r
-        }\r
-        /* Expand arrow styling */\r
-        .ng-expand-icon {\r
-          font-size: 9px !important;\r
-          opacity: 0.5 !important;\r
-          color: #6b7280 !important;\r
-          width: 14px !important;\r
-          min-width: 14px !important;\r
-        }\r
-        .ng-expand-icon:hover {\r
-          opacity: 1 !important;\r
-        }\r
-        /* Row borders — use box-shadow instead of border to avoid layout shift */\r
-        .ng-grid-row {\r
-          border: none !important;\r
-          box-shadow: inset 0 -1px 0 #f3f4f6;\r
-          box-sizing: border-box !important;\r
-        }\r
-        /* Leaf rows are draggable from anywhere */\r
-        .ng-grid-row:not(.ng-group-row) {\r
-          cursor: grab;\r
-        }\r
-        .ng-grid-row:not(.ng-group-row):hover {\r
-          background: rgba(59,130,246,0.04) !important;\r
-          outline: 1px solid rgba(59,130,246,0.12) !important;\r
-          outline-offset: -1px;\r
-        }\r
-        .ng-grid-row:not(.ng-group-row):active {\r
-          cursor: grabbing;\r
-        }\r
-        .ng-grid-row td {\r
-          border: none !important;\r
-          box-sizing: border-box !important;\r
-        }\r
-        /* Remove cell right borders for cleaner look */\r
-        .ng-grid-cell {\r
-          border-right: none !important;\r
-        }\r
-        .ng-grid-th {\r
-          border-right: none !important;\r
-        }\r
-        /* Kill alternating row color — depth shading handles backgrounds.\r
-           Use unset (not !important) so inline depth-shading can override. */\r
-        .ng-row-alt:not(.ng-group-row) {\r
-          background: unset;\r
-        }\r
-        /* Keep the gantt canvas sticky so it stays in view on horizontal scroll.\r
-           The nimbus-gantt library sets this at init (core.js:1332) but something\r
-           can reset it; this !important ensures it's always honoured. */\r
-        .ng-scroll-content > canvas {\r
-          position: sticky !important;\r
-          left: 0 !important;\r
-        }\r
-        /* Belt-and-suspenders: hide any legacy stripe overlay div from cached\r
-           old code that created a position:absolute div bleeding past canvas. */\r
-        [data-depth-stripes] {\r
-          display: none !important;\r
-        }\r
-        /* Bucket header rows (NOW / NEXT / PLANNED / etc.)\r
-           Strong background from GROUP_BG, white text, no top-accent border. */\r
-        .ng-group-row {\r
-          font-weight: 700;\r
-          font-size: 11px;\r
-          letter-spacing: 0.03em;\r
-          box-sizing: border-box !important;\r
-          box-shadow: none !important;\r
-          color: #fff !important;\r
-        }\r
-        .ng-group-row .ng-grid-cell-text {\r
-          font-weight: 700 !important;\r
-          font-size: 12px !important;\r
-          color: #fff !important;\r
-          letter-spacing: 0.02em;\r
-          color: inherit !important;\r
-          text-transform: uppercase;\r
-        }\r
-        .ng-group-row .ng-expand-icon {\r
-          color: inherit !important;\r
-          opacity: 0.5 !important;\r
-        }\r
-        /* Hours/count column for group rows — full size, never truncate */\r
-        .ng-group-row .ng-grid-cell[data-field="hoursLabel"] {\r
-          font-weight: 600 !important;\r
-          font-size: 11px !important;\r
-          color: inherit !important;\r
-          opacity: 0.75;\r
-          white-space: nowrap !important;\r
-          overflow: visible !important;\r
-          text-overflow: unset !important;\r
-        }\r
-        /* Hours column for child rows — monospace, muted, lighter weight */\r
-        .ng-grid-cell[data-field="hoursLabel"] {\r
-          font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;\r
-          font-size: 10px;\r
-          color: #94a3b8;\r
-          font-weight: 400;\r
-        }\r
-        /* Drag handle icon — always visible, like v3 sidebar */\r
-        .ng-drag-handle {\r
-          display: inline-flex;\r
-          align-items: center;\r
-          justify-content: center;\r
-          cursor: grab;\r
-          opacity: 0.3;\r
-          font-size: 11px;\r
-          color: #94a3b8;\r
-          vertical-align: middle;\r
-          user-select: none;\r
-          width: 14px;\r
-          height: 14px;\r
-          flex-shrink: 0;\r
-          margin-left: -5px !important;\r
-          margin-right: 4px;\r
-        }\r
-        .ng-grid-row:hover .ng-drag-handle {\r
-          opacity: 0.6;\r
-          color: #64748b;\r
-        }\r
-        .ng-drag-handle:active {\r
-          cursor: grabbing;\r
-          opacity: 1;\r
-        }\r
-        /* Selected row — subtle highlight that doesn't clash with group bg colors */\r
-        .ng-row-selected:not(.ng-group-row) {\r
-          background: rgba(59, 130, 246, 0.06) !important;\r
-          box-shadow: inset 3px 0 0 #3b82f6 !important;\r
-        }\r
-        .ng-row-selected.ng-group-row {\r
-          box-shadow: inset 0 2px 0 currentColor, inset 3px 0 0 currentColor, inset 0 -1px 0 #f3f4f6 !important;\r
-        }\r
-        /* Canvas cursor: let core.js hit-test control cursor via inline style */\r
-        /* Group row hours column inherits group color too */\r
-        .ng-group-row .ng-grid-cell[data-field="hoursLabel"] {\r
-          color: inherit !important;\r
-          opacity: 0.7;\r
-        }\r
-\r
-        /*\r
-         * DEPTH-INDENTATION FIX — CSS !important beats the library's inline\r
-         * padding-left (which has no !important).  We read the library's own\r
-         * depth-indicator value (28 / 48 / 68 / 88 px) and map it to our compact\r
-         * spacing so that:\r
-         *   • Depth-0 parent ▼ caret aligns with the NOW/NEXT bucket ▼ caret (both at 8px)\r
-         *   • Depth-1+ leaf ≡ hamburgers align with their sibling parent ▼ carets\r
-         *\r
-         * Formula: parent_padding(d) = 8 + d×10\r
-         *          leaf_padding(d)   = max(0, 8 + d×10 − 10) = max(0, (d−1)×10 + 8 − 10)\r
-         *   d=0 → parent: 8px ; leaf:  0px (hamburger at 10px)\r
-         *   d=1 → parent: 18px; leaf:  8px (hamburger at 18px = parent caret ✓)\r
-         *   d=2 → parent: 28px; leaf: 18px (hamburger at 28px = parent caret ✓)\r
-         *   d=3 → parent: 38px; leaf: 28px (hamburger at 38px = parent caret ✓)\r
-         *\r
-         * Library depth→px map: depth 0→28px, 1→48px, 2→68px, 3→88px.\r
-         * Selectors use :has() (Chrome 105+) to distinguish parent vs leaf rows.\r
-         */\r
-\r
-        /* ── depth 0 (library sets 28px) ─────────────────────────────── */\r
-        /* Both parent (▶) and leaf (≡) align at same X — icon type is the distinction */\r
-        .ng-grid-row:not(.ng-group-row)\r
-          .ng-tree-cell[style*="padding-left: 28px"] { padding-left: 8px  !important; }\r
-\r
-        /* ── depth 1 (library sets 48px) ─────────────────────────────── */\r
-        .ng-grid-row:not(.ng-group-row)\r
-          .ng-tree-cell[style*="padding-left: 48px"] { padding-left: 18px !important; }\r
-\r
-        /* ── depth 2 (library sets 68px) ─────────────────────────────── */\r
-        .ng-grid-row:not(.ng-group-row)\r
-          .ng-tree-cell[style*="padding-left: 68px"] { padding-left: 28px !important; }\r
-\r
-        /* ── depth 3 (library sets 88px) — future-proofing ───────────── */\r
-        /* ── depth 3 (library sets 88px) — future-proofing ──────────── */\r
-        .ng-grid-row:not(.ng-group-row)\r
-          .ng-tree-cell[style*="padding-left: 88px"] { padding-left: 38px !important; }\r
-        /*\r
-         * DEPTH-INDENT FALLBACK via CSS animation trick.\r
-         * The JS chunk may be cached — this animation fires onAnimationStart which\r
-         * the shading useEffect intercepts to re-apply correct indentation.\r
-         * Animation name is deliberately unique so it only targets our container.\r
-         */\r
-        @keyframes mf-depth-check { from { outline-color: transparent; } to { outline-color: transparent; } }\r
-        .ng-gantt-container {\r
-          animation: mf-depth-check 0.001s linear 1 !important;\r
-        }\r
-      \r
-`;
+  const inlineStyles = "";
   const cloudnimbusTemplate = defineTemplate({
     name: "cloudnimbus",
     defaults: {
@@ -3362,7 +2579,7 @@ var NimbusGanttApp = function(exports) {
   }
   class IIFEApp {
     static mount(container, options) {
-      var _a, _b, _c;
+      var _a, _b, _c, _d, _e;
       IIFEApp.unmount(container);
       const templateName = options.template || "cloudnimbus";
       const overrides = options.overrides ? { ...options.overrides } : {};
@@ -3377,6 +2594,112 @@ var NimbusGanttApp = function(exports) {
         tplConfig = resolveTemplate("cloudnimbus", overrides);
       }
       if (options.engine) tplConfig.engine = options.engine;
+      if (options.engineOnly) {
+        let _syncToCanvas = function() {
+          const f = applyFilter(allTasks2, state2.filter, state2.search);
+          const g = buildTasks(f);
+          const gi = inst;
+          if (typeof gi.setData === "function") {
+            gi.setData(g, []);
+            try {
+              gi.expandAll();
+            } catch (_e2) {
+            }
+          }
+        };
+        container.style.cssText = "height:100%;width:100%;position:relative";
+        const ganttEl = document.createElement("div");
+        ganttEl.style.cssText = "height:100%;width:100%;position:absolute;inset:0";
+        container.innerHTML = "";
+        container.appendChild(ganttEl);
+        const _win = typeof window !== "undefined" ? window : null;
+        const eng = options.engine ?? (_win == null ? void 0 : _win.NimbusGantt) ?? null;
+        if (!eng || !eng.NimbusGantt) {
+          ganttEl.style.cssText += ";padding:20px;color:#b91c1c;font-size:13px";
+          ganttEl.textContent = "nimbus-gantt engine not loaded";
+          registry.push({ container, cleanup: () => {
+            container.innerHTML = "";
+          } });
+          return { setTasks: () => {
+          }, destroy: () => IIFEApp.unmount(container) };
+        }
+        injectLegacyNgCss();
+        let allTasks2 = options.tasks || [];
+        const state2 = { ...INITIAL_STATE };
+        const depthMap2 = buildDepthMap(allTasks2);
+        const filtered = applyFilter(allTasks2, state2.filter, state2.search);
+        const gtasks = buildTasks(filtered);
+        const inst = new eng.NimbusGantt(ganttEl, {
+          tasks: gtasks,
+          dependencies: [],
+          columns: GANTT_COLS,
+          theme: V3_THEME,
+          rowHeight: 32,
+          barHeight: 20,
+          headerHeight: 32,
+          gridWidth: 295,
+          zoomLevel: state2.zoom,
+          showToday: true,
+          showWeekends: true,
+          showProgress: true,
+          colorMap: ((_d = options.config) == null ? void 0 : _d.colorMap) || { ...STAGE_COLORS, ...STAGE_TO_CATEGORY_COLOR },
+          readOnly: false
+        });
+        if (typeof ((_e = tplConfig.engine) == null ? void 0 : _e.PriorityGroupingPlugin) === "function") {
+          inst.use(tplConfig.engine.PriorityGroupingPlugin({
+            buckets: tplConfig.buckets,
+            getBucket: (task) => task.groupId || null
+          }));
+        }
+        inst.setData(gtasks, []);
+        try {
+          inst.expandAll();
+        } catch (_e2) {
+        }
+        setTimeout(() => {
+          var _a2;
+          try {
+            (_a2 = inst.scrollToDate) == null ? void 0 : _a2.call(inst, /* @__PURE__ */ new Date());
+          } catch (_e2) {
+          }
+        }, 50);
+        let cleanupShading2 = null;
+        let cleanupDrag2 = null;
+        if (tplConfig.features.depthShading) cleanupShading2 = startDepthShading(ganttEl, depthMap2);
+        if (tplConfig.features.dragReparent) cleanupDrag2 = startDragReparent(ganttEl, allTasks2, depthMap2, options.onPatch || (() => {
+        }));
+        const cleanup2 = () => {
+          if (cleanupShading2) cleanupShading2();
+          if (cleanupDrag2) cleanupDrag2();
+          try {
+            inst.destroy();
+          } catch (_e2) {
+          }
+          container.innerHTML = "";
+        };
+        registry.push({ container, cleanup: cleanup2 });
+        return {
+          setTasks(tasks) {
+            allTasks2 = tasks;
+            _syncToCanvas();
+          },
+          /** Called by NimbusGanttAppReact when the React filter/search state changes. */
+          setFilter(filter, search) {
+            state2.filter = filter;
+            state2.search = search;
+            _syncToCanvas();
+          },
+          /** Called by NimbusGanttAppReact when the zoom pill changes. */
+          setZoom(zoom) {
+            state2.zoom = zoom;
+            const gi = inst;
+            if (typeof gi.setZoom === "function") gi.setZoom(zoom);
+          },
+          destroy() {
+            IIFEApp.unmount(container);
+          }
+        };
+      }
       let state = { ...INITIAL_STATE };
       let allTasks = options.tasks || [];
       const patchLog = [];
@@ -3551,7 +2874,7 @@ var NimbusGanttApp = function(exports) {
         ganttInst.setData(gtasks, []);
         try {
           ganttInst.expandAll();
-        } catch (_e) {
+        } catch (_e2) {
         }
         if (cleanupShading) cleanupShading();
         if (cleanupDrag) cleanupDrag();
@@ -3569,7 +2892,7 @@ var NimbusGanttApp = function(exports) {
             gi.setData(gtasks, []);
             try {
               gi.expandAll();
-            } catch (_e) {
+            } catch (_e2) {
             }
           }
         } else {
@@ -3590,7 +2913,7 @@ var NimbusGanttApp = function(exports) {
         if (ganttInst) {
           try {
             ganttInst.destroy();
-          } catch (_e) {
+          } catch (_e2) {
           }
           ganttInst = null;
         }
@@ -3614,7 +2937,7 @@ var NimbusGanttApp = function(exports) {
         if (ganttInst) {
           try {
             ganttInst.destroy();
-          } catch (_e) {
+          } catch (_e2) {
           }
         }
         slotInstances.forEach((inst) => inst.destroy());
@@ -3622,7 +2945,7 @@ var NimbusGanttApp = function(exports) {
         removeTemplateCss(container);
         try {
           themeStyleEl.remove();
-        } catch (_e) {
+        } catch (_e2) {
         }
       };
       registry.push({ container, cleanup });
