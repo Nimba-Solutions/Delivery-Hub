@@ -837,6 +837,7 @@ var NimbusGanttApp = function(exports) {
     sidebarOpen: false,
     statsOpen: false,
     detailOpen: false,
+    detailMode: "view",
     auditPanelOpen: true,
     // v9 parity — Audit strip defaults to open
     fullscreen: false,
@@ -861,12 +862,20 @@ var NimbusGanttApp = function(exports) {
         return { ...state, sidebarOpen: !state.sidebarOpen };
       case "TOGGLE_STATS":
         return { ...state, statsOpen: !state.statsOpen };
-      case "TOGGLE_DETAIL":
+      case "TOGGLE_DETAIL": {
+        const opening = event.taskId !== void 0;
         return {
           ...state,
-          detailOpen: event.taskId !== void 0 ? true : !state.detailOpen,
-          selectedTaskId: event.taskId !== void 0 ? event.taskId : state.selectedTaskId
+          detailOpen: opening ? true : !state.detailOpen,
+          selectedTaskId: opening ? event.taskId : state.selectedTaskId,
+          // When opening: use editMode payload (default 'view'). When closing
+          // or toggling (no taskId): keep existing detailMode — v10 dblclick
+          // sets editMode:true, plain click leaves it 'view'.
+          detailMode: opening ? event.editMode ? "edit" : "view" : state.detailMode
         };
+      }
+      case "SET_DETAIL_MODE":
+        return { ...state, detailMode: event.mode };
       case "TOGGLE_AUDIT_PANEL":
         return { ...state, auditPanelOpen: !state.auditPanelOpen };
       case "TOGGLE_FULLSCREEN":
@@ -1071,7 +1080,7 @@ var NimbusGanttApp = function(exports) {
     { id: "calendar", label: "Calendar", icon: "▥" },
     { id: "flow", label: "Flow", icon: "⟿" }
   ];
-  const CLOUD_NIMBUS_VIEWS = CLOUD_NIMBUS_VIEW_MODES.map((v) => v.id);
+  const CLOUD_NIMBUS_VIEWS = ["gantt"];
   const CLOUD_NIMBUS_CATEGORIES = [
     { category: "in-flight", label: "In Flight", color: "#10b981" },
     { category: "next-up", label: "Next Up", color: "#3b82f6" },
@@ -1240,18 +1249,23 @@ var NimbusGanttApp = function(exports) {
       version.textContent = config.version || "v10 · Nimbus Gantt";
       root.appendChild(version);
       root.appendChild(mkSep$1());
-      CLOUD_NIMBUS_VIEW_MODES.forEach((v) => {
-        const on = state.viewMode === v.id;
-        const cls = CLS_PILL_BTN_BASE + " " + (on ? CLS_PILL_BTN_ACTIVE_VIOLET : CLS_PILL_BTN_IDLE_VIOLET);
-        const btn = el$1("button", cls);
-        const ico = el$1("span", "mr-1");
-        ico.textContent = v.icon;
-        btn.appendChild(ico);
-        btn.appendChild(document.createTextNode(v.label));
-        btn.addEventListener("click", () => dispatch({ type: "SET_VIEW", mode: v.id }));
-        root.appendChild(btn);
-      });
-      root.appendChild(mkSep$1());
+      const enabledViews = CLOUD_NIMBUS_VIEW_MODES.filter(
+        (v) => !config.views || config.views.includes(v.id)
+      );
+      if (enabledViews.length > 1) {
+        enabledViews.forEach((v) => {
+          const on = state.viewMode === v.id;
+          const cls = CLS_PILL_BTN_BASE + " " + (on ? CLS_PILL_BTN_ACTIVE_VIOLET : CLS_PILL_BTN_IDLE_VIOLET);
+          const btn = el$1("button", cls);
+          const ico = el$1("span", "mr-1");
+          ico.textContent = v.icon;
+          btn.appendChild(ico);
+          btn.appendChild(document.createTextNode(v.label));
+          btn.addEventListener("click", () => dispatch({ type: "SET_VIEW", mode: v.id }));
+          root.appendChild(btn);
+        });
+        root.appendChild(mkSep$1());
+      }
       function toggleBtn(label, on, ev) {
         const cls = CLS_PILL_BTN_BASE + " " + (on ? CLS_PILL_BTN_ACTIVE_BLUE : CLS_PILL_BTN_IDLE_BLUE);
         const b = el$1("button", cls);
@@ -1888,6 +1902,9 @@ var NimbusGanttApp = function(exports) {
   function DetailPanelVanilla(initial) {
     const root = el$1("div", CLS_DETAIL);
     root.setAttribute("data-slot", "DetailPanel");
+    let draftStart = "";
+    let draftEnd = "";
+    let lastRenderedKey = "";
     function render(p) {
       clear(root);
       const { state, data, dispatch } = p;
@@ -1901,11 +1918,19 @@ var NimbusGanttApp = function(exports) {
         return;
       }
       root.style.display = "";
+      const editing = state.detailMode === "edit";
       const catColor = "#64748b";
       root.style.bottom = "80px";
       root.style.right = "24px";
       root.style.width = "380px";
       root.style.borderColor = catColor;
+      root.setAttribute("data-detail-mode", state.detailMode);
+      const renderKey = `${task.id}|${editing ? 1 : 0}|${task.startDate || ""}|${task.endDate || ""}`;
+      if (renderKey !== lastRenderedKey) {
+        draftStart = task.startDate || "";
+        draftEnd = task.endDate || "";
+        lastRenderedKey = renderKey;
+      }
       const header = el$1("div", CLS_DETAIL_HEADER);
       header.style.background = catColor + "15";
       const lwrap = el$1("div", "flex items-center gap-2 min-w-0");
@@ -1920,8 +1945,21 @@ var NimbusGanttApp = function(exports) {
       lwrap.appendChild(titleSp);
       header.appendChild(lwrap);
       const rwrap = el$1("div", "flex items-center gap-1 flex-shrink-0 ml-2");
+      const editBtn = el$1(
+        "button",
+        editing ? "text-fuchsia-600 hover:text-fuchsia-800 text-sm px-1 transition-colors" : "text-slate-400 hover:text-slate-700 text-sm px-1 transition-colors"
+      );
+      editBtn.setAttribute("data-testid", "detail-edit-toggle");
+      editBtn.setAttribute("title", editing ? "Exit edit mode" : "Edit");
+      editBtn.setAttribute("aria-pressed", editing ? "true" : "false");
+      editBtn.textContent = "✎";
+      editBtn.addEventListener("click", () => {
+        dispatch({ type: "SET_DETAIL_MODE", mode: editing ? "view" : "edit" });
+      });
+      rwrap.appendChild(editBtn);
       const closeBtn = el$1("button", "text-slate-400 hover:text-slate-700 text-sm px-1 transition-colors");
       closeBtn.textContent = "×";
+      closeBtn.setAttribute("title", "Close");
       closeBtn.addEventListener("click", () => dispatch({ type: "TOGGLE_DETAIL" }));
       rwrap.appendChild(closeBtn);
       header.appendChild(rwrap);
@@ -1945,13 +1983,67 @@ var NimbusGanttApp = function(exports) {
         w.appendChild(v);
         grid.appendChild(w);
       }
+      function inpField(label, type, value, onInput) {
+        const w = el$1("div", "");
+        const l = el$1("p", "text-[9px] text-slate-400 uppercase tracking-wide");
+        l.textContent = label;
+        const input = document.createElement("input");
+        input.type = type;
+        input.value = value;
+        input.className = "w-full px-1.5 py-0.5 text-xs text-slate-900 border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-fuchsia-400";
+        input.addEventListener("input", () => onInput(input.value));
+        w.appendChild(l);
+        w.appendChild(input);
+        grid.appendChild(w);
+      }
       fld("Status", task.stage || "—");
       fld("Priority", task.priorityGroup || "—");
-      fld("Start", task.startDate || "—");
-      fld("End", task.endDate || "—");
+      if (editing) {
+        inpField("Start", "date", draftStart, (v) => {
+          draftStart = v;
+        });
+        inpField("End", "date", draftEnd, (v) => {
+          draftEnd = v;
+        });
+      } else {
+        fld("Start", task.startDate || "—");
+        fld("End", task.endDate || "—");
+      }
       fld("Estimated", task.estimatedHours ? task.estimatedHours + "h" : "—");
       fld("Logged", task.loggedHours ? task.loggedHours + "h" : "—");
       body.appendChild(grid);
+      if (editing) {
+        const actions = el$1("div", "pt-2 border-t border-slate-100 flex gap-2");
+        const saveBtn = el$1(
+          "button",
+          "flex-1 text-[10px] font-bold uppercase px-2 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+        );
+        saveBtn.textContent = "Save";
+        saveBtn.addEventListener("click", () => {
+          const patch = {
+            id: String(task.id)
+          };
+          if (draftStart !== (task.startDate || "")) patch.startDate = draftStart;
+          if (draftEnd !== (task.endDate || "")) patch.endDate = draftEnd;
+          if (patch.startDate !== void 0 || patch.endDate !== void 0) {
+            dispatch({ type: "PATCH", patch });
+          }
+          dispatch({ type: "SET_DETAIL_MODE", mode: "view" });
+        });
+        actions.appendChild(saveBtn);
+        const cancelBtn = el$1(
+          "button",
+          "flex-1 text-[10px] font-bold uppercase px-2 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+        );
+        cancelBtn.textContent = "Cancel";
+        cancelBtn.addEventListener("click", () => {
+          draftStart = task.startDate || "";
+          draftEnd = task.endDate || "";
+          dispatch({ type: "SET_DETAIL_MODE", mode: "view" });
+        });
+        actions.appendChild(cancelBtn);
+        body.appendChild(actions);
+      }
       root.appendChild(body);
     }
     render(initial);
@@ -2597,7 +2689,7 @@ var NimbusGanttApp = function(exports) {
       if (options.engineOnly) {
         let _syncToCanvas = function() {
           const f = applyFilter(allTasks2, state2.filter, state2.search);
-          const g = buildTasks(f);
+          const g = state2.groupBy === "epic" ? buildTasks(buildTasksEpic(f)) : buildTasks(f);
           const gi = inst;
           if (typeof gi.setData === "function") {
             gi.setData(g, []);
@@ -2629,6 +2721,11 @@ var NimbusGanttApp = function(exports) {
         const depthMap2 = buildDepthMap(allTasks2);
         const filtered = applyFilter(allTasks2, state2.filter, state2.search);
         const gtasks = buildTasks(filtered);
+        let lastHoveredTaskId = null;
+        const findTaskById = (id) => {
+          if (!id) return null;
+          return allTasks2.find((t) => t.id === id) ?? null;
+        };
         const inst = new eng.NimbusGantt(ganttEl, {
           tasks: gtasks,
           dependencies: [],
@@ -2643,8 +2740,72 @@ var NimbusGanttApp = function(exports) {
           showWeekends: true,
           showProgress: true,
           colorMap: ((_d = options.config) == null ? void 0 : _d.colorMap) || { ...STAGE_COLORS, ...STAGE_TO_CATEGORY_COLOR },
-          readOnly: false
+          readOnly: false,
+          onTaskClick: (task) => {
+            var _a2;
+            if (!task || !task.id || isBucketId(task.id)) return;
+            const t = findTaskById(task.id);
+            if (t) (_a2 = options.onTaskClick) == null ? void 0 : _a2.call(options, t, "canvas");
+          },
+          onTaskDblClick: (task) => {
+            var _a2;
+            if (!task || !task.id || isBucketId(task.id)) return;
+            const t = findTaskById(task.id);
+            if (t) (_a2 = options.onTaskDoubleClick) == null ? void 0 : _a2.call(options, t);
+          },
+          // Canvas-bar hover: engine fires onHover on every pointermove that
+          // hits a bar, with task=null when the cursor leaves all bars. We
+          // coalesce to avoid duplicate fires when the cursor stays over the
+          // same bar, and share lastHoveredTaskId with the grid-row + context-
+          // menu path so right-click on a canvas bar resolves correctly.
+          onHover: (task) => {
+            var _a2;
+            const id = (task == null ? void 0 : task.id) && !isBucketId(task.id) ? task.id : null;
+            if (id === lastHoveredTaskId) return;
+            lastHoveredTaskId = id;
+            (_a2 = options.onTaskHover) == null ? void 0 : _a2.call(options, id);
+          },
+          onTaskMove: (task, s, e) => {
+            var _a2;
+            if (task && task.id && !isBucketId(task.id)) (_a2 = options.onPatch) == null ? void 0 : _a2.call(options, { id: task.id, startDate: s, endDate: e });
+          },
+          onTaskResize: (task, s, e) => {
+            var _a2;
+            if (task && task.id && !isBucketId(task.id)) (_a2 = options.onPatch) == null ? void 0 : _a2.call(options, { id: task.id, startDate: s, endDate: e });
+          }
         });
+        const handleMouseOver = (e) => {
+          var _a2, _b2;
+          const target = e.target;
+          const row = (_a2 = target == null ? void 0 : target.closest) == null ? void 0 : _a2.call(target, ".ng-grid-row[data-task-id]");
+          const id = (row == null ? void 0 : row.getAttribute("data-task-id")) ?? null;
+          if (id && !isBucketId(id) && id !== lastHoveredTaskId) {
+            lastHoveredTaskId = id;
+            (_b2 = options.onTaskHover) == null ? void 0 : _b2.call(options, id);
+          }
+        };
+        const handleMouseLeave = () => {
+          var _a2;
+          if (lastHoveredTaskId !== null) {
+            lastHoveredTaskId = null;
+            (_a2 = options.onTaskHover) == null ? void 0 : _a2.call(options, null);
+          }
+        };
+        const handleContextMenu = (e) => {
+          var _a2;
+          if (!options.onTaskContextMenu) return;
+          const target = e.target;
+          const row = (_a2 = target == null ? void 0 : target.closest) == null ? void 0 : _a2.call(target, ".ng-grid-row[data-task-id]");
+          const rowId = (row == null ? void 0 : row.getAttribute("data-task-id")) ?? null;
+          const taskId = rowId && !isBucketId(rowId) ? rowId : lastHoveredTaskId;
+          const t = findTaskById(taskId);
+          if (!t) return;
+          e.preventDefault();
+          options.onTaskContextMenu(t, { x: e.clientX, y: e.clientY });
+        };
+        ganttEl.addEventListener("mouseover", handleMouseOver);
+        ganttEl.addEventListener("mouseleave", handleMouseLeave);
+        ganttEl.addEventListener("contextmenu", handleContextMenu);
         if (typeof ((_e = tplConfig.engine) == null ? void 0 : _e.PriorityGroupingPlugin) === "function") {
           inst.use(tplConfig.engine.PriorityGroupingPlugin({
             buckets: tplConfig.buckets,
@@ -2671,6 +2832,9 @@ var NimbusGanttApp = function(exports) {
         const cleanup2 = () => {
           if (cleanupShading2) cleanupShading2();
           if (cleanupDrag2) cleanupDrag2();
+          ganttEl.removeEventListener("mouseover", handleMouseOver);
+          ganttEl.removeEventListener("mouseleave", handleMouseLeave);
+          ganttEl.removeEventListener("contextmenu", handleContextMenu);
           try {
             inst.destroy();
           } catch (_e2) {
@@ -2694,6 +2858,11 @@ var NimbusGanttApp = function(exports) {
             state2.zoom = zoom;
             const gi = inst;
             if (typeof gi.setZoom === "function") gi.setZoom(zoom);
+          },
+          /** Called by NimbusGanttAppReact when the groupBy toggle changes. */
+          setGroupBy(groupBy) {
+            state2.groupBy = groupBy;
+            _syncToCanvas();
           },
           destroy() {
             IIFEApp.unmount(container);
@@ -2740,7 +2909,7 @@ var NimbusGanttApp = function(exports) {
           patchLog.unshift({ ts: /* @__PURE__ */ new Date(), desc: title + ": " + parts.join(", ") });
           if (patchLog.length > 50) patchLog.pop();
         }
-        dispatch({ type: "PATCH" });
+        dispatch({ type: "PATCH", patch });
         rawOnPatch(patch);
         if (_patchRefreshTimer.t) clearTimeout(_patchRefreshTimer.t);
         _patchRefreshTimer.t = setTimeout(() => {
@@ -2749,6 +2918,10 @@ var NimbusGanttApp = function(exports) {
         }, 50);
       }
       function dispatch(ev) {
+        if (ev.type === "PATCH") {
+          onTaskPatch(ev.patch);
+          return;
+        }
         const nextState = reduceAppState(state, ev);
         const stateChanged = nextState !== state;
         state = nextState;
@@ -2835,6 +3008,7 @@ var NimbusGanttApp = function(exports) {
         ganttEl.style.cssText = "height:100%;width:100%;position:absolute;inset:0";
         host.innerHTML = "";
         host.appendChild(ganttEl);
+        let lastHoveredTaskId = null;
         ganttInst = new Ctor(ganttEl, {
           tasks: gtasks,
           dependencies: [],
@@ -2851,10 +3025,29 @@ var NimbusGanttApp = function(exports) {
           colorMap: ((_a2 = options.config) == null ? void 0 : _a2.colorMap) || { ...STAGE_COLORS, ...STAGE_TO_CATEGORY_COLOR },
           readOnly: false,
           onTaskClick: (task) => {
-            if (task && task.id && !isBucketId(task.id)) dispatch({ type: "TOGGLE_DETAIL", taskId: task.id });
+            var _a3;
+            if (!task || !task.id || isBucketId(task.id)) return;
+            dispatch({ type: "TOGGLE_DETAIL", taskId: task.id });
+            const t = allTasks.find((x) => x.id === task.id);
+            if (t) (_a3 = options.onTaskClick) == null ? void 0 : _a3.call(options, t, "canvas");
           },
           onTaskDblClick: (task) => {
-            if (task && task.id && !isBucketId(task.id)) dispatch({ type: "TOGGLE_DETAIL", taskId: task.id });
+            var _a3;
+            if (!task || !task.id || isBucketId(task.id)) return;
+            dispatch({ type: "TOGGLE_DETAIL", taskId: task.id, editMode: true });
+            const t = allTasks.find((x) => x.id === task.id);
+            if (t) (_a3 = options.onTaskDoubleClick) == null ? void 0 : _a3.call(options, t);
+          },
+          // Canvas-bar hover — engine fires onHover on pointermove hits.
+          // Coalesce so identical-id sequential fires are a no-op, and keep
+          // lastHoveredTaskId in sync with the DOM grid-row path (set below)
+          // so right-click on a canvas bar resolves correctly.
+          onHover: (task) => {
+            var _a3;
+            const id = (task == null ? void 0 : task.id) && !isBucketId(task.id) ? task.id : null;
+            if (id === lastHoveredTaskId) return;
+            lastHoveredTaskId = id;
+            (_a3 = options.onTaskHover) == null ? void 0 : _a3.call(options, id);
           },
           onTaskMove: (task, s, e) => {
             if (task && task.id && !isBucketId(task.id)) onTaskPatch({ id: task.id, startDate: s, endDate: e });
@@ -2863,6 +3056,46 @@ var NimbusGanttApp = function(exports) {
             if (task && task.id && !isBucketId(task.id)) onTaskPatch({ id: task.id, startDate: s, endDate: e });
           }
         });
+        const findTaskById = (id) => id ? allTasks.find((t) => t.id === id) ?? null : null;
+        const onMouseOver = (e) => {
+          var _a3, _b2;
+          const target = e.target;
+          const row = (_a3 = target == null ? void 0 : target.closest) == null ? void 0 : _a3.call(target, ".ng-grid-row[data-task-id]");
+          const id = (row == null ? void 0 : row.getAttribute("data-task-id")) ?? null;
+          if (id && !isBucketId(id) && id !== lastHoveredTaskId) {
+            lastHoveredTaskId = id;
+            (_b2 = options.onTaskHover) == null ? void 0 : _b2.call(options, id);
+          }
+        };
+        const onMouseLeave = () => {
+          var _a3;
+          if (lastHoveredTaskId !== null) {
+            lastHoveredTaskId = null;
+            (_a3 = options.onTaskHover) == null ? void 0 : _a3.call(options, null);
+          }
+        };
+        const onContextMenu = (e) => {
+          var _a3;
+          if (!options.onTaskContextMenu) return;
+          const target = e.target;
+          const row = (_a3 = target == null ? void 0 : target.closest) == null ? void 0 : _a3.call(target, ".ng-grid-row[data-task-id]");
+          const rowId = (row == null ? void 0 : row.getAttribute("data-task-id")) ?? null;
+          const taskId = rowId && !isBucketId(rowId) ? rowId : lastHoveredTaskId;
+          const t = findTaskById(taskId);
+          if (!t) return;
+          e.preventDefault();
+          options.onTaskContextMenu(t, { x: e.clientX, y: e.clientY });
+        };
+        ganttEl.addEventListener("mouseover", onMouseOver);
+        ganttEl.addEventListener("mouseleave", onMouseLeave);
+        ganttEl.addEventListener("contextmenu", onContextMenu);
+        const prevCleanupDrag = cleanupDrag;
+        cleanupDrag = () => {
+          ganttEl.removeEventListener("mouseover", onMouseOver);
+          ganttEl.removeEventListener("mouseleave", onMouseLeave);
+          ganttEl.removeEventListener("contextmenu", onContextMenu);
+          if (prevCleanupDrag) prevCleanupDrag();
+        };
         if (typeof PGP === "function") {
           const pluginBuckets = tplConfig.buckets;
           ganttInst.use(PGP({
@@ -2989,5 +3222,3 @@ var NimbusGanttApp = function(exports) {
   return exports;
 }({});
 typeof window !== "undefined" && (window.NimbusGanttApp = NimbusGanttApp.NimbusGanttApp || NimbusGanttApp);
-
-/* force-rebuild-0.179 — breaks SF package content-hash dedup that silently kept 0.178 serving the pre-#635 bundle */
