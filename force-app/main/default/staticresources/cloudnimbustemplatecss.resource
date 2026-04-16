@@ -799,3 +799,5 @@
           animation: mf-depth-check 0.001s linear 1 !important;
         }
       
+
+/* force-rebuild-0.180 — break SF package static-resource dedup (cloudnimbustemplatecss missed PR #635/#636 hash update) */
