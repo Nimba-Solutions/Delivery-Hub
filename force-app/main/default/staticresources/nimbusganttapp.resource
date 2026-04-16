@@ -2989,3 +2989,5 @@ var NimbusGanttApp = function(exports) {
   return exports;
 }({});
 typeof window !== "undefined" && (window.NimbusGanttApp = NimbusGanttApp.NimbusGanttApp || NimbusGanttApp);
+
+/* force-rebuild-0.179 — breaks SF package content-hash dedup that silently kept 0.178 serving the pre-#635 bundle */
