@@ -2156,58 +2156,52 @@ var NimbusGanttApp = (function(exports) {
     let note = "";
     let inputEl = null;
     function render(p) {
-      var _a;
-      try {
-        clear(root);
-        inputEl = null;
-        root.style.display = p.state.auditPanelOpen ? "" : "none";
-        if (!p.state.auditPanelOpen) return;
-        const dirty = p.state.pendingPatchCount > 0;
-        const inner = el$1("div", "flex flex-wrap items-center gap-2");
-        const lbl = el$1("span", CLS_AUDIT_LABEL);
-        lbl.textContent = "📤 Audit pass";
-        inner.appendChild(lbl);
-        const stat = el$1("span", dirty ? CLS_AUDIT_STATUS_DIRTY : CLS_AUDIT_STATUS_CLEAN);
-        stat.textContent = dirty ? "unsaved changes" : "clean";
-        inner.appendChild(stat);
-        const submitBtn = el$1("button", CLS_AUDIT_SUBMIT);
-        const input = el$1("input", CLS_AUDIT_INPUT);
-        input.type = "text";
-        input.placeholder = "commit note (optional)";
-        input.value = note;
-        input.setAttribute("data-testid", "audit-note-input");
-        input.addEventListener("input", (e) => {
-          note = e.target.value;
-          submitBtn.disabled = note.length === 0 && !dirty;
-        });
-        inputEl = input;
-        inner.appendChild(input);
-        submitBtn.type = "button";
-        submitBtn.textContent = "📤 Submit + commit";
-        submitBtn.setAttribute("data-testid", "audit-submit-btn");
+      clear(root);
+      inputEl = null;
+      root.style.display = p.state.auditPanelOpen ? "" : "none";
+      if (!p.state.auditPanelOpen) return;
+      const dirty = p.state.pendingPatchCount > 0;
+      const inner = el$1("div", "flex flex-wrap items-center gap-2");
+      const lbl = el$1("span", CLS_AUDIT_LABEL);
+      lbl.textContent = "📤 Audit pass";
+      inner.appendChild(lbl);
+      const stat = el$1("span", dirty ? CLS_AUDIT_STATUS_DIRTY : CLS_AUDIT_STATUS_CLEAN);
+      stat.textContent = dirty ? "unsaved changes" : "clean";
+      inner.appendChild(stat);
+      const submitBtn = el$1("button", CLS_AUDIT_SUBMIT);
+      const input = el$1("input", CLS_AUDIT_INPUT);
+      input.type = "text";
+      input.placeholder = "commit note (optional)";
+      input.value = note;
+      input.setAttribute("data-testid", "audit-note-input");
+      input.addEventListener("input", (e) => {
+        note = e.target.value;
         submitBtn.disabled = note.length === 0 && !dirty;
-        submitBtn.addEventListener("click", () => {
-          p.dispatch({ type: "RESET_PATCHES" });
-          note = "";
-          if (inputEl) inputEl.value = "";
-          submitBtn.disabled = true;
-        });
-        inner.appendChild(submitBtn);
-        const rst = el$1("button", CLS_AUDIT_RESET);
-        rst.type = "button";
-        rst.textContent = "↺ Reset";
-        rst.setAttribute("data-testid", "audit-reset-btn");
-        rst.addEventListener("click", () => {
-          note = "";
-          if (inputEl) inputEl.value = "";
-          p.dispatch({ type: "RESET_PATCHES" });
-        });
-        inner.appendChild(rst);
-        root.appendChild(inner);
-      } catch (err) {
-        console.error("[NGA FS-DIAG] AuditPanel.render threw", err instanceof Error ? err.message : err, err == null ? void 0 : err.stack, { stateShape: Object.keys(p.state || {}), auditPanelOpen: (_a = p.state) == null ? void 0 : _a.auditPanelOpen });
-        throw err;
-      }
+      });
+      inputEl = input;
+      inner.appendChild(input);
+      submitBtn.type = "button";
+      submitBtn.textContent = "📤 Submit + commit";
+      submitBtn.setAttribute("data-testid", "audit-submit-btn");
+      submitBtn.disabled = note.length === 0 && !dirty;
+      submitBtn.addEventListener("click", () => {
+        p.dispatch({ type: "RESET_PATCHES" });
+        note = "";
+        if (inputEl) inputEl.value = "";
+        submitBtn.disabled = true;
+      });
+      inner.appendChild(submitBtn);
+      const rst = el$1("button", CLS_AUDIT_RESET);
+      rst.type = "button";
+      rst.textContent = "↺ Reset";
+      rst.setAttribute("data-testid", "audit-reset-btn");
+      rst.addEventListener("click", () => {
+        note = "";
+        if (inputEl) inputEl.value = "";
+        p.dispatch({ type: "RESET_PATCHES" });
+      });
+      inner.appendChild(rst);
+      root.appendChild(inner);
     }
     render(initial);
     return {
@@ -2490,10 +2484,6 @@ var NimbusGanttApp = (function(exports) {
   });
   registerTemplate(minimalTemplate);
   diag("lib:loaded", { app: "unknown" });
-  try {
-    console.log("[NGA FS-DIAG] module-load:complete", { hasWindow: typeof window !== "undefined" });
-  } catch (_e) {
-  }
   const V3_THEME = {
     timelineBg: "#ffffff",
     timelineGridColor: "#e5e7eb",
@@ -2784,16 +2774,6 @@ var NimbusGanttApp = (function(exports) {
   }
   class IIFEApp {
     static mount(container, options) {
-      var _a;
-      try {
-        console.log("[NGA FS-DIAG] mount:entry", { mode: options.mode, engineOnly: !!options.engineOnly, tasksCount: (_a = options.tasks) == null ? void 0 : _a.length });
-        return IIFEApp._mountBody(container, options);
-      } catch (err) {
-        console.error("[NGA FS-DIAG] mount:throw", err instanceof Error ? err.message : err, err == null ? void 0 : err.stack);
-        throw err;
-      }
-    }
-    static _mountBody(container, options) {
       var _a, _b, _c, _d, _e;
       const mountStartedAt = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
       IIFEApp.unmount(container);
@@ -3268,29 +3248,18 @@ var NimbusGanttApp = (function(exports) {
             getBucketProgress: typeof hwp === "function" ? hwp : void 0
           }));
         }
-        console.log("[NGA FS-DIAG] chrome-initGantt: pre-setData");
-        try {
-          ganttInst.setData(gtasks, []);
-        } catch (err) {
-          console.error("[NGA FS-DIAG] chrome-initGantt: setData threw", err);
-          throw err;
-        }
+        ganttInst.setData(gtasks, []);
         try {
           ganttInst.expandAll();
         } catch (_e2) {
         }
-        console.log("[NGA FS-DIAG] chrome-initGantt: post-setData, scheduling scrollToDate");
-        const rafFn = typeof requestAnimationFrame === "function" ? requestAnimationFrame : (cb) => setTimeout(() => cb(Date.now()), 16);
-        rafFn(() => {
-          rafFn(() => {
-            var _a3;
-            try {
-              (_a3 = ganttInst.scrollToDate) == null ? void 0 : _a3.call(ganttInst, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
-            } catch (err) {
-              console.error("[NGA FS-DIAG] chrome-scrollToDate threw", err);
-            }
-          });
-        });
+        setTimeout(() => {
+          var _a3;
+          try {
+            (_a3 = ganttInst.scrollToDate) == null ? void 0 : _a3.call(ganttInst, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
+          } catch (_e2) {
+          }
+        }, 50);
         if (cleanupShading) cleanupShading();
         if (cleanupDrag) cleanupDrag();
         if (tplConfig.features.depthShading) cleanupShading = startDepthShading(ganttEl, depthMap);
