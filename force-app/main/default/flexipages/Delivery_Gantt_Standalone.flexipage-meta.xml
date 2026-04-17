@@ -4,6 +4,10 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
+                <componentInstanceProperties>
+                    <name>mode</name>
+                    <value>fullscreen</value>
+                </componentInstanceProperties>
                 <componentName>deliveryProFormaTimeline</componentName>
                 <identifier>c_deliveryProFormaTimeline</identifier>
             </componentInstance>
