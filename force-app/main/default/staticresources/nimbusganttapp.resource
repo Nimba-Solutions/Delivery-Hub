@@ -1120,14 +1120,7 @@ var NimbusGanttApp = (function(exports) {
     { id: "calendar", label: "Calendar", icon: "▥" },
     { id: "flow", label: "Flow", icon: "⟿" }
   ];
-  const CLOUD_NIMBUS_VIEWS = [
-    "gantt",
-    "list",
-    "treemap",
-    "bubbles",
-    "calendar",
-    "flow"
-  ];
+  const CLOUD_NIMBUS_VIEWS = ["gantt"];
   const CLOUD_NIMBUS_CATEGORIES = [
     { category: "in-flight", label: "In Flight", color: "#10b981" },
     { category: "next-up", label: "Next Up", color: "#3b82f6" },
@@ -2165,6 +2158,8 @@ var NimbusGanttApp = (function(exports) {
     function render(p) {
       clear(root);
       inputEl = null;
+      root.style.display = p.state.auditPanelOpen ? "" : "none";
+      if (!p.state.auditPanelOpen) return;
       const dirty = p.state.pendingPatchCount > 0;
       const inner = el$1("div", "flex flex-wrap items-center gap-2");
       const lbl = el$1("span", CLS_AUDIT_LABEL);
@@ -2519,6 +2514,7 @@ var NimbusGanttApp = (function(exports) {
     { field: "title", header: "", width: 210, tree: true },
     { field: "hoursLabel", header: "", width: 85, align: "right" }
   ];
+  const INITIAL_VIEWPORT_OFFSET_MS = 14 * 24 * 60 * 60 * 1e3;
   function injectLegacyNgCss() {
     if (document.getElementById("nga-v5-css")) return;
     const s = document.createElement("style");
@@ -2962,7 +2958,7 @@ var NimbusGanttApp = (function(exports) {
         setTimeout(() => {
           var _a2;
           try {
-            (_a2 = inst.scrollToDate) == null ? void 0 : _a2.call(inst, /* @__PURE__ */ new Date());
+            (_a2 = inst.scrollToDate) == null ? void 0 : _a2.call(inst, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
           } catch (_e2) {
           }
         }, 50);
@@ -3317,6 +3313,13 @@ var NimbusGanttApp = (function(exports) {
           ganttInst.expandAll();
         } catch (_e2) {
         }
+        setTimeout(() => {
+          var _a3;
+          try {
+            (_a3 = ganttInst.scrollToDate) == null ? void 0 : _a3.call(ganttInst, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
+          } catch (_e2) {
+          }
+        }, 50);
         if (cleanupShading) cleanupShading();
         if (cleanupDrag) cleanupDrag();
         if (tplConfig.features.depthShading) cleanupShading = startDepthShading(ganttEl, depthMap);
