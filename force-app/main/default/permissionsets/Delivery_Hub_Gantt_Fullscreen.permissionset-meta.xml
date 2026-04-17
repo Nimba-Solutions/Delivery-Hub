@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Grants visibility of the Delivery Gantt Standalone tab (full-screen Pro Forma Timeline). Assigned on top of DeliveryHubApp / DeliveryHubAdmin_App for users who should see the full-chrome Gantt via the Delivery_Gantt_Standalone Lightning app page.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Delivery Hub — Gantt Fullscreen</label>
+    <tabSettings>
+        <tab>Delivery_Gantt_Standalone</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+</PermissionSet>
