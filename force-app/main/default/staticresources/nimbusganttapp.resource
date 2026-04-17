@@ -1,4 +1,4 @@
-var NimbusGanttApp = function(exports) {
+var NimbusGanttApp = (function(exports) {
   "use strict";
   const GROUP_BAR = {
     "top-priority": "#f87171",
@@ -824,7 +824,10 @@ var NimbusGanttApp = function(exports) {
       components: finalComponents,
       stylesheet,
       title,
-      version
+      version,
+      // mode defaults to 'fullscreen'; IIFEApp / React driver may overwrite
+      // this post-resolve to reflect the caller's MountOptions.mode.
+      mode: "fullscreen"
     };
   }
   const INITIAL_STATE = {
@@ -967,6 +970,43 @@ var NimbusGanttApp = function(exports) {
   }
   function themeToScopedCss(templateName, theme) {
     return '.nga-root[data-template="' + templateName + '"]{' + themeToCssVars(theme) + "}";
+  }
+  function detectEnabled() {
+    if (typeof window === "undefined") return false;
+    try {
+      if (window.NGA_DIAG === true) return true;
+      if (typeof localStorage !== "undefined" && localStorage.getItem("NGA_DIAG") === "1") return true;
+      const q = window.location && window.location.search || "";
+      if (/[?&]nga_diag=1(?:&|$)/.test(q)) return true;
+    } catch {
+    }
+    return false;
+  }
+  const enabled = detectEnabled();
+  if (enabled && typeof window !== "undefined") {
+    const w = window;
+    if (!Array.isArray(w.__nga_diag)) w.__nga_diag = [];
+  }
+  function now() {
+    if (typeof performance !== "undefined" && typeof performance.now === "function") {
+      return performance.now();
+    }
+    return Date.now();
+  }
+  function diag(kind, data) {
+    if (!enabled) return;
+    const ev = { t: now(), kind, ...data || {} };
+    try {
+      const arr = window.__nga_diag;
+      if (Array.isArray(arr)) arr.push(ev);
+    } catch {
+    }
+    try {
+      if (window.NGA_DIAG_VERBOSE === true) {
+        console.log("[NGA]", kind, data || {});
+      }
+    } catch {
+    }
   }
   const cloudnimbusTheme = {
     // Brand
@@ -1345,12 +1385,21 @@ var NimbusGanttApp = function(exports) {
         render(currentProps);
       });
       root.appendChild(unpinBtn);
+      const hostExit = config.mode === "fullscreen" && typeof config.onExitFullscreen === "function";
       const fsBtn = el$1(
         "button",
-        CLS_PILL_BTN_BASE + " " + (state.fullscreen ? CLS_RIGHT_FS_ON : CLS_RIGHT_FS_OFF)
+        CLS_PILL_BTN_BASE + " " + (state.fullscreen || hostExit ? CLS_RIGHT_FS_ON : CLS_RIGHT_FS_OFF)
       );
-      fsBtn.textContent = state.fullscreen ? "Exit Fullscreen" : "Fullscreen";
-      fsBtn.addEventListener("click", () => dispatch({ type: "TOGGLE_FULLSCREEN" }));
+      if (hostExit) {
+        fsBtn.textContent = "← Exit Full Screen";
+        fsBtn.setAttribute("data-nga-fullscreen-exit", "1");
+        fsBtn.addEventListener("click", () => {
+          config.onExitFullscreen();
+        });
+      } else {
+        fsBtn.textContent = state.fullscreen ? "Exit Fullscreen" : "Fullscreen";
+        fsBtn.addEventListener("click", () => dispatch({ type: "TOGGLE_FULLSCREEN" }));
+      }
       root.appendChild(fsBtn);
       const adminBtn = el$1(
         "button",
@@ -2056,6 +2105,50 @@ var NimbusGanttApp = function(exports) {
       }
     };
   }
+  function ContentAreaVanilla$1(initial) {
+    const root = el$1("div", CLS_CONTENT_OUTER);
+    root.setAttribute("data-slot", "ContentArea");
+    const host = el$1("div", CLS_CONTENT);
+    host.setAttribute("data-nga-gantt-host", "1");
+    let sidebarInst = null;
+    let detailInst = null;
+    function render(p) {
+      clear(root);
+      if (p.state.sidebarOpen && p.config.features.sidebar) {
+        if (!sidebarInst) sidebarInst = SidebarVanilla(p);
+        else sidebarInst.update(p);
+        const wrap = el$1("div", CLS_SIDEBAR_WRAP);
+        wrap.style.width = "280px";
+        wrap.appendChild(sidebarInst.el);
+        root.appendChild(wrap);
+        const resizer = el$1("div", CLS_RESIZER);
+        root.appendChild(resizer);
+      } else if (sidebarInst) {
+        sidebarInst.destroy();
+        sidebarInst = null;
+      }
+      root.appendChild(host);
+      if (p.state.detailOpen && p.config.features.detailPanel) {
+        if (!detailInst) detailInst = DetailPanelVanilla(p);
+        else detailInst.update(p);
+        root.appendChild(detailInst.el);
+      } else if (detailInst) {
+        detailInst.destroy();
+        detailInst = null;
+      }
+    }
+    render(initial);
+    return {
+      el: root,
+      update: render,
+      destroy() {
+        if (sidebarInst) sidebarInst.destroy();
+        if (detailInst) detailInst.destroy();
+        clear(root);
+        if (root.parentNode) root.parentNode.removeChild(root);
+      }
+    };
+  }
   function AuditPanelVanilla(initial) {
     const root = el$1("div", CLS_AUDIT);
     root.setAttribute("data-slot", "AuditPanel");
@@ -2118,70 +2211,16 @@ var NimbusGanttApp = function(exports) {
       }
     };
   }
-  function ContentAreaVanilla$1(initial) {
-    const root = el$1("div", CLS_CONTENT_OUTER);
-    root.setAttribute("data-slot", "ContentArea");
-    const host = el$1("div", CLS_CONTENT);
-    host.setAttribute("data-nga-gantt-host", "1");
-    let sidebarInst = null;
-    let detailInst = null;
-    let auditInst = null;
-    function render(p) {
-      clear(root);
-      if (p.state.sidebarOpen && p.config.features.sidebar) {
-        if (!sidebarInst) sidebarInst = SidebarVanilla(p);
-        else sidebarInst.update(p);
-        const wrap = el$1("div", CLS_SIDEBAR_WRAP);
-        wrap.style.width = "280px";
-        wrap.appendChild(sidebarInst.el);
-        root.appendChild(wrap);
-        const resizer = el$1("div", CLS_RESIZER);
-        root.appendChild(resizer);
-      } else if (sidebarInst) {
-        sidebarInst.destroy();
-        sidebarInst = null;
-      }
-      root.appendChild(host);
-      if (p.state.detailOpen && p.config.features.detailPanel) {
-        if (!detailInst) detailInst = DetailPanelVanilla(p);
-        else detailInst.update(p);
-        root.appendChild(detailInst.el);
-      } else if (detailInst) {
-        detailInst.destroy();
-        detailInst = null;
-      }
-      if (p.config.features.auditPanel) {
-        if (!auditInst) auditInst = AuditPanelVanilla(p);
-        else auditInst.update(p);
-        root.appendChild(auditInst.el);
-      } else if (auditInst) {
-        auditInst.destroy();
-        auditInst = null;
-      }
-    }
-    render(initial);
-    return {
-      el: root,
-      update: render,
-      destroy() {
-        if (sidebarInst) sidebarInst.destroy();
-        if (detailInst) detailInst.destroy();
-        if (auditInst) auditInst.destroy();
-        clear(root);
-        if (root.parentNode) root.parentNode.removeChild(root);
-      }
-    };
-  }
   const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const DAY_MS = 24 * 3600 * 1e3;
   const WEEK_MS = 7 * DAY_MS;
   const NUM_WEEKS = 16;
   const TRACK_PX = 32;
   function computeWeeks(tasks) {
-    const now = /* @__PURE__ */ new Date();
-    const dow = now.getDay();
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
+    const now2 = /* @__PURE__ */ new Date();
+    const dow = now2.getDay();
+    const monday = new Date(now2);
+    monday.setDate(now2.getDate() - (dow === 0 ? 6 : dow - 1));
     monday.setHours(0, 0, 0, 0);
     const weeks = [];
     for (let i = 0; i < NUM_WEEKS; i++) {
@@ -2262,7 +2301,14 @@ var NimbusGanttApp = function(exports) {
         titleBar: true,
         statsPanel: true,
         filterBar: true,
-        zoomBar: true,
+        // zoomBar default OFF — TitleBar already renders inline zoom pills
+        // (Day/Week/Month/Quarter), matching v9's gold-standard layout. The
+        // standalone ZoomBar slot exists for minimal-template consumers that
+        // skip TitleBar; cloudnimbus consumers would render it twice. Observed
+        // 2026-04-16 on /v12 (8 zoom buttons instead of 4). Same class of
+        // dup as the AuditPanel fix at c9c765d.
+        // KEEP IN SYNC with index.ts — the React variant.
+        zoomBar: false,
         sidebar: true,
         detailPanel: true,
         auditPanel: true,
@@ -2435,6 +2481,7 @@ var NimbusGanttApp = function(exports) {
     }
   });
   registerTemplate(minimalTemplate);
+  diag("lib:loaded", { app: "unknown" });
   const V3_THEME = {
     timelineBg: "#ffffff",
     timelineGridColor: "#e5e7eb",
@@ -2470,6 +2517,18 @@ var NimbusGanttApp = function(exports) {
     const s = document.createElement("style");
     s.id = "nga-v5-css";
     s.textContent = [
+      /* Critical template-flex rules — must apply synchronously at mount. */
+      ".nga-root{display:flex;flex-direction:column;height:100%;width:100%;overflow:hidden}",
+      /* Fullscreen mode safety floor — if the consumer\'s parent chain doesn\'t
+       * resolve to a real viewport height (e.g. Lightning app page with weird
+       * layout, or a plain div that lost its position:fixed), fall back to
+       * 100vh so the canvas always has room. Embedded mode is explicitly NOT
+       * floored — embedded consumers opt into small container sizes. */
+      '.nga-root[data-mode="fullscreen"]{min-height:100vh}',
+      ".nga-titlebar,.nga-filterbar,.nga-zoombar,.nga-stats,.nga-hrswkstrip,.nga-audit{flex-shrink:0}",
+      ".nga-content-outer{flex:1 1 auto;display:flex;overflow:hidden;min-width:0;min-height:0}",
+      ".nga-content{flex:1 1 auto;position:relative;min-width:0;min-height:0}",
+      /* Library-class (.ng-*) overrides — v5 styling carried forward. */
       ".ng-grid{font-family:sans-serif!important;font-size:12px!important;color:#1f2937!important;letter-spacing:-.01em}",
       ".ng-grid table{border-collapse:collapse!important;border-spacing:0!important}",
       ".ng-grid-header{background:#f3f4f6!important;visibility:hidden!important}",
@@ -2669,15 +2728,77 @@ var NimbusGanttApp = function(exports) {
     const idx = registry.findIndex((e) => e.container === c);
     if (idx !== -1) registry.splice(idx, 1);
   }
+  const EMBEDDED_FEATURE_OVERRIDES = {
+    titleBar: false,
+    statsPanel: false,
+    filterBar: false,
+    zoomBar: false,
+    sidebar: false,
+    detailPanel: false,
+    auditPanel: false,
+    hrsWkStrip: false
+  };
+  function renderEmbeddedFullscreenButton(container, onClick) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.setAttribute("data-nga-fullscreen-enter", "1");
+    btn.textContent = "↗ Full Screen";
+    btn.style.cssText = [
+      "position:absolute",
+      "top:8px",
+      "right:8px",
+      "z-index:50",
+      "padding:6px 10px",
+      "font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif",
+      "font-size:11px",
+      "font-weight:600",
+      "color:#1f2937",
+      "background:#ffffff",
+      "border:1px solid #e5e7eb",
+      "border-radius:6px",
+      "box-shadow:0 1px 2px rgba(0,0,0,0.04)",
+      "cursor:pointer"
+    ].join(";");
+    btn.addEventListener("click", onClick);
+    if (!container.style.position) container.style.position = "relative";
+    container.appendChild(btn);
+    return () => {
+      try {
+        btn.remove();
+      } catch (_e) {
+      }
+    };
+  }
   class IIFEApp {
     static mount(container, options) {
       var _a, _b, _c, _d, _e;
+      const mountStartedAt = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
       IIFEApp.unmount(container);
       const templateName = options.template || "cloudnimbus";
+      const mode = options.mode || "fullscreen";
+      try {
+        const r = container.getBoundingClientRect();
+        diag("mount:start", {
+          containerRect: { x: r.x, y: r.y, w: r.width, h: r.height },
+          mode,
+          engineVersion: options.engine && options.engine.version || "unknown",
+          hasOnExit: typeof options.onExitFullscreen === "function",
+          hasOnEnter: typeof options.onEnterFullscreen === "function",
+          engineOnly: !!options.engineOnly,
+          template: templateName
+        });
+      } catch (_e2) {
+      }
       const overrides = options.overrides ? { ...options.overrides } : {};
       if (((_a = options.config) == null ? void 0 : _a.title) !== void 0) overrides.title = options.config.title;
       if (((_b = options.config) == null ? void 0 : _b.version) !== void 0) overrides.version = options.config.version;
       if ((_c = options.config) == null ? void 0 : _c.buckets) overrides.buckets = options.config.buckets;
+      if (mode === "embedded") {
+        overrides.features = {
+          ...EMBEDDED_FEATURE_OVERRIDES,
+          ...overrides.features || {}
+        };
+      }
       let tplConfig;
       try {
         tplConfig = resolveTemplate(templateName, overrides);
@@ -2685,6 +2806,10 @@ var NimbusGanttApp = function(exports) {
         console.error("[nimbus-gantt] template resolution failed:", err);
         tplConfig = resolveTemplate("cloudnimbus", overrides);
       }
+      tplConfig.mode = mode;
+      if (options.onEnterFullscreen) tplConfig.onEnterFullscreen = options.onEnterFullscreen;
+      if (options.onExitFullscreen) tplConfig.onExitFullscreen = options.onExitFullscreen;
+      if (options.cssUrl) tplConfig.stylesheet = { ...tplConfig.stylesheet, url: options.cssUrl };
       if (options.engine) tplConfig.engine = options.engine;
       if (options.engineOnly) {
         let _syncToCanvas = function() {
@@ -2699,7 +2824,9 @@ var NimbusGanttApp = function(exports) {
             }
           }
         };
-        container.style.cssText = "height:100%;width:100%;position:relative";
+        if (!container.style.position) container.style.position = "relative";
+        if (!container.style.height) container.style.height = "100%";
+        if (!container.style.width) container.style.width = "100%";
         const ganttEl = document.createElement("div");
         ganttEl.style.cssText = "height:100%;width:100%;position:absolute;inset:0";
         container.innerHTML = "";
@@ -2882,7 +3009,21 @@ var NimbusGanttApp = function(exports) {
       });
       container.className = "nga-root";
       container.setAttribute("data-template", tplConfig.templateName);
-      container.style.cssText = "height:100%;display:flex;flex-direction:column;background:" + tplConfig.theme.bg + ";overflow:hidden;font-family:" + tplConfig.theme.fontFamily;
+      container.setAttribute("data-mode", mode);
+      container.style.display = "flex";
+      container.style.flexDirection = "column";
+      container.style.overflow = "hidden";
+      container.style.background = tplConfig.theme.bg;
+      container.style.fontFamily = tplConfig.theme.fontFamily;
+      diag("mount:styles-applied", {
+        propsWritten: ["display", "flex-direction", "overflow", "background", "font-family"],
+        preservedConsumer: {
+          height: container.style.height || "(inherits)",
+          width: container.style.width || "(inherits)",
+          position: container.style.position || "(inherits)"
+        }
+      });
+      diag("mount:data-mode", { mode });
       const _patchRefreshTimer = { t: null };
       const rawOnPatch = options.onPatch || (() => {
       });
@@ -2949,10 +3090,10 @@ var NimbusGanttApp = function(exports) {
       function renderSlots() {
         const props = currentProps();
         SLOT_ORDER.forEach((slotName) => {
-          const enabled = shouldRenderSlot(slotName, tplConfig.features);
+          const enabled2 = shouldRenderSlot(slotName, tplConfig.features);
           const existing = slotInstances.get(slotName);
           const slotDef = tplConfig.components[slotName];
-          if (!enabled) {
+          if (!enabled2) {
             if (existing) {
               existing.destroy();
               slotInstances.delete(slotName);
@@ -3163,10 +3304,77 @@ var NimbusGanttApp = function(exports) {
         renderSlots();
       }
       renderSlots();
+      try {
+        const renderedSlots = [];
+        slotInstances.forEach((_inst, name) => renderedSlots.push(name));
+        diag("mount:slots-rendered", {
+          slotOrder: SLOT_ORDER,
+          rendered: renderedSlots,
+          features: tplConfig.features
+        });
+      } catch (_e2) {
+      }
       if (ganttHost) initGantt(ganttHost);
+      try {
+        const raf = typeof requestAnimationFrame === "function" ? requestAnimationFrame : (fn) => setTimeout(() => fn(Date.now()), 16);
+        raf(() => {
+          try {
+            const measure = (sel) => {
+              const elSel = container.querySelector(sel);
+              return elSel ? Math.round(elSel.getBoundingClientRect().height) : 0;
+            };
+            diag("mount:chrome-heights", {
+              root: Math.round(container.getBoundingClientRect().height),
+              titlebar: measure(".nga-titlebar"),
+              stats: measure(".nga-stats"),
+              filterbar: measure(".nga-filterbar"),
+              zoombar: measure(".nga-zoombar"),
+              audit: measure(".nga-audit"),
+              hrswkstrip: measure(".nga-hrswkstrip"),
+              contentOuter: measure(".nga-content-outer"),
+              content: measure(".nga-content")
+            });
+            const canvasEl = container.querySelector("canvas");
+            if (canvasEl) {
+              diag("mount:init-gantt", {
+                canvasW: canvasEl.width,
+                canvasH: canvasEl.height,
+                cssW: Math.round(canvasEl.getBoundingClientRect().width),
+                cssH: Math.round(canvasEl.getBoundingClientRect().height)
+                // pxPerWeek / visibleWeeks are engine-internal; omitted until
+                // the engine exposes a getState() surface.
+              });
+              if (canvasEl.height < 64) {
+                diag("warn:zero-height", { surface: "canvas", canvasH: canvasEl.height });
+              }
+            } else {
+              diag("warn:no-canvas", {});
+            }
+            const durationMs = (typeof performance !== "undefined" && performance.now ? performance.now() : Date.now()) - mountStartedAt;
+            diag("mount:complete", {
+              taskCount: allTasks.length,
+              durationMs: Math.round(durationMs)
+            });
+          } catch (err) {
+            diag("err:post-mount", { message: (err == null ? void 0 : err.message) || String(err) });
+          }
+        });
+      } catch (_e2) {
+      }
+      let cleanupEmbeddedBtn = null;
+      if (mode === "embedded" && options.onEnterFullscreen) {
+        cleanupEmbeddedBtn = renderEmbeddedFullscreenButton(
+          container,
+          () => {
+            var _a2;
+            return (_a2 = options.onEnterFullscreen) == null ? void 0 : _a2.call(options);
+          }
+        );
+      }
       const cleanup = () => {
         if (cleanupShading) cleanupShading();
         if (cleanupDrag) cleanupDrag();
+        if (cleanupEmbeddedBtn) cleanupEmbeddedBtn();
         if (ganttInst) {
           try {
             ganttInst.destroy();
@@ -3220,5 +3428,5 @@ var NimbusGanttApp = function(exports) {
   exports.NimbusGanttApp = NimbusGanttApp2;
   Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
   return exports;
-}({});
+})({});
 typeof window !== "undefined" && (window.NimbusGanttApp = NimbusGanttApp.NimbusGanttApp || NimbusGanttApp);
