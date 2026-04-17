@@ -8,6 +8,17 @@
         <target>lightning__HomePage</target>
         <target>lightning__RecordPage</target>
     </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__AppPage">
+            <property
+                name="mode"
+                type="String"
+                label="Render Mode"
+                description="embedded (default — minimal chrome, in-app) or fullscreen (full toolbar, standalone app page)"
+                default="embedded"
+                datasource="embedded,fullscreen"/>
+        </targetConfig>
+    </targetConfigs>
     <masterLabel>Delivery Pro Forma Timeline</masterLabel>
     <description>Priority-grouped delivery timeline (NOW / NEXT / PLANNED / PROPOSED / HOLD) powered by nimbus-gantt's PriorityGroupingPlugin. Ports the cloudnimbusllc.com /mf/delivery-timeline-v5 page to a DH LWC that consumes real WorkItem__c records.</description>
 </LightningComponentBundle>
