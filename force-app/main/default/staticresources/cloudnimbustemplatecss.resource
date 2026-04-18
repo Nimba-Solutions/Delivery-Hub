@@ -569,41 +569,57 @@
 }
 
 
-/* === Gantt library (.ng-*) overrides — copied from DeliveryTimelineV5.tsx === */
+/* === Gantt library (.ng-*) overrides — ported from DeliveryTimelineV5.tsx ===
+ *
+ * 0.182: stripped !important from rules where the engine doesn't override via
+ * inline `style=` attribute (font/color/padding for non-cell selectors,
+ * visibility, display, etc). Retained !important ONLY where the engine's
+ * inline write or a later JS-set !important would otherwise win — each
+ * remaining !important is annotated below with its rationale.
+ *
+ * If a rule looks like it should drop its !important: check whether any code
+ * in packages/core (the engine) writes that property as inline style on the
+ * matching element. depthShading.ts also writes background with `setProperty
+ * ..., 'important'`, so any rule competing with it MUST keep !important.
+ *
+ * The injectLegacyNgCss synchronous backstop in IIFEApp.ts retains its full
+ * !important set — that path runs before this stylesheet loads on Salesforce
+ * (Strategy C async fetch). No-FOUC guarantee preserved. */
 
-        /* Grid panel font matching v3 canvas renderer */
         .ng-grid {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-          font-size: 12px !important;
-          color: #1f2937 !important;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-size: 12px;
+          color: #1f2937;
           letter-spacing: -0.01em;
         }
-        /* Ensure grid table has no border-spacing that could affect row alignment */
         .ng-grid table {
-          border-collapse: collapse !important;
-          border-spacing: 0 !important;
+          border-collapse: collapse;
+          border-spacing: 0;
         }
         .ng-grid-header {
-          background: #f3f4f6 !important;
-          visibility: hidden !important;
+          background: #f3f4f6;
+          visibility: hidden;
         }
         .ng-grid-th {
-          font-size: 12px !important;
-          font-weight: 700 !important;
-          color: #1f2937 !important;
-          padding: 0 6px !important;
+          font-size: 12px;
+          font-weight: 700;
+          color: #1f2937;
+          padding: 0 6px;
         }
         /* Parent/group rows: bold like v3 (but not priority-group header rows) */
         .ng-grid-row:not(.ng-group-row) .ng-tree-cell .ng-expand-icon + .ng-grid-cell-text {
-          font-weight: 700 !important;
-          color: #1f2937 !important;
+          font-weight: 700;
+          color: #1f2937;
         }
         /* Child rows (indented): lighter/muted like v3 canvas */
         .ng-grid-row .ng-tree-cell .ng-expand-spacer + .ng-grid-cell-text {
-          font-weight: 400 !important;
-          color: #6b7280 !important;
-          font-size: 11px !important;
+          font-weight: 400;
+          color: #6b7280;
+          font-size: 11px;
         }
+        /* !important on padding/line-height: engine writes per-cell padding via
+         * inline style for the depth-indent indicator. Class !important is the
+         * only way to land our compact spacing. */
         .ng-grid-cell {
           padding-top: 0 !important;
           padding-right: 6px !important;
@@ -611,32 +627,43 @@
           padding-left: 6px; /* no !important — JS depth-indent overrides this */
           line-height: 32px !important;
         }
-        /* Zero out the spacer so ≡ aligns with ▶ at the same depth */
+        /* !important defensive: the engine ships an injected baseline rule for
+         * `.ng-expand-spacer { width }` (DomTreeGrid). We win on insertion
+         * order without !important, but kept defensive in case a future
+         * engine rev re-orders style injection. Trim if confirmed safe. */
         .ng-expand-spacer {
           width: 0 !important;
           min-width: 0 !important;
         }
-        /* Expand arrow styling */
         .ng-expand-icon {
-          font-size: 9px !important;
-          opacity: 0.5 !important;
-          color: #6b7280 !important;
+          font-size: 9px;
+          opacity: 0.5;
+          color: #6b7280;
+          /* !important defensive (same rationale as .ng-expand-spacer): engine
+           * has its own baseline rule for icon width. We win on insertion
+           * order; !important kept as belt-and-suspenders. */
           width: 14px !important;
           min-width: 14px !important;
         }
         .ng-expand-icon:hover {
-          opacity: 1 !important;
+          opacity: 1;
         }
-        /* Row borders — use box-shadow instead of border to avoid layout shift */
+        /* !important defensive on border/box-sizing: engine doesn't currently
+         * inline-write border on rows, but its injected baseline `<style>`
+         * sets row borders. We win on insertion order without !important;
+         * kept defensive against future engine changes. */
         .ng-grid-row {
           border: none !important;
           box-shadow: inset 0 -1px 0 #f3f4f6;
           box-sizing: border-box !important;
         }
-        /* Leaf rows are draggable from anywhere */
         .ng-grid-row:not(.ng-group-row) {
           cursor: grab;
         }
+        /* !important on hover bg/outline: depthShading.ts writes row background
+         * with setProperty(..., 'important'). To win on hover we MUST !important
+         * — otherwise the stripe colour persists and the blue hover wash is
+         * suppressed entirely. */
         .ng-grid-row:not(.ng-group-row):hover {
           background: rgba(59,130,246,0.04) !important;
           outline: 1px solid rgba(59,130,246,0.12) !important;
@@ -649,70 +676,76 @@
           border: none !important;
           box-sizing: border-box !important;
         }
-        /* Remove cell right borders for cleaner look */
+        /* !important on border-right: engine inline-writes per-cell borders
+         * for grid-line rendering. Drop and the engine's borders return. */
         .ng-grid-cell {
           border-right: none !important;
         }
         .ng-grid-th {
           border-right: none !important;
         }
-        /* Kill alternating row color — depth shading handles backgrounds.
-           Use unset (not !important) so inline depth-shading can override. */
+        /* `unset` (not !important) so depthShading.ts can apply depth-tinted bg. */
         .ng-row-alt:not(.ng-group-row) {
           background: unset;
         }
-        /* Keep the gantt canvas sticky so it stays in view on horizontal scroll.
-           The nimbus-gantt library sets this at init (core.js:1332) but something
-           can reset it; this !important ensures it's always honoured. */
+        /* !important on canvas position: the engine sets position at init
+         * (core/src/render/CanvasRenderer.ts) and certain code paths reset it.
+         * Sticky positioning is the only way the canvas stays visible during
+         * horizontal scroll, so we lock it. */
         .ng-scroll-content > canvas {
           position: sticky !important;
           left: 0 !important;
         }
         /* Belt-and-suspenders: hide any legacy stripe overlay div from cached
-           old code that created a position:absolute div bleeding past canvas. */
+         * old code that created a position:absolute div bleeding past canvas. */
         [data-depth-stripes] {
-          display: none !important;
+          display: none;
         }
-        /* Bucket header rows (NOW / NEXT / PLANNED / etc.)
-           Strong background from GROUP_BG, white text, no top-accent border. */
+        /* Bucket header rows (NOW / NEXT / PLANNED / etc.) — strong group bg
+         * from GROUP_BG (engine inline), white text, no top accent. */
         .ng-group-row {
           font-weight: 700;
           font-size: 11px;
           letter-spacing: 0.03em;
+          /* !important on box-*: engine inline-writes bg + border on group rows. */
           box-sizing: border-box !important;
           box-shadow: none !important;
           color: #fff !important;
         }
+        /* !important on text styling: engine writes inline color/weight per cell. */
         .ng-group-row .ng-grid-cell-text {
           font-weight: 700 !important;
           font-size: 12px !important;
-          color: #fff !important;
-          letter-spacing: 0.02em;
           color: inherit !important;
+          letter-spacing: 0.02em;
           text-transform: uppercase;
         }
         .ng-group-row .ng-expand-icon {
           color: inherit !important;
-          opacity: 0.5 !important;
+          opacity: 0.5;
         }
-        /* Hours/count column for group rows — full size, never truncate */
+        /* !important on group-row hours: engine inline-writes the field text. */
         .ng-group-row .ng-grid-cell[data-field="hoursLabel"] {
           font-weight: 600 !important;
           font-size: 11px !important;
           color: inherit !important;
-          opacity: 0.75;
+          opacity: 0.7; /* tightened from 0.75 to match v9 group-row hours muting */
           white-space: nowrap !important;
           overflow: visible !important;
           text-overflow: unset !important;
         }
-        /* Hours column for child rows — monospace, muted, lighter weight */
+        /* Hours column for child rows — monospace, muted, lighter weight.
+         * No !important: engine doesn't inline-write font for child cells. */
         .ng-grid-cell[data-field="hoursLabel"] {
           font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
           font-size: 10px;
           color: #94a3b8;
           font-weight: 400;
         }
-        /* Drag handle icon — always visible, like v3 sidebar */
+        /* Drag handle icon — always visible, like v3 sidebar.
+         * !important on margin-left: engine writes margin inline on tree-cell
+         * children for depth alignment. Without !important, our negative pull
+         * is overridden and the handle visually drifts right. */
         .ng-drag-handle {
           display: inline-flex;
           align-items: center;
@@ -737,19 +770,15 @@
           cursor: grabbing;
           opacity: 1;
         }
-        /* Selected row — subtle highlight that doesn't clash with group bg colors */
+        /* Selected row — subtle highlight that doesn't clash with group bg.
+         * !important: depthShading.ts writes row bg with !important; only an
+         * !important class rule wins on the selected state. */
         .ng-row-selected:not(.ng-group-row) {
           background: rgba(59, 130, 246, 0.06) !important;
           box-shadow: inset 3px 0 0 #3b82f6 !important;
         }
         .ng-row-selected.ng-group-row {
           box-shadow: inset 0 2px 0 currentColor, inset 3px 0 0 currentColor, inset 0 -1px 0 #f3f4f6 !important;
-        }
-        /* Canvas cursor: let core.js hit-test control cursor via inline style */
-        /* Group row hours column inherits group color too */
-        .ng-group-row .ng-grid-cell[data-field="hoursLabel"] {
-          color: inherit !important;
-          opacity: 0.7;
         }
 
         /*
@@ -785,19 +814,17 @@
           .ng-tree-cell[style*="padding-left: 68px"] { padding-left: 28px !important; }
 
         /* ── depth 3 (library sets 88px) — future-proofing ───────────── */
-        /* ── depth 3 (library sets 88px) — future-proofing ──────────── */
         .ng-grid-row:not(.ng-group-row)
           .ng-tree-cell[style*="padding-left: 88px"] { padding-left: 38px !important; }
-        /*
-         * DEPTH-INDENT FALLBACK via CSS animation trick.
-         * The JS chunk may be cached — this animation fires onAnimationStart which
-         * the shading useEffect intercepts to re-apply correct indentation.
-         * Animation name is deliberately unique so it only targets our container.
-         */
-        @keyframes mf-depth-check { from { outline-color: transparent; } to { outline-color: transparent; } }
-        .ng-gantt-container {
-          animation: mf-depth-check 0.001s linear 1 !important;
-        }
-      
 
-/* force-rebuild-0.180 — break SF package static-resource dedup (cloudnimbustemplatecss missed PR #635/#636 hash update) */
+        /*
+         * NOTE — the mf-depth-check @keyframes animation hack from v5 was
+         * deleted in 0.182 (commit history). v5 used a 0.001s no-op animation
+         * to fire `onAnimationStart` events that re-triggered a depth-shading
+         * useEffect when the JS chunk was cached. We don't have the cache-bust
+         * problem v5 had: depthShading.ts uses MutationObserver +
+         * requestAnimationFrame to re-apply on DOM changes (no animation event
+         * dependency). Per the "kill hacks on the way in" principle, ported
+         * this defensively was wrong — diagnosed + removed.
+         */
+      
