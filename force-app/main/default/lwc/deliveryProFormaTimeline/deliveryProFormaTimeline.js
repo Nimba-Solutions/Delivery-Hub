@@ -102,13 +102,22 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             console.warn('[DeliveryTimeline] nimbusganttapp script warning (may be Locker Service):', e && e.message);
         }
         this._scriptLoaded = true;
-        if (window.NimbusGanttApp) {
-            await this._loadAndMount();
-        } else {
+        if (!window.NimbusGanttApp) {
             // eslint-disable-next-line no-console
             console.error('[DeliveryTimeline] window.NimbusGanttApp not set after script load — bundle may have failed');
             this._showError('Timeline bundle failed to load', new Error('window.NimbusGanttApp not defined'));
+            return;
         }
+        // Defer mount via a macrotask so FlexiPage @api prop hydration
+        // (fullscreenUrl in particular) is guaranteed complete before the
+        // mount config snapshots them. connectedCallback's microtask awaits
+        // are not always enough on FlexiPage-hosted components — HQ probe
+        // at e8c20967 showed @api fullscreenUrl landing on the host element
+        // AFTER NimbusGanttApp.mount() had already snapshotted an undefined
+        // value, causing NG to fall through to native requestFullscreen.
+        setTimeout(() => {
+            if (!this._mounted) this._loadAndMount();
+        }, 0);
     }
 
     disconnectedCallback() {
@@ -256,6 +265,14 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         }
 
         try {
+            // eslint-disable-next-line no-console
+            console.log('[DH mount]', JSON.stringify({
+                mode: mountConfig.mode,
+                fullscreenUrl: mountConfig.fullscreenUrl,
+                hasOnEnter: !!mountConfig.onEnterFullscreen,
+                hasOnExit: !!mountConfig.onExitFullscreen,
+                taskCount: mountConfig.tasks ? mountConfig.tasks.length : 0,
+            }));
             window.NimbusGanttApp.mount(container, mountConfig);
             this._mounted = true;
         } catch (error) {
