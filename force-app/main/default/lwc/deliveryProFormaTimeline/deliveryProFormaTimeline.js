@@ -68,6 +68,12 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     _tasks = [];
 
     async connectedCallback() {
+        // Fullscreen FlexiPage route renders a Salesforce-injected SLDS page-header
+        // band (tab label + motif) above the FlexiPage region. That band can only
+        // be suppressed by a document-head CSS rule (LWC shadow DOM can't reach
+        // the parent chrome); inject it when mode === 'fullscreen' so the
+        // FlexiPage route visually matches the VF Full_Bleed route.
+        this._installFullscreenChromeHide();
         // Load core first so window.NimbusGantt is available when the app shell
         // bundle runs. Locker Service may reject loadScript even when the
         // script actually executed — catch and continue.
@@ -103,6 +109,26 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             } catch (e) { /* swallow */ }
             this._mounted = false;
         }
+        this._uninstallFullscreenChromeHide();
+    }
+
+    _installFullscreenChromeHide() {
+        if (this.mode !== 'fullscreen') return;
+        if (document.getElementById('dh-gantt-fs-chrome-hide')) return;
+        const style = document.createElement('style');
+        style.id = 'dh-gantt-fs-chrome-hide';
+        style.textContent = [
+            '.forceAppHomePage section.slds-page-header,',
+            '.appHomePage section.slds-page-header,',
+            '[data-aura-class="forceAppHomePage"] section.slds-page-header,',
+            '.forceHighlightsPanel { display: none !important; }'
+        ].join(' ');
+        document.head.appendChild(style);
+    }
+
+    _uninstallFullscreenChromeHide() {
+        const s = document.getElementById('dh-gantt-fs-chrome-hide');
+        if (s && s.parentNode) s.parentNode.removeChild(s);
     }
 
     async _loadAndMount() {
