@@ -782,6 +782,7 @@ var NimbusGanttApp = (function(exports) {
     let stylesheet = {};
     let title = "Nimbus Gantt";
     let version = "";
+    let apiDocsUrl;
     chain.forEach((tpl) => {
       const d = tpl.defaults || {};
       if (d.features) features = { ...features, ...d.features };
@@ -791,6 +792,7 @@ var NimbusGanttApp = (function(exports) {
       if (d.views) views = d.views;
       if (d.title !== void 0) title = d.title;
       if (d.version !== void 0) version = d.version;
+      if (d.apiDocsUrl !== void 0) apiDocsUrl = d.apiDocsUrl;
       if (tpl.stylesheet && (tpl.stylesheet.url || tpl.stylesheet.inline || tpl.stylesheet.importedByBundler)) {
         stylesheet = tpl.stylesheet;
       }
@@ -806,6 +808,7 @@ var NimbusGanttApp = (function(exports) {
       if (overrides.views) views = overrides.views;
       if (overrides.title !== void 0) title = overrides.title;
       if (overrides.version !== void 0) version = overrides.version;
+      if (overrides.apiDocsUrl !== void 0) apiDocsUrl = overrides.apiDocsUrl;
       if (overrides.components) {
         components = mergeComponents(components, overrides.components);
       }
@@ -825,6 +828,7 @@ var NimbusGanttApp = (function(exports) {
       stylesheet,
       title,
       version,
+      apiDocsUrl,
       // mode defaults to 'fullscreen'; IIFEApp / React driver may overwrite
       // this post-resolve to reflect the caller's MountOptions.mode.
       mode: "fullscreen"
@@ -1120,7 +1124,14 @@ var NimbusGanttApp = (function(exports) {
     { id: "calendar", label: "Calendar", icon: "▥" },
     { id: "flow", label: "Flow", icon: "⟿" }
   ];
-  const CLOUD_NIMBUS_VIEWS = ["gantt"];
+  const CLOUD_NIMBUS_VIEWS = [
+    "gantt",
+    "list",
+    "treemap",
+    "bubbles",
+    "calendar",
+    "flow"
+  ];
   const CLOUD_NIMBUS_CATEGORIES = [
     { category: "in-flight", label: "In Flight", color: "#10b981" },
     { category: "next-up", label: "Next Up", color: "#3b82f6" },
@@ -1425,6 +1436,17 @@ var NimbusGanttApp = (function(exports) {
         render(currentProps);
       });
       root.appendChild(advisorBtn);
+      if (config.apiDocsUrl) {
+        const apiDocs = el$1(
+          "a",
+          "text-[10px] text-slate-500 hover:text-fuchsia-600 underline decoration-dotted shrink-0"
+        );
+        apiDocs.href = config.apiDocsUrl;
+        apiDocs.title = "API docs — how to automate submits";
+        apiDocs.setAttribute("data-nga-api-docs", "1");
+        apiDocs.textContent = "API docs";
+        root.appendChild(apiDocs);
+      }
       const v3 = el$1("a", CLS_V3_LINK);
       v3.href = "#";
       v3.textContent = "v3 (Canvas)";
@@ -2568,159 +2590,28 @@ var NimbusGanttApp = (function(exports) {
     if (css) e.style.cssText = css;
     return e;
   }
-  function renderList(container, tasks, buckets) {
+  function renderComingSoon(container, viewLabel) {
     container.innerHTML = "";
-    const wrap = el("div", "height:100%;overflow:auto;font-family:sans-serif;font-size:12px");
-    const byGroup = {};
-    tasks.forEach((t) => {
-      if (t.parentId) return;
-      if (t.groupId) {
-        if (!byGroup[t.groupId]) byGroup[t.groupId] = [];
-        byGroup[t.groupId].push(t);
-      }
-    });
-    buckets.forEach((b) => {
-      const members = byGroup[b.id] || [];
-      if (!members.length) return;
-      const hdr = el("div", "background:" + b.bgTint + ";color:#fff;font-weight:700;font-size:11px;padding:7px 14px;text-transform:uppercase;position:sticky;top:0;z-index:1");
-      hdr.textContent = b.label + " — " + members.length + " items";
-      wrap.appendChild(hdr);
-      members.forEach((t) => {
-        const row = el("div", "display:flex;align-items:center;padding:5px 14px;gap:8px;border-bottom:1px solid #f3f4f6");
-        const dot = el("span", "width:7px;height:7px;border-radius:50%;background:" + (STAGE_COLORS[t.status] || "#94a3b8"));
-        row.appendChild(dot);
-        const title = el("span", "flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#1f2937");
-        title.textContent = t.title;
-        row.appendChild(title);
-        if (t.hoursLabel) {
-          const h = el("span", "font-size:10px;color:#94a3b8;font-family:monospace");
-          h.textContent = t.hoursLabel;
-          row.appendChild(h);
-        }
-        wrap.appendChild(row);
-      });
-    });
-    container.appendChild(wrap);
-  }
-  function renderTreemap(container, tasks, buckets) {
-    container.innerHTML = "";
-    const wrap = el("div", "height:100%;overflow:auto;padding:8px;font-family:sans-serif;background:#f8fafc");
-    const leaves = tasks.filter((t) => {
-      var _a;
-      return !t.isParent && (((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0) > 0;
-    });
-    const total = leaves.reduce((s, t) => {
-      var _a;
-      return s + (((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0);
-    }, 0);
-    if (!total) {
-      wrap.textContent = "No hours to show";
-      container.appendChild(wrap);
-      return;
-    }
-    const grouped = {};
-    leaves.forEach((t) => {
-      const g = t.groupId || "other";
-      (grouped[g] = grouped[g] || []).push(t);
-    });
-    buckets.forEach((b) => {
-      const members = grouped[b.id] || [];
-      if (!members.length) return;
-      const sec = el("div", "margin-bottom:8px");
-      const hdr = el("div", "font-size:10px;font-weight:700;color:#fff;padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:3px;background:" + b.bgTint);
-      hdr.textContent = b.label;
-      sec.appendChild(hdr);
-      const row = el("div", "display:flex;flex-wrap:wrap;gap:3px");
-      members.forEach((t) => {
-        var _a;
-        const tile = el("div", "background:" + (t.color || "#94a3b8") + "44;border:1px solid " + (t.color || "#94a3b8") + ";padding:4px 6px;border-radius:4px;font-size:10px");
-        tile.textContent = t.title.slice(0, 20) + " " + (((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0) + "h";
-        row.appendChild(tile);
-      });
-      sec.appendChild(row);
-      wrap.appendChild(sec);
-    });
-    container.appendChild(wrap);
-  }
-  function renderBubbles(container, tasks) {
-    container.innerHTML = "";
-    const leaves = tasks.filter((t) => {
-      var _a;
-      return !t.isParent && (((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0) > 0;
-    });
-    const wrap = el("div", "height:100%;overflow:auto;padding:10px;font-family:sans-serif;background:#f8fafc");
-    if (!leaves.length) {
-      wrap.textContent = "No tasks";
-      container.appendChild(wrap);
-      return;
-    }
-    const maxH = Math.max(1, ...leaves.map((t) => {
-      var _a;
-      return ((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0;
-    }));
-    leaves.forEach((t) => {
-      var _a;
-      const r = Math.max(20, Math.sqrt((((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0) / maxH) * 60);
-      const bub = el("div", "display:inline-block;width:" + r * 2 + "px;height:" + r * 2 + "px;border-radius:50%;background:" + (t.color || "#94a3b8") + "55;border:1.5px solid " + (t.color || "#94a3b8") + ";margin:4px;text-align:center;line-height:" + r * 2 + "px;font-size:10px;color:#1f2937");
-      bub.textContent = t.title.slice(0, 8);
-      wrap.appendChild(bub);
-    });
-    container.appendChild(wrap);
-  }
-  function renderCalendar(container, tasks) {
-    container.innerHTML = "";
-    const wrap = el("div", "height:100%;overflow:auto;padding:10px;font-family:sans-serif");
-    const today = /* @__PURE__ */ new Date();
-    const monday = new Date(today);
-    const dow = today.getDay();
-    monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
-    monday.setHours(0, 0, 0, 0);
-    const WEEK_MS2 = 7 * 864e5;
-    for (let i = 0; i < 8; i++) {
-      const wkStart = new Date(monday.getTime() + i * WEEK_MS2);
-      const wkEnd = new Date(wkStart.getTime() + WEEK_MS2);
-      const wkTasks = tasks.filter((t) => {
-        if (!t.startDate || !t.endDate) return false;
-        const tS = (/* @__PURE__ */ new Date(t.startDate + "T00:00:00")).getTime();
-        const tE = (/* @__PURE__ */ new Date(t.endDate + "T00:00:00")).getTime();
-        return tE > wkStart.getTime() && tS < wkEnd.getTime();
-      });
-      const row = el("div", "display:flex;gap:4px;padding:6px;border-bottom:1px solid #e5e7eb");
-      const lbl = el("div", "width:80px;font-size:10px;color:#64748b");
-      lbl.textContent = wkStart.toISOString().slice(0, 10);
-      row.appendChild(lbl);
-      const cnt = el("div", "flex:1;font-size:10px;color:#1f2937");
-      cnt.textContent = wkTasks.length + " task" + (wkTasks.length === 1 ? "" : "s");
-      row.appendChild(cnt);
-      wrap.appendChild(row);
-    }
-    container.appendChild(wrap);
-  }
-  function renderFlow(container, tasks) {
-    container.innerHTML = "";
-    const wrap = el("div", "height:100%;overflow-x:auto;display:flex;gap:8px;padding:8px;background:#f8fafc;font-family:sans-serif");
-    const cols = [
-      { label: "Backlog", color: "#f59e0b", match: (c) => c === "#f59e0b" },
-      { label: "Next Up", color: "#3b82f6", match: (c) => c === "#3b82f6" },
-      { label: "In Flight", color: "#10b981", match: (c) => c === "#10b981" },
-      { label: "Blocked", color: "#ef4444", match: (c) => c === "#ef4444" },
-      { label: "Done", color: "#cbd5e1", match: (c) => c === "#cbd5e1" }
-    ];
-    const leaves = tasks.filter((t) => !t.isParent);
-    cols.forEach((c) => {
-      const colEl = el("div", "width:200px;flex-shrink:0");
-      const hdr = el("div", "background:" + c.color + "22;color:" + c.color + ";padding:5px 8px;font-size:11px;font-weight:700;border-radius:4px 4px 0 0");
-      hdr.textContent = c.label;
-      colEl.appendChild(hdr);
-      const inner = el("div", "border:1px solid " + c.color + "55;border-radius:0 0 4px 4px;padding:4px");
-      leaves.filter((t) => c.match(t.color || "")).forEach((t) => {
-        const card = el("div", "background:#fff;border-left:3px solid " + (t.color || "#94a3b8") + ";padding:5px 8px;margin-bottom:3px;font-size:10px;border-radius:4px");
-        card.textContent = t.title;
-        inner.appendChild(card);
-      });
-      colEl.appendChild(inner);
-      wrap.appendChild(colEl);
-    });
+    const wrap = el("div", [
+      "height:100%",
+      "width:100%",
+      "display:flex",
+      "flex-direction:column",
+      "align-items:center",
+      "justify-content:center",
+      "gap:12px",
+      "padding:32px",
+      "font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif",
+      "color:#475569",
+      "background:#f8fafc",
+      "text-align:center"
+    ].join(";"));
+    const title = el("div", "font-size:18px;font-weight:700;color:#1f2937");
+    title.textContent = viewLabel + " view — coming in 0.183";
+    wrap.appendChild(title);
+    const msg = el("div", "font-size:13px;color:#64748b;max-width:480px;line-height:1.5");
+    msg.textContent = "Only the Gantt view is fully ported in this release. Switch back to Gantt to see the timeline. The other views are planned for the next cut alongside the AuditListView port.";
+    wrap.appendChild(msg);
     container.appendChild(wrap);
   }
   const registry = [];
@@ -3306,15 +3197,18 @@ var NimbusGanttApp = (function(exports) {
           ganttInst = null;
         }
         ganttHost.innerHTML = "";
-        const filtered = applyFilter(allTasks, state.filter, state.search);
-        const maybeHide = state.hideCompleted ? filtered.filter((t) => !DONE_STAGES[t.stage || ""]) : filtered;
-        const mapped = buildTasks(maybeHide);
-        if (state.viewMode === "gantt") initGantt(ganttHost);
-        else if (state.viewMode === "flow") renderFlow(ganttHost, mapped);
-        else if (state.viewMode === "calendar") renderCalendar(ganttHost, mapped);
-        else if (state.viewMode === "treemap") renderTreemap(ganttHost, mapped, tplConfig.buckets);
-        else if (state.viewMode === "bubbles") renderBubbles(ganttHost, mapped);
-        else renderList(ganttHost, mapped, tplConfig.buckets);
+        if (state.viewMode === "gantt") {
+          initGantt(ganttHost);
+        } else {
+          const labelMap = {
+            list: "List",
+            treemap: "Treemap",
+            bubbles: "Bubbles",
+            calendar: "Calendar",
+            flow: "Flow"
+          };
+          renderComingSoon(ganttHost, labelMap[state.viewMode] || state.viewMode);
+        }
         renderSlots();
       }
       renderSlots();
