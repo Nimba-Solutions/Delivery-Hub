@@ -226,18 +226,19 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         const mountConfig = {
             mode: this.mode,
             tasks,
-            // Date edits use the LEGACY onPatch path intentionally. NG 0.183's
-            // IIFEApp gates: if options.onItemEdit is truthy, the legacy onPatch
-            // is skipped and onItemEdit is awaited. Demo-triage at 889c88da
-            // showed zero Apex fetches during drag — NG saw our onItemEdit as
-            // truthy and committed the visual before the awaited promise
-            // landed, so updateWorkItemDates never fired. Per NG CC: removing
-            // onItemEdit from mount config re-engages the legacy save path via
-            // _handlePatch → updateWorkItemDates.
+            // Save-path routing is mode-conditional:
             //
-            // _handleItemEdit / _handleItemEditError remain defined below as
-            // dead wire — once the NG stub-detection behavior is understood,
-            // re-enable by restoring the keys here.
+            //   Embedded (Delivery_Timeline tab): NG emits legacy onPatch for
+            //     date edits. Glen's 12b6036a probe confirms one POST /aura
+            //     fires per drag. _handlePatch → updateWorkItemDates works.
+            //
+            //   Fullscreen (Standalone FlexiPage + VF Full_Bleed): NG 0.183
+            //     appears to emit ONLY onItemEdit (no legacy onPatch fallback).
+            //     Removing onItemEdit at 12b6036a cut the save wire on both
+            //     fullscreen surfaces (0 Apex fetches on drag). Restoring
+            //     onItemEdit here for fullscreen only — inlined fully so NG's
+            //     stub-detection heuristic (if that's what tripped earlier)
+            //     can't misread a method-reference arrow as empty.
             onPatch: (patch) => this._handlePatch(patch),
             onItemReorder: (taskId, payload) => this._handleItemReorder(taskId, payload),
             onItemReorderError: (taskId, error) => this._handleItemReorderError(taskId, error),
@@ -255,6 +256,26 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             // Locker Service proxies can still be settling.
             engine: window.NimbusGantt,
         };
+
+        // Fullscreen-only: wire onItemEdit/onItemEditError INLINE. Arrow
+        // forwards directly to updateWorkItemDates without method-reference
+        // indirection. Embedded stays on legacy onPatch (verified working).
+        if (this.mode === 'fullscreen') {
+            mountConfig.onItemEdit = async (taskId, changes) => {
+                const id = this._normalizeTaskId(taskId);
+                // eslint-disable-next-line no-console
+                console.log('[DH onItemEdit inline]', { arg1Type: typeof taskId, resolvedId: id, changes });
+                if (!id) { throw new Error('[DH] onItemEdit missing taskId'); }
+                const { startDate, endDate } = changes || {};
+                await updateWorkItemDates({
+                    workItemId: id,
+                    startDate: startDate || null,
+                    endDate: endDate || null,
+                });
+                this._scheduleRefetch();
+            };
+            mountConfig.onItemEditError = (taskId, error) => this._showError('Failed to save date change', error);
+        }
 
         // Surface-aware fullscreen-button routing. Give NG's shell exactly one
         // signal per route so the button direction is unambiguous:
