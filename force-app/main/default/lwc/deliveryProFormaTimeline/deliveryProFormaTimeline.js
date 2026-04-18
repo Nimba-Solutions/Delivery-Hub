@@ -63,6 +63,18 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
      */
     @api mode = 'embedded';
 
+    /**
+     * Outbound URL for NG's fullscreen button — set declaratively on the
+     * Standalone FlexiPage (componentInstanceProperty fullscreenUrl). When set,
+     * NG's shell renders a button that navigates to this URL on click. Left
+     * unset on Delivery_Timeline (embedded) + VF Full_Bleed (/apex/) mounts.
+     *
+     * Value from FlexiPage is the unprefixed URL (/apex/DeliveryGanttStandalone);
+     * subscriber orgs need the namespaced URL. The _mount() path applies the
+     * runtime-resolved VF prefix before handing it to NG (CLAUDE.md VF-URL rule).
+     */
+    @api fullscreenUrl;
+
     _scriptLoaded = false;
     _mounted = false;
     _tasks = [];
@@ -205,26 +217,41 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         // Surface-aware fullscreen-button routing. Give NG's shell exactly one
         // signal per route so the button direction is unambiguous:
         //
-        //   Embedded (Delivery_Timeline tab, mode=embedded)
+        //   Embedded (Delivery_Timeline tab, mode=embedded, no @api fullscreenUrl)
         //     → onEnterFullscreen only: "↗ Full Screen" navigates to Standalone tab
-        //   Standalone FlexiPage (Delivery_Gantt_Standalone, mode=fullscreen, non-/apex/)
+        //   Standalone FlexiPage (mode=fullscreen, @api fullscreenUrl set by FlexiPage)
         //     → fullscreenUrl only: outbound button to VF Full_Bleed route
-        //   VF Full_Bleed (/apex/DeliveryGanttStandalone, mode=fullscreen, /apex/ path)
+        //   VF Full_Bleed (/apex/, mode=fullscreen, no @api fullscreenUrl — LightningOut
+        //                  mount doesn't set it)
         //     → onExitFullscreen only: "← Exit" back to embedded Delivery_Timeline tab
         //
-        // Previously passed all three callbacks unconditionally — NG's shell
-        // then used callback presence to render the exit button on Standalone
-        // despite fullscreenUrl being set (HQ probe at 6396556 showed
-        // fullscreenExitBtn:true / fullscreenUrlBtn:false on Standalone).
+        // The @api fullscreenUrl prop is the primary signal for Standalone
+        // routing — set declaratively on the FlexiPage. onApexRoute is the
+        // fallback discriminator for the fullscreen-mode-no-fullscreenUrl case
+        // (VF Lightning Out mount).
         const onApexRoute = typeof window !== 'undefined'
             && window.location
             && typeof window.location.pathname === 'string'
             && window.location.pathname.indexOf('/apex/') !== -1;
         if (this.mode === 'embedded') {
             mountConfig.onEnterFullscreen = () => this._handleEnterFullscreen();
-        } else if (this.mode === 'fullscreen' && onApexRoute) {
+        } else if (this.fullscreenUrl) {
+            // Apply namespace prefix to the FlexiPage-declared URL for
+            // subscriber orgs (FlexiPage stores a static string; scratch
+            // stores /apex/Name, subscriber needs /apex/delivery__Name).
+            let url = this.fullscreenUrl;
+            const prefix = this._vfPrefix();
+            if (prefix && url.indexOf('/apex/') === 0 && url.indexOf('__') === -1) {
+                url = url.replace('/apex/', `/apex/${prefix}`);
+            }
+            mountConfig.fullscreenUrl = url;
+        } else if (onApexRoute) {
+            // VF Full_Bleed mount (no @api fullscreenUrl from LightningOut)
             mountConfig.onExitFullscreen = () => this._handleExitFullscreen();
-        } else if (this.mode === 'fullscreen' && !onApexRoute) {
+        } else {
+            // Standalone FlexiPage without fullscreenUrl configured — fall back
+            // to computed URL so behavior is preserved even if FlexiPage prop
+            // is missing.
             mountConfig.fullscreenUrl = `/apex/${this._vfPrefix()}DeliveryGanttStandalone`;
         }
 

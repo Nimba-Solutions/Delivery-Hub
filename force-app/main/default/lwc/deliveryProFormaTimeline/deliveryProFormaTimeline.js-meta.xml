@@ -17,6 +17,11 @@
                 description="embedded (default — minimal chrome, in-app) or fullscreen (full toolbar, standalone app page)"
                 default="embedded"
                 datasource="embedded,fullscreen"/>
+            <property
+                name="fullscreenUrl"
+                type="String"
+                label="Fullscreen URL"
+                description="Outbound URL for the NG fullscreen button (e.g. /apex/DeliveryGanttStandalone). Only set on the Standalone FlexiPage — leave empty on embedded + VF routes. Namespace prefix is applied automatically at runtime for subscriber orgs."/>
         </targetConfig>
     </targetConfigs>
     <masterLabel>Delivery Pro Forma Timeline</masterLabel>
