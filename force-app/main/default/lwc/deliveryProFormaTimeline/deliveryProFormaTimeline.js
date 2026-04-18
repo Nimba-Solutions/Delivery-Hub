@@ -117,7 +117,15 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         if (document.getElementById('dh-gantt-fs-chrome-hide')) return;
         const style = document.createElement('style');
         style.id = 'dh-gantt-fs-chrome-hide';
+        // Real AppPage/FlexiPage chrome targets (confirmed via Glen's DevTools
+        // on /lightning/n/Delivery_Gantt_Standalone): app_flexipage-header
+        // custom element wrapping div.slds-page-header.header.flexipageHeader.
+        // Earlier .forceAppHomePage selectors missed; kept for belt-and-
+        // suspenders in case DOM shifts across LEX releases.
         style.textContent = [
+            'app_flexipage-header,',
+            '.flexipageHeader,',
+            'div.slds-page-header.header.flexipageHeader,',
             '.forceAppHomePage section.slds-page-header,',
             '.appHomePage section.slds-page-header,',
             '[data-aura-class="forceAppHomePage"] section.slds-page-header,',
