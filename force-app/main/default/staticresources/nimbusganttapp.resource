@@ -2948,9 +2948,11 @@ var NimbusGanttApp = (function(exports) {
         } catch (_e2) {
         }
         setTimeout(() => {
-          var _a2;
+          var _a2, _b2, _c2, _d2;
           try {
-            (_a2 = inst.scrollToDate) == null ? void 0 : _a2.call(inst, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
+            const gi = inst;
+            const x = (_b2 = (_a2 = gi.timeScale) == null ? void 0 : _a2.dateToX) == null ? void 0 : _b2.call(_a2, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
+            if (typeof x === "number") (_d2 = (_c2 = gi.scrollManager) == null ? void 0 : _c2.scrollToX) == null ? void 0 : _d2.call(_c2, Math.max(0, x));
           } catch (_e2) {
           }
         }, 50);
@@ -3254,9 +3256,11 @@ var NimbusGanttApp = (function(exports) {
         } catch (_e2) {
         }
         setTimeout(() => {
-          var _a3;
+          var _a3, _b2, _c2, _d2;
           try {
-            (_a3 = ganttInst.scrollToDate) == null ? void 0 : _a3.call(ganttInst, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
+            const gi = ganttInst;
+            const x = (_b2 = (_a3 = gi.timeScale) == null ? void 0 : _a3.dateToX) == null ? void 0 : _b2.call(_a3, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
+            if (typeof x === "number") (_d2 = (_c2 = gi.scrollManager) == null ? void 0 : _c2.scrollToX) == null ? void 0 : _d2.call(_c2, Math.max(0, x));
           } catch (_e2) {
           }
         }, 50);
