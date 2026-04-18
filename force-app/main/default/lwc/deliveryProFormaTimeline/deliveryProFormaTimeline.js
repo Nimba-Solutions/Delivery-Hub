@@ -357,12 +357,17 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
      * NG 0.183 onItemEdit(taskId, { startDate?, endDate? }). Optimistic: NG
      * holds the dragged bar in an in-flight state, awaits this promise, then
      * commits on resolve or reverts on reject. Re-throw on Apex failure so
-     * NG reverts — the error UI is emitted by NG through onItemEditError
-     * (surfaced via _handleItemEditError → ShowToastEvent, per HQ's
-     * library-UI-agnostic option a).
+     * NG reverts — the error UI is emitted by NG through onItemEditError.
+     *
+     * Signature-drift guard: NG may pass the full task object as arg 1 on
+     * some code paths (same risk flagged for onItemReorder). Normalize to
+     * a string id defensively.
      */
-    async _handleItemEdit(taskId, changes) {
-        if (!taskId) return;
+    async _handleItemEdit(arg1, changes) {
+        const taskId = this._normalizeTaskId(arg1);
+        // eslint-disable-next-line no-console
+        console.log('[DH onItemEdit]', { arg1Type: typeof arg1, resolvedTaskId: taskId, changes });
+        if (!taskId) { throw new Error('[DH] onItemEdit missing taskId'); }
         const { startDate, endDate } = changes || {};
         await updateWorkItemDates({
             workItemId: taskId,
@@ -383,8 +388,11 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
      * parent change via existing Apex. Same optimistic/revert semantics
      * as onItemEdit: re-throw on failure so NG reverts the visual.
      */
-    async _handleItemReorder(taskId, payload) {
-        if (!taskId) return;
+    async _handleItemReorder(arg1, payload) {
+        const taskId = this._normalizeTaskId(arg1);
+        // eslint-disable-next-line no-console
+        console.log('[DH onItemReorder]', { arg1Type: typeof arg1, resolvedTaskId: taskId, payload });
+        if (!taskId) { throw new Error('[DH] onItemReorder missing taskId'); }
         const { newIndex, newParentId } = payload || {};
         const ops = [
             updateWorkItemSortOrder({ workItemId: taskId, sortOrder: Number(newIndex) || 0 }),
@@ -405,7 +413,10 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
      * the clicked WorkItem__c. Namespace prefix applied at runtime for
      * subscriber orgs (scratch 'WorkItem__c' → subscriber 'delivery__WorkItem__c').
      */
-    _handleItemClick(taskId) {
+    _handleItemClick(arg1) {
+        const taskId = this._normalizeTaskId(arg1);
+        // eslint-disable-next-line no-console
+        console.log('[DH onItemClick]', { arg1Type: typeof arg1, resolvedTaskId: taskId });
         if (!taskId) return;
         this[NavigationMixin.Navigate]({
             type: 'standard__recordPage',
@@ -415,6 +426,19 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 actionName: 'view',
             },
         });
+    }
+
+    /**
+     * NG 0.183 API is documented as (taskId, ...) but signature drift has
+     * been observed (onItemReorder shipped with a payload object, not bare
+     * newIndex). Normalize arg 1 to a string id: accept either a string id
+     * or a task object with .id.
+     */
+    _normalizeTaskId(arg) {
+        if (!arg) return null;
+        if (typeof arg === 'string') return arg;
+        if (typeof arg === 'object' && arg.id) return String(arg.id);
+        return null;
     }
 
     _mapTasksForNg(rawTasks) {
