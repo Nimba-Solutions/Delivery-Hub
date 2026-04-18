@@ -2723,7 +2723,6 @@ var NimbusGanttApp = (function(exports) {
     });
     container.appendChild(wrap);
   }
-  let mountSeq = 0;
   const registry = [];
   function getEntry(c) {
     return registry.find((e) => e.container === c) || null;
@@ -2780,15 +2779,9 @@ var NimbusGanttApp = (function(exports) {
       IIFEApp.unmount(container);
       const templateName = options.template || "cloudnimbus";
       const mode = options.mode || "fullscreen";
-      const containerId = "nga-" + ++mountSeq;
-      try {
-        container.setAttribute("data-nga-id", containerId);
-      } catch (_e2) {
-      }
       try {
         const r = container.getBoundingClientRect();
         diag("mount:start", {
-          containerId,
           containerRect: { x: r.x, y: r.y, w: r.width, h: r.height },
           mode,
           engineVersion: options.engine && options.engine.version || "unknown",
@@ -2844,12 +2837,11 @@ var NimbusGanttApp = (function(exports) {
         const _win = typeof window !== "undefined" ? window : null;
         const eng = options.engine ?? (_win == null ? void 0 : _win.NimbusGantt) ?? null;
         if (!eng || !eng.NimbusGantt) {
-          diag("err:engine-missing", { containerId, path: "engineOnly" });
           ganttEl.style.cssText += ";padding:20px;color:#b91c1c;font-size:13px";
           ganttEl.textContent = "nimbus-gantt engine not loaded";
           registry.push({ container, cleanup: () => {
             container.innerHTML = "";
-          }, hadGantt: false, mode, containerId });
+          } });
           return { setTasks: () => {
           }, destroy: () => IIFEApp.unmount(container) };
         }
@@ -2979,57 +2971,7 @@ var NimbusGanttApp = (function(exports) {
           }
           container.innerHTML = "";
         };
-        registry.push({ container, cleanup: cleanup2, hadGantt: true, mode, containerId });
-        try {
-          const raf = typeof requestAnimationFrame === "function" ? requestAnimationFrame : (fn) => setTimeout(() => fn(Date.now()), 16);
-          raf(() => {
-            try {
-              const measure = (sel) => {
-                const e = container.querySelector(sel);
-                return e ? Math.round(e.getBoundingClientRect().height) : 0;
-              };
-              diag("mount:chrome-heights", {
-                containerId,
-                engineOnly: true,
-                root: Math.round(container.getBoundingClientRect().height),
-                titlebar: measure(".nga-titlebar"),
-                stats: measure(".nga-stats"),
-                filterbar: measure(".nga-filterbar"),
-                zoombar: measure(".nga-zoombar"),
-                audit: measure(".nga-audit"),
-                hrswkstrip: measure(".nga-hrswkstrip"),
-                contentOuter: measure(".nga-content-outer"),
-                content: measure(".nga-content")
-              });
-              const canvasEl = ganttEl.querySelector("canvas");
-              if (canvasEl) {
-                diag("mount:init-gantt", {
-                  containerId,
-                  engineOnly: true,
-                  canvasW: canvasEl.width,
-                  canvasH: canvasEl.height,
-                  cssW: Math.round(canvasEl.getBoundingClientRect().width),
-                  cssH: Math.round(canvasEl.getBoundingClientRect().height)
-                });
-                if (canvasEl.height < 64) {
-                  diag("warn:zero-height", { containerId, surface: "canvas", canvasH: canvasEl.height });
-                }
-              } else {
-                diag("warn:no-canvas", { containerId });
-              }
-              const durationMs = (typeof performance !== "undefined" && performance.now ? performance.now() : Date.now()) - mountStartedAt;
-              diag("mount:complete", {
-                containerId,
-                engineOnly: true,
-                taskCount: allTasks2.length,
-                durationMs: Math.round(durationMs)
-              });
-            } catch (err) {
-              diag("err:post-mount", { containerId, message: (err == null ? void 0 : err.message) || String(err) });
-            }
-          });
-        } catch (_e2) {
-        }
+        registry.push({ container, cleanup: cleanup2 });
         return {
           setTasks(tasks) {
             allTasks2 = tasks;
@@ -3077,7 +3019,6 @@ var NimbusGanttApp = (function(exports) {
       container.style.background = tplConfig.theme.bg;
       container.style.fontFamily = tplConfig.theme.fontFamily;
       diag("mount:styles-applied", {
-        containerId,
         propsWritten: ["display", "flex-direction", "overflow", "background", "font-family"],
         preservedConsumer: {
           height: container.style.height || "(inherits)",
@@ -3085,7 +3026,7 @@ var NimbusGanttApp = (function(exports) {
           position: container.style.position || "(inherits)"
         }
       });
-      diag("mount:data-mode", { containerId, mode });
+      diag("mount:data-mode", { mode });
       const _patchRefreshTimer = { t: null };
       const rawOnPatch = options.onPatch || (() => {
       });
@@ -3197,7 +3138,6 @@ var NimbusGanttApp = (function(exports) {
         var _a2;
         const eng = resolveEngine();
         if (!eng || !eng.NimbusGantt) {
-          diag("err:engine-missing", { containerId, path: "chrome" });
           host.style.cssText = "padding:20px;color:#b91c1c;font-size:13px";
           host.textContent = "nimbus-gantt engine not loaded";
           return;
@@ -3378,7 +3318,6 @@ var NimbusGanttApp = (function(exports) {
         const renderedSlots = [];
         slotInstances.forEach((_inst, name) => renderedSlots.push(name));
         diag("mount:slots-rendered", {
-          containerId,
           slotOrder: SLOT_ORDER,
           rendered: renderedSlots,
           features: tplConfig.features
@@ -3395,8 +3334,6 @@ var NimbusGanttApp = (function(exports) {
               return elSel ? Math.round(elSel.getBoundingClientRect().height) : 0;
             };
             diag("mount:chrome-heights", {
-              containerId,
-              engineOnly: false,
               root: Math.round(container.getBoundingClientRect().height),
               titlebar: measure(".nga-titlebar"),
               stats: measure(".nga-stats"),
@@ -3410,30 +3347,24 @@ var NimbusGanttApp = (function(exports) {
             const canvasEl = container.querySelector("canvas");
             if (canvasEl) {
               diag("mount:init-gantt", {
-                containerId,
-                engineOnly: false,
                 canvasW: canvasEl.width,
                 canvasH: canvasEl.height,
                 cssW: Math.round(canvasEl.getBoundingClientRect().width),
                 cssH: Math.round(canvasEl.getBoundingClientRect().height)
-                // pxPerWeek / visibleWeeks are engine-internal; omitted until
-                // the engine exposes a getState() surface.
               });
               if (canvasEl.height < 64) {
-                diag("warn:zero-height", { containerId, surface: "canvas", canvasH: canvasEl.height });
+                diag("warn:zero-height", { surface: "canvas", canvasH: canvasEl.height });
               }
             } else {
-              diag("warn:no-canvas", { containerId });
+              diag("warn:no-canvas", {});
             }
             const durationMs = (typeof performance !== "undefined" && performance.now ? performance.now() : Date.now()) - mountStartedAt;
             diag("mount:complete", {
-              containerId,
-              engineOnly: false,
               taskCount: allTasks.length,
               durationMs: Math.round(durationMs)
             });
           } catch (err) {
-            diag("err:post-mount", { containerId, message: (err == null ? void 0 : err.message) || String(err) });
+            diag("err:post-mount", { message: (err == null ? void 0 : err.message) || String(err) });
           }
         });
       } catch (_e2) {
@@ -3466,7 +3397,7 @@ var NimbusGanttApp = (function(exports) {
         } catch (_e2) {
         }
       };
-      registry.push({ container, cleanup, hadGantt: true, mode, containerId });
+      registry.push({ container, cleanup });
       return {
         setTasks(tasks) {
           allTasks = tasks;
@@ -3479,21 +3410,12 @@ var NimbusGanttApp = (function(exports) {
       };
     }
     static unmount(container) {
-      var _a;
       const e = getEntry(container);
-      const hadGantt = (e == null ? void 0 : e.hadGantt) ?? false;
-      const mode = (e == null ? void 0 : e.mode) ?? "unknown";
-      const containerId = (e == null ? void 0 : e.containerId) ?? (((_a = container.getAttribute) == null ? void 0 : _a.call(container, "data-nga-id")) || "unknown");
       if (e) {
         if (e.cleanup) e.cleanup();
         removeEntry(container);
       }
       container.innerHTML = "";
-      try {
-        container.removeAttribute("data-nga-id");
-      } catch (_err) {
-      }
-      diag("unmount", { containerId, hadGantt, mode });
     }
   }
   const NimbusGanttApp2 = {
