@@ -89,6 +89,11 @@
 [data-nga-titlebar-row] a {
   font-size: 10px;
 }
+
+/* Arrow normalization lives at line ~687 in the v5-ported `.ng-expand-icon`
+ * block below — consolidated there rather than duplicated here to avoid
+ * source-order conflicts with the existing !important width. See the
+ * "ARROW_DIFF 2026-04-18 font-family normalization" comment there. */
 .nga-filterbar { display: block; padding: 6px 12px; background: #fff; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; }
 .nga-zoombar { display: flex; align-items: center; gap: 0.5rem; }
 .nga-stats { padding: 12px; background: #fff; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; }
@@ -660,15 +665,31 @@
           width: 0 !important;
           min-width: 0 !important;
         }
+        /* ARROW_DIFF 2026-04-18 font-family normalization: ARROW_DIFF
+         * probe across the three SF routes showed the font-family inherited
+         * by .ng-expand-icon varied — Full_Bleed got `-apple-system,
+         * BlinkMacSystemFont, ...` (heavier U+25B6 render), while
+         * Standalone + Embedded got `sans-serif` (Lightning reset, cleaner
+         * render). Glen flagged Full_Bleed arrows as visually ugly vs the
+         * other two routes. Lock the font-family to a symbol-capable stack
+         * so all hosts render identically. Bumped font-size 9 → 10 and
+         * width 14 → 16 per Glen's spec (matches the heavier symbol glyph
+         * rendered by font stacks that hit the right symbol fallback).
+         * Longer-term nicer: replace the ▶/▼ text chars with inline SVG
+         * for pixel parity; that's a follow-up. */
         .ng-expand-icon {
-          font-size: 9px;
+          font-family: -apple-system, "Segoe UI Symbol", "Apple Symbols", "Helvetica Neue", Arial, sans-serif;
+          font-size: 10px;
+          line-height: 1;
+          display: inline-block;
+          text-align: center;
           opacity: 0.5;
           color: #6b7280;
           /* !important defensive (same rationale as .ng-expand-spacer): engine
            * has its own baseline rule for icon width. We win on insertion
            * order; !important kept as belt-and-suspenders. */
-          width: 14px !important;
-          min-width: 14px !important;
+          width: 16px !important;
+          min-width: 16px !important;
         }
         .ng-expand-icon:hover {
           opacity: 1;

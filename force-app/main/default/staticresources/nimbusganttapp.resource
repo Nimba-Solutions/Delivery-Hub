@@ -127,7 +127,7 @@ var NimbusGanttApp = (function(exports) {
       const hrs = t.estimatedHours ? Math.round(Number(t.estimatedHours)) : 0;
       const logged = t.loggedHours ? Number(t.loggedHours) : 0;
       const pct = hrs > 0 ? Math.round(logged / hrs * 100) : 0;
-      const hLabel = hrs > 0 ? logged > 0 ? hrs + "h (" + pct + "%)" : hrs + "h" : "";
+      const hLabel = hrs > 0 ? logged > 0 ? hrs + "h (" + pct + "% budget)" : hrs + "h" : "";
       const gid = t.parentWorkItemId ? null : t.priorityGroup || null;
       const col = gid ? GROUP_BAR[gid] || "#94a3b8" : STAGE_TO_CATEGORY_COLOR[t.stage || ""] || STAGE_COLORS[t.stage || ""] || "#94a3b8";
       const start = t.startDate || fallback;
@@ -135,7 +135,7 @@ var NimbusGanttApp = (function(exports) {
       return {
         id: t.id,
         title: t.title || t.name || t.id,
-        name: hrs > 0 ? logged > 0 ? hrs + "h (" + pct + "%)" : hrs + "h" : "",
+        name: hrs > 0 ? logged > 0 ? hrs + "h (" + pct + "% budget)" : hrs + "h" : "",
         hoursLabel: hLabel,
         startDate: start,
         endDate: end,
@@ -803,6 +803,8 @@ var NimbusGanttApp = (function(exports) {
     let sortKey = "default";
     const collapsedBuckets = /* @__PURE__ */ new Set();
     const expandedIds = /* @__PURE__ */ new Set();
+    const progressLabel = (options == null ? void 0 : options.progressLabel) ?? "Budget Used";
+    const hideRecordIds = (options == null ? void 0 : options.hideRecordIds) ?? true;
     const audits = /* @__PURE__ */ new Map();
     for (const t of tasks) audits.set(t.id, auditTask(t));
     const dupeIds = /* @__PURE__ */ new Set();
@@ -1265,20 +1267,22 @@ var NimbusGanttApp = (function(exports) {
       chev.style.cssText = "color:#64748b;font-size:11px;flex-shrink:0;width:12px;text-align:center";
       chev.textContent = isExpanded ? "▼" : "▶";
       top.appendChild(chev);
-      const name = el$1("code", "");
-      name.style.cssText = [
-        "font-family:SF Mono,Cascadia Code,Consolas,monospace",
-        "font-size:11px",
-        "color:#64748b",
-        "flex-shrink:0",
-        "min-width:80px",
-        "max-width:140px",
-        "overflow:hidden",
-        "text-overflow:ellipsis",
-        "white-space:nowrap"
-      ].join(";");
-      name.textContent = task.name || task.id;
-      top.appendChild(name);
+      if (!hideRecordIds) {
+        const name = el$1("code", "");
+        name.style.cssText = [
+          "font-family:SF Mono,Cascadia Code,Consolas,monospace",
+          "font-size:11px",
+          "color:#64748b",
+          "flex-shrink:0",
+          "min-width:80px",
+          "max-width:140px",
+          "overflow:hidden",
+          "text-overflow:ellipsis",
+          "white-space:nowrap"
+        ].join(";");
+        name.textContent = task.name || task.id;
+        top.appendChild(name);
+      }
       const title = el$1("span", "");
       title.style.cssText = [
         "flex:1",
@@ -1290,6 +1294,16 @@ var NimbusGanttApp = (function(exports) {
         "white-space:nowrap"
       ].join(";");
       title.textContent = task.title;
+      if (options == null ? void 0 : options.onTaskClick) {
+        title.style.cursor = "pointer";
+        title.style.textDecoration = "underline";
+        title.style.textDecorationStyle = "dotted";
+        title.style.textDecorationColor = "#94a3b8";
+        title.addEventListener("click", (e) => {
+          e.stopPropagation();
+          options.onTaskClick(task.id);
+        });
+      }
       top.appendChild(title);
       const pct = progressOf(task);
       if (pct !== null) {
@@ -1299,10 +1313,12 @@ var NimbusGanttApp = (function(exports) {
           "font-size:11px",
           "color:" + (pct === 100 ? "#10b981" : pct > 50 ? "#d97706" : "#64748b"),
           "font-weight:600",
-          "min-width:32px",
-          "text-align:right"
+          "text-align:right",
+          "white-space:nowrap"
         ].join(";");
-        pctWrap.textContent = pct + "%";
+        const prefixLabel = progressLabel.trim();
+        pctWrap.textContent = prefixLabel ? prefixLabel + " " + pct + "%" : pct + "%";
+        pctWrap.title = "Budget Used — hours logged / hours estimated";
         top.appendChild(pctWrap);
       }
       const hoursTxt = el$1("span", "");
@@ -1572,6 +1588,9 @@ var NimbusGanttApp = (function(exports) {
     let title = "Nimbus Gantt";
     let version = "";
     let apiDocsUrl;
+    let fullscreenUrl;
+    let progressLabel;
+    let hideRecordIds;
     chain.forEach((tpl) => {
       const d = tpl.defaults || {};
       if (d.features) features = { ...features, ...d.features };
@@ -1582,6 +1601,9 @@ var NimbusGanttApp = (function(exports) {
       if (d.title !== void 0) title = d.title;
       if (d.version !== void 0) version = d.version;
       if (d.apiDocsUrl !== void 0) apiDocsUrl = d.apiDocsUrl;
+      if (d.fullscreenUrl !== void 0) fullscreenUrl = d.fullscreenUrl;
+      if (d.progressLabel !== void 0) progressLabel = d.progressLabel;
+      if (d.hideRecordIds !== void 0) hideRecordIds = d.hideRecordIds;
       if (tpl.stylesheet && (tpl.stylesheet.url || tpl.stylesheet.inline || tpl.stylesheet.importedByBundler)) {
         stylesheet = tpl.stylesheet;
       }
@@ -1598,6 +1620,9 @@ var NimbusGanttApp = (function(exports) {
       if (overrides.title !== void 0) title = overrides.title;
       if (overrides.version !== void 0) version = overrides.version;
       if (overrides.apiDocsUrl !== void 0) apiDocsUrl = overrides.apiDocsUrl;
+      if (overrides.fullscreenUrl !== void 0) fullscreenUrl = overrides.fullscreenUrl;
+      if (overrides.progressLabel !== void 0) progressLabel = overrides.progressLabel;
+      if (overrides.hideRecordIds !== void 0) hideRecordIds = overrides.hideRecordIds;
       if (overrides.components) {
         components = mergeComponents(components, overrides.components);
       }
@@ -1618,6 +1643,9 @@ var NimbusGanttApp = (function(exports) {
       title,
       version,
       apiDocsUrl,
+      fullscreenUrl,
+      progressLabel,
+      hideRecordIds,
       // mode defaults to 'fullscreen'; IIFEApp / React driver may overwrite
       // this post-resolve to reflect the caller's MountOptions.mode.
       mode: "fullscreen"
@@ -2182,22 +2210,33 @@ var NimbusGanttApp = (function(exports) {
         render(currentProps);
       });
       rowMain.appendChild(unpinBtn);
-      const hostExit = config.mode === "fullscreen" && typeof config.onExitFullscreen === "function";
-      const fsBtn = el$1(
-        "button",
-        CLS_PILL_BTN_BASE + " " + (state.fullscreen || hostExit ? CLS_RIGHT_FS_ON : CLS_RIGHT_FS_OFF)
-      );
-      if (hostExit) {
-        fsBtn.textContent = "← Exit Full Screen";
-        fsBtn.setAttribute("data-nga-fullscreen-exit", "1");
-        fsBtn.addEventListener("click", () => {
-          config.onExitFullscreen();
-        });
-      } else {
-        fsBtn.textContent = state.fullscreen ? "Exit Fullscreen" : "Fullscreen";
-        fsBtn.addEventListener("click", () => dispatch({ type: "TOGGLE_FULLSCREEN" }));
+      const fsUrl = config.fullscreenUrl;
+      const onCurrentFsUrl = !!(fsUrl && typeof location !== "undefined" && location.pathname === fsUrl);
+      if (!onCurrentFsUrl) {
+        const hostExit = config.mode === "fullscreen" && typeof config.onExitFullscreen === "function";
+        const active = state.fullscreen || hostExit;
+        const fsBtn = el$1(
+          "button",
+          CLS_PILL_BTN_BASE + " " + (active ? CLS_RIGHT_FS_ON : CLS_RIGHT_FS_OFF)
+        );
+        if (fsUrl) {
+          fsBtn.textContent = "Fullscreen";
+          fsBtn.setAttribute("data-nga-fullscreen-url", "1");
+          fsBtn.addEventListener("click", () => {
+            window.location.href = fsUrl;
+          });
+        } else if (hostExit) {
+          fsBtn.textContent = "← Exit Full Screen";
+          fsBtn.setAttribute("data-nga-fullscreen-exit", "1");
+          fsBtn.addEventListener("click", () => {
+            config.onExitFullscreen();
+          });
+        } else {
+          fsBtn.textContent = state.fullscreen ? "Exit Fullscreen" : "Fullscreen";
+          fsBtn.addEventListener("click", () => dispatch({ type: "TOGGLE_FULLSCREEN" }));
+        }
+        rowMain.appendChild(fsBtn);
       }
-      rowMain.appendChild(fsBtn);
       const adminBtn = el$1(
         "button",
         CLS_PILL_BTN_BASE + " " + (adminOn ? CLS_RIGHT_ADMIN_ON : CLS_RIGHT_ADMIN_OFF)
@@ -3349,7 +3388,11 @@ var NimbusGanttApp = (function(exports) {
       ".ng-grid-row .ng-tree-cell .ng-expand-spacer+.ng-grid-cell-text{font-weight:400!important;color:#6b7280!important;font-size:11px!important}",
       ".ng-grid-cell{padding-top:0!important;padding-right:6px!important;padding-bottom:0!important;padding-left:6px;line-height:32px!important;border-right:none!important}",
       ".ng-expand-spacer{width:0!important;min-width:0!important}",
-      ".ng-expand-icon{font-size:9px!important;opacity:.5!important;color:#6b7280!important;width:14px!important;min-width:14px!important}",
+      /* .ng-expand-icon — ARROW_DIFF 2026-04-18 font-family normalization.
+       * Must match the canonical rule in styles.css:~687 so SF's
+       * synchronous injection backstop doesn't fight the async template
+       * stylesheet. See styles.css for rationale. */
+      '.ng-expand-icon{font-family:-apple-system,"Segoe UI Symbol","Apple Symbols","Helvetica Neue",Arial,sans-serif!important;font-size:10px!important;line-height:1!important;display:inline-block!important;text-align:center!important;opacity:.5!important;color:#6b7280!important;width:16px!important;min-width:16px!important}',
       ".ng-expand-icon:hover{opacity:1!important}",
       ".ng-grid-row{border:none!important;box-shadow:inset 0 -1px 0 #f3f4f6;box-sizing:border-box!important}",
       ".ng-grid-row:not(.ng-group-row){cursor:grab}",
@@ -3987,7 +4030,10 @@ var NimbusGanttApp = (function(exports) {
         if (state.viewMode === "gantt") {
           initGantt(ganttHost);
         } else if (state.viewMode === "list") {
-          renderAuditListView(ganttHost, allTasks);
+          renderAuditListView(ganttHost, allTasks, {
+            progressLabel: tplConfig.progressLabel,
+            hideRecordIds: tplConfig.hideRecordIds
+          });
         } else {
           const labelMap = {
             treemap: "Treemap",
