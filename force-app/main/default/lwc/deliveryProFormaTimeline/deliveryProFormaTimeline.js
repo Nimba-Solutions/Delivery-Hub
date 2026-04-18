@@ -243,7 +243,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             //   features.hoursColumn / features.budgetUsedColumn — per-column gates
             onItemEdit: (taskId, changes) => this._handleItemEdit(taskId, changes),
             onItemEditError: (taskId, error) => this._handleItemEditError(taskId, error),
-            onItemReorder: (taskId, newIndex) => this._handleItemReorder(taskId, newIndex),
+            onItemReorder: (taskId, payload) => this._handleItemReorder(taskId, payload),
             onItemReorderError: (taskId, error) => this._handleItemReorderError(taskId, error),
             onItemClick: (taskId) => this._handleItemClick(taskId),
             onViewportChange: (state) => this._handleViewportChange(state),
@@ -377,13 +377,22 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     }
 
     /**
-     * NG 0.183 onItemReorder(taskId, newIndex). Persists the new sort position
-     * via the existing updateWorkItemSortOrder Apex; same optimistic/revert
-     * semantics as onItemEdit.
+     * NG 0.183 onItemReorder(taskId, { newIndex, newParentId? }). Payload
+     * object — newParentId only present when the drag also changed parent
+     * (re-parent + re-sort in a single gesture). Persists sort + optional
+     * parent change via existing Apex. Same optimistic/revert semantics
+     * as onItemEdit: re-throw on failure so NG reverts the visual.
      */
-    async _handleItemReorder(taskId, newIndex) {
+    async _handleItemReorder(taskId, payload) {
         if (!taskId) return;
-        await updateWorkItemSortOrder({ workItemId: taskId, sortOrder: Number(newIndex) || 0 });
+        const { newIndex, newParentId } = payload || {};
+        const ops = [
+            updateWorkItemSortOrder({ workItemId: taskId, sortOrder: Number(newIndex) || 0 }),
+        ];
+        if (newParentId !== undefined) {
+            ops.push(updateWorkItemParent({ workItemId: taskId, parentId: newParentId || '' }));
+        }
+        await Promise.all(ops);
         this._scheduleRefetch();
     }
 
