@@ -76,12 +76,13 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     @api fullscreenUrl;
 
     /**
-     * Whether NG's chrome (titlebar rows) is visible by default on mount.
-     * Per-surface FlexiPage override (admins can set Standalone = true,
-     * Embedded = false). Forwarded into NG 0.183's chromeVisibleDefault mount
-     * option. No-op with bundles older than 0.183.
+     * Whether NG's chrome (titlebar rows) is HIDDEN by default on mount.
+     * Inverted name per LWC1503 — boolean @api props can't default to true.
+     * Default false = chrome visible; set true on the Embedded FlexiPage to
+     * surface a minimal-chrome view when SF already surrounds the component.
+     * Forwarded as `chromeVisibleDefault: !chromeHiddenDefault` to NG 0.183+.
      */
-    @api chromeVisibleDefault = true;
+    @api chromeHiddenDefault = false;
 
     _scriptLoaded = false;
     _mounted = false;
@@ -231,7 +232,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             onItemEdit: (task, dates) => this._handleItemEdit(task, dates),
             onItemClick: (task) => this._handleItemClick(task),
             onItemEditError: (taskId, error) => this._handleItemEditError(taskId, error),
-            chromeVisibleDefault: this.chromeVisibleDefault,
+            chromeVisibleDefault: !this.chromeHiddenDefault,
             cssUrl: CLOUDNIMBUS_CSS,
             // Passed explicitly to avoid window-lookup races; the app shell
             // would otherwise reach for window.NimbusGantt at a point where
