@@ -7,6 +7,7 @@ var NimbusGanttApp = (function(exports) {
     "proposed": "#60a5fa",
     "deferred": "#cbd5e1"
   };
+  const OVER_BUDGET_COLOR = "#f59e0b";
   const STAGE_COLORS = {
     "Backlog": "#64748b",
     "Scoping In Progress": "#64748b",
@@ -129,7 +130,9 @@ var NimbusGanttApp = (function(exports) {
       const pct = hrs > 0 ? Math.round(logged / hrs * 100) : 0;
       const hLabel = hrs > 0 ? logged > 0 ? hrs + "h (" + pct + "% budget)" : hrs + "h" : "";
       const gid = t.parentWorkItemId ? null : t.priorityGroup || null;
-      const col = gid ? GROUP_BAR[gid] || "#94a3b8" : STAGE_TO_CATEGORY_COLOR[t.stage || ""] || STAGE_COLORS[t.stage || ""] || "#94a3b8";
+      const overBudget = hrs > 0 && logged >= hrs;
+      const baseCol = gid ? GROUP_BAR[gid] || "#94a3b8" : STAGE_TO_CATEGORY_COLOR[t.stage || ""] || STAGE_COLORS[t.stage || ""] || "#94a3b8";
+      const col = overBudget ? OVER_BUDGET_COLOR : baseCol;
       const start = t.startDate || fallback;
       const end = t.endDate || addDays(start, 14);
       return {
@@ -137,6 +140,11 @@ var NimbusGanttApp = (function(exports) {
         title: t.title || t.name || t.id,
         name: hrs > 0 ? logged > 0 ? hrs + "h (" + pct + "% budget)" : hrs + "h" : "",
         hoursLabel: hLabel,
+        // DM-3 (0.183) — split fields for surfaces that opt into the separate
+        // Hours + Budget Used columns. When zero, empty string so the cell
+        // renders blank rather than "0h" / "0%".
+        hours: hrs > 0 ? hrs + "h" : "",
+        budgetUsedPct: hrs > 0 && logged > 0 ? pct + "%" : "",
         startDate: start,
         endDate: end,
         progress: hrs > 0 ? Math.min(logged / hrs, 1) : 0,
@@ -181,17 +189,26 @@ var NimbusGanttApp = (function(exports) {
       const allE = [t.endDate].concat(dd.e).filter(Boolean).sort();
       const rootGroup = resolveRootGroup(t.id);
       const parentBaseColor = rootGroup ? GROUP_BAR[rootGroup] || "#94a3b8" : t.color || "#64748b";
+      const pHrs = t.metadata.hoursHigh;
+      const pLogged = t.metadata.hoursLogged;
+      const parentOverBudget = pHrs > 0 && pLogged >= pHrs;
+      const parentPaint = parentOverBudget ? OVER_BUDGET_COLOR : parentBaseColor;
       return {
         id: t.id,
         title: t.title,
         name: t.name + (count > 0 ? " · " + count + " items" : ""),
         hoursLabel: t.hoursLabel,
+        // DM-3: propagate through parent mapping so conditional columns
+        // render on parent rows too (typically blank since parents often
+        // carry zero direct estimates — rollup math is DM-6, future).
+        hours: t.hours,
+        budgetUsedPct: t.budgetUsedPct,
         startDate: allS.length ? allS[0] : t.startDate,
         endDate: allE.length ? allE[allE.length - 1] : t.endDate,
         progress: t.progress,
         status: t.status,
         // Darken the root bucket's bar color — all parent bars share the same hue family
-        color: darkenColor(parentBaseColor, 0.25),
+        color: darkenColor(parentPaint, 0.25),
         groupId: t.groupId,
         parentId: t.parentId,
         sortOrder: t.sortOrder,
@@ -1480,7 +1497,15 @@ var NimbusGanttApp = (function(exports) {
     dragReparent: true,
     depthShading: true,
     groupByToggle: true,
-    hideCompletedToggle: true
+    hideCompletedToggle: true,
+    // DM-3 (0.183) — new columns default OFF so existing surfaces keep their
+    // current tree width. DH opts in per-template / per-mount via features
+    // overrides. hoursLabel (combined "40h (75% budget)") remains on the
+    // default column — DM-3 is for surfaces that want the two values split.
+    hoursColumn: false,
+    budgetUsedColumn: false,
+    // DM-5 (0.183) — header-row completion bar defaults ON; pairs with DM-4.
+    headerRowCompletionBar: true
   };
   const DEFAULT_THEME = {
     primary: "#2563eb",
@@ -3358,10 +3383,19 @@ var NimbusGanttApp = (function(exports) {
     selectionColor: "#3b82f6",
     singleRowHeader: true
   };
-  const GANTT_COLS = [
-    { field: "title", header: "", width: 210, tree: true },
-    { field: "hoursLabel", header: "", width: 85, align: "right" }
-  ];
+  function buildGanttCols(features) {
+    const cols = [
+      { field: "title", header: "", width: 210, tree: true },
+      { field: "hoursLabel", header: "", width: 85, align: "right" }
+    ];
+    if (features.hoursColumn) {
+      cols.push({ field: "hours", header: "Hours", width: 60, align: "right" });
+    }
+    if (features.budgetUsedColumn) {
+      cols.push({ field: "budgetUsedPct", header: "Budget Used", width: 90, align: "right" });
+    }
+    return cols;
+  }
   const INITIAL_VIEWPORT_OFFSET_MS = 14 * 24 * 60 * 60 * 1e3;
   function injectLegacyNgCss() {
     if (document.getElementById("nga-v5-css")) return;
@@ -3495,7 +3529,7 @@ var NimbusGanttApp = (function(exports) {
   }
   class IIFEApp {
     static mount(container, options) {
-      var _a, _b, _c, _d, _e;
+      var _a, _b, _c, _d, _e, _f;
       const mountStartedAt = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
       IIFEApp.unmount(container);
       const templateName = options.template || "cloudnimbus";
@@ -3580,7 +3614,7 @@ var NimbusGanttApp = (function(exports) {
         const inst = new eng.NimbusGantt(ganttEl, {
           tasks: gtasks,
           dependencies: [],
-          columns: GANTT_COLS,
+          columns: buildGanttCols(tplConfig.features),
           theme: V3_THEME,
           rowHeight: 32,
           barHeight: 20,
@@ -3593,10 +3627,11 @@ var NimbusGanttApp = (function(exports) {
           colorMap: ((_d = options.config) == null ? void 0 : _d.colorMap) || { ...STAGE_COLORS, ...STAGE_TO_CATEGORY_COLOR },
           readOnly: false,
           onTaskClick: (task) => {
-            var _a2;
+            var _a2, _b2;
             if (!task || !task.id || isBucketId(task.id)) return;
             const t = findTaskById(task.id);
             if (t) (_a2 = options.onTaskClick) == null ? void 0 : _a2.call(options, t, "canvas");
+            (_b2 = options.onItemClick) == null ? void 0 : _b2.call(options, task.id);
           },
           onTaskDblClick: (task) => {
             var _a2;
@@ -3723,8 +3758,44 @@ var NimbusGanttApp = (function(exports) {
         };
       }
       let state = { ...INITIAL_STATE };
+      if ((_f = options.initialViewport) == null ? void 0 : _f.zoom) {
+        state = { ...state, zoom: options.initialViewport.zoom };
+      }
       let allTasks = options.tasks || [];
       const patchLog = [];
+      const _viewportEmitTimer = { t: null };
+      function emitViewport() {
+        if (!options.onViewportChange || !ganttInst) return;
+        if (_viewportEmitTimer.t) clearTimeout(_viewportEmitTimer.t);
+        _viewportEmitTimer.t = setTimeout(() => {
+          var _a2, _b2;
+          _viewportEmitTimer.t = null;
+          try {
+            const sm = ganttInst.scrollManager;
+            const pos = ((_a2 = sm == null ? void 0 : sm.getScrollPosition) == null ? void 0 : _a2.call(sm)) ?? { x: 0, y: 0 };
+            (_b2 = options.onViewportChange) == null ? void 0 : _b2.call(options, {
+              scrollLeft: pos.x,
+              scrollTop: pos.y,
+              zoom: state.zoom
+            });
+          } catch (_e2) {
+          }
+        }, 150);
+      }
+      let chromeVisible = options.chromeVisibleDefault !== false;
+      if (mode === "embedded") chromeVisible = false;
+      const ORIGINAL_FEATURES = { ...tplConfig.features };
+      function applyChromeVisibility() {
+        if (chromeVisible) {
+          tplConfig.features = { ...ORIGINAL_FEATURES };
+        } else {
+          tplConfig.features = {
+            ...ORIGINAL_FEATURES,
+            ...EMBEDDED_FEATURE_OVERRIDES
+          };
+        }
+      }
+      applyChromeVisibility();
       injectLegacyNgCss();
       const themeStyleEl = document.createElement("style");
       themeStyleEl.setAttribute("data-nga-theme", tplConfig.templateName);
@@ -3753,6 +3824,145 @@ var NimbusGanttApp = (function(exports) {
       const _patchRefreshTimer = { t: null };
       const rawOnPatch = options.onPatch || (() => {
       });
+      const pendingEdits = /* @__PURE__ */ new Map();
+      let nextEditSeq = 0;
+      const inflightTaskIds = /* @__PURE__ */ new Set();
+      function dimColor(hex) {
+        if (!hex) return "#94a3b880";
+        if (hex.startsWith("rgb")) return hex;
+        const s = hex.charAt(0) === "#" ? hex.slice(1) : hex;
+        const full = s.length === 3 ? s.charAt(0) + s.charAt(0) + s.charAt(1) + s.charAt(1) + s.charAt(2) + s.charAt(2) : s;
+        if (full.length !== 6) return hex;
+        return "#" + full + "80";
+      }
+      async function onTaskEditAsync(taskId, nextStart, nextEnd, changes) {
+        var _a2;
+        const idx = allTasks.findIndex((t) => t.id === taskId);
+        if (idx === -1) return;
+        const existing = pendingEdits.get(taskId);
+        const origStart = existing ? existing.origStart : allTasks[idx].startDate || "";
+        const origEnd = existing ? existing.origEnd : allTasks[idx].endDate || "";
+        const seq = ++nextEditSeq;
+        pendingEdits.set(taskId, { seq, origStart, origEnd });
+        inflightTaskIds.add(taskId);
+        allTasks[idx] = { ...allTasks[idx], startDate: nextStart, endDate: nextEnd };
+        const title = allTasks[idx].title || allTasks[idx].name || taskId;
+        patchLog.unshift({ ts: /* @__PURE__ */ new Date(), desc: title + ": dates updated" });
+        if (patchLog.length > 50) patchLog.pop();
+        dispatch({ type: "PATCH", patch: { id: taskId, startDate: nextStart, endDate: nextEnd } });
+        refreshGantt();
+        if (!options.onItemEdit) {
+          inflightTaskIds.delete(taskId);
+          pendingEdits.delete(taskId);
+          rawOnPatch({ id: taskId, startDate: nextStart, endDate: nextEnd });
+          refreshGantt();
+          return;
+        }
+        try {
+          await options.onItemEdit(taskId, changes);
+          const current = pendingEdits.get(taskId);
+          if (!current || current.seq !== seq) return;
+          pendingEdits.delete(taskId);
+          inflightTaskIds.delete(taskId);
+          refreshGantt();
+        } catch (err) {
+          const current = pendingEdits.get(taskId);
+          if (!current || current.seq !== seq) return;
+          const idxNow = allTasks.findIndex((t) => t.id === taskId);
+          if (idxNow !== -1) {
+            allTasks[idxNow] = { ...allTasks[idxNow], startDate: origStart, endDate: origEnd };
+          }
+          pendingEdits.delete(taskId);
+          inflightTaskIds.delete(taskId);
+          refreshGantt();
+          try {
+            (_a2 = options.onItemEditError) == null ? void 0 : _a2.call(
+              options,
+              taskId,
+              err instanceof Error ? err : new Error(String(err))
+            );
+          } catch (_e2) {
+          }
+        }
+      }
+      const pendingReorders = /* @__PURE__ */ new Map();
+      let nextReorderSeq = 0;
+      async function onTaskReorderAsync(patch) {
+        var _a2;
+        const taskId = patch.id;
+        const idx = allTasks.findIndex((t) => t.id === taskId);
+        if (idx === -1) return;
+        const existing = pendingReorders.get(taskId);
+        const origTask = allTasks[idx];
+        const origParentId = existing ? existing.origParentId : origTask.parentWorkItemId;
+        const origSortOrder = existing ? existing.origSortOrder : origTask.sortOrder;
+        const origPriorityGroup = existing ? existing.origPriorityGroup : origTask.priorityGroup;
+        const seq = ++nextReorderSeq;
+        pendingReorders.set(taskId, { seq, origParentId, origSortOrder, origPriorityGroup });
+        inflightTaskIds.add(taskId);
+        const u = { ...origTask };
+        if (patch.parentId !== void 0) u.parentWorkItemId = patch.parentId;
+        if (patch.priorityGroup !== void 0) u.priorityGroup = patch.priorityGroup;
+        if (patch.sortOrder !== void 0) u.sortOrder = patch.sortOrder;
+        allTasks[idx] = u;
+        const title = origTask.title || origTask.name || taskId;
+        const logParts = [];
+        if (patch.priorityGroup) logParts.push("→ " + patch.priorityGroup);
+        if (patch.parentId !== void 0) logParts.push("parent " + (patch.parentId || "none"));
+        if (patch.sortOrder !== void 0) logParts.push("reordered");
+        patchLog.unshift({ ts: /* @__PURE__ */ new Date(), desc: title + ": " + logParts.join(", ") });
+        if (patchLog.length > 50) patchLog.pop();
+        dispatch({ type: "PATCH", patch });
+        refreshGantt();
+        if (!options.onItemReorder) {
+          inflightTaskIds.delete(taskId);
+          pendingReorders.delete(taskId);
+          rawOnPatch(patch);
+          refreshGantt();
+          return;
+        }
+        try {
+          const newIndex = typeof patch.sortOrder === "number" ? patch.sortOrder : 0;
+          const newParentId = patch.parentId !== void 0 ? patch.parentId : void 0;
+          await options.onItemReorder(taskId, { newIndex, newParentId });
+          const current = pendingReorders.get(taskId);
+          if (!current || current.seq !== seq) return;
+          pendingReorders.delete(taskId);
+          inflightTaskIds.delete(taskId);
+          refreshGantt();
+        } catch (err) {
+          const current = pendingReorders.get(taskId);
+          if (!current || current.seq !== seq) return;
+          const idxNow = allTasks.findIndex((t) => t.id === taskId);
+          if (idxNow !== -1) {
+            const rev = { ...allTasks[idxNow] };
+            rev.parentWorkItemId = origParentId ?? null;
+            if (origSortOrder !== void 0) rev.sortOrder = origSortOrder;
+            rev.priorityGroup = origPriorityGroup ?? null;
+            allTasks[idxNow] = rev;
+          }
+          pendingReorders.delete(taskId);
+          inflightTaskIds.delete(taskId);
+          refreshGantt();
+          try {
+            (_a2 = options.onItemReorderError) == null ? void 0 : _a2.call(
+              options,
+              taskId,
+              err instanceof Error ? err : new Error(String(err))
+            );
+          } catch (_e2) {
+          }
+        }
+      }
+      function interceptedOnPatch(patch) {
+        const hasStructural = patch.parentId !== void 0 || patch.priorityGroup !== void 0 || patch.sortOrder !== void 0;
+        const hasDates = patch.startDate !== void 0 || patch.endDate !== void 0;
+        if (hasStructural && !hasDates) {
+          onTaskReorderAsync(patch);
+        } else {
+          onTaskPatch(patch);
+        }
+      }
       function onTaskPatch(patch) {
         const idx = allTasks.findIndex((t) => t.id === patch.id);
         if (idx !== -1) {
@@ -3800,6 +4010,7 @@ var NimbusGanttApp = (function(exports) {
             rebuildView();
           } else if (ev.type === "SET_ZOOM") {
             if (ganttInst && typeof ganttInst.setZoom === "function") ganttInst.setZoom(state.zoom);
+            emitViewport();
           }
         }
       }
@@ -3842,6 +4053,12 @@ var NimbusGanttApp = (function(exports) {
             container.appendChild(inst.el);
           }
         });
+        SLOT_ORDER.forEach((slotName) => {
+          const inst = slotInstances.get(slotName);
+          if (inst && inst.el.parentNode === container) {
+            container.appendChild(inst.el);
+          }
+        });
         const contentInst = slotInstances.get("ContentArea");
         if (contentInst) {
           ganttHost = contentInst.el.querySelector('[data-nga-gantt-host="1"]');
@@ -3879,7 +4096,7 @@ var NimbusGanttApp = (function(exports) {
         ganttInst = new Ctor(ganttEl, {
           tasks: gtasks,
           dependencies: [],
-          columns: GANTT_COLS,
+          columns: buildGanttCols(tplConfig.features),
           theme: V3_THEME,
           rowHeight: 32,
           barHeight: 20,
@@ -3892,11 +4109,12 @@ var NimbusGanttApp = (function(exports) {
           colorMap: ((_a2 = options.config) == null ? void 0 : _a2.colorMap) || { ...STAGE_COLORS, ...STAGE_TO_CATEGORY_COLOR },
           readOnly: false,
           onTaskClick: (task) => {
-            var _a3;
+            var _a3, _b2;
             if (!task || !task.id || isBucketId(task.id)) return;
             dispatch({ type: "TOGGLE_DETAIL", taskId: task.id });
             const t = allTasks.find((x) => x.id === task.id);
             if (t) (_a3 = options.onTaskClick) == null ? void 0 : _a3.call(options, t, "canvas");
+            (_b2 = options.onItemClick) == null ? void 0 : _b2.call(options, task.id);
           },
           onTaskDblClick: (task) => {
             var _a3;
@@ -3917,10 +4135,16 @@ var NimbusGanttApp = (function(exports) {
             (_a3 = options.onTaskHover) == null ? void 0 : _a3.call(options, id);
           },
           onTaskMove: (task, s, e) => {
-            if (task && task.id && !isBucketId(task.id)) onTaskPatch({ id: task.id, startDate: s, endDate: e });
+            if (!task || !task.id || isBucketId(task.id)) return;
+            onTaskEditAsync(task.id, s, e, { startDate: s, endDate: e });
           },
           onTaskResize: (task, s, e) => {
-            if (task && task.id && !isBucketId(task.id)) onTaskPatch({ id: task.id, startDate: s, endDate: e });
+            if (!task || !task.id || isBucketId(task.id)) return;
+            const orig = allTasks.find((t) => t.id === task.id);
+            const changes = {};
+            if (!orig || orig.startDate !== s) changes.startDate = s;
+            if (!orig || orig.endDate !== e) changes.endDate = e;
+            onTaskEditAsync(task.id, s, e, changes);
           }
         });
         const findTaskById = (id) => id ? allTasks.find((t) => t.id === id) ?? null : null;
@@ -3965,10 +4189,11 @@ var NimbusGanttApp = (function(exports) {
         };
         if (typeof PGP === "function") {
           const pluginBuckets = tplConfig.buckets;
+          const bucketProgressFn = tplConfig.features.headerRowCompletionBar === false ? () => 0 : typeof hwp === "function" ? hwp : void 0;
           ganttInst.use(PGP({
             buckets: pluginBuckets,
             getBucket: (task) => task.groupId || null,
-            getBucketProgress: typeof hwp === "function" ? hwp : void 0
+            getBucketProgress: bucketProgressFn
           }));
         }
         ganttInst.setData(gtasks, []);
@@ -3977,25 +4202,55 @@ var NimbusGanttApp = (function(exports) {
         } catch (_e2) {
         }
         setTimeout(() => {
-          var _a3, _b2, _c2, _d2;
+          var _a3, _b2, _c2, _d2, _e2, _f2, _g, _h, _i;
           try {
             const gi = ganttInst;
-            const x = (_b2 = (_a3 = gi.timeScale) == null ? void 0 : _a3.dateToX) == null ? void 0 : _b2.call(_a3, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
-            if (typeof x === "number") (_d2 = (_c2 = gi.scrollManager) == null ? void 0 : _c2.scrollToX) == null ? void 0 : _d2.call(_c2, Math.max(0, x));
-          } catch (_e2) {
+            const iv = options.initialViewport;
+            if (iv && (typeof iv.scrollLeft === "number" || typeof iv.scrollTop === "number")) {
+              const x = typeof iv.scrollLeft === "number" ? Math.max(0, iv.scrollLeft) : 0;
+              const y = typeof iv.scrollTop === "number" ? Math.max(0, iv.scrollTop) : 0;
+              if (typeof ((_a3 = gi.scrollManager) == null ? void 0 : _a3.setScrollPosition) === "function") {
+                gi.scrollManager.setScrollPosition(x, y);
+              } else {
+                (_c2 = (_b2 = gi.scrollManager) == null ? void 0 : _b2.scrollToX) == null ? void 0 : _c2.call(_b2, x);
+                (_e2 = (_d2 = gi.scrollManager) == null ? void 0 : _d2.scrollToY) == null ? void 0 : _e2.call(_d2, y);
+              }
+            } else {
+              const x = (_g = (_f2 = gi.timeScale) == null ? void 0 : _f2.dateToX) == null ? void 0 : _g.call(_f2, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
+              if (typeof x === "number") (_i = (_h = gi.scrollManager) == null ? void 0 : _h.scrollToX) == null ? void 0 : _i.call(_h, Math.max(0, x));
+            }
+          } catch (_e3) {
           }
         }, 50);
         if (cleanupShading) cleanupShading();
         if (cleanupDrag) cleanupDrag();
         if (tplConfig.features.depthShading) cleanupShading = startDepthShading(ganttEl, depthMap);
-        if (tplConfig.features.dragReparent) cleanupDrag = startDragReparent(ganttEl, allTasks, depthMap, onTaskPatch);
+        if (tplConfig.features.dragReparent) cleanupDrag = startDragReparent(ganttEl, allTasks, depthMap, interceptedOnPatch);
+        if (options.onViewportChange) {
+          try {
+            const wrapper = ganttEl.querySelector(".ng-scroll-wrapper");
+            if (wrapper) {
+              const onScroll = () => emitViewport();
+              wrapper.addEventListener("scroll", onScroll, { passive: true });
+              const prevCleanupDrag2 = cleanupDrag;
+              cleanupDrag = () => {
+                wrapper.removeEventListener("scroll", onScroll);
+                if (prevCleanupDrag2) prevCleanupDrag2();
+              };
+            }
+          } catch (_e2) {
+          }
+        }
       }
       function refreshGantt() {
         if (!ganttHost) return;
         if (state.viewMode === "gantt" && ganttInst) {
           const filtered = applyFilter(allTasks, state.filter, state.search);
           const maybeHide = state.hideCompleted ? filtered.filter((t) => !DONE_STAGES[t.stage || ""]) : filtered;
-          const gtasks = state.groupBy === "epic" ? buildTasks(buildTasksEpic(maybeHide)) : buildTasks(maybeHide);
+          let gtasks = state.groupBy === "epic" ? buildTasks(buildTasksEpic(maybeHide)) : buildTasks(maybeHide);
+          if (inflightTaskIds.size > 0) {
+            gtasks = gtasks.map((t) => inflightTaskIds.has(t.id) ? { ...t, color: dimColor(t.color) } : t);
+          }
           const gi = ganttInst;
           if (typeof gi.setData === "function") {
             gi.setData(gtasks, []);
@@ -4135,6 +4390,18 @@ var NimbusGanttApp = (function(exports) {
           allTasks = tasks;
           depthMap = buildDepthMap(allTasks);
           rebuildView();
+        },
+        /** CH-1 (0.183) — toggle chrome visibility at runtime. With no arg,
+         *  flips current state; boolean arg sets explicitly. Embedded-mode
+         *  mounts cannot re-show chrome this way because features were
+         *  scrubbed at resolve time (mount with mode='fullscreen' first if
+         *  runtime re-show is needed). */
+        toggleChrome(visible) {
+          const next = typeof visible === "boolean" ? visible : !chromeVisible;
+          if (next === chromeVisible) return;
+          chromeVisible = next;
+          applyChromeVisibility();
+          renderSlots();
         },
         destroy() {
           IIFEApp.unmount(container);

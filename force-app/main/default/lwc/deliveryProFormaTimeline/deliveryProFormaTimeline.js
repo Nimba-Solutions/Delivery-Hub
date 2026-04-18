@@ -89,6 +89,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     _tasks = [];
     _mountHandle = null;
     _refetchTimer = null;
+    _viewportWriteTimer = null;
 
     async connectedCallback() {
         // Fullscreen FlexiPage route renders a Salesforce-injected SLDS page-header
@@ -135,6 +136,10 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         if (this._refetchTimer) {
             clearTimeout(this._refetchTimer);
             this._refetchTimer = null;
+        }
+        if (this._viewportWriteTimer) {
+            clearTimeout(this._viewportWriteTimer);
+            this._viewportWriteTimer = null;
         }
         if (this._mounted) {
             try {
@@ -221,18 +226,33 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         const mountConfig = {
             mode: this.mode,
             tasks,
-            // NG ≤ 6396556 API — kept for backwards compat with the current
-            // shipped bundle until 0.183 lands.
+            // NG ≤ 6396556 API — kept for backwards compat with older bundles.
+            // 0.183 may no longer emit onPatch for dates (split into onItemEdit)
+            // and for sort order (split into onItemReorder). Keeping the handler
+            // as a no-op safety net in case non-date/non-reorder patches still
+            // flow through (priorityGroup, parent).
             onPatch: (patch) => this._handlePatch(patch),
-            // NG 0.183 API (pre-staged — no-op on older bundles):
-            //   onItemEdit: drag-to-edit dates, optimistic + revert-on-throw
-            //   onItemClick: click bar → navigate to SF record page
-            //   onItemEditError: UI-agnostic error surface after a thrown onItemEdit
-            //   chromeVisibleDefault: initial chrome visibility per FlexiPage config
-            onItemEdit: (task, dates) => this._handleItemEdit(task, dates),
-            onItemClick: (task) => this._handleItemClick(task),
+            // NG 0.183 final API:
+            //   onItemEdit(taskId, { startDate?, endDate? })
+            //   onItemReorder(taskId, newIndex)
+            //   onItemClick(taskId)
+            //   onItemEditError(taskId, error), onItemReorderError(taskId, error)
+            //   onViewportChange(state) — debounced 150ms by NG
+            //   initialViewport — applied at mount
+            //   chromeVisibleDefault — initial chrome visibility
+            //   features.hoursColumn / features.budgetUsedColumn — per-column gates
+            onItemEdit: (taskId, changes) => this._handleItemEdit(taskId, changes),
             onItemEditError: (taskId, error) => this._handleItemEditError(taskId, error),
+            onItemReorder: (taskId, newIndex) => this._handleItemReorder(taskId, newIndex),
+            onItemReorderError: (taskId, error) => this._handleItemReorderError(taskId, error),
+            onItemClick: (taskId) => this._handleItemClick(taskId),
+            onViewportChange: (state) => this._handleViewportChange(state),
+            initialViewport: this._readInitialViewport(),
             chromeVisibleDefault: !this.chromeHiddenDefault,
+            features: {
+                hoursColumn: true,
+                budgetUsedColumn: true,
+            },
             cssUrl: CLOUDNIMBUS_CSS,
             // Passed explicitly to avoid window-lookup races; the app shell
             // would otherwise reach for window.NimbusGantt at a point where
@@ -334,19 +354,20 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     }
 
     /**
-     * NG 0.183 onItemEdit callback. Optimistic: NG holds the dragged bar in
-     * an in-flight state, awaits this promise, then commits on resolve or
-     * reverts on reject. We must RE-THROW on Apex failure so NG reverts —
-     * the error UI is emitted by NG through onItemEditError (surfaced via
-     * _handleItemEditError → ShowToastEvent).
+     * NG 0.183 onItemEdit(taskId, { startDate?, endDate? }). Optimistic: NG
+     * holds the dragged bar in an in-flight state, awaits this promise, then
+     * commits on resolve or reverts on reject. Re-throw on Apex failure so
+     * NG reverts — the error UI is emitted by NG through onItemEditError
+     * (surfaced via _handleItemEditError → ShowToastEvent, per HQ's
+     * library-UI-agnostic option a).
      */
-    async _handleItemEdit(task, dates) {
-        if (!task || !task.id) return;
-        const { start, end } = dates || {};
+    async _handleItemEdit(taskId, changes) {
+        if (!taskId) return;
+        const { startDate, endDate } = changes || {};
         await updateWorkItemDates({
-            workItemId: task.id,
-            startDate: start || null,
-            endDate: end || null,
+            workItemId: taskId,
+            startDate: startDate || null,
+            endDate: endDate || null,
         });
         this._scheduleRefetch();
     }
@@ -356,17 +377,31 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     }
 
     /**
-     * NG 0.183 onItemClick callback. Opens the standard SF record page for
-     * the clicked WorkItem__c. Namespace prefix is applied at runtime for
-     * subscriber orgs (scratch 'WorkItem__c' → subscriber 'delivery__WorkItem__c'
-     * per CLAUDE.md getLocalName() / namespace rule).
+     * NG 0.183 onItemReorder(taskId, newIndex). Persists the new sort position
+     * via the existing updateWorkItemSortOrder Apex; same optimistic/revert
+     * semantics as onItemEdit.
      */
-    _handleItemClick(task) {
-        if (!task || !task.id) return;
+    async _handleItemReorder(taskId, newIndex) {
+        if (!taskId) return;
+        await updateWorkItemSortOrder({ workItemId: taskId, sortOrder: Number(newIndex) || 0 });
+        this._scheduleRefetch();
+    }
+
+    _handleItemReorderError(taskId, error) {
+        this._showError('Failed to save reorder', error);
+    }
+
+    /**
+     * NG 0.183 onItemClick(taskId). Opens the standard SF record page for
+     * the clicked WorkItem__c. Namespace prefix applied at runtime for
+     * subscriber orgs (scratch 'WorkItem__c' → subscriber 'delivery__WorkItem__c').
+     */
+    _handleItemClick(taskId) {
+        if (!taskId) return;
         this[NavigationMixin.Navigate]({
             type: 'standard__recordPage',
             attributes: {
-                recordId: task.id,
+                recordId: taskId,
                 objectApiName: `${this._vfPrefix()}WorkItem__c`,
                 actionName: 'view',
             },
@@ -374,22 +409,64 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     }
 
     _mapTasksForNg(rawTasks) {
-        return (rawTasks || []).map(r => ({
-            id: r.id,
-            title: r.title || r.name,
-            priorityGroup: r.priorityGroup || 'follow-on',
-            stage: r.stage || '',
-            priority: r.priority || 'Medium',
-            startDate: r.startDate || null,
-            endDate: r.endDate || null,
-            estimatedHours: Number(r.estimatedHours) || 0,
-            loggedHours: Number(r.loggedHours) || 0,
-            developerName: r.developerName || '',
-            entityName: r.entityName || '',
-            parentWorkItemId: r.parentWorkItemId || null,
-            sortOrder: Number(r.sortOrder) || 0,
-            isInactive: !!r.isInactive,
-        }));
+        return (rawTasks || []).map(r => {
+            const estimated = Number(r.estimatedHours) || 0;
+            const logged = Number(r.loggedHours) || 0;
+            // DM-3: per-row column value. Guard against div-by-zero; 0-estimate
+            // items show 0% even when hours are logged (matches v9 behavior).
+            const budgetUsedPercent = estimated > 0
+                ? Math.round((logged / estimated) * 1000) / 10
+                : 0;
+            return {
+                id: r.id,
+                title: r.title || r.name,
+                priorityGroup: r.priorityGroup || 'follow-on',
+                stage: r.stage || '',
+                priority: r.priority || 'Medium',
+                startDate: r.startDate || null,
+                endDate: r.endDate || null,
+                estimatedHours: estimated,
+                loggedHours: logged,
+                budgetUsedPercent,
+                developerName: r.developerName || '',
+                entityName: r.entityName || '',
+                parentWorkItemId: r.parentWorkItemId || null,
+                sortOrder: Number(r.sortOrder) || 0,
+                isInactive: !!r.isInactive,
+            };
+        });
+    }
+
+    /**
+     * IM-7 viewport persistence. Per-mode key so Embedded and Standalone
+     * don't clobber each other. localStorage is per-browser (not cross-device);
+     * acceptable tradeoff vs. a UserPreference__c sObject. Try/catch guards
+     * Locker Service / private-mode restrictions.
+     */
+    get _viewportStorageKey() {
+        return `dh.gantt.viewport.${this.mode || 'embedded'}`;
+    }
+
+    _readInitialViewport() {
+        try {
+            const raw = window.localStorage.getItem(this._viewportStorageKey);
+            if (!raw) return undefined;
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') return parsed;
+        } catch (e) { /* storage unavailable — first mount, fall through */ }
+        return undefined;
+    }
+
+    _handleViewportChange(state) {
+        // NG debounces the callback at 150ms; add a host-side throttle so
+        // rapid scrolls don't thrash localStorage.
+        if (this._viewportWriteTimer) clearTimeout(this._viewportWriteTimer);
+        this._viewportWriteTimer = setTimeout(() => {
+            this._viewportWriteTimer = null;
+            try {
+                window.localStorage.setItem(this._viewportStorageKey, JSON.stringify(state));
+            } catch (e) { /* storage full / disabled — swallow */ }
+        }, 500);
     }
 
     /**
