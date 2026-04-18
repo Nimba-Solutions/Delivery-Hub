@@ -195,8 +195,6 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             mode: this.mode,
             tasks,
             onPatch: (patch) => this._handlePatch(patch),
-            onEnterFullscreen: () => this._handleEnterFullscreen(),
-            onExitFullscreen: () => this._handleExitFullscreen(),
             cssUrl: CLOUDNIMBUS_CSS,
             // Passed explicitly to avoid window-lookup races; the app shell
             // would otherwise reach for window.NimbusGantt at a point where
@@ -204,17 +202,29 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             engine: window.NimbusGantt,
         };
 
-        // Fullscreen-button → VF route wiring. Native fullscreen API fails in
-        // the Lightning iframe sandbox; the VF + Lightning Out route IS the
-        // chromeless fullscreen experience. On the FlexiPage Standalone route
-        // (mode=fullscreen, non-apex URL), pass fullscreenUrl so the shell
-        // navigates there on click. On the VF route itself (/apex/...), omit
-        // the prop so the shell auto-hides the button.
+        // Surface-aware fullscreen-button routing. Give NG's shell exactly one
+        // signal per route so the button direction is unambiguous:
+        //
+        //   Embedded (Delivery_Timeline tab, mode=embedded)
+        //     → onEnterFullscreen only: "↗ Full Screen" navigates to Standalone tab
+        //   Standalone FlexiPage (Delivery_Gantt_Standalone, mode=fullscreen, non-/apex/)
+        //     → fullscreenUrl only: outbound button to VF Full_Bleed route
+        //   VF Full_Bleed (/apex/DeliveryGanttStandalone, mode=fullscreen, /apex/ path)
+        //     → onExitFullscreen only: "← Exit" back to embedded Delivery_Timeline tab
+        //
+        // Previously passed all three callbacks unconditionally — NG's shell
+        // then used callback presence to render the exit button on Standalone
+        // despite fullscreenUrl being set (HQ probe at 6396556 showed
+        // fullscreenExitBtn:true / fullscreenUrlBtn:false on Standalone).
         const onApexRoute = typeof window !== 'undefined'
             && window.location
             && typeof window.location.pathname === 'string'
             && window.location.pathname.indexOf('/apex/') !== -1;
-        if (this.mode === 'fullscreen' && !onApexRoute) {
+        if (this.mode === 'embedded') {
+            mountConfig.onEnterFullscreen = () => this._handleEnterFullscreen();
+        } else if (this.mode === 'fullscreen' && onApexRoute) {
+            mountConfig.onExitFullscreen = () => this._handleExitFullscreen();
+        } else if (this.mode === 'fullscreen' && !onApexRoute) {
             mountConfig.fullscreenUrl = `/apex/${this._vfPrefix()}DeliveryGanttStandalone`;
         }
 
