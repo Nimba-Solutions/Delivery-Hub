@@ -70,6 +70,25 @@
    row = v12 prod parity preserved. */
 .nga-titlebar { display: flex; flex-direction: column; gap: 6px; padding: 6px 12px; background: #fff; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }
 .nga-titlebar-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; min-width: 0; }
+
+/* Defensive pill sizing — bracket-free selector to survive the VF +
+ * Lightning Out CSS injection path's failure to match Tailwind arbitrary-
+ * value escaped-bracket selectors. On /apex/DeliveryGanttStandalone the
+ * byte-identical `.text-\[10px\]{font-size:10px}` rule from Tailwind was
+ * in the stylesheet but the selector didn't match the `<button
+ * class="text-[10px] ...">` elements — computed style fell through to the
+ * 13px/400 inherited from .nga-root. Lightning-native paths
+ * (/lightning/n/Delivery_Gantt_Standalone) parsed the escape correctly.
+ * These additive rules use attribute + tag selectors (no escaped chars)
+ * so they match in every pipeline. Keep the Tailwind classes in TitleBar
+ * — they still work on Lightning + v12 React; this is pure backstop. */
+[data-nga-titlebar-row] button {
+  font-size: 10px;
+  font-weight: 600;
+}
+[data-nga-titlebar-row] a {
+  font-size: 10px;
+}
 .nga-filterbar { display: block; padding: 6px 12px; background: #fff; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; }
 .nga-zoombar { display: flex; align-items: center; gap: 0.5rem; }
 .nga-stats { padding: 12px; background: #fff; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; }
