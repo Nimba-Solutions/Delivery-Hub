@@ -308,8 +308,17 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 fullscreenUrl: mountConfig.fullscreenUrl,
                 hasOnEnter: !!mountConfig.onEnterFullscreen,
                 hasOnExit: !!mountConfig.onExitFullscreen,
+                hasOnItemEdit: !!mountConfig.onItemEdit,
+                hasOnItemEditError: !!mountConfig.onItemEditError,
+                hasOnItemReorder: !!mountConfig.onItemReorder,
+                hasOnItemReorderError: !!mountConfig.onItemReorderError,
+                hasOnItemClick: !!mountConfig.onItemClick,
+                hasOnViewportChange: !!mountConfig.onViewportChange,
+                hasOnPatch: !!mountConfig.onPatch,
                 taskCount: mountConfig.tasks ? mountConfig.tasks.length : 0,
                 chromeVisibleDefault: mountConfig.chromeVisibleDefault,
+                features: mountConfig.features,
+                initialViewport: mountConfig.initialViewport,
             }));
             // Capture the mount return value — NG 0.183 returns a handle with
             // toggleChrome(), destroy(), and (expected) an update method for
