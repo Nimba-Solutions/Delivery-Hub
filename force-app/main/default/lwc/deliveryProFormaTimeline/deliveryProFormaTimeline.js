@@ -226,23 +226,19 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         const mountConfig = {
             mode: this.mode,
             tasks,
-            // NG ≤ 6396556 API — kept for backwards compat with older bundles.
-            // 0.183 may no longer emit onPatch for dates (split into onItemEdit)
-            // and for sort order (split into onItemReorder). Keeping the handler
-            // as a no-op safety net in case non-date/non-reorder patches still
-            // flow through (priorityGroup, parent).
+            // Date edits use the LEGACY onPatch path intentionally. NG 0.183's
+            // IIFEApp gates: if options.onItemEdit is truthy, the legacy onPatch
+            // is skipped and onItemEdit is awaited. Demo-triage at 889c88da
+            // showed zero Apex fetches during drag — NG saw our onItemEdit as
+            // truthy and committed the visual before the awaited promise
+            // landed, so updateWorkItemDates never fired. Per NG CC: removing
+            // onItemEdit from mount config re-engages the legacy save path via
+            // _handlePatch → updateWorkItemDates.
+            //
+            // _handleItemEdit / _handleItemEditError remain defined below as
+            // dead wire — once the NG stub-detection behavior is understood,
+            // re-enable by restoring the keys here.
             onPatch: (patch) => this._handlePatch(patch),
-            // NG 0.183 final API:
-            //   onItemEdit(taskId, { startDate?, endDate? })
-            //   onItemReorder(taskId, newIndex)
-            //   onItemClick(taskId)
-            //   onItemEditError(taskId, error), onItemReorderError(taskId, error)
-            //   onViewportChange(state) — debounced 150ms by NG
-            //   initialViewport — applied at mount
-            //   chromeVisibleDefault — initial chrome visibility
-            //   features.hoursColumn / features.budgetUsedColumn — per-column gates
-            onItemEdit: (taskId, changes) => this._handleItemEdit(taskId, changes),
-            onItemEditError: (taskId, error) => this._handleItemEditError(taskId, error),
             onItemReorder: (taskId, payload) => this._handleItemReorder(taskId, payload),
             onItemReorderError: (taskId, error) => this._handleItemReorderError(taskId, error),
             onItemClick: (taskId) => this._handleItemClick(taskId),
@@ -308,13 +304,11 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 fullscreenUrl: mountConfig.fullscreenUrl,
                 hasOnEnter: !!mountConfig.onEnterFullscreen,
                 hasOnExit: !!mountConfig.onExitFullscreen,
+                hasOnPatch: !!mountConfig.onPatch,
                 hasOnItemEdit: !!mountConfig.onItemEdit,
-                hasOnItemEditError: !!mountConfig.onItemEditError,
                 hasOnItemReorder: !!mountConfig.onItemReorder,
-                hasOnItemReorderError: !!mountConfig.onItemReorderError,
                 hasOnItemClick: !!mountConfig.onItemClick,
                 hasOnViewportChange: !!mountConfig.onViewportChange,
-                hasOnPatch: !!mountConfig.onPatch,
                 taskCount: mountConfig.tasks ? mountConfig.tasks.length : 0,
                 chromeVisibleDefault: mountConfig.chromeVisibleDefault,
                 features: mountConfig.features,
