@@ -63,11 +63,29 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
      */
     @api mode = 'embedded';
 
+    /**
+     * Outbound URL for NG's fullscreen button — set declaratively on the
+     * Standalone FlexiPage (componentInstanceProperty fullscreenUrl). When set,
+     * NG's shell renders a button that navigates to this URL on click. Left
+     * unset on Delivery_Timeline (embedded) + VF Full_Bleed (/apex/) mounts.
+     *
+     * Value from FlexiPage is the unprefixed URL (/apex/DeliveryGanttStandalone);
+     * subscriber orgs need the namespaced URL. The _mount() path applies the
+     * runtime-resolved VF prefix before handing it to NG (CLAUDE.md VF-URL rule).
+     */
+    @api fullscreenUrl;
+
     _scriptLoaded = false;
     _mounted = false;
     _tasks = [];
 
     async connectedCallback() {
+        // Fullscreen FlexiPage route renders a Salesforce-injected SLDS page-header
+        // band (tab label + motif) above the FlexiPage region. That band can only
+        // be suppressed by a document-head CSS rule (LWC shadow DOM can't reach
+        // the parent chrome); inject it when mode === 'fullscreen' so the
+        // FlexiPage route visually matches the VF Full_Bleed route.
+        this._installFullscreenChromeHide();
         // Load core first so window.NimbusGantt is available when the app shell
         // bundle runs. Locker Service may reject loadScript even when the
         // script actually executed — catch and continue.
@@ -84,13 +102,22 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             console.warn('[DeliveryTimeline] nimbusganttapp script warning (may be Locker Service):', e && e.message);
         }
         this._scriptLoaded = true;
-        if (window.NimbusGanttApp) {
-            await this._loadAndMount();
-        } else {
+        if (!window.NimbusGanttApp) {
             // eslint-disable-next-line no-console
             console.error('[DeliveryTimeline] window.NimbusGanttApp not set after script load — bundle may have failed');
             this._showError('Timeline bundle failed to load', new Error('window.NimbusGanttApp not defined'));
+            return;
         }
+        // Defer mount via a macrotask so FlexiPage @api prop hydration
+        // (fullscreenUrl in particular) is guaranteed complete before the
+        // mount config snapshots them. connectedCallback's microtask awaits
+        // are not always enough on FlexiPage-hosted components — HQ probe
+        // at e8c20967 showed @api fullscreenUrl landing on the host element
+        // AFTER NimbusGanttApp.mount() had already snapshotted an undefined
+        // value, causing NG to fall through to native requestFullscreen.
+        setTimeout(() => {
+            if (!this._mounted) this._loadAndMount();
+        }, 0);
     }
 
     disconnectedCallback() {
@@ -103,6 +130,43 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             } catch (e) { /* swallow */ }
             this._mounted = false;
         }
+        this._uninstallFullscreenChromeHide();
+    }
+
+    _installFullscreenChromeHide() {
+        if (this.mode !== 'fullscreen') return;
+        if (document.getElementById('dh-gantt-fs-chrome-hide')) return;
+        const style = document.createElement('style');
+        style.id = 'dh-gantt-fs-chrome-hide';
+        // Real AppPage/FlexiPage chrome targets (confirmed via Glen's DevTools
+        // on /lightning/n/Delivery_Gantt_Standalone): app_flexipage-header
+        // custom element wrapping div.slds-page-header.header.flexipageHeader.
+        // Earlier .forceAppHomePage selectors missed; kept for belt-and-
+        // suspenders in case DOM shifts across LEX releases.
+        style.textContent = [
+            'app_flexipage-header,',
+            '.flexipageHeader,',
+            'div.slds-page-header.header.flexipageHeader,',
+            '.forceAppHomePage section.slds-page-header,',
+            '.appHomePage section.slds-page-header,',
+            '[data-aura-class="forceAppHomePage"] section.slds-page-header,',
+            '.forceHighlightsPanel { display: none !important; }'
+        ].join(' ');
+        document.head.appendChild(style);
+    }
+
+    _uninstallFullscreenChromeHide() {
+        const s = document.getElementById('dh-gantt-fs-chrome-hide');
+        if (s && s.parentNode) s.parentNode.removeChild(s);
+    }
+
+    // CLOUDNIMBUS_CSS resolves to `/resource/{ts}/cloudnimbustemplatecss` in a
+    // non-namespaced scratch and `/resource/{ts}/delivery__cloudnimbustemplatecss`
+    // in a subscriber org. Used to build the VF fullscreen URL so it resolves
+    // correctly in both contexts (CLAUDE.md: never hardcode namespace in VF URL).
+    _vfPrefix() {
+        const m = /\/resource\/\d+\/([^/?]+?)__cloudnimbustemplatecss/.exec(CLOUDNIMBUS_CSS);
+        return m ? `${m[1]}__` : '';
     }
 
     async _loadAndMount() {
@@ -148,19 +212,68 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             isInactive: !!r.isInactive,
         }));
 
+        const mountConfig = {
+            mode: this.mode,
+            tasks,
+            onPatch: (patch) => this._handlePatch(patch),
+            cssUrl: CLOUDNIMBUS_CSS,
+            // Passed explicitly to avoid window-lookup races; the app shell
+            // would otherwise reach for window.NimbusGantt at a point where
+            // Locker Service proxies can still be settling.
+            engine: window.NimbusGantt,
+        };
+
+        // Surface-aware fullscreen-button routing. Give NG's shell exactly one
+        // signal per route so the button direction is unambiguous:
+        //
+        //   Embedded (Delivery_Timeline tab, mode=embedded, no @api fullscreenUrl)
+        //     → onEnterFullscreen only: "↗ Full Screen" navigates to Standalone tab
+        //   Standalone FlexiPage (mode=fullscreen, @api fullscreenUrl set by FlexiPage)
+        //     → fullscreenUrl only: outbound button to VF Full_Bleed route
+        //   VF Full_Bleed (/apex/, mode=fullscreen, no @api fullscreenUrl — LightningOut
+        //                  mount doesn't set it)
+        //     → onExitFullscreen only: "← Exit" back to embedded Delivery_Timeline tab
+        //
+        // The @api fullscreenUrl prop is the primary signal for Standalone
+        // routing — set declaratively on the FlexiPage. onApexRoute is the
+        // fallback discriminator for the fullscreen-mode-no-fullscreenUrl case
+        // (VF Lightning Out mount).
+        const onApexRoute = typeof window !== 'undefined'
+            && window.location
+            && typeof window.location.pathname === 'string'
+            && window.location.pathname.indexOf('/apex/') !== -1;
+        if (this.mode === 'embedded') {
+            mountConfig.onEnterFullscreen = () => this._handleEnterFullscreen();
+        } else if (this.fullscreenUrl) {
+            // Apply namespace prefix to the FlexiPage-declared URL for
+            // subscriber orgs (FlexiPage stores a static string; scratch
+            // stores /apex/Name, subscriber needs /apex/delivery__Name).
+            let url = this.fullscreenUrl;
+            const prefix = this._vfPrefix();
+            if (prefix && url.indexOf('/apex/') === 0 && url.indexOf('__') === -1) {
+                url = url.replace('/apex/', `/apex/${prefix}`);
+            }
+            mountConfig.fullscreenUrl = url;
+        } else if (onApexRoute) {
+            // VF Full_Bleed mount (no @api fullscreenUrl from LightningOut)
+            mountConfig.onExitFullscreen = () => this._handleExitFullscreen();
+        } else {
+            // Standalone FlexiPage without fullscreenUrl configured — fall back
+            // to computed URL so behavior is preserved even if FlexiPage prop
+            // is missing.
+            mountConfig.fullscreenUrl = `/apex/${this._vfPrefix()}DeliveryGanttStandalone`;
+        }
+
         try {
-            window.NimbusGanttApp.mount(container, {
-                mode: this.mode,
-                tasks,
-                onPatch: (patch) => this._handlePatch(patch),
-                onEnterFullscreen: () => this._handleEnterFullscreen(),
-                onExitFullscreen: () => this._handleExitFullscreen(),
-                cssUrl: CLOUDNIMBUS_CSS,
-                // Passed explicitly to avoid window-lookup races; the app shell
-                // would otherwise reach for window.NimbusGantt at a point where
-                // Locker Service proxies can still be settling.
-                engine: window.NimbusGantt,
-            });
+            // eslint-disable-next-line no-console
+            console.log('[DH mount]', JSON.stringify({
+                mode: mountConfig.mode,
+                fullscreenUrl: mountConfig.fullscreenUrl,
+                hasOnEnter: !!mountConfig.onEnterFullscreen,
+                hasOnExit: !!mountConfig.onExitFullscreen,
+                taskCount: mountConfig.tasks ? mountConfig.tasks.length : 0,
+            }));
+            window.NimbusGanttApp.mount(container, mountConfig);
             this._mounted = true;
         } catch (error) {
             // eslint-disable-next-line no-console

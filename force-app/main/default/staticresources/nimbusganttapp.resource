@@ -127,7 +127,7 @@ var NimbusGanttApp = (function(exports) {
       const hrs = t.estimatedHours ? Math.round(Number(t.estimatedHours)) : 0;
       const logged = t.loggedHours ? Number(t.loggedHours) : 0;
       const pct = hrs > 0 ? Math.round(logged / hrs * 100) : 0;
-      const hLabel = hrs > 0 ? logged > 0 ? hrs + "h (" + pct + "%)" : hrs + "h" : "";
+      const hLabel = hrs > 0 ? logged > 0 ? hrs + "h (" + pct + "% budget)" : hrs + "h" : "";
       const gid = t.parentWorkItemId ? null : t.priorityGroup || null;
       const col = gid ? GROUP_BAR[gid] || "#94a3b8" : STAGE_TO_CATEGORY_COLOR[t.stage || ""] || STAGE_COLORS[t.stage || ""] || "#94a3b8";
       const start = t.startDate || fallback;
@@ -135,7 +135,7 @@ var NimbusGanttApp = (function(exports) {
       return {
         id: t.id,
         title: t.title || t.name || t.id,
-        name: hrs > 0 ? logged > 0 ? hrs + "h (" + pct + "%)" : hrs + "h" : "",
+        name: hrs > 0 ? logged > 0 ? hrs + "h (" + pct + "% budget)" : hrs + "h" : "",
         hoursLabel: hLabel,
         startDate: start,
         endDate: end,
@@ -632,6 +632,811 @@ var NimbusGanttApp = (function(exports) {
       cleanupDrag();
     };
   }
+  function el$1(tag, className, styleText) {
+    const e = document.createElement(tag);
+    if (className) e.className = className;
+    return e;
+  }
+  function clear(node) {
+    while (node.firstChild) node.removeChild(node.firstChild);
+  }
+  const GROUP_ORDER = ["top-priority", "active", "follow-on", "proposed", "deferred"];
+  const GROUP_LABELS = {
+    "top-priority": "NOW",
+    "active": "NEXT",
+    "follow-on": "PLANNED",
+    "proposed": "PROPOSED",
+    "deferred": "HOLD"
+  };
+  const GROUP_COLORS = {
+    "top-priority": "#dc2626",
+    "active": "#d97706",
+    "follow-on": "#059669",
+    "proposed": "#2563eb",
+    "deferred": "#94a3b8"
+  };
+  const GROUP_BG = {
+    "top-priority": "#fef2f2",
+    "active": "#fffbeb",
+    "follow-on": "#ecfdf5",
+    "proposed": "#eff6ff",
+    "deferred": "#f8fafc"
+  };
+  const FILTER_LABELS = {
+    "all": "All",
+    "needs-attention": "Needs attention",
+    "dupes": "Dupe candidates",
+    "no-mf-ref": "No mfRef",
+    "no-mf-page": "No docs page",
+    "no-owner": "No owner",
+    "no-dates": "No dates",
+    "no-hours": "Not sized"
+  };
+  const SORT_LABELS = {
+    "default": "Sort: default",
+    "hours-desc": "Hours: high → low",
+    "hours-asc": "Hours: low → high",
+    "owner": "Owner",
+    "last-activity": "Last activity",
+    "audit-score": "Audit score"
+  };
+  function auditTask(task) {
+    const hasOwner = !!task.developerName;
+    const hasDates = !!(task.startDate && task.endDate);
+    const hasHours = !!(task.estimatedHours && task.estimatedHours > 0);
+    const issues = [];
+    if (!hasOwner) issues.push({ severity: "warning", message: "No owner assigned" });
+    if (!hasDates) issues.push({ severity: "warning", message: "No start/end dates" });
+    if (!hasHours) issues.push({ severity: "warning", message: "Not sized (no hours estimate)" });
+    return {
+      flags: {
+        hasMfRef: false,
+        // NormalizedTask has no mfRef field
+        hasMfPage: false,
+        // No docs-page lookup in v0
+        hasOwner,
+        hasDates,
+        hasHours
+      },
+      issues,
+      score: hasOwner && hasDates && hasHours ? 100 : 50
+    };
+  }
+  function computeKpis(tasks, audits) {
+    let totalSizedHours = 0;
+    let needsAttention = 0;
+    let proposalReady = 0;
+    let proposalTotal = 0;
+    for (const t of tasks) {
+      const h = t.estimatedHours || 0;
+      totalSizedHours += h;
+      const a = audits.get(t.id);
+      if (a && a.issues.some((i) => i.severity === "error" || i.severity === "warning")) {
+        needsAttention++;
+      }
+      if (t.priorityGroup === "proposed") {
+        proposalTotal++;
+        if (a && a.flags.hasOwner && a.flags.hasHours && a.flags.hasDates) {
+          proposalReady++;
+        }
+      }
+    }
+    return {
+      totalItems: tasks.length,
+      totalSizedHours: Math.round(totalSizedHours),
+      needsAttention,
+      dupeCount: 0,
+      proposalReady,
+      proposalTotal
+    };
+  }
+  function bucketOf(task) {
+    const g = task.priorityGroup;
+    if (g && GROUP_ORDER.indexOf(g) >= 0) return g;
+    return "deferred";
+  }
+  function fmtDate(iso) {
+    if (!iso) return "";
+    const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? m[2] + "-" + m[3] : iso;
+  }
+  function fmtDateRange(start, end) {
+    if (!start && !end) return "";
+    return fmtDate(start) + " → " + fmtDate(end);
+  }
+  function progressOf(task) {
+    const high = task.estimatedHours || 0;
+    const logged = task.loggedHours || 0;
+    if (DONE_STAGES[task.stage || ""]) return 100;
+    if (!high) return null;
+    return Math.min(100, Math.round(logged / high * 100));
+  }
+  const KPI_TONES = {
+    slate: { bg: "#f1f5f9", text: "#475569" },
+    emerald: { bg: "#d1fae5", text: "#047857" },
+    amber: { bg: "#fef3c7", text: "#b45309" },
+    rose: { bg: "#ffe4e6", text: "#be123c" }
+  };
+  function kpiPill(label, value, tone) {
+    const t = KPI_TONES[tone];
+    const wrap = el$1("span", "");
+    wrap.style.cssText = [
+      "display:inline-flex",
+      "align-items:center",
+      "gap:6px",
+      "padding:3px 10px",
+      "border-radius:9999px",
+      "background:" + t.bg,
+      "color:" + t.text,
+      "font-size:11px",
+      "font-weight:600",
+      "white-space:nowrap"
+    ].join(";");
+    const v = el$1("span", "");
+    v.style.cssText = "font-weight:700";
+    v.textContent = value;
+    const l = el$1("span", "");
+    l.style.cssText = "opacity:0.85;font-weight:500";
+    l.textContent = label;
+    wrap.appendChild(v);
+    wrap.appendChild(l);
+    return wrap;
+  }
+  function auditIcons(audit) {
+    const wrap = el$1("span", "");
+    wrap.style.cssText = "display:inline-flex;gap:4px;font-size:11px;opacity:0.75;";
+    function icon(glyph, ok, title) {
+      const s = el$1("span", "");
+      s.style.cssText = "color:" + (ok ? "#10b981" : "#94a3b8");
+      s.textContent = glyph;
+      s.title = title;
+      return s;
+    }
+    wrap.appendChild(icon("👤", audit.flags.hasOwner, "Owner"));
+    wrap.appendChild(icon("📅", audit.flags.hasDates, "Dates"));
+    wrap.appendChild(icon("⌛", audit.flags.hasHours, "Hours estimated"));
+    return wrap;
+  }
+  function renderAuditListView(host, tasks, options) {
+    let search = "";
+    let filterChip = "all";
+    let sortKey = "default";
+    const collapsedBuckets = /* @__PURE__ */ new Set();
+    const expandedIds = /* @__PURE__ */ new Set();
+    const progressLabel = (options == null ? void 0 : options.progressLabel) ?? "Budget Used";
+    const hideRecordIds = (options == null ? void 0 : options.hideRecordIds) ?? true;
+    const audits = /* @__PURE__ */ new Map();
+    for (const t of tasks) audits.set(t.id, auditTask(t));
+    const dupeIds = /* @__PURE__ */ new Set();
+    function getFilteredTasks() {
+      let result = tasks;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        result = result.filter((t) => {
+          const hay = [
+            t.title || "",
+            t.name || "",
+            t.developerName || "",
+            t.stage || ""
+            // mfRef + notes have no equivalent on NormalizedTask; skip.
+          ].join(" ").toLowerCase();
+          return hay.indexOf(q) >= 0;
+        });
+      }
+      if (filterChip !== "all") {
+        result = result.filter((t) => {
+          const a = audits.get(t.id);
+          if (!a) return false;
+          switch (filterChip) {
+            case "needs-attention":
+              return a.issues.some((i) => i.severity === "error" || i.severity === "warning");
+            case "no-mf-ref":
+              return !a.flags.hasMfRef;
+            case "no-mf-page":
+              return !a.flags.hasMfPage;
+            case "no-owner":
+              return !a.flags.hasOwner;
+            case "no-dates":
+              return !a.flags.hasDates;
+            case "no-hours":
+              return !a.flags.hasHours;
+            case "dupes":
+              return dupeIds.has(t.id);
+            default:
+              return true;
+          }
+        });
+      }
+      return result;
+    }
+    function sortTasks(arr) {
+      if (sortKey === "default") {
+        return arr.slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+      }
+      const out = arr.slice();
+      if (sortKey === "hours-desc") {
+        out.sort((a, b) => (b.estimatedHours || 0) - (a.estimatedHours || 0));
+      } else if (sortKey === "hours-asc") {
+        out.sort((a, b) => (a.estimatedHours || 0) - (b.estimatedHours || 0));
+      } else if (sortKey === "owner") {
+        out.sort((a, b) => (a.developerName || "").localeCompare(b.developerName || ""));
+      } else if (sortKey === "last-activity") {
+        out.sort((a, b) => (b.endDate || "").localeCompare(a.endDate || ""));
+      } else if (sortKey === "audit-score") {
+        out.sort((a, b) => {
+          var _a, _b;
+          return (((_a = audits.get(a.id)) == null ? void 0 : _a.score) || 0) - (((_b = audits.get(b.id)) == null ? void 0 : _b.score) || 0);
+        });
+      }
+      return out;
+    }
+    function groupByBucket(filtered) {
+      const m = /* @__PURE__ */ new Map();
+      for (const g of GROUP_ORDER) m.set(g, []);
+      for (const t of filtered) {
+        const b = bucketOf(t);
+        m.get(b).push(t);
+      }
+      for (const g of GROUP_ORDER) {
+        m.set(g, sortTasks(m.get(g)));
+      }
+      return m;
+    }
+    function bucketStats(bucketTasks) {
+      let hours = 0, logged = 0, issues = 0;
+      for (const t of bucketTasks) {
+        hours += t.estimatedHours || 0;
+        logged += t.loggedHours || 0;
+        const a = audits.get(t.id);
+        if (a && a.issues.some((i) => i.severity === "error" || i.severity === "warning")) {
+          issues++;
+        }
+      }
+      return { count: bucketTasks.length, hours: Math.round(hours), logged: Math.round(logged), issues };
+    }
+    function filterCounts() {
+      const counts = {
+        "all": tasks.length,
+        "needs-attention": 0,
+        "no-mf-ref": 0,
+        "no-mf-page": 0,
+        "no-owner": 0,
+        "no-dates": 0,
+        "no-hours": 0,
+        "dupes": 0
+      };
+      for (const t of tasks) {
+        const a = audits.get(t.id);
+        if (!a) continue;
+        if (a.issues.some((i) => i.severity === "error" || i.severity === "warning")) counts["needs-attention"]++;
+        if (!a.flags.hasMfRef) counts["no-mf-ref"]++;
+        if (!a.flags.hasMfPage) counts["no-mf-page"]++;
+        if (!a.flags.hasOwner) counts["no-owner"]++;
+        if (!a.flags.hasDates) counts["no-dates"]++;
+        if (!a.flags.hasHours) counts["no-hours"]++;
+        if (dupeIds.has(t.id)) counts["dupes"]++;
+      }
+      return counts;
+    }
+    let bodyEl = null;
+    let clearLink = null;
+    const filterPillBtns = /* @__PURE__ */ new Map();
+    const filterPillCnts = /* @__PURE__ */ new Map();
+    function applyFilterPillStyles(chip) {
+      const btn = filterPillBtns.get(chip);
+      const cnt = filterPillCnts.get(chip);
+      if (!btn || !cnt) return;
+      const isActive = chip === filterChip;
+      btn.style.cssText = [
+        "padding:4px 10px",
+        "border-radius:9999px",
+        "border:1px solid " + (isActive ? "#3b82f6" : "#e2e8f0"),
+        "background:" + (isActive ? "#3b82f6" : "#ffffff"),
+        "color:" + (isActive ? "#ffffff" : "#475569"),
+        "font-size:11px",
+        "font-weight:600",
+        "cursor:pointer",
+        "display:inline-flex",
+        "align-items:center",
+        "gap:5px"
+      ].join(";");
+      cnt.style.cssText = [
+        "padding:0 6px",
+        "border-radius:9999px",
+        "background:" + (isActive ? "rgba(255,255,255,0.25)" : "#f1f5f9"),
+        "color:" + (isActive ? "#ffffff" : "#64748b"),
+        "font-size:10px",
+        "font-weight:700"
+      ].join(";");
+    }
+    function updateFilterPillStyles() {
+      Object.keys(FILTER_LABELS).forEach((chip) => {
+        applyFilterPillStyles(chip);
+      });
+    }
+    function updateClearLinkVisibility() {
+      if (!clearLink) return;
+      const anyFilter = filterChip !== "all" || search.trim() !== "" || sortKey !== "default";
+      clearLink.style.display = anyFilter ? "" : "none";
+    }
+    function resetAllFilters() {
+      search = "";
+      filterChip = "all";
+      sortKey = "default";
+      const searchInput = host.querySelector('input[type="search"]');
+      if (searchInput) searchInput.value = "";
+      const sortSel = host.querySelector("select[data-nga-audit-sort]");
+      if (sortSel) sortSel.value = "default";
+      updateFilterPillStyles();
+      updateClearLinkVisibility();
+      renderBody();
+    }
+    function renderBody() {
+      if (!bodyEl) return;
+      clear(bodyEl);
+      const grouped = groupByBucket(getFilteredTasks());
+      for (const g of GROUP_ORDER) {
+        const bucketTasks = grouped.get(g);
+        if (bucketTasks.length === 0) continue;
+        const stats = bucketStats(bucketTasks);
+        const isCollapsed = collapsedBuckets.has(g);
+        const section = el$1("section", "");
+        section.style.cssText = [
+          "border-radius:12px",
+          "border:2px solid " + GROUP_COLORS[g] + "40",
+          "background:" + GROUP_BG[g],
+          "overflow:hidden"
+        ].join(";");
+        const bucketHdr = el$1("div", "");
+        bucketHdr.style.cssText = [
+          "display:flex",
+          "align-items:center",
+          "gap:10px",
+          "padding:10px 14px",
+          "background:#ffffff",
+          "border-bottom:1px solid " + GROUP_COLORS[g] + "30",
+          "cursor:pointer",
+          "user-select:none"
+        ].join(";");
+        const chevron = el$1("span", "");
+        chevron.style.cssText = "font-size:12px;color:" + GROUP_COLORS[g];
+        chevron.textContent = isCollapsed ? "▶" : "▼";
+        bucketHdr.appendChild(chevron);
+        const bucketLabel = el$1("span", "");
+        bucketLabel.style.cssText = [
+          "font-size:13px",
+          "font-weight:700",
+          "letter-spacing:0.05em",
+          "color:" + GROUP_COLORS[g],
+          "text-transform:uppercase"
+        ].join(";");
+        bucketLabel.textContent = GROUP_LABELS[g];
+        bucketHdr.appendChild(bucketLabel);
+        const bucketStatsEl = el$1("span", "");
+        bucketStatsEl.style.cssText = "font-size:11px;color:#64748b;font-weight:500";
+        const statsParts = [
+          stats.count + " item" + (stats.count === 1 ? "" : "s"),
+          stats.hours + "h sized"
+        ];
+        if (stats.logged > 0) statsParts.push(stats.logged + "h logged");
+        if (stats.issues > 0) statsParts.push(stats.issues + " needs attention");
+        bucketStatsEl.textContent = statsParts.join(" · ");
+        bucketHdr.appendChild(bucketStatsEl);
+        bucketHdr.addEventListener("click", () => {
+          if (isCollapsed) collapsedBuckets.delete(g);
+          else collapsedBuckets.add(g);
+          renderBody();
+        });
+        section.appendChild(bucketHdr);
+        if (!isCollapsed) {
+          const body = el$1("div", "");
+          body.style.cssText = "background:#ffffff";
+          for (const t of bucketTasks) {
+            body.appendChild(renderRow(t));
+          }
+          section.appendChild(body);
+        }
+        bodyEl.appendChild(section);
+      }
+      if (Array.from(grouped.values()).every((arr) => arr.length === 0)) {
+        const empty = el$1("div", "");
+        empty.style.cssText = [
+          "padding:48px 24px",
+          "text-align:center",
+          "color:#64748b",
+          "font-size:13px"
+        ].join(";");
+        const emptyTitle = el$1("div", "");
+        emptyTitle.style.cssText = "font-size:16px;font-weight:600;color:#475569;margin-bottom:8px";
+        emptyTitle.textContent = tasks.length === 0 ? "No tasks to audit" : "No tasks match the current filter";
+        empty.appendChild(emptyTitle);
+        if (tasks.length > 0 && (filterChip !== "all" || search.trim() !== "")) {
+          const clearBtn = el$1("button", "");
+          clearBtn.style.cssText = [
+            "margin-top:12px",
+            "padding:6px 14px",
+            "background:#3b82f6",
+            "color:#ffffff",
+            "border:none",
+            "border-radius:8px",
+            "font-size:12px",
+            "font-weight:600",
+            "cursor:pointer"
+          ].join(";");
+          clearBtn.textContent = "Clear filters";
+          clearBtn.addEventListener("click", () => resetAllFilters());
+          empty.appendChild(clearBtn);
+        }
+        bodyEl.appendChild(empty);
+      }
+    }
+    function mountShell() {
+      clear(host);
+      host.style.cssText = [
+        "height:100%",
+        "width:100%",
+        "overflow:auto",
+        "background:#f8fafc",
+        "color:#0f172a",
+        "font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif"
+      ].join(";");
+      const kpis = computeKpis(tasks, audits);
+      const header = el$1("div", "");
+      header.style.cssText = [
+        "background:#ffffff",
+        "border-bottom:1px solid #e2e8f0",
+        "box-shadow:0 1px 2px rgba(0,0,0,0.04)"
+      ].join(";");
+      const headerInner = el$1("div", "");
+      headerInner.style.cssText = [
+        "padding:12px 16px",
+        "display:flex",
+        "flex-wrap:wrap",
+        "align-items:center",
+        "gap:12px"
+      ].join(";");
+      const labelWrap = el$1("div", "");
+      labelWrap.style.cssText = "display:flex;align-items:center;gap:8px;margin-right:8px";
+      const label = el$1("span", "");
+      label.style.cssText = "font-size:14px;font-weight:700;color:#0f172a";
+      label.textContent = "Audit view";
+      const sep = el$1("span", "");
+      sep.style.cssText = "color:#94a3b8;font-size:12px";
+      sep.textContent = "·";
+      labelWrap.appendChild(label);
+      labelWrap.appendChild(sep);
+      headerInner.appendChild(labelWrap);
+      const kpiWrap = el$1("div", "");
+      kpiWrap.style.cssText = "display:flex;flex-wrap:wrap;gap:8px;align-items:center";
+      kpiWrap.appendChild(kpiPill("items", String(kpis.totalItems), "slate"));
+      kpiWrap.appendChild(kpiPill("h sized", String(kpis.totalSizedHours), "slate"));
+      kpiWrap.appendChild(kpiPill(
+        "needs attention",
+        String(kpis.needsAttention),
+        kpis.needsAttention > 0 ? "amber" : "emerald"
+      ));
+      kpiWrap.appendChild(kpiPill(
+        "dupes",
+        String(kpis.dupeCount),
+        "emerald"
+      ));
+      if (kpis.proposalTotal > 0) {
+        const ready = kpis.proposalReady;
+        const total = kpis.proposalTotal;
+        const tone = ready === total ? "emerald" : ready > total / 2 ? "amber" : "rose";
+        kpiWrap.appendChild(kpiPill("ready / " + total, String(ready), tone));
+      }
+      headerInner.appendChild(kpiWrap);
+      const spacer = el$1("div", "");
+      spacer.style.cssText = "flex:1;min-width:8px";
+      headerInner.appendChild(spacer);
+      const searchInput = el$1("input", "");
+      searchInput.type = "search";
+      searchInput.placeholder = "Search title / owner / stage…";
+      searchInput.value = search;
+      searchInput.style.cssText = [
+        "min-width:200px",
+        "max-width:320px",
+        "padding:6px 12px",
+        "border-radius:8px",
+        "border:1px solid #cbd5e1",
+        "font-size:13px",
+        "background:#ffffff",
+        "outline:none"
+      ].join(";");
+      searchInput.addEventListener("input", (e) => {
+        search = e.target.value;
+        renderBody();
+        updateClearLinkVisibility();
+      });
+      headerInner.appendChild(searchInput);
+      const sortSel = el$1("select", "");
+      sortSel.setAttribute("data-nga-audit-sort", "1");
+      sortSel.style.cssText = [
+        "padding:6px 10px",
+        "border-radius:8px",
+        "border:1px solid #cbd5e1",
+        "font-size:12px",
+        "background:#ffffff",
+        "outline:none"
+      ].join(";");
+      Object.keys(SORT_LABELS).forEach((k) => {
+        const opt = el$1("option", "");
+        opt.value = k;
+        opt.textContent = SORT_LABELS[k];
+        if (k === sortKey) opt.selected = true;
+        sortSel.appendChild(opt);
+      });
+      sortSel.addEventListener("change", (e) => {
+        sortKey = e.target.value;
+        renderBody();
+        updateClearLinkVisibility();
+      });
+      headerInner.appendChild(sortSel);
+      header.appendChild(headerInner);
+      const filterRow = el$1("div", "");
+      filterRow.style.cssText = [
+        "display:flex",
+        "flex-wrap:wrap",
+        "gap:6px",
+        "padding:10px 16px",
+        "border-bottom:1px solid #f1f5f9",
+        "background:#ffffff"
+      ].join(";");
+      const counts = filterCounts();
+      Object.keys(FILTER_LABELS).forEach((chip) => {
+        const btn = el$1("button", "");
+        const lbl = el$1("span", "");
+        lbl.textContent = FILTER_LABELS[chip];
+        btn.appendChild(lbl);
+        const cnt = el$1("span", "");
+        cnt.textContent = String(counts[chip]);
+        btn.appendChild(cnt);
+        btn.addEventListener("click", () => {
+          filterChip = chip;
+          updateFilterPillStyles();
+          updateClearLinkVisibility();
+          renderBody();
+        });
+        filterRow.appendChild(btn);
+        filterPillBtns.set(chip, btn);
+        filterPillCnts.set(chip, cnt);
+        applyFilterPillStyles(chip);
+      });
+      clearLink = el$1("button", "");
+      clearLink.style.cssText = [
+        "padding:4px 10px",
+        "background:transparent",
+        "border:none",
+        "color:#dc2626",
+        "font-size:11px",
+        "font-weight:600",
+        "cursor:pointer",
+        "text-decoration:underline",
+        "text-decoration-style:dotted"
+      ].join(";");
+      clearLink.textContent = "Clear filters";
+      clearLink.addEventListener("click", () => resetAllFilters());
+      filterRow.appendChild(clearLink);
+      updateClearLinkVisibility();
+      header.appendChild(filterRow);
+      host.appendChild(header);
+      bodyEl = el$1("div", "");
+      bodyEl.style.cssText = "padding:16px;display:flex;flex-direction:column;gap:14px";
+      host.appendChild(bodyEl);
+    }
+    function renderRow(task) {
+      const audit = audits.get(task.id);
+      const isExpanded = expandedIds.has(task.id);
+      const hasErrors = audit.issues.some((i) => i.severity === "error");
+      const hasWarnings = audit.issues.some((i) => i.severity === "warning");
+      const row = el$1("div", "");
+      row.style.cssText = [
+        "display:flex",
+        "flex-direction:column",
+        "border-bottom:1px solid #f1f5f9",
+        "background:#ffffff",
+        "transition:background-color 0.1s"
+      ].join(";");
+      row.addEventListener("mouseenter", () => {
+        row.style.backgroundColor = hasErrors ? "rgba(244,63,94,0.04)" : hasWarnings ? "rgba(245,158,11,0.04)" : "rgba(59,130,246,0.04)";
+      });
+      row.addEventListener("mouseleave", () => {
+        row.style.backgroundColor = "#ffffff";
+      });
+      const top = el$1("div", "");
+      top.style.cssText = [
+        "display:flex",
+        "align-items:center",
+        "gap:10px",
+        "padding:8px 14px",
+        "cursor:pointer"
+      ].join(";");
+      const drag = el$1("span", "");
+      drag.style.cssText = [
+        "color:#cbd5e1",
+        "font-size:14px",
+        "cursor:grab",
+        "user-select:none",
+        "flex-shrink:0"
+      ].join(";");
+      drag.textContent = "⠇";
+      drag.title = "Drag to reorder (coming in 0.183)";
+      top.appendChild(drag);
+      const chev = el$1("span", "");
+      chev.style.cssText = "color:#64748b;font-size:11px;flex-shrink:0;width:12px;text-align:center";
+      chev.textContent = isExpanded ? "▼" : "▶";
+      top.appendChild(chev);
+      if (!hideRecordIds) {
+        const name = el$1("code", "");
+        name.style.cssText = [
+          "font-family:SF Mono,Cascadia Code,Consolas,monospace",
+          "font-size:11px",
+          "color:#64748b",
+          "flex-shrink:0",
+          "min-width:80px",
+          "max-width:140px",
+          "overflow:hidden",
+          "text-overflow:ellipsis",
+          "white-space:nowrap"
+        ].join(";");
+        name.textContent = task.name || task.id;
+        top.appendChild(name);
+      }
+      const title = el$1("span", "");
+      title.style.cssText = [
+        "flex:1",
+        "min-width:0",
+        "font-size:13px",
+        "color:#0f172a",
+        "overflow:hidden",
+        "text-overflow:ellipsis",
+        "white-space:nowrap"
+      ].join(";");
+      title.textContent = task.title;
+      if (options == null ? void 0 : options.onTaskClick) {
+        title.style.cursor = "pointer";
+        title.style.textDecoration = "underline";
+        title.style.textDecorationStyle = "dotted";
+        title.style.textDecorationColor = "#94a3b8";
+        title.addEventListener("click", (e) => {
+          e.stopPropagation();
+          options.onTaskClick(task.id);
+        });
+      }
+      top.appendChild(title);
+      const pct = progressOf(task);
+      if (pct !== null) {
+        const pctWrap = el$1("span", "");
+        pctWrap.style.cssText = [
+          "flex-shrink:0",
+          "font-size:11px",
+          "color:" + (pct === 100 ? "#10b981" : pct > 50 ? "#d97706" : "#64748b"),
+          "font-weight:600",
+          "text-align:right",
+          "white-space:nowrap"
+        ].join(";");
+        const prefixLabel = progressLabel.trim();
+        pctWrap.textContent = prefixLabel ? prefixLabel + " " + pct + "%" : pct + "%";
+        pctWrap.title = "Budget Used — hours logged / hours estimated";
+        top.appendChild(pctWrap);
+      }
+      const hoursTxt = el$1("span", "");
+      hoursTxt.style.cssText = [
+        "font-family:SF Mono,Cascadia Code,Consolas,monospace",
+        "font-size:11px",
+        "color:" + (audit.flags.hasHours ? "#475569" : "#dc2626"),
+        "flex-shrink:0",
+        "min-width:64px",
+        "text-align:right"
+      ].join(";");
+      if (audit.flags.hasHours) {
+        const high = task.estimatedHours || 0;
+        const logged = task.loggedHours || 0;
+        hoursTxt.textContent = logged > 0 ? logged + "h / " + high + "h" : high + "h";
+      } else {
+        hoursTxt.textContent = "— h";
+      }
+      top.appendChild(hoursTxt);
+      const dates = el$1("span", "");
+      dates.style.cssText = [
+        "font-family:SF Mono,Cascadia Code,Consolas,monospace",
+        "font-size:11px",
+        "color:" + (audit.flags.hasDates ? "#475569" : "#dc2626"),
+        "flex-shrink:0",
+        "min-width:104px",
+        "text-align:right"
+      ].join(";");
+      dates.textContent = audit.flags.hasDates ? fmtDateRange(task.startDate, task.endDate) : "— → —";
+      top.appendChild(dates);
+      top.appendChild(auditIcons(audit));
+      top.addEventListener("click", () => {
+        if (isExpanded) expandedIds.delete(task.id);
+        else expandedIds.add(task.id);
+        renderBody();
+      });
+      row.appendChild(top);
+      if (isExpanded) {
+        let field = function(label, value) {
+          const f = el$1("div", "");
+          f.style.cssText = "display:flex;flex-direction:column;gap:2px";
+          const l = el$1("span", "");
+          l.style.cssText = "font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;font-weight:600";
+          l.textContent = label;
+          const v = el$1("span", "");
+          v.style.cssText = "font-size:12px;color:#0f172a";
+          v.textContent = value || "—";
+          f.appendChild(l);
+          f.appendChild(v);
+          grid.appendChild(f);
+        };
+        const detail = el$1("div", "");
+        detail.style.cssText = [
+          "padding:12px 14px 14px 50px",
+          "background:#f8fafc",
+          "border-top:1px solid #f1f5f9",
+          "font-size:12px",
+          "color:#475569"
+        ].join(";");
+        const grid = el$1("div", "");
+        grid.style.cssText = [
+          "display:grid",
+          "grid-template-columns:repeat(auto-fit,minmax(180px,1fr))",
+          "gap:8px 16px"
+        ].join(";");
+        field("Stage", task.stage || "");
+        field("Owner", task.developerName || "");
+        field("Priority group", task.priorityGroup || "");
+        field("Start", task.startDate || "");
+        field("End", task.endDate || "");
+        field("Estimated", String(task.estimatedHours || 0) + " h");
+        field("Logged", String(task.loggedHours || 0) + " h");
+        if (task.entityName) field("Entity", task.entityName);
+        detail.appendChild(grid);
+        if (audit.issues.length > 0) {
+          const issuesWrap = el$1("div", "");
+          issuesWrap.style.cssText = [
+            "margin-top:10px",
+            "padding:8px 10px",
+            "background:#ffffff",
+            "border:1px solid #e2e8f0",
+            "border-radius:6px",
+            "display:flex",
+            "flex-direction:column",
+            "gap:4px"
+          ].join(";");
+          const issuesTitle = el$1("div", "");
+          issuesTitle.style.cssText = "font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px";
+          issuesTitle.textContent = "Audit issues";
+          issuesWrap.appendChild(issuesTitle);
+          for (const issue of audit.issues) {
+            const issueRow = el$1("div", "");
+            issueRow.style.cssText = [
+              "display:flex",
+              "align-items:center",
+              "gap:6px",
+              "font-size:11px",
+              "color:" + (issue.severity === "error" ? "#dc2626" : issue.severity === "warning" ? "#d97706" : "#64748b")
+            ].join(";");
+            const dot = el$1("span", "");
+            dot.style.cssText = "flex-shrink:0;width:6px;height:6px;border-radius:50%;background:currentColor";
+            issueRow.appendChild(dot);
+            const msg = el$1("span", "");
+            msg.textContent = issue.message;
+            issueRow.appendChild(msg);
+            issuesWrap.appendChild(issueRow);
+          }
+          detail.appendChild(issuesWrap);
+        }
+        row.appendChild(detail);
+      }
+      return row;
+    }
+    mountShell();
+    renderBody();
+    return function cleanup() {
+    };
+  }
   const registry$1 = [];
   function findIndex(name) {
     for (let i = 0; i < registry$1.length; i++) {
@@ -782,6 +1587,10 @@ var NimbusGanttApp = (function(exports) {
     let stylesheet = {};
     let title = "Nimbus Gantt";
     let version = "";
+    let apiDocsUrl;
+    let fullscreenUrl;
+    let progressLabel;
+    let hideRecordIds;
     chain.forEach((tpl) => {
       const d = tpl.defaults || {};
       if (d.features) features = { ...features, ...d.features };
@@ -791,6 +1600,10 @@ var NimbusGanttApp = (function(exports) {
       if (d.views) views = d.views;
       if (d.title !== void 0) title = d.title;
       if (d.version !== void 0) version = d.version;
+      if (d.apiDocsUrl !== void 0) apiDocsUrl = d.apiDocsUrl;
+      if (d.fullscreenUrl !== void 0) fullscreenUrl = d.fullscreenUrl;
+      if (d.progressLabel !== void 0) progressLabel = d.progressLabel;
+      if (d.hideRecordIds !== void 0) hideRecordIds = d.hideRecordIds;
       if (tpl.stylesheet && (tpl.stylesheet.url || tpl.stylesheet.inline || tpl.stylesheet.importedByBundler)) {
         stylesheet = tpl.stylesheet;
       }
@@ -806,6 +1619,10 @@ var NimbusGanttApp = (function(exports) {
       if (overrides.views) views = overrides.views;
       if (overrides.title !== void 0) title = overrides.title;
       if (overrides.version !== void 0) version = overrides.version;
+      if (overrides.apiDocsUrl !== void 0) apiDocsUrl = overrides.apiDocsUrl;
+      if (overrides.fullscreenUrl !== void 0) fullscreenUrl = overrides.fullscreenUrl;
+      if (overrides.progressLabel !== void 0) progressLabel = overrides.progressLabel;
+      if (overrides.hideRecordIds !== void 0) hideRecordIds = overrides.hideRecordIds;
       if (overrides.components) {
         components = mergeComponents(components, overrides.components);
       }
@@ -825,6 +1642,10 @@ var NimbusGanttApp = (function(exports) {
       stylesheet,
       title,
       version,
+      apiDocsUrl,
+      fullscreenUrl,
+      progressLabel,
+      hideRecordIds,
       // mode defaults to 'fullscreen'; IIFEApp / React driver may overwrite
       // this post-resolve to reflect the caller's MountOptions.mode.
       mode: "fullscreen"
@@ -1120,7 +1941,14 @@ var NimbusGanttApp = (function(exports) {
     { id: "calendar", label: "Calendar", icon: "▥" },
     { id: "flow", label: "Flow", icon: "⟿" }
   ];
-  const CLOUD_NIMBUS_VIEWS = ["gantt"];
+  const CLOUD_NIMBUS_VIEWS = [
+    "gantt",
+    "list",
+    "treemap",
+    "bubbles",
+    "calendar",
+    "flow"
+  ];
   const CLOUD_NIMBUS_CATEGORIES = [
     { category: "in-flight", label: "In Flight", color: "#10b981" },
     { category: "next-up", label: "Next Up", color: "#3b82f6" },
@@ -1134,7 +1962,8 @@ var NimbusGanttApp = (function(exports) {
     { name: "Mahi", role: "SFDC Dev", hoursPerMonth: 50, active: true },
     { name: "Antima", role: "SFDC Dev (PT)", hoursPerMonth: 40, active: true }
   ];
-  const CLS_TITLEBAR = "nga-titlebar bg-white border-b border-slate-200 px-3 py-1.5 flex items-center gap-2 flex-wrap min-w-0 overflow-x-hidden";
+  const CLS_TITLEBAR = "nga-titlebar bg-white border-b border-slate-200 px-3 py-1.5 flex flex-col gap-1.5 min-w-0 overflow-x-hidden";
+  const CLS_TITLEBAR_ROW = "flex items-center gap-2 flex-wrap min-w-0";
   const CLS_TITLE_BRAND = "text-sm font-bold text-slate-900";
   const CLS_VERSION_PILL = "text-[9px] font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded-full px-2 py-0.5";
   const CLS_SEP = "text-slate-200";
@@ -1238,14 +2067,6 @@ var NimbusGanttApp = (function(exports) {
     amber: { border: "border-amber-200", label: "text-amber-700", value: "text-amber-800" },
     indigo: { border: "border-indigo-200", label: "text-indigo-700", value: "text-indigo-800" }
   };
-  function el$1(tag, className, styleText) {
-    const e = document.createElement(tag);
-    if (className) e.className = className;
-    return e;
-  }
-  function clear(node) {
-    while (node.firstChild) node.removeChild(node.firstChild);
-  }
   const ZOOMS$2 = ["day", "week", "month", "quarter"];
   const GROUPS = ["priority", "epic"];
   const CLS_GROUP_BOTH = "bg-indigo-600 text-white border-indigo-600";
@@ -1282,13 +2103,10 @@ var NimbusGanttApp = (function(exports) {
     function render(p) {
       clear(root);
       const { config, state, dispatch, data } = p;
-      const brand = el$1("span", CLS_TITLE_BRAND);
-      brand.textContent = config.title || "Pro Forma Timeline";
-      root.appendChild(brand);
-      const version = el$1("span", CLS_VERSION_PILL);
-      version.textContent = config.version || "v10 · Nimbus Gantt";
-      root.appendChild(version);
-      root.appendChild(mkSep$1());
+      const rowViews = el$1("div", CLS_TITLEBAR_ROW);
+      rowViews.setAttribute("data-nga-titlebar-row", "views");
+      const rowMain = el$1("div", CLS_TITLEBAR_ROW);
+      rowMain.setAttribute("data-nga-titlebar-row", "main");
       const enabledViews = CLOUD_NIMBUS_VIEW_MODES.filter(
         (v) => !config.views || config.views.includes(v.id)
       );
@@ -1302,10 +2120,17 @@ var NimbusGanttApp = (function(exports) {
           btn.appendChild(ico);
           btn.appendChild(document.createTextNode(v.label));
           btn.addEventListener("click", () => dispatch({ type: "SET_VIEW", mode: v.id }));
-          root.appendChild(btn);
+          rowViews.appendChild(btn);
         });
-        root.appendChild(mkSep$1());
+        root.appendChild(rowViews);
       }
+      const brand = el$1("span", CLS_TITLE_BRAND);
+      brand.textContent = config.title || "Pro Forma Timeline";
+      rowMain.appendChild(brand);
+      const version = el$1("span", CLS_VERSION_PILL);
+      version.textContent = config.version || "v10 · Nimbus Gantt";
+      rowMain.appendChild(version);
+      rowMain.appendChild(mkSep$1());
       function toggleBtn(label, on, ev) {
         const cls = CLS_PILL_BTN_BASE + " " + (on ? CLS_PILL_BTN_ACTIVE_BLUE : CLS_PILL_BTN_IDLE_BLUE);
         const b = el$1("button", cls);
@@ -1313,26 +2138,26 @@ var NimbusGanttApp = (function(exports) {
         b.addEventListener("click", ev);
         return b;
       }
-      root.appendChild(toggleBtn("Sidebar", state.sidebarOpen, () => dispatch({ type: "TOGGLE_SIDEBAR" })));
-      root.appendChild(toggleBtn("Stats", state.statsOpen, () => dispatch({ type: "TOGGLE_STATS" })));
+      rowMain.appendChild(toggleBtn("Sidebar", state.sidebarOpen, () => dispatch({ type: "TOGGLE_SIDEBAR" })));
+      rowMain.appendChild(toggleBtn("Stats", state.statsOpen, () => dispatch({ type: "TOGGLE_STATS" })));
       if (config.features.auditPanel) {
-        root.appendChild(toggleBtn("Audit", state.auditPanelOpen, () => dispatch({ type: "TOGGLE_AUDIT_PANEL" })));
+        rowMain.appendChild(toggleBtn("Audit", state.auditPanelOpen, () => dispatch({ type: "TOGGLE_AUDIT_PANEL" })));
       }
-      root.appendChild(mkSep$1());
+      rowMain.appendChild(mkSep$1());
       ZOOMS$2.forEach((z) => {
         const on = state.zoom === z;
         const cls = CLS_PILL_BTN_BASE + " " + (on ? CLS_PILL_BTN_ACTIVE_SLATE : CLS_PILL_BTN_IDLE_SLATE);
         const b = el$1("button", cls);
         b.textContent = z.charAt(0).toUpperCase() + z.slice(1);
         b.addEventListener("click", () => dispatch({ type: "SET_ZOOM", zoom: z }));
-        root.appendChild(b);
+        rowMain.appendChild(b);
       });
       if (config.features.groupByToggle) {
-        root.appendChild(mkSep$1());
+        rowMain.appendChild(mkSep$1());
         const gLbl = el$1("span", CLS_GROUP_LABEL);
         gLbl.textContent = "Group:";
         gLbl.title = "Left-click = Gantt · Right-click = Sidebar";
-        root.appendChild(gLbl);
+        rowMain.appendChild(gLbl);
         GROUPS.forEach((g) => {
           const isGantt = state.groupBy === g;
           const isSide = state.groupBy === g;
@@ -1358,11 +2183,11 @@ var NimbusGanttApp = (function(exports) {
             e.preventDefault();
             dispatch({ type: "SET_GROUP_BY", groupBy: g });
           });
-          root.appendChild(b);
+          rowMain.appendChild(b);
         });
       }
       const fill = el$1("div", CLS_TB_FILL);
-      root.appendChild(fill);
+      rowMain.appendChild(fill);
       const hoursHigh = data.stats.est;
       const hoursLow = data.stats.estLow || data.stats.est;
       const totalCap = CLOUD_NIMBUS_POOL.reduce((s, m) => s + (m.active !== false ? m.hoursPerMonth : 0), 0);
@@ -1372,7 +2197,7 @@ var NimbusGanttApp = (function(exports) {
       const mHighS = isFinite(mHigh) ? mHigh.toFixed(1) : "∞";
       const summary = el$1("span", CLS_TB_SUMMARY);
       summary.textContent = data.stats.scheduled + " scheduled · " + hoursLow + "–" + hoursHigh + "h · " + mLowS + "–" + mHighS + " mo";
-      root.appendChild(summary);
+      rowMain.appendChild(summary);
       const unpinBtn = el$1(
         "button",
         CLS_PILL_BTN_BASE + " " + (unpinOn ? CLS_RIGHT_UNPIN_ON : CLS_RIGHT_UNPIN_OFF)
@@ -1384,23 +2209,34 @@ var NimbusGanttApp = (function(exports) {
         console.log("[TitleBar] unpin toggled →", unpinOn);
         render(currentProps);
       });
-      root.appendChild(unpinBtn);
-      const hostExit = config.mode === "fullscreen" && typeof config.onExitFullscreen === "function";
-      const fsBtn = el$1(
-        "button",
-        CLS_PILL_BTN_BASE + " " + (state.fullscreen || hostExit ? CLS_RIGHT_FS_ON : CLS_RIGHT_FS_OFF)
-      );
-      if (hostExit) {
-        fsBtn.textContent = "← Exit Full Screen";
-        fsBtn.setAttribute("data-nga-fullscreen-exit", "1");
-        fsBtn.addEventListener("click", () => {
-          config.onExitFullscreen();
-        });
-      } else {
-        fsBtn.textContent = state.fullscreen ? "Exit Fullscreen" : "Fullscreen";
-        fsBtn.addEventListener("click", () => dispatch({ type: "TOGGLE_FULLSCREEN" }));
+      rowMain.appendChild(unpinBtn);
+      const fsUrl = config.fullscreenUrl;
+      const onCurrentFsUrl = !!(fsUrl && typeof location !== "undefined" && location.pathname === fsUrl);
+      if (!onCurrentFsUrl) {
+        const hostExit = config.mode === "fullscreen" && typeof config.onExitFullscreen === "function";
+        const active = state.fullscreen || hostExit;
+        const fsBtn = el$1(
+          "button",
+          CLS_PILL_BTN_BASE + " " + (active ? CLS_RIGHT_FS_ON : CLS_RIGHT_FS_OFF)
+        );
+        if (fsUrl) {
+          fsBtn.textContent = "Fullscreen";
+          fsBtn.setAttribute("data-nga-fullscreen-url", "1");
+          fsBtn.addEventListener("click", () => {
+            window.location.href = fsUrl;
+          });
+        } else if (hostExit) {
+          fsBtn.textContent = "← Exit Full Screen";
+          fsBtn.setAttribute("data-nga-fullscreen-exit", "1");
+          fsBtn.addEventListener("click", () => {
+            config.onExitFullscreen();
+          });
+        } else {
+          fsBtn.textContent = state.fullscreen ? "Exit Fullscreen" : "Fullscreen";
+          fsBtn.addEventListener("click", () => dispatch({ type: "TOGGLE_FULLSCREEN" }));
+        }
+        rowMain.appendChild(fsBtn);
       }
-      root.appendChild(fsBtn);
       const adminBtn = el$1(
         "button",
         CLS_PILL_BTN_BASE + " " + (adminOn ? CLS_RIGHT_ADMIN_ON : CLS_RIGHT_ADMIN_OFF)
@@ -1412,7 +2248,7 @@ var NimbusGanttApp = (function(exports) {
         console.log("[TitleBar] admin toggled →", adminOn);
         render(currentProps);
       });
-      root.appendChild(adminBtn);
+      rowMain.appendChild(adminBtn);
       const advisorBtn = el$1(
         "button",
         CLS_PILL_BTN_BASE + " " + (advisorOn ? CLS_RIGHT_ADVISOR_ON : CLS_RIGHT_ADVISOR_OFF)
@@ -1424,11 +2260,23 @@ var NimbusGanttApp = (function(exports) {
         console.log("[TitleBar] advisor toggled →", advisorOn);
         render(currentProps);
       });
-      root.appendChild(advisorBtn);
+      rowMain.appendChild(advisorBtn);
+      if (config.apiDocsUrl) {
+        const apiDocs = el$1(
+          "a",
+          "text-[10px] text-slate-500 hover:text-fuchsia-600 underline decoration-dotted shrink-0"
+        );
+        apiDocs.href = config.apiDocsUrl;
+        apiDocs.title = "API docs — how to automate submits";
+        apiDocs.setAttribute("data-nga-api-docs", "1");
+        apiDocs.textContent = "API docs";
+        rowMain.appendChild(apiDocs);
+      }
       const v3 = el$1("a", CLS_V3_LINK);
       v3.href = "#";
       v3.textContent = "v3 (Canvas)";
-      root.appendChild(v3);
+      rowMain.appendChild(v3);
+      root.appendChild(rowMain);
     }
     render(initial);
     return {
@@ -2540,7 +3388,11 @@ var NimbusGanttApp = (function(exports) {
       ".ng-grid-row .ng-tree-cell .ng-expand-spacer+.ng-grid-cell-text{font-weight:400!important;color:#6b7280!important;font-size:11px!important}",
       ".ng-grid-cell{padding-top:0!important;padding-right:6px!important;padding-bottom:0!important;padding-left:6px;line-height:32px!important;border-right:none!important}",
       ".ng-expand-spacer{width:0!important;min-width:0!important}",
-      ".ng-expand-icon{font-size:9px!important;opacity:.5!important;color:#6b7280!important;width:14px!important;min-width:14px!important}",
+      /* .ng-expand-icon — ARROW_DIFF 2026-04-18 font-family normalization.
+       * Must match the canonical rule in styles.css:~687 so SF's
+       * synchronous injection backstop doesn't fight the async template
+       * stylesheet. See styles.css for rationale. */
+      '.ng-expand-icon{font-family:-apple-system,"Segoe UI Symbol","Apple Symbols","Helvetica Neue",Arial,sans-serif!important;font-size:10px!important;line-height:1!important;display:inline-block!important;text-align:center!important;opacity:.5!important;color:#6b7280!important;width:16px!important;min-width:16px!important}',
       ".ng-expand-icon:hover{opacity:1!important}",
       ".ng-grid-row{border:none!important;box-shadow:inset 0 -1px 0 #f3f4f6;box-sizing:border-box!important}",
       ".ng-grid-row:not(.ng-group-row){cursor:grab}",
@@ -2568,159 +3420,28 @@ var NimbusGanttApp = (function(exports) {
     if (css) e.style.cssText = css;
     return e;
   }
-  function renderList(container, tasks, buckets) {
+  function renderComingSoon(container, viewLabel) {
     container.innerHTML = "";
-    const wrap = el("div", "height:100%;overflow:auto;font-family:sans-serif;font-size:12px");
-    const byGroup = {};
-    tasks.forEach((t) => {
-      if (t.parentId) return;
-      if (t.groupId) {
-        if (!byGroup[t.groupId]) byGroup[t.groupId] = [];
-        byGroup[t.groupId].push(t);
-      }
-    });
-    buckets.forEach((b) => {
-      const members = byGroup[b.id] || [];
-      if (!members.length) return;
-      const hdr = el("div", "background:" + b.bgTint + ";color:#fff;font-weight:700;font-size:11px;padding:7px 14px;text-transform:uppercase;position:sticky;top:0;z-index:1");
-      hdr.textContent = b.label + " — " + members.length + " items";
-      wrap.appendChild(hdr);
-      members.forEach((t) => {
-        const row = el("div", "display:flex;align-items:center;padding:5px 14px;gap:8px;border-bottom:1px solid #f3f4f6");
-        const dot = el("span", "width:7px;height:7px;border-radius:50%;background:" + (STAGE_COLORS[t.status] || "#94a3b8"));
-        row.appendChild(dot);
-        const title = el("span", "flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#1f2937");
-        title.textContent = t.title;
-        row.appendChild(title);
-        if (t.hoursLabel) {
-          const h = el("span", "font-size:10px;color:#94a3b8;font-family:monospace");
-          h.textContent = t.hoursLabel;
-          row.appendChild(h);
-        }
-        wrap.appendChild(row);
-      });
-    });
-    container.appendChild(wrap);
-  }
-  function renderTreemap(container, tasks, buckets) {
-    container.innerHTML = "";
-    const wrap = el("div", "height:100%;overflow:auto;padding:8px;font-family:sans-serif;background:#f8fafc");
-    const leaves = tasks.filter((t) => {
-      var _a;
-      return !t.isParent && (((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0) > 0;
-    });
-    const total = leaves.reduce((s, t) => {
-      var _a;
-      return s + (((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0);
-    }, 0);
-    if (!total) {
-      wrap.textContent = "No hours to show";
-      container.appendChild(wrap);
-      return;
-    }
-    const grouped = {};
-    leaves.forEach((t) => {
-      const g = t.groupId || "other";
-      (grouped[g] = grouped[g] || []).push(t);
-    });
-    buckets.forEach((b) => {
-      const members = grouped[b.id] || [];
-      if (!members.length) return;
-      const sec = el("div", "margin-bottom:8px");
-      const hdr = el("div", "font-size:10px;font-weight:700;color:#fff;padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:3px;background:" + b.bgTint);
-      hdr.textContent = b.label;
-      sec.appendChild(hdr);
-      const row = el("div", "display:flex;flex-wrap:wrap;gap:3px");
-      members.forEach((t) => {
-        var _a;
-        const tile = el("div", "background:" + (t.color || "#94a3b8") + "44;border:1px solid " + (t.color || "#94a3b8") + ";padding:4px 6px;border-radius:4px;font-size:10px");
-        tile.textContent = t.title.slice(0, 20) + " " + (((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0) + "h";
-        row.appendChild(tile);
-      });
-      sec.appendChild(row);
-      wrap.appendChild(sec);
-    });
-    container.appendChild(wrap);
-  }
-  function renderBubbles(container, tasks) {
-    container.innerHTML = "";
-    const leaves = tasks.filter((t) => {
-      var _a;
-      return !t.isParent && (((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0) > 0;
-    });
-    const wrap = el("div", "height:100%;overflow:auto;padding:10px;font-family:sans-serif;background:#f8fafc");
-    if (!leaves.length) {
-      wrap.textContent = "No tasks";
-      container.appendChild(wrap);
-      return;
-    }
-    const maxH = Math.max(1, ...leaves.map((t) => {
-      var _a;
-      return ((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0;
-    }));
-    leaves.forEach((t) => {
-      var _a;
-      const r = Math.max(20, Math.sqrt((((_a = t.metadata) == null ? void 0 : _a.hoursHigh) || 0) / maxH) * 60);
-      const bub = el("div", "display:inline-block;width:" + r * 2 + "px;height:" + r * 2 + "px;border-radius:50%;background:" + (t.color || "#94a3b8") + "55;border:1.5px solid " + (t.color || "#94a3b8") + ";margin:4px;text-align:center;line-height:" + r * 2 + "px;font-size:10px;color:#1f2937");
-      bub.textContent = t.title.slice(0, 8);
-      wrap.appendChild(bub);
-    });
-    container.appendChild(wrap);
-  }
-  function renderCalendar(container, tasks) {
-    container.innerHTML = "";
-    const wrap = el("div", "height:100%;overflow:auto;padding:10px;font-family:sans-serif");
-    const today = /* @__PURE__ */ new Date();
-    const monday = new Date(today);
-    const dow = today.getDay();
-    monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
-    monday.setHours(0, 0, 0, 0);
-    const WEEK_MS2 = 7 * 864e5;
-    for (let i = 0; i < 8; i++) {
-      const wkStart = new Date(monday.getTime() + i * WEEK_MS2);
-      const wkEnd = new Date(wkStart.getTime() + WEEK_MS2);
-      const wkTasks = tasks.filter((t) => {
-        if (!t.startDate || !t.endDate) return false;
-        const tS = (/* @__PURE__ */ new Date(t.startDate + "T00:00:00")).getTime();
-        const tE = (/* @__PURE__ */ new Date(t.endDate + "T00:00:00")).getTime();
-        return tE > wkStart.getTime() && tS < wkEnd.getTime();
-      });
-      const row = el("div", "display:flex;gap:4px;padding:6px;border-bottom:1px solid #e5e7eb");
-      const lbl = el("div", "width:80px;font-size:10px;color:#64748b");
-      lbl.textContent = wkStart.toISOString().slice(0, 10);
-      row.appendChild(lbl);
-      const cnt = el("div", "flex:1;font-size:10px;color:#1f2937");
-      cnt.textContent = wkTasks.length + " task" + (wkTasks.length === 1 ? "" : "s");
-      row.appendChild(cnt);
-      wrap.appendChild(row);
-    }
-    container.appendChild(wrap);
-  }
-  function renderFlow(container, tasks) {
-    container.innerHTML = "";
-    const wrap = el("div", "height:100%;overflow-x:auto;display:flex;gap:8px;padding:8px;background:#f8fafc;font-family:sans-serif");
-    const cols = [
-      { label: "Backlog", color: "#f59e0b", match: (c) => c === "#f59e0b" },
-      { label: "Next Up", color: "#3b82f6", match: (c) => c === "#3b82f6" },
-      { label: "In Flight", color: "#10b981", match: (c) => c === "#10b981" },
-      { label: "Blocked", color: "#ef4444", match: (c) => c === "#ef4444" },
-      { label: "Done", color: "#cbd5e1", match: (c) => c === "#cbd5e1" }
-    ];
-    const leaves = tasks.filter((t) => !t.isParent);
-    cols.forEach((c) => {
-      const colEl = el("div", "width:200px;flex-shrink:0");
-      const hdr = el("div", "background:" + c.color + "22;color:" + c.color + ";padding:5px 8px;font-size:11px;font-weight:700;border-radius:4px 4px 0 0");
-      hdr.textContent = c.label;
-      colEl.appendChild(hdr);
-      const inner = el("div", "border:1px solid " + c.color + "55;border-radius:0 0 4px 4px;padding:4px");
-      leaves.filter((t) => c.match(t.color || "")).forEach((t) => {
-        const card = el("div", "background:#fff;border-left:3px solid " + (t.color || "#94a3b8") + ";padding:5px 8px;margin-bottom:3px;font-size:10px;border-radius:4px");
-        card.textContent = t.title;
-        inner.appendChild(card);
-      });
-      colEl.appendChild(inner);
-      wrap.appendChild(colEl);
-    });
+    const wrap = el("div", [
+      "height:100%",
+      "width:100%",
+      "display:flex",
+      "flex-direction:column",
+      "align-items:center",
+      "justify-content:center",
+      "gap:12px",
+      "padding:32px",
+      "font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif",
+      "color:#475569",
+      "background:#f8fafc",
+      "text-align:center"
+    ].join(";"));
+    const title = el("div", "font-size:18px;font-weight:700;color:#1f2937");
+    title.textContent = viewLabel + " view — coming in 0.183";
+    wrap.appendChild(title);
+    const msg = el("div", "font-size:13px;color:#64748b;max-width:480px;line-height:1.5");
+    msg.textContent = "Only the Gantt view is fully ported in this release. Switch back to Gantt to see the timeline. The other views are planned for the next cut alongside the AuditListView port.";
+    wrap.appendChild(msg);
     container.appendChild(wrap);
   }
   const registry = [];
@@ -2948,9 +3669,11 @@ var NimbusGanttApp = (function(exports) {
         } catch (_e2) {
         }
         setTimeout(() => {
-          var _a2;
+          var _a2, _b2, _c2, _d2;
           try {
-            (_a2 = inst.scrollToDate) == null ? void 0 : _a2.call(inst, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
+            const gi = inst;
+            const x = (_b2 = (_a2 = gi.timeScale) == null ? void 0 : _a2.dateToX) == null ? void 0 : _b2.call(_a2, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
+            if (typeof x === "number") (_d2 = (_c2 = gi.scrollManager) == null ? void 0 : _c2.scrollToX) == null ? void 0 : _d2.call(_c2, Math.max(0, x));
           } catch (_e2) {
           }
         }, 50);
@@ -3254,9 +3977,11 @@ var NimbusGanttApp = (function(exports) {
         } catch (_e2) {
         }
         setTimeout(() => {
-          var _a3;
+          var _a3, _b2, _c2, _d2;
           try {
-            (_a3 = ganttInst.scrollToDate) == null ? void 0 : _a3.call(ganttInst, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
+            const gi = ganttInst;
+            const x = (_b2 = (_a3 = gi.timeScale) == null ? void 0 : _a3.dateToX) == null ? void 0 : _b2.call(_a3, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
+            if (typeof x === "number") (_d2 = (_c2 = gi.scrollManager) == null ? void 0 : _c2.scrollToX) == null ? void 0 : _d2.call(_c2, Math.max(0, x));
           } catch (_e2) {
           }
         }, 50);
@@ -3302,15 +4027,22 @@ var NimbusGanttApp = (function(exports) {
           ganttInst = null;
         }
         ganttHost.innerHTML = "";
-        const filtered = applyFilter(allTasks, state.filter, state.search);
-        const maybeHide = state.hideCompleted ? filtered.filter((t) => !DONE_STAGES[t.stage || ""]) : filtered;
-        const mapped = buildTasks(maybeHide);
-        if (state.viewMode === "gantt") initGantt(ganttHost);
-        else if (state.viewMode === "flow") renderFlow(ganttHost, mapped);
-        else if (state.viewMode === "calendar") renderCalendar(ganttHost, mapped);
-        else if (state.viewMode === "treemap") renderTreemap(ganttHost, mapped, tplConfig.buckets);
-        else if (state.viewMode === "bubbles") renderBubbles(ganttHost, mapped);
-        else renderList(ganttHost, mapped, tplConfig.buckets);
+        if (state.viewMode === "gantt") {
+          initGantt(ganttHost);
+        } else if (state.viewMode === "list") {
+          renderAuditListView(ganttHost, allTasks, {
+            progressLabel: tplConfig.progressLabel,
+            hideRecordIds: tplConfig.hideRecordIds
+          });
+        } else {
+          const labelMap = {
+            treemap: "Treemap",
+            bubbles: "Bubbles",
+            calendar: "Calendar",
+            flow: "Flow"
+          };
+          renderComingSoon(ganttHost, labelMap[state.viewMode] || state.viewMode);
+        }
         renderSlots();
       }
       renderSlots();
