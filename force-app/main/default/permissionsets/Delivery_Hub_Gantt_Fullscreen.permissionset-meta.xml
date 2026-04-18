@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
-    <description>Grants visibility of the Pro Forma Timeline fullscreen tabs. Delivery_Gantt_Standalone is the FlexiPage-backed route (keeps SF chrome). Delivery_Gantt_Full_Bleed is the Visualforce + Lightning Out route (no SF chrome). Both assigned together by default — admins can remove one if they want to hide the other.</description>
+    <description>Grants visibility on both Pro Forma Timeline fullscreen tabs: Delivery_Gantt_Standalone (FlexiPage, has SF chrome) + Delivery_Gantt_Full_Bleed (VF + Lightning Out, no chrome).</description>
     <hasActivationRequired>false</hasActivationRequired>
     <label>Delivery Hub — Gantt Fullscreen</label>
     <tabSettings>
