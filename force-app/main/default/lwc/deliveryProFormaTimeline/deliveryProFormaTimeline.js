@@ -75,9 +75,19 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
      */
     @api fullscreenUrl;
 
+    /**
+     * Whether NG's chrome (titlebar rows) is visible by default on mount.
+     * Per-surface FlexiPage override (admins can set Standalone = true,
+     * Embedded = false). Forwarded into NG 0.183's chromeVisibleDefault mount
+     * option. No-op with bundles older than 0.183.
+     */
+    @api chromeVisibleDefault = true;
+
     _scriptLoaded = false;
     _mounted = false;
     _tasks = [];
+    _mountHandle = null;
+    _refetchTimer = null;
 
     async connectedCallback() {
         // Fullscreen FlexiPage route renders a Salesforce-injected SLDS page-header
@@ -121,14 +131,25 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     }
 
     disconnectedCallback() {
+        if (this._refetchTimer) {
+            clearTimeout(this._refetchTimer);
+            this._refetchTimer = null;
+        }
         if (this._mounted) {
             try {
-                const container = this.template.querySelector('.timeline-container');
-                if (container && window.NimbusGanttApp) {
-                    window.NimbusGanttApp.unmount(container);
+                // Prefer the handle's destroy() if NG 0.183 exposes one; fall
+                // back to the older container-based unmount API.
+                if (this._mountHandle && typeof this._mountHandle.destroy === 'function') {
+                    this._mountHandle.destroy();
+                } else {
+                    const container = this.template.querySelector('.timeline-container');
+                    if (container && window.NimbusGanttApp) {
+                        window.NimbusGanttApp.unmount(container);
+                    }
                 }
             } catch (e) { /* swallow */ }
             this._mounted = false;
+            this._mountHandle = null;
         }
         this._uninstallFullscreenChromeHide();
     }
@@ -194,28 +215,23 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             return;
         }
 
-        // Map Apex DTOs to SFTask shape the shell expects
-        const tasks = this._tasks.map(r => ({
-            id: r.id,
-            title: r.title || r.name,
-            priorityGroup: r.priorityGroup || 'follow-on',
-            stage: r.stage || '',
-            priority: r.priority || 'Medium',
-            startDate: r.startDate || null,
-            endDate: r.endDate || null,
-            estimatedHours: Number(r.estimatedHours) || 0,
-            loggedHours: Number(r.loggedHours) || 0,
-            developerName: r.developerName || '',
-            entityName: r.entityName || '',
-            parentWorkItemId: r.parentWorkItemId || null,
-            sortOrder: Number(r.sortOrder) || 0,
-            isInactive: !!r.isInactive,
-        }));
+        const tasks = this._mapTasksForNg(this._tasks);
 
         const mountConfig = {
             mode: this.mode,
             tasks,
+            // NG ≤ 6396556 API — kept for backwards compat with the current
+            // shipped bundle until 0.183 lands.
             onPatch: (patch) => this._handlePatch(patch),
+            // NG 0.183 API (pre-staged — no-op on older bundles):
+            //   onItemEdit: drag-to-edit dates, optimistic + revert-on-throw
+            //   onItemClick: click bar → navigate to SF record page
+            //   onItemEditError: UI-agnostic error surface after a thrown onItemEdit
+            //   chromeVisibleDefault: initial chrome visibility per FlexiPage config
+            onItemEdit: (task, dates) => this._handleItemEdit(task, dates),
+            onItemClick: (task) => this._handleItemClick(task),
+            onItemEditError: (taskId, error) => this._handleItemEditError(taskId, error),
+            chromeVisibleDefault: this.chromeVisibleDefault,
             cssUrl: CLOUDNIMBUS_CSS,
             // Passed explicitly to avoid window-lookup races; the app shell
             // would otherwise reach for window.NimbusGantt at a point where
@@ -272,8 +288,13 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 hasOnEnter: !!mountConfig.onEnterFullscreen,
                 hasOnExit: !!mountConfig.onExitFullscreen,
                 taskCount: mountConfig.tasks ? mountConfig.tasks.length : 0,
+                chromeVisibleDefault: mountConfig.chromeVisibleDefault,
             }));
-            window.NimbusGanttApp.mount(container, mountConfig);
+            // Capture the mount return value — NG 0.183 returns a handle with
+            // toggleChrome(), destroy(), and (expected) an update method for
+            // pushing fresh tasks after a save. Older bundles may return
+            // undefined; guard all handle-method calls.
+            this._mountHandle = window.NimbusGanttApp.mount(container, mountConfig);
             this._mounted = true;
         } catch (error) {
             // eslint-disable-next-line no-console
@@ -305,8 +326,98 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
 
         try {
             await Promise.all(ops);
+            this._scheduleRefetch();
         } catch (error) {
             this._showError('Failed to save change', error);
+        }
+    }
+
+    /**
+     * NG 0.183 onItemEdit callback. Optimistic: NG holds the dragged bar in
+     * an in-flight state, awaits this promise, then commits on resolve or
+     * reverts on reject. We must RE-THROW on Apex failure so NG reverts —
+     * the error UI is emitted by NG through onItemEditError (surfaced via
+     * _handleItemEditError → ShowToastEvent).
+     */
+    async _handleItemEdit(task, dates) {
+        if (!task || !task.id) return;
+        const { start, end } = dates || {};
+        await updateWorkItemDates({
+            workItemId: task.id,
+            startDate: start || null,
+            endDate: end || null,
+        });
+        this._scheduleRefetch();
+    }
+
+    _handleItemEditError(taskId, error) {
+        this._showError('Failed to save date change', error);
+    }
+
+    /**
+     * NG 0.183 onItemClick callback. Opens the standard SF record page for
+     * the clicked WorkItem__c. Namespace prefix is applied at runtime for
+     * subscriber orgs (scratch 'WorkItem__c' → subscriber 'delivery__WorkItem__c'
+     * per CLAUDE.md getLocalName() / namespace rule).
+     */
+    _handleItemClick(task) {
+        if (!task || !task.id) return;
+        this[NavigationMixin.Navigate]({
+            type: 'standard__recordPage',
+            attributes: {
+                recordId: task.id,
+                objectApiName: `${this._vfPrefix()}WorkItem__c`,
+                actionName: 'view',
+            },
+        });
+    }
+
+    _mapTasksForNg(rawTasks) {
+        return (rawTasks || []).map(r => ({
+            id: r.id,
+            title: r.title || r.name,
+            priorityGroup: r.priorityGroup || 'follow-on',
+            stage: r.stage || '',
+            priority: r.priority || 'Medium',
+            startDate: r.startDate || null,
+            endDate: r.endDate || null,
+            estimatedHours: Number(r.estimatedHours) || 0,
+            loggedHours: Number(r.loggedHours) || 0,
+            developerName: r.developerName || '',
+            entityName: r.entityName || '',
+            parentWorkItemId: r.parentWorkItemId || null,
+            sortOrder: Number(r.sortOrder) || 0,
+            isInactive: !!r.isInactive,
+        }));
+    }
+
+    /**
+     * Debounced post-save re-fetch. After a successful write, pull fresh
+     * WorkItem__c data so rollups/formula fields (TotalLoggedHoursSum__c,
+     * SLA dates, etc.) re-render with server-computed values. 500ms debounce
+     * prevents Apex storms under rapid drag/patch sequences.
+     *
+     * Pushes fresh tasks into NG via the mount handle if 0.183+ exposes an
+     * updateTasks() method; otherwise caches locally for next mount cycle.
+     */
+    _scheduleRefetch() {
+        if (this._refetchTimer) clearTimeout(this._refetchTimer);
+        this._refetchTimer = setTimeout(() => {
+            this._refetchTimer = null;
+            this._refetchAfterPatch();
+        }, 500);
+    }
+
+    async _refetchAfterPatch() {
+        try {
+            const data = await getProFormaTimelineData({ showCompleted: false });
+            this._tasks = data || [];
+            if (this._mountHandle && typeof this._mountHandle.updateTasks === 'function') {
+                this._mountHandle.updateTasks(this._mapTasksForNg(this._tasks));
+            }
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.warn('[DeliveryTimeline] post-save re-fetch failed (non-critical):', error);
         }
     }
 

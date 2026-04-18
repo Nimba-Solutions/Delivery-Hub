@@ -22,6 +22,12 @@
                 type="String"
                 label="Fullscreen URL"
                 description="Outbound URL for the NG fullscreen button (e.g. /apex/DeliveryGanttStandalone). Only set on the Standalone FlexiPage — leave empty on embedded + VF routes. Namespace prefix is applied automatically at runtime for subscriber orgs."/>
+            <property
+                name="chromeVisibleDefault"
+                type="Boolean"
+                label="Chrome Visible by Default"
+                description="Controls NG's chrome (titlebar rows) initial visibility. true = chrome visible on mount (good for Standalone). false = chrome hidden on mount (good for Embedded where SF chrome already surrounds the component). Honored by NG 0.183+."
+                default="true"/>
         </targetConfig>
     </targetConfigs>
     <masterLabel>Delivery Pro Forma Timeline</masterLabel>
