@@ -1934,7 +1934,8 @@ var NimbusGanttApp = (function(exports) {
     { name: "Mahi", role: "SFDC Dev", hoursPerMonth: 50, active: true },
     { name: "Antima", role: "SFDC Dev (PT)", hoursPerMonth: 40, active: true }
   ];
-  const CLS_TITLEBAR = "nga-titlebar bg-white border-b border-slate-200 px-3 py-1.5 flex items-center gap-2 flex-wrap min-w-0 overflow-x-hidden";
+  const CLS_TITLEBAR = "nga-titlebar bg-white border-b border-slate-200 px-3 py-1.5 flex flex-col gap-1.5 min-w-0 overflow-x-hidden";
+  const CLS_TITLEBAR_ROW = "flex items-center gap-2 flex-wrap min-w-0";
   const CLS_TITLE_BRAND = "text-sm font-bold text-slate-900";
   const CLS_VERSION_PILL = "text-[9px] font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded-full px-2 py-0.5";
   const CLS_SEP = "text-slate-200";
@@ -2074,13 +2075,10 @@ var NimbusGanttApp = (function(exports) {
     function render(p) {
       clear(root);
       const { config, state, dispatch, data } = p;
-      const brand = el$1("span", CLS_TITLE_BRAND);
-      brand.textContent = config.title || "Pro Forma Timeline";
-      root.appendChild(brand);
-      const version = el$1("span", CLS_VERSION_PILL);
-      version.textContent = config.version || "v10 · Nimbus Gantt";
-      root.appendChild(version);
-      root.appendChild(mkSep$1());
+      const rowViews = el$1("div", CLS_TITLEBAR_ROW);
+      rowViews.setAttribute("data-nga-titlebar-row", "views");
+      const rowMain = el$1("div", CLS_TITLEBAR_ROW);
+      rowMain.setAttribute("data-nga-titlebar-row", "main");
       const enabledViews = CLOUD_NIMBUS_VIEW_MODES.filter(
         (v) => !config.views || config.views.includes(v.id)
       );
@@ -2094,10 +2092,17 @@ var NimbusGanttApp = (function(exports) {
           btn.appendChild(ico);
           btn.appendChild(document.createTextNode(v.label));
           btn.addEventListener("click", () => dispatch({ type: "SET_VIEW", mode: v.id }));
-          root.appendChild(btn);
+          rowViews.appendChild(btn);
         });
-        root.appendChild(mkSep$1());
+        root.appendChild(rowViews);
       }
+      const brand = el$1("span", CLS_TITLE_BRAND);
+      brand.textContent = config.title || "Pro Forma Timeline";
+      rowMain.appendChild(brand);
+      const version = el$1("span", CLS_VERSION_PILL);
+      version.textContent = config.version || "v10 · Nimbus Gantt";
+      rowMain.appendChild(version);
+      rowMain.appendChild(mkSep$1());
       function toggleBtn(label, on, ev) {
         const cls = CLS_PILL_BTN_BASE + " " + (on ? CLS_PILL_BTN_ACTIVE_BLUE : CLS_PILL_BTN_IDLE_BLUE);
         const b = el$1("button", cls);
@@ -2105,26 +2110,26 @@ var NimbusGanttApp = (function(exports) {
         b.addEventListener("click", ev);
         return b;
       }
-      root.appendChild(toggleBtn("Sidebar", state.sidebarOpen, () => dispatch({ type: "TOGGLE_SIDEBAR" })));
-      root.appendChild(toggleBtn("Stats", state.statsOpen, () => dispatch({ type: "TOGGLE_STATS" })));
+      rowMain.appendChild(toggleBtn("Sidebar", state.sidebarOpen, () => dispatch({ type: "TOGGLE_SIDEBAR" })));
+      rowMain.appendChild(toggleBtn("Stats", state.statsOpen, () => dispatch({ type: "TOGGLE_STATS" })));
       if (config.features.auditPanel) {
-        root.appendChild(toggleBtn("Audit", state.auditPanelOpen, () => dispatch({ type: "TOGGLE_AUDIT_PANEL" })));
+        rowMain.appendChild(toggleBtn("Audit", state.auditPanelOpen, () => dispatch({ type: "TOGGLE_AUDIT_PANEL" })));
       }
-      root.appendChild(mkSep$1());
+      rowMain.appendChild(mkSep$1());
       ZOOMS$2.forEach((z) => {
         const on = state.zoom === z;
         const cls = CLS_PILL_BTN_BASE + " " + (on ? CLS_PILL_BTN_ACTIVE_SLATE : CLS_PILL_BTN_IDLE_SLATE);
         const b = el$1("button", cls);
         b.textContent = z.charAt(0).toUpperCase() + z.slice(1);
         b.addEventListener("click", () => dispatch({ type: "SET_ZOOM", zoom: z }));
-        root.appendChild(b);
+        rowMain.appendChild(b);
       });
       if (config.features.groupByToggle) {
-        root.appendChild(mkSep$1());
+        rowMain.appendChild(mkSep$1());
         const gLbl = el$1("span", CLS_GROUP_LABEL);
         gLbl.textContent = "Group:";
         gLbl.title = "Left-click = Gantt · Right-click = Sidebar";
-        root.appendChild(gLbl);
+        rowMain.appendChild(gLbl);
         GROUPS.forEach((g) => {
           const isGantt = state.groupBy === g;
           const isSide = state.groupBy === g;
@@ -2150,11 +2155,11 @@ var NimbusGanttApp = (function(exports) {
             e.preventDefault();
             dispatch({ type: "SET_GROUP_BY", groupBy: g });
           });
-          root.appendChild(b);
+          rowMain.appendChild(b);
         });
       }
       const fill = el$1("div", CLS_TB_FILL);
-      root.appendChild(fill);
+      rowMain.appendChild(fill);
       const hoursHigh = data.stats.est;
       const hoursLow = data.stats.estLow || data.stats.est;
       const totalCap = CLOUD_NIMBUS_POOL.reduce((s, m) => s + (m.active !== false ? m.hoursPerMonth : 0), 0);
@@ -2164,7 +2169,7 @@ var NimbusGanttApp = (function(exports) {
       const mHighS = isFinite(mHigh) ? mHigh.toFixed(1) : "∞";
       const summary = el$1("span", CLS_TB_SUMMARY);
       summary.textContent = data.stats.scheduled + " scheduled · " + hoursLow + "–" + hoursHigh + "h · " + mLowS + "–" + mHighS + " mo";
-      root.appendChild(summary);
+      rowMain.appendChild(summary);
       const unpinBtn = el$1(
         "button",
         CLS_PILL_BTN_BASE + " " + (unpinOn ? CLS_RIGHT_UNPIN_ON : CLS_RIGHT_UNPIN_OFF)
@@ -2176,7 +2181,7 @@ var NimbusGanttApp = (function(exports) {
         console.log("[TitleBar] unpin toggled →", unpinOn);
         render(currentProps);
       });
-      root.appendChild(unpinBtn);
+      rowMain.appendChild(unpinBtn);
       const hostExit = config.mode === "fullscreen" && typeof config.onExitFullscreen === "function";
       const fsBtn = el$1(
         "button",
@@ -2192,7 +2197,7 @@ var NimbusGanttApp = (function(exports) {
         fsBtn.textContent = state.fullscreen ? "Exit Fullscreen" : "Fullscreen";
         fsBtn.addEventListener("click", () => dispatch({ type: "TOGGLE_FULLSCREEN" }));
       }
-      root.appendChild(fsBtn);
+      rowMain.appendChild(fsBtn);
       const adminBtn = el$1(
         "button",
         CLS_PILL_BTN_BASE + " " + (adminOn ? CLS_RIGHT_ADMIN_ON : CLS_RIGHT_ADMIN_OFF)
@@ -2204,7 +2209,7 @@ var NimbusGanttApp = (function(exports) {
         console.log("[TitleBar] admin toggled →", adminOn);
         render(currentProps);
       });
-      root.appendChild(adminBtn);
+      rowMain.appendChild(adminBtn);
       const advisorBtn = el$1(
         "button",
         CLS_PILL_BTN_BASE + " " + (advisorOn ? CLS_RIGHT_ADVISOR_ON : CLS_RIGHT_ADVISOR_OFF)
@@ -2216,7 +2221,7 @@ var NimbusGanttApp = (function(exports) {
         console.log("[TitleBar] advisor toggled →", advisorOn);
         render(currentProps);
       });
-      root.appendChild(advisorBtn);
+      rowMain.appendChild(advisorBtn);
       if (config.apiDocsUrl) {
         const apiDocs = el$1(
           "a",
@@ -2226,12 +2231,13 @@ var NimbusGanttApp = (function(exports) {
         apiDocs.title = "API docs — how to automate submits";
         apiDocs.setAttribute("data-nga-api-docs", "1");
         apiDocs.textContent = "API docs";
-        root.appendChild(apiDocs);
+        rowMain.appendChild(apiDocs);
       }
       const v3 = el$1("a", CLS_V3_LINK);
       v3.href = "#";
       v3.textContent = "v3 (Canvas)";
-      root.appendChild(v3);
+      rowMain.appendChild(v3);
+      root.appendChild(rowMain);
     }
     render(initial);
     return {

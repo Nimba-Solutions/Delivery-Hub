@@ -63,7 +63,13 @@
 .nga-root { display: flex; flex-direction: column; height: 100%; width: 100%; overflow: hidden; }
 /* Fullscreen escape — covers Salesforce header/nav/footer with one click */
 .nga-fullscreen { position: fixed !important; inset: 0 !important; z-index: 9999 !important; width: 100vw !important; height: 100vh !important; background: #f8fafc !important; }
-.nga-titlebar { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding: 6px 12px; background: #fff; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }
+/* Outer titlebar is column-flex — Row 1 (view pills, conditional) stacks
+   above Row 2 (brand + toggles + zoom + summary + right-side) so the
+   chrome never crams 13 pills into a single wrap-prone line. Single-view
+   configs (A1 reverted / minimal template) hide Row 1 → visually single
+   row = v12 prod parity preserved. */
+.nga-titlebar { display: flex; flex-direction: column; gap: 6px; padding: 6px 12px; background: #fff; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; }
+.nga-titlebar-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; min-width: 0; }
 .nga-filterbar { display: block; padding: 6px 12px; background: #fff; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; }
 .nga-zoombar { display: flex; align-items: center; gap: 0.5rem; }
 .nga-stats { padding: 12px; background: #fff; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; }
