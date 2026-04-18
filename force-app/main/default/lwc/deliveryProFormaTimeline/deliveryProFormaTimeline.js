@@ -131,6 +131,15 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         if (s && s.parentNode) s.parentNode.removeChild(s);
     }
 
+    // CLOUDNIMBUS_CSS resolves to `/resource/{ts}/cloudnimbustemplatecss` in a
+    // non-namespaced scratch and `/resource/{ts}/delivery__cloudnimbustemplatecss`
+    // in a subscriber org. Used to build the VF fullscreen URL so it resolves
+    // correctly in both contexts (CLAUDE.md: never hardcode namespace in VF URL).
+    _vfPrefix() {
+        const m = /\/resource\/\d+\/([^/?]+?)__cloudnimbustemplatecss/.exec(CLOUDNIMBUS_CSS);
+        return m ? `${m[1]}__` : '';
+    }
+
     async _loadAndMount() {
         try {
             const data = await getProFormaTimelineData({ showCompleted: false });
@@ -174,19 +183,35 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             isInactive: !!r.isInactive,
         }));
 
+        const mountConfig = {
+            mode: this.mode,
+            tasks,
+            onPatch: (patch) => this._handlePatch(patch),
+            onEnterFullscreen: () => this._handleEnterFullscreen(),
+            onExitFullscreen: () => this._handleExitFullscreen(),
+            cssUrl: CLOUDNIMBUS_CSS,
+            // Passed explicitly to avoid window-lookup races; the app shell
+            // would otherwise reach for window.NimbusGantt at a point where
+            // Locker Service proxies can still be settling.
+            engine: window.NimbusGantt,
+        };
+
+        // Fullscreen-button → VF route wiring. Native fullscreen API fails in
+        // the Lightning iframe sandbox; the VF + Lightning Out route IS the
+        // chromeless fullscreen experience. On the FlexiPage Standalone route
+        // (mode=fullscreen, non-apex URL), pass fullscreenUrl so the shell
+        // navigates there on click. On the VF route itself (/apex/...), omit
+        // the prop so the shell auto-hides the button.
+        const onApexRoute = typeof window !== 'undefined'
+            && window.location
+            && typeof window.location.pathname === 'string'
+            && window.location.pathname.indexOf('/apex/') !== -1;
+        if (this.mode === 'fullscreen' && !onApexRoute) {
+            mountConfig.fullscreenUrl = `/apex/${this._vfPrefix()}DeliveryGanttStandalone`;
+        }
+
         try {
-            window.NimbusGanttApp.mount(container, {
-                mode: this.mode,
-                tasks,
-                onPatch: (patch) => this._handlePatch(patch),
-                onEnterFullscreen: () => this._handleEnterFullscreen(),
-                onExitFullscreen: () => this._handleExitFullscreen(),
-                cssUrl: CLOUDNIMBUS_CSS,
-                // Passed explicitly to avoid window-lookup races; the app shell
-                // would otherwise reach for window.NimbusGantt at a point where
-                // Locker Service proxies can still be settling.
-                engine: window.NimbusGantt,
-            });
+            window.NimbusGanttApp.mount(container, mountConfig);
             this._mounted = true;
         } catch (error) {
             // eslint-disable-next-line no-console
