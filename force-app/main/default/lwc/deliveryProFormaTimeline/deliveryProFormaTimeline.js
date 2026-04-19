@@ -379,6 +379,10 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             // pushing fresh tasks after a save. Older bundles may return
             // undefined; guard all handle-method calls.
             this._mountHandle = window.NimbusGanttApp.mount(container, mountConfig);
+            // Expose the handle for DevTools / keyboard-shortcut consumers
+            // (e.g. window.__DH_HANDLE.scrollToDate(new Date()) for T-for-today).
+            // Each mount overwrites; last-mounted wins if multiple instances.
+            try { window.__DH_HANDLE = this._mountHandle; } catch (e) { /* LWS proxy */ }
             this._mounted = true;
             this._installCnEditBridge();
         } catch (error) {
