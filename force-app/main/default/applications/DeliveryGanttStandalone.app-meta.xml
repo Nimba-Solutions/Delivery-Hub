@@ -13,5 +13,6 @@
     <label>Delivery Gantt Standalone</label>
     <navType>Standard</navType>
     <tabs>Delivery_Gantt_Standalone</tabs>
+    <tabs>Delivery_Gantt_Full_Bleed</tabs>
     <uiType>Lightning</uiType>
 </CustomApplication>

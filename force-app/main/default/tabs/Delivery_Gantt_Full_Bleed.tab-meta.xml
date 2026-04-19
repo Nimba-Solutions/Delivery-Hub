@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Full-bleed Pro Forma Timeline — no SF chrome. VF + Lightning Out route, companion to Delivery_Gantt_Standalone.</description>
+    <page>DeliveryGanttStandalone</page>
+    <label>Gantt — Full Bleed</label>
+    <motif>Custom67: Gears</motif>
+</CustomTab>
