@@ -105,7 +105,7 @@ private class DeliveryWorkItemControllerTest {
         List<Map<String, Object>> updates = new List<Map<String, Object>>();
         updates.add(new Map<String, Object>{
             'Id' => workItems[0].Id,
-            '%%%NAMESPACED_ORG%%%SortOrderNumber__c' => 5
+            '%%%NAMESPACE_DOT%%%SortOrderNumber__c' => 5
         });
 
         Test.startTest();

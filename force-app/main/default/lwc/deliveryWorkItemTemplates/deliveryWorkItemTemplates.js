@@ -137,7 +137,7 @@ export default class DeliveryWorkItemTemplates extends NavigationMixin(Lightning
                 type: "standard__recordPage",
                 attributes: {
                     recordId: newId,
-                    objectApiName: "WorkItem__c",
+                    objectApiName: "%%%NAMESPACE_DOT%%%WorkItem__c",
                     actionName: "view"
                 }
             });

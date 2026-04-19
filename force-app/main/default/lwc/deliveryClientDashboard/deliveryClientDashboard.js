@@ -402,7 +402,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
             attributes: {
                 actionName: 'view',
-                objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c',
+                objectApiName: '%%%NAMESPACE_DOT%%%WorkItem__c',
                 recordId
             },
             type: 'standard__recordPage'
@@ -458,7 +458,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
             this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
                 attributes: {
                     actionName: 'list',
-                    objectApiName: fallbackObject || '%%%NAMESPACED_ORG%%%WorkItem__c'
+                    objectApiName: fallbackObject || '%%%NAMESPACE_DOT%%%WorkItem__c'
                 },
                 state: { filterName: fallbackListView },
                 type: 'standard__objectPage'
@@ -488,7 +488,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
             this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
                 attributes: {
                     actionName: 'list',
-                    objectApiName: '%%%NAMESPACED_ORG%%%WorkLog__c'
+                    objectApiName: '%%%NAMESPACE_DOT%%%WorkLog__c'
                 },
                 state: { filterName: 'This_Month' },
                 type: 'standard__objectPage'
