@@ -666,7 +666,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             whoami: function () {
                 try {
                     // eslint-disable-next-line no-undef
-                    const u = (typeof $A \!== 'undefined' && $A.get && $A.get('$SObjectType.CurrentUser.Id'));
+                    const u = (typeof $A !== 'undefined' && $A.get && $A.get('$SObjectType.CurrentUser.Id'));
                     return Promise.resolve(u || null);
                 } catch (_e) {
                     return Promise.resolve(null);
@@ -675,8 +675,8 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             getState: function () {
                 return {
                     tasks: self._tasks || [],
-                    mounted: \!\!self._mounted,
-                    surface: (typeof window \!== 'undefined' && window.location && window.location.pathname) || '',
+                    mounted: !!self._mounted,
+                    surface: (typeof window !== 'undefined' && window.location && window.location.pathname) || '',
                 };
             },
             moveTask: function (id, startISO, endISO) {
@@ -724,7 +724,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
 
     _uninstallCnEditBridge() {
         try {
-            if (typeof window \!== 'undefined' && window.__cnEdit && window.__cnEdit === this._cnEditBridge) {
+            if (typeof window !== 'undefined' && window.__cnEdit && window.__cnEdit === this._cnEditBridge) {
                 delete window.__cnEdit;
             }
         } catch (_e) { /* swallow */ }
