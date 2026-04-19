@@ -437,23 +437,29 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     }
 
     /**
-     * NG 0.183 onItemReorder(taskId, { newIndex, newParentId? }). Payload
-     * object — newParentId only present when the drag also changed parent
-     * (re-parent + re-sort in a single gesture). Persists sort + optional
-     * parent change via existing Apex. Same optimistic/revert semantics
-     * as onItemEdit: re-throw on failure so NG reverts the visual.
+     * NG 0.183.1 onItemReorder(taskId, { newIndex, newParentId?, newPriorityGroup? }).
+     * Payload object — the optional fields fire only when the drag gesture
+     * crossed a boundary:
+     *   - newParentId: re-parent within the same priority group
+     *   - newPriorityGroup: drag across priority lanes (NOW ↔ NEXT ↔ PLANNED)
+     * Asymmetric reprioritize ("NEXT → NOW works, NOW → NEXT doesn't") on
+     * MF-Prod traced to this handler ignoring newPriorityGroup — sort updated
+     * on both but lane only changed visually; on refresh items snapped back.
      */
     async _handleItemReorder(arg1, payload) {
         const taskId = this._normalizeTaskId(arg1);
         // eslint-disable-next-line no-console
         console.log('[DH onItemReorder]', { arg1Type: typeof arg1, resolvedTaskId: taskId, payload });
         if (!taskId) { throw new Error('[DH] onItemReorder missing taskId'); }
-        const { newIndex, newParentId } = payload || {};
+        const { newIndex, newParentId, newPriorityGroup } = payload || {};
         const ops = [
             updateWorkItemSortOrder({ workItemId: taskId, sortOrder: Number(newIndex) || 0 }),
         ];
         if (newParentId !== undefined) {
             ops.push(updateWorkItemParent({ workItemId: taskId, parentId: newParentId || '' }));
+        }
+        if (newPriorityGroup !== undefined && newPriorityGroup !== null) {
+            ops.push(updateWorkItemPriorityGroup({ workItemId: taskId, priorityGroup: newPriorityGroup }));
         }
         await Promise.all(ops);
         this._scheduleRefetch();
