@@ -320,9 +320,13 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
 
         try {
             // eslint-disable-next-line no-console
-            console.log('[DH mount]', JSON.stringify({
+            const mountSnapshot = {
+                surface: (typeof window !== 'undefined' && window.location && window.location.pathname) || '',
                 mode: mountConfig.mode,
-                fullscreenUrl: mountConfig.fullscreenUrl,
+                apiModeProp: this.mode,
+                apiFullscreenUrlProp: this.fullscreenUrl,
+                apiChromeHiddenDefaultProp: this.chromeHiddenDefault,
+                resolvedFullscreenUrl: mountConfig.fullscreenUrl,
                 hasOnEnter: !!mountConfig.onEnterFullscreen,
                 hasOnExit: !!mountConfig.onExitFullscreen,
                 hasOnPatch: !!mountConfig.onPatch,
@@ -334,7 +338,13 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 chromeVisibleDefault: mountConfig.chromeVisibleDefault,
                 features: mountConfig.features,
                 initialViewport: mountConfig.initialViewport,
-            }));
+                mountedAt: new Date().toISOString(),
+            };
+            // eslint-disable-next-line no-console
+            console.log('[DH mount]', JSON.stringify(mountSnapshot));
+            // Expose to window so probe can read regardless of console cache.
+            // Overwritten on every mount; multi-mount scenarios get last-wins.
+            try { window.__DH_MOUNT_STATE = mountSnapshot; } catch (e) { /* Locker */ }
             // Capture the mount return value — NG 0.183 returns a handle with
             // toggleChrome(), destroy(), and (expected) an update method for
             // pushing fresh tasks after a save. Older bundles may return
