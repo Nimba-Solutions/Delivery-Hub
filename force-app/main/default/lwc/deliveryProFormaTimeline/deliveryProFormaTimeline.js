@@ -471,7 +471,11 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         const taskId = this._normalizeTaskId(arg1);
         // eslint-disable-next-line no-console
         console.log('[DH onItemClick]', { arg1Type: typeof arg1, resolvedTaskId: taskId });
-        if (!taskId) return;
+        // Guard against NG virtual group-header / bucket rows (ids like
+        // "NEXT", "NOW", "PROPOSED", "follow-on") and any non-SF-Id shape.
+        // SF Ids are 15 or 18 alphanumeric chars. Fires NavigationMixin only
+        // when the id passes this shape check — otherwise PageNotFound modal.
+        if (!taskId || !/^[a-zA-Z0-9]{15}([a-zA-Z0-9]{3})?$/.test(taskId)) return;
         this[NavigationMixin.Navigate]({
             type: 'standard__recordPage',
             attributes: {
