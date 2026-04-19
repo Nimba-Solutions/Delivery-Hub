@@ -494,7 +494,7 @@ export default class DeliveryVoiceNotes extends NavigationMixin(LightningElement
             this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
                 attributes: {
                     actionName: 'view',
-                    objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c',
+                    objectApiName: '%%%NAMESPACE_DOT%%%WorkItem__c',
                     recordId: recordId
                 },
                 type: 'standard__recordPage'
