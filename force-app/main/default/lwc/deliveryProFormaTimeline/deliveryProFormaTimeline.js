@@ -555,11 +555,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
      * Locker Service / private-mode restrictions.
      */
     get _viewportStorageKey() {
-        // v2 bump — evicts stuck {scrollLeft:0} entries from v1 keys that
-        // trapped users at dataset start because "0 is an explicit value" per
-        // NG precedence (explicit pixels > semantic > default). Old keys are
-        // orphaned in localStorage; eventually GC'd by browser storage limits.
-        return `dh.gantt.viewport.v2.${this.mode || 'embedded'}`;
+        return `dh.gantt.viewport.v3.${this.mode || 'embedded'}`;
     }
 
     _readInitialViewport() {
@@ -568,28 +564,28 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             if (!raw) return undefined;
             const parsed = JSON.parse(raw);
             if (!parsed || typeof parsed !== 'object') return undefined;
-            // Guard against the stored-zero trap: a fresh-first-load viewport
-            // self-persists {scrollLeft:0, scrollTop:0} which then trumps
-            // initialFocusDate on every subsequent load (0 is a valid explicit
-            // number per NG precedence). Treat all-zero scroll as "no real
-            // user pan" and fall through to initialFocusDate today-landing.
-            // Real pan positions have at least one non-zero coordinate.
-            const hasMeaningfulScroll = Number(parsed.scrollLeft) > 0
-                || Number(parsed.scrollTop) > 0;
-            if (!hasMeaningfulScroll) return undefined;
-            return parsed;
+            // TTL-bounded pan memory: within 10 min of the last persist, restore
+            // the user's scroll so tab-flip feels sticky. Past that, drop it and
+            // fall through to initialFocusDate today-landing. This kills the
+            // self-reinforcing trap where every load anchored to an old pan
+            // (scrollLeft:388 pointed at "today when it was written" — once
+            // today moves on or the dataset shifts, that pixel is no longer
+            // today, and today-landing silently breaks).
+            const age = Date.now() - Number(parsed.savedAt || 0);
+            if (!Number.isFinite(age) || age < 0 || age > 600000) return undefined;
+            if (!parsed.state || typeof parsed.state !== 'object') return undefined;
+            return parsed.state;
         } catch (e) { /* storage unavailable — first mount, fall through */ }
         return undefined;
     }
 
     _handleViewportChange(state) {
-        // NG debounces the callback at 150ms; add a host-side throttle so
-        // rapid scrolls don't thrash localStorage.
         if (this._viewportWriteTimer) clearTimeout(this._viewportWriteTimer);
         this._viewportWriteTimer = setTimeout(() => {
             this._viewportWriteTimer = null;
             try {
-                window.localStorage.setItem(this._viewportStorageKey, JSON.stringify(state));
+                const payload = { state, savedAt: Date.now() };
+                window.localStorage.setItem(this._viewportStorageKey, JSON.stringify(payload));
             } catch (e) { /* storage full / disabled — swallow */ }
         }, 500);
     }
