@@ -669,6 +669,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             '  __cnEdit.moveToGroup(id, group)',
             '  __cnEdit.reorder(id, newIndex)',
             '  __cnEdit.setParent(id, parentId|null)',
+            '  __cnEdit.scrollToDate(date) -> scroll timeline to focus on date (NG 0.185.1+)',
             '  __cnEdit.submit(note?)    -> no-op (DH writes every patch immediately)',
             '  __cnEdit.reset()          -> no-op (reload page to refetch)',
             '',
@@ -709,6 +710,21 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             },
             setParent: function (id, parentId) {
                 return self._handlePatch({ id: id, parentId: parentId || null });
+            },
+            scrollToDate: function (date) {
+                // NG 0.185.1+ exposes scrollToDate on the mount handle.
+                // Accepts Date object or ISO 'YYYY-MM-DD' string. Snaps
+                // to start-of-period for the current zoom (week/month/quarter).
+                // No-op on older bundles — handle method absent.
+                if (!self._mountHandle || typeof self._mountHandle.scrollToDate !== 'function') {
+                    const msg = 'scrollToDate unavailable — requires NG 0.185.1+ bundle';
+                    // eslint-disable-next-line no-console
+                    console.warn('[cn-edit]', msg);
+                    return { ok: false, msg: msg };
+                }
+                const arg = date instanceof Date ? date : new Date(date || Date.now());
+                self._mountHandle.scrollToDate(arg);
+                return { ok: true };
             },
             submit: function (_note) {
                 const msg = 'submit() is a no-op in DH: each patch is already persisted. Reload to refetch.';
