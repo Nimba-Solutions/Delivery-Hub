@@ -555,7 +555,11 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
      * Locker Service / private-mode restrictions.
      */
     get _viewportStorageKey() {
-        return `dh.gantt.viewport.${this.mode || 'embedded'}`;
+        // v2 bump — evicts stuck {scrollLeft:0} entries from v1 keys that
+        // trapped users at dataset start because "0 is an explicit value" per
+        // NG precedence (explicit pixels > semantic > default). Old keys are
+        // orphaned in localStorage; eventually GC'd by browser storage limits.
+        return `dh.gantt.viewport.v2.${this.mode || 'embedded'}`;
     }
 
     _readInitialViewport() {
@@ -563,7 +567,17 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             const raw = window.localStorage.getItem(this._viewportStorageKey);
             if (!raw) return undefined;
             const parsed = JSON.parse(raw);
-            if (parsed && typeof parsed === 'object') return parsed;
+            if (!parsed || typeof parsed !== 'object') return undefined;
+            // Guard against the stored-zero trap: a fresh-first-load viewport
+            // self-persists {scrollLeft:0, scrollTop:0} which then trumps
+            // initialFocusDate on every subsequent load (0 is a valid explicit
+            // number per NG precedence). Treat all-zero scroll as "no real
+            // user pan" and fall through to initialFocusDate today-landing.
+            // Real pan positions have at least one non-zero coordinate.
+            const hasMeaningfulScroll = Number(parsed.scrollLeft) > 0
+                || Number(parsed.scrollTop) > 0;
+            if (!hasMeaningfulScroll) return undefined;
+            return parsed;
         } catch (e) { /* storage unavailable — first mount, fall through */ }
         return undefined;
     }
