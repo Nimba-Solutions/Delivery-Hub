@@ -1,4 +1,4 @@
-var NimbusGanttApp = function(exports) {
+var NimbusGanttApp = (function(exports) {
   "use strict";
   const GROUP_BAR = {
     "top-priority": "#f87171",
@@ -3560,6 +3560,29 @@ var NimbusGanttApp = function(exports) {
     return cols;
   }
   const INITIAL_VIEWPORT_OFFSET_MS = 14 * 24 * 60 * 60 * 1e3;
+  function snapDateToZoomPeriod(date, zoom) {
+    const d = new Date(date.getTime());
+    d.setUTCHours(0, 0, 0, 0);
+    if (zoom === "week") {
+      const dow = d.getUTCDay();
+      const offsetDays = dow === 0 ? -6 : 1 - dow;
+      d.setUTCDate(d.getUTCDate() + offsetDays);
+    } else if (zoom === "month") {
+      d.setUTCDate(1);
+    } else if (zoom === "quarter") {
+      const m = d.getUTCMonth();
+      const qm = Math.floor(m / 3) * 3;
+      d.setUTCMonth(qm, 1);
+    }
+    return d;
+  }
+  function parseFocusDate(input) {
+    if (!input) return null;
+    if (input instanceof Date) return isNaN(input.getTime()) ? null : input;
+    const t = Date.parse(input);
+    if (isNaN(t)) return null;
+    return new Date(t);
+  }
   function injectLegacyNgCss() {
     if (document.getElementById("nga-v5-css")) return;
     const s = document.createElement("style");
@@ -3874,12 +3897,24 @@ var NimbusGanttApp = function(exports) {
         } catch (_e2) {
         }
         setTimeout(() => {
-          var _a2, _b2, _c2, _d2;
+          var _a2, _b2, _c2, _d2, _e2, _f2, _g, _h, _i, _j;
           try {
             const gi = inst;
-            const x = (_b2 = (_a2 = gi.timeScale) == null ? void 0 : _a2.dateToX) == null ? void 0 : _b2.call(_a2, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
-            if (typeof x === "number") (_d2 = (_c2 = gi.scrollManager) == null ? void 0 : _c2.scrollToX) == null ? void 0 : _d2.call(_c2, Math.max(0, x));
-          } catch (_e2) {
+            const iv = options.initialViewport;
+            if (iv && typeof iv.scrollLeft === "number") {
+              (_b2 = (_a2 = gi.scrollManager) == null ? void 0 : _a2.scrollToX) == null ? void 0 : _b2.call(_a2, Math.max(0, iv.scrollLeft));
+            } else if (options.initialFocusDate) {
+              const parsed = parseFocusDate(options.initialFocusDate);
+              if (parsed) {
+                const snapped = snapDateToZoomPeriod(parsed, state2.zoom);
+                const x = (_d2 = (_c2 = gi.timeScale) == null ? void 0 : _c2.dateToX) == null ? void 0 : _d2.call(_c2, snapped);
+                if (typeof x === "number") (_f2 = (_e2 = gi.scrollManager) == null ? void 0 : _e2.scrollToX) == null ? void 0 : _f2.call(_e2, Math.max(0, x));
+              }
+            } else {
+              const x = (_h = (_g = gi.timeScale) == null ? void 0 : _g.dateToX) == null ? void 0 : _h.call(_g, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
+              if (typeof x === "number") (_j = (_i = gi.scrollManager) == null ? void 0 : _i.scrollToX) == null ? void 0 : _j.call(_i, Math.max(0, x));
+            }
+          } catch (_e3) {
           }
         }, 50);
         let cleanupShading2 = null;
@@ -3921,6 +3956,36 @@ var NimbusGanttApp = function(exports) {
           setGroupBy(groupBy) {
             state2.groupBy = groupBy;
             _syncToCanvas();
+          },
+          /** 0.185 — engineOnly batchMode stubs.
+           *
+           *  The engineOnly mount path doesn't currently buffer edits — it
+           *  forwards onTaskMove/onTaskResize directly to options.onPatch.
+           *  These stubs exist so NimbusGanttAppReact consumers calling
+           *  `handleRef.current.commitEdits()` get a clean no-op rather than
+           *  a TypeError. Real batch buffering for the React driver is queued
+           *  for a follow-up cut once a React consumer needs it (CN v10/v12
+           *  stay on per-patch flow per 0.185 spec). */
+          getPendingEdits() {
+            return [];
+          },
+          commitEdits() {
+            return Promise.resolve({ committed: [] });
+          },
+          discardEdits() {
+          },
+          /** 0.185.1 — same impl as the chrome-aware path. Snap then scroll. */
+          scrollToDate(date) {
+            var _a2, _b2, _c2, _d2;
+            const parsed = parseFocusDate(date);
+            if (!parsed) return;
+            try {
+              const gi = inst;
+              const snapped = snapDateToZoomPeriod(parsed, state2.zoom);
+              const x = (_b2 = (_a2 = gi.timeScale) == null ? void 0 : _a2.dateToX) == null ? void 0 : _b2.call(_a2, snapped);
+              if (typeof x === "number") (_d2 = (_c2 = gi.scrollManager) == null ? void 0 : _c2.scrollToX) == null ? void 0 : _d2.call(_c2, Math.max(0, x));
+            } catch (_e2) {
+            }
           },
           destroy() {
             IIFEApp.unmount(container);
@@ -4005,6 +4070,75 @@ var NimbusGanttApp = function(exports) {
       const pendingEdits = /* @__PURE__ */ new Map();
       let nextEditSeq = 0;
       const inflightTaskIds = /* @__PURE__ */ new Set();
+      const pendingBuffer = /* @__PURE__ */ new Map();
+      const dirtyTaskIds = /* @__PURE__ */ new Set();
+      function bufferEdit(taskId, kind, payloadDelta, originalDelta) {
+        const key = taskId + "::" + kind;
+        const existing = pendingBuffer.get(key);
+        if (kind === "edit") {
+          pendingBuffer.set(key, {
+            taskId,
+            kind: "edit",
+            changes: { ...(existing == null ? void 0 : existing.changes) ?? {}, ...payloadDelta },
+            original: (existing == null ? void 0 : existing.original) ?? originalDelta,
+            ts: Date.now()
+          });
+        } else {
+          pendingBuffer.set(key, {
+            taskId,
+            kind: "reorder",
+            reorderPayload: {
+              ...(existing == null ? void 0 : existing.reorderPayload) ?? {},
+              ...payloadDelta
+            },
+            original: (existing == null ? void 0 : existing.original) ?? originalDelta,
+            ts: Date.now()
+          });
+        }
+      }
+      function buildPendingChangesFromBuffer() {
+        if (pendingBuffer.size === 0) return [];
+        const byTask = /* @__PURE__ */ new Map();
+        for (const p of pendingBuffer.values()) {
+          let entry = byTask.get(p.taskId);
+          if (!entry) {
+            const task = allTasks.find((t) => t.id === p.taskId);
+            const title = (task == null ? void 0 : task.title) || (task == null ? void 0 : task.name) || p.taskId;
+            entry = { id: p.taskId, title, fields: [], descs: [] };
+            byTask.set(p.taskId, entry);
+          }
+          if (p.kind === "edit" && p.changes) {
+            if (p.changes.startDate !== void 0) {
+              entry.fields.push("startDate");
+              entry.descs.push("start: " + (p.original.startDate || "?") + " → " + p.changes.startDate);
+            }
+            if (p.changes.endDate !== void 0) {
+              entry.fields.push("endDate");
+              entry.descs.push("end: " + (p.original.endDate || "?") + " → " + p.changes.endDate);
+            }
+          }
+          if (p.kind === "reorder" && p.reorderPayload) {
+            if (p.reorderPayload.priorityGroup !== void 0) {
+              entry.fields.push("priorityGroup");
+              entry.descs.push("group: " + (p.original.priorityGroup || "?") + " → " + p.reorderPayload.priorityGroup);
+            }
+            if (p.reorderPayload.parentId !== void 0) {
+              entry.fields.push("parentId");
+              entry.descs.push("parent: " + (p.original.parentId || "none") + " → " + (p.reorderPayload.parentId || "none"));
+            }
+            if (p.reorderPayload.sortOrder !== void 0) {
+              entry.fields.push("sortOrder");
+              entry.descs.push("sortOrder → " + p.reorderPayload.sortOrder);
+            }
+          }
+        }
+        return Array.from(byTask.values());
+      }
+      function syncPendingChanges() {
+        if (!options.batchMode) return;
+        tplConfig.pendingChanges = buildPendingChangesFromBuffer();
+        renderSlots();
+      }
       function dimColor(hex) {
         if (!hex) return "#94a3b880";
         if (hex.startsWith("rgb")) return hex;
@@ -4021,6 +4155,13 @@ var NimbusGanttApp = function(exports) {
         } catch (_e2) {
         }
         if (idx === -1) {
+          if (options.batchMode) {
+            try {
+              diag("warn:task-not-in-allTasks", { taskId, origin: "edit-batch", changes });
+            } catch (_e2) {
+            }
+            return;
+          }
           try {
             diag("warn:task-not-in-allTasks", { taskId, origin: "edit", changes });
           } catch (_e2) {
@@ -4041,6 +4182,24 @@ var NimbusGanttApp = function(exports) {
             } catch (_e2) {
             }
           }
+          return;
+        }
+        if (options.batchMode) {
+          const origStartB = allTasks[idx].startDate || "";
+          const origEndB = allTasks[idx].endDate || "";
+          allTasks[idx] = { ...allTasks[idx], startDate: nextStart, endDate: nextEnd };
+          const titleB = allTasks[idx].title || allTasks[idx].name || taskId;
+          patchLog.unshift({ ts: /* @__PURE__ */ new Date(), desc: titleB + ": dates updated (pending)" });
+          if (patchLog.length > 50) patchLog.pop();
+          bufferEdit(
+            taskId,
+            "edit",
+            { startDate: nextStart, endDate: nextEnd },
+            { startDate: origStartB, endDate: origEndB }
+          );
+          dirtyTaskIds.add(taskId);
+          syncPendingChanges();
+          refreshGantt();
           return;
         }
         const existing = pendingEdits.get(taskId);
@@ -4104,6 +4263,13 @@ var NimbusGanttApp = function(exports) {
         const taskId = patch.id;
         const idx = allTasks.findIndex((t) => t.id === taskId);
         if (idx === -1) {
+          if (options.batchMode) {
+            try {
+              diag("warn:task-not-in-allTasks", { taskId, origin: "reorder-batch", patch });
+            } catch (_e2) {
+            }
+            return;
+          }
           try {
             diag("warn:task-not-in-allTasks", { taskId, origin: "reorder", patch });
           } catch (_e2) {
@@ -4128,6 +4294,34 @@ var NimbusGanttApp = function(exports) {
             } catch (_e2) {
             }
           }
+          return;
+        }
+        if (options.batchMode) {
+          const origTaskB = allTasks[idx];
+          const u2 = { ...origTaskB };
+          if (patch.parentId !== void 0) u2.parentWorkItemId = patch.parentId;
+          if (patch.priorityGroup !== void 0) u2.priorityGroup = patch.priorityGroup;
+          if (patch.sortOrder !== void 0) u2.sortOrder = patch.sortOrder;
+          allTasks[idx] = u2;
+          const titleB = origTaskB.title || origTaskB.name || taskId;
+          const partsB = [];
+          if (patch.priorityGroup) partsB.push("→ " + patch.priorityGroup);
+          if (patch.parentId !== void 0) partsB.push("parent " + (patch.parentId || "none"));
+          if (patch.sortOrder !== void 0) partsB.push("reordered");
+          patchLog.unshift({ ts: /* @__PURE__ */ new Date(), desc: titleB + ": " + partsB.join(", ") + " (pending)" });
+          if (patchLog.length > 50) patchLog.pop();
+          const reorderDelta = {};
+          if (patch.priorityGroup !== void 0) reorderDelta.priorityGroup = patch.priorityGroup;
+          if (patch.sortOrder !== void 0) reorderDelta.sortOrder = patch.sortOrder;
+          if (patch.parentId !== void 0) reorderDelta.parentId = patch.parentId;
+          bufferEdit(taskId, "reorder", reorderDelta, {
+            priorityGroup: origTaskB.priorityGroup ?? void 0,
+            sortOrder: origTaskB.sortOrder,
+            parentId: origTaskB.parentWorkItemId ?? null
+          });
+          dirtyTaskIds.add(taskId);
+          syncPendingChanges();
+          refreshGantt();
           return;
         }
         const existing = pendingReorders.get(taskId);
@@ -4462,7 +4656,7 @@ var NimbusGanttApp = function(exports) {
         } catch (_e2) {
         }
         setTimeout(() => {
-          var _a3, _b2, _c2, _d2, _e2, _f2, _g, _h, _i;
+          var _a3, _b2, _c2, _d2, _e2, _f2, _g, _h, _i, _j, _k, _l, _m;
           try {
             const gi = ganttInst;
             const iv = options.initialViewport;
@@ -4475,9 +4669,16 @@ var NimbusGanttApp = function(exports) {
                 (_c2 = (_b2 = gi.scrollManager) == null ? void 0 : _b2.scrollToX) == null ? void 0 : _c2.call(_b2, x);
                 (_e2 = (_d2 = gi.scrollManager) == null ? void 0 : _d2.scrollToY) == null ? void 0 : _e2.call(_d2, y);
               }
+            } else if (options.initialFocusDate) {
+              const parsed = parseFocusDate(options.initialFocusDate);
+              if (parsed) {
+                const snapped = snapDateToZoomPeriod(parsed, state.zoom);
+                const x = (_g = (_f2 = gi.timeScale) == null ? void 0 : _f2.dateToX) == null ? void 0 : _g.call(_f2, snapped);
+                if (typeof x === "number") (_i = (_h = gi.scrollManager) == null ? void 0 : _h.scrollToX) == null ? void 0 : _i.call(_h, Math.max(0, x));
+              }
             } else {
-              const x = (_g = (_f2 = gi.timeScale) == null ? void 0 : _f2.dateToX) == null ? void 0 : _g.call(_f2, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
-              if (typeof x === "number") (_i = (_h = gi.scrollManager) == null ? void 0 : _h.scrollToX) == null ? void 0 : _i.call(_h, Math.max(0, x));
+              const x = (_k = (_j = gi.timeScale) == null ? void 0 : _j.dateToX) == null ? void 0 : _k.call(_j, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
+              if (typeof x === "number") (_m = (_l = gi.scrollManager) == null ? void 0 : _l.scrollToX) == null ? void 0 : _m.call(_l, Math.max(0, x));
             }
           } catch (_e3) {
           }
@@ -4508,8 +4709,8 @@ var NimbusGanttApp = function(exports) {
           const filtered = applyFilter(allTasks, state.filter, state.search);
           const maybeHide = state.hideCompleted ? filtered.filter((t) => !DONE_STAGES[t.stage || ""]) : filtered;
           let gtasks = state.groupBy === "epic" ? buildTasks(buildTasksEpic(maybeHide)) : buildTasks(maybeHide);
-          if (inflightTaskIds.size > 0) {
-            gtasks = gtasks.map((t) => inflightTaskIds.has(t.id) ? { ...t, color: dimColor(t.color) } : t);
+          if (inflightTaskIds.size > 0 || dirtyTaskIds.size > 0) {
+            gtasks = gtasks.map((t) => inflightTaskIds.has(t.id) || dirtyTaskIds.has(t.id) ? { ...t, color: dimColor(t.color) } : t);
           }
           const gi = ganttInst;
           if (typeof gi.setData === "function") {
@@ -4661,6 +4862,108 @@ var NimbusGanttApp = function(exports) {
         toggleChrome(visible) {
           runToggleChrome(visible);
         },
+        /** 0.185 — snapshot of the batch buffer. Empty array when batchMode
+         *  is off or the buffer is clean. Insertion-order preserved across
+         *  the Map iteration. */
+        getPendingEdits() {
+          return Array.from(pendingBuffer.values());
+        },
+        /** 0.185 — flush every buffered edit to the host. Edits first
+         *  (date changes), reorders second (parent/sortOrder/priorityGroup) —
+         *  matches DH Apex's race-avoidance pattern (sortOrder reads neighbor
+         *  state, so updateWorkItemDates must land first). Resolves with
+         *  `{ committed }` on full success. On first failure, throws
+         *  `{ failedAt, successful, error }`; failed + remaining stay in
+         *  the buffer so the host can retry or discardEdits(). */
+        async commitEdits() {
+          const all = Array.from(pendingBuffer.values());
+          const edits = all.filter((p) => p.kind === "edit");
+          const reorders = all.filter((p) => p.kind === "reorder");
+          const ordered = [...edits, ...reorders];
+          const committed = [];
+          for (const p of ordered) {
+            try {
+              if (p.kind === "edit" && p.changes) {
+                if (options.onItemEdit) {
+                  await options.onItemEdit(p.taskId, p.changes);
+                } else if (options.onPatch) {
+                  await Promise.resolve(options.onPatch({
+                    id: p.taskId,
+                    startDate: p.changes.startDate,
+                    endDate: p.changes.endDate
+                  }));
+                }
+              } else if (p.kind === "reorder" && p.reorderPayload) {
+                if (options.onItemReorder) {
+                  const newIndex = typeof p.reorderPayload.sortOrder === "number" ? p.reorderPayload.sortOrder : 0;
+                  const payload = { newIndex };
+                  if (p.reorderPayload.parentId !== void 0) payload.newParentId = p.reorderPayload.parentId;
+                  if (p.reorderPayload.priorityGroup !== void 0) payload.newPriorityGroup = p.reorderPayload.priorityGroup;
+                  await options.onItemReorder(p.taskId, payload);
+                } else if (options.onPatch) {
+                  await Promise.resolve(options.onPatch({
+                    id: p.taskId,
+                    parentId: p.reorderPayload.parentId,
+                    priorityGroup: p.reorderPayload.priorityGroup,
+                    sortOrder: p.reorderPayload.sortOrder
+                  }));
+                }
+              }
+              pendingBuffer.delete(p.taskId + "::" + p.kind);
+              const stillBuffered = pendingBuffer.has(p.taskId + "::edit") || pendingBuffer.has(p.taskId + "::reorder");
+              if (!stillBuffered) dirtyTaskIds.delete(p.taskId);
+              committed.push(p);
+            } catch (err) {
+              syncPendingChanges();
+              refreshGantt();
+              throw { failedAt: p, successful: committed, error: err };
+            }
+          }
+          syncPendingChanges();
+          refreshGantt();
+          return { committed };
+        },
+        /** 0.185.1 — imperative scroll-to-date. Snaps to start-of-period for
+         *  the current zoom (Mon for week, 1st for month, 1st of quarter for
+         *  quarter; day = no snap), then computes scrollLeft via
+         *  `timeScale.dateToX` and lands the date at the LEFT edge. No-op if
+         *  the engine isn't mounted yet (early call before initGantt). */
+        scrollToDate(date) {
+          var _a2, _b2, _c2, _d2;
+          if (!ganttInst) return;
+          const parsed = parseFocusDate(date);
+          if (!parsed) return;
+          try {
+            const gi = ganttInst;
+            const snapped = snapDateToZoomPeriod(parsed, state.zoom);
+            const x = (_b2 = (_a2 = gi.timeScale) == null ? void 0 : _a2.dateToX) == null ? void 0 : _b2.call(_a2, snapped);
+            if (typeof x === "number") (_d2 = (_c2 = gi.scrollManager) == null ? void 0 : _c2.scrollToX) == null ? void 0 : _d2.call(_c2, Math.max(0, x));
+          } catch (_e2) {
+          }
+        },
+        /** 0.185 — visual-only revert. Restores `original` on every buffered
+         *  task and clears the buffer. Host never sees a callback. Use when
+         *  the user clicks Cancel on the audit preview modal. */
+        discardEdits() {
+          for (const p of pendingBuffer.values()) {
+            const idx = allTasks.findIndex((t) => t.id === p.taskId);
+            if (idx === -1) continue;
+            const u = { ...allTasks[idx] };
+            if (p.kind === "edit") {
+              if (p.original.startDate !== void 0) u.startDate = p.original.startDate;
+              if (p.original.endDate !== void 0) u.endDate = p.original.endDate;
+            } else {
+              if (p.original.priorityGroup !== void 0) u.priorityGroup = p.original.priorityGroup;
+              if (p.original.parentId !== void 0) u.parentWorkItemId = p.original.parentId;
+              if (p.original.sortOrder !== void 0) u.sortOrder = p.original.sortOrder;
+            }
+            allTasks[idx] = u;
+          }
+          pendingBuffer.clear();
+          dirtyTaskIds.clear();
+          syncPendingChanges();
+          refreshGantt();
+        },
         destroy() {
           IIFEApp.unmount(container);
         }
@@ -4693,5 +4996,5 @@ var NimbusGanttApp = function(exports) {
   exports.NimbusGanttApp = NimbusGanttApp2;
   Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
   return exports;
-}({});
+})({});
 typeof window !== "undefined" && (window.NimbusGanttApp = NimbusGanttApp.NimbusGanttApp || NimbusGanttApp);

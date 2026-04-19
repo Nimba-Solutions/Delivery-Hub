@@ -247,6 +247,14 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             onItemClick: (taskId) => this._handleItemClick(taskId),
             onViewportChange: (state) => this._handleViewportChange(state),
             initialViewport: this._readInitialViewport(),
+            // Dormant prop wiring — NG implements the handler in a future
+            // release. When NG ships, fullscreen first-load lands on today
+            // instead of dataset earliest date (scrollLeft:0). No-op on
+            // current NG 0.185.0.1 (unknown prop, silently ignored).
+            // Precedence (per NG-side spec): explicit initialViewport.scrollLeft
+            // from localStorage wins over initialFocusDate — so returning
+            // users keep their saved pan position, new users land on today.
+            initialFocusDate: new Date().toISOString().slice(0, 10),
             chromeVisibleDefault: !this.chromeHiddenDefault,
             features: {
                 hoursColumn: true,
@@ -340,30 +348,32 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 chromeVisibleDefault: mountConfig.chromeVisibleDefault,
                 features: mountConfig.features,
                 initialViewport: mountConfig.initialViewport,
+                initialFocusDate: mountConfig.initialFocusDate,
                 mountedAt: new Date().toISOString(),
             };
             // eslint-disable-next-line no-console
             console.log('[DH mount]', JSON.stringify(mountSnapshot));
             // Triple-publish so the probe has multiple reading paths that
-            // don't all depend on the same LWS/Locker proxy behaving. If
-            // window.* and globalThis.* are both swallowed silently by the
-            // sandbox, the CustomEvent at least crosses shadow boundaries
-            // (composed:true) and can be caught by a document listener.
-            // Warn (not silent swallow) on throw so probe can grep console
-            // for [DH] mount-state publish failed — tells us if all three
-            // paths rejected.
+            // don't all depend on the same LWS/Locker proxy behaving. Each
+            // publish target gets its own try/catch — in LWS strict mode on
+            // subscriber orgs (verified on MF-Prod 2026-04-19), globalThis
+            // evaluates to undefined and throws "Cannot set properties of
+            // undefined", which in a single-try block aborts the downstream
+            // CustomEvent dispatch too. Individual try/catches prevent one
+            // silent fail from cascading.
+            try { window.__DH_MOUNT_STATE = mountSnapshot; } catch (e) { /* Locker/LWS proxy */ }
             try {
-                window.__DH_MOUNT_STATE = mountSnapshot;
-                globalThis.__DH_MOUNT_STATE = mountSnapshot;
+                if (typeof globalThis !== 'undefined' && globalThis) {
+                    globalThis.__DH_MOUNT_STATE = mountSnapshot;
+                }
+            } catch (e) { /* LWS strict — globalThis undefined */ }
+            try {
                 document.dispatchEvent(new CustomEvent('dh-mount', {
                     detail: mountSnapshot,
                     bubbles: true,
                     composed: true,
                 }));
-            } catch (e) {
-                // eslint-disable-next-line no-console
-                console.warn('[DH] mount-state publish failed:', e);
-            }
+            } catch (e) { /* dispatchEvent unavailable */ }
             // Capture the mount return value — NG 0.183 returns a handle with
             // toggleChrome(), destroy(), and (expected) an update method for
             // pushing fresh tasks after a save. Older bundles may return
@@ -436,23 +446,29 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     }
 
     /**
-     * NG 0.183 onItemReorder(taskId, { newIndex, newParentId? }). Payload
-     * object — newParentId only present when the drag also changed parent
-     * (re-parent + re-sort in a single gesture). Persists sort + optional
-     * parent change via existing Apex. Same optimistic/revert semantics
-     * as onItemEdit: re-throw on failure so NG reverts the visual.
+     * NG 0.183.1 onItemReorder(taskId, { newIndex, newParentId?, newPriorityGroup? }).
+     * Payload object — the optional fields fire only when the drag gesture
+     * crossed a boundary:
+     *   - newParentId: re-parent within the same priority group
+     *   - newPriorityGroup: drag across priority lanes (NOW ↔ NEXT ↔ PLANNED)
+     * Asymmetric reprioritize ("NEXT → NOW works, NOW → NEXT doesn't") on
+     * MF-Prod traced to this handler ignoring newPriorityGroup — sort updated
+     * on both but lane only changed visually; on refresh items snapped back.
      */
     async _handleItemReorder(arg1, payload) {
         const taskId = this._normalizeTaskId(arg1);
         // eslint-disable-next-line no-console
         console.log('[DH onItemReorder]', { arg1Type: typeof arg1, resolvedTaskId: taskId, payload });
         if (!taskId) { throw new Error('[DH] onItemReorder missing taskId'); }
-        const { newIndex, newParentId } = payload || {};
+        const { newIndex, newParentId, newPriorityGroup } = payload || {};
         const ops = [
             updateWorkItemSortOrder({ workItemId: taskId, sortOrder: Number(newIndex) || 0 }),
         ];
         if (newParentId !== undefined) {
             ops.push(updateWorkItemParent({ workItemId: taskId, parentId: newParentId || '' }));
+        }
+        if (newPriorityGroup !== undefined && newPriorityGroup !== null) {
+            ops.push(updateWorkItemPriorityGroup({ workItemId: taskId, priorityGroup: newPriorityGroup }));
         }
         await Promise.all(ops);
         this._scheduleRefetch();
@@ -653,6 +669,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             '  __cnEdit.moveToGroup(id, group)',
             '  __cnEdit.reorder(id, newIndex)',
             '  __cnEdit.setParent(id, parentId|null)',
+            '  __cnEdit.scrollToDate(date) -> scroll timeline to focus on date (NG 0.185.1+)',
             '  __cnEdit.submit(note?)    -> no-op (DH writes every patch immediately)',
             '  __cnEdit.reset()          -> no-op (reload page to refetch)',
             '',
@@ -693,6 +710,21 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             },
             setParent: function (id, parentId) {
                 return self._handlePatch({ id: id, parentId: parentId || null });
+            },
+            scrollToDate: function (date) {
+                // NG 0.185.1+ exposes scrollToDate on the mount handle.
+                // Accepts Date object or ISO 'YYYY-MM-DD' string. Snaps
+                // to start-of-period for the current zoom (week/month/quarter).
+                // No-op on older bundles — handle method absent.
+                if (!self._mountHandle || typeof self._mountHandle.scrollToDate !== 'function') {
+                    const msg = 'scrollToDate unavailable — requires NG 0.185.1+ bundle';
+                    // eslint-disable-next-line no-console
+                    console.warn('[cn-edit]', msg);
+                    return { ok: false, msg: msg };
+                }
+                const arg = date instanceof Date ? date : new Date(date || Date.now());
+                self._mountHandle.scrollToDate(arg);
+                return { ok: true };
             },
             submit: function (_note) {
                 const msg = 'submit() is a no-op in DH: each patch is already persisted. Reload to refetch.';
