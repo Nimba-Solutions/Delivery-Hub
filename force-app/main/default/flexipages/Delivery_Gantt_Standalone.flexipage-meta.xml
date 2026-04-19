@@ -8,6 +8,10 @@
                     <name>mode</name>
                     <value>fullscreen</value>
                 </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>fullscreenUrl</name>
+                    <value>/apex/DeliveryGanttStandalone</value>
+                </componentInstanceProperties>
                 <componentName>deliveryProFormaTimeline</componentName>
                 <identifier>c_deliveryProFormaTimeline</identifier>
             </componentInstance>
