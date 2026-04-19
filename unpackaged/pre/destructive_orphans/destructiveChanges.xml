@@ -88,5 +88,9 @@
         <members>WorkflowType__mdt.UseSimplifiedViewBool__c</members>
         <name>CustomField</name>
     </types>
+    <types>
+        <members>deliverytimeline</members>
+        <name>StaticResource</name>
+    </types>
     <version>62.0</version>
 </Package>
