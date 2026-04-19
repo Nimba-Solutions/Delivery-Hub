@@ -1,4 +1,4 @@
-var NimbusGanttApp = (function(exports) {
+var NimbusGanttApp = function(exports) {
   "use strict";
   const GROUP_BAR = {
     "top-priority": "#f87171",
@@ -3028,13 +3028,17 @@ var NimbusGanttApp = (function(exports) {
     root.setAttribute("data-slot", "AuditPanel");
     root.setAttribute("data-testid", "audit-panel");
     let note = "";
+    let submitting = false;
+    let lastResult = null;
     let inputEl = null;
+    let latestProps = initial;
     function render(p) {
+      latestProps = p;
       clear(root);
       inputEl = null;
       root.style.display = p.state.auditPanelOpen ? "" : "none";
       if (!p.state.auditPanelOpen) return;
-      const dirty = p.state.pendingPatchCount > 0;
+      const dirty = (p.config.isDirty ?? false) || p.state.pendingPatchCount > 0;
       const inner = el$1("div", "flex flex-wrap items-center gap-2");
       const lbl = el$1("span", CLS_AUDIT_LABEL);
       lbl.textContent = "📤 Audit pass";
@@ -3042,40 +3046,85 @@ var NimbusGanttApp = (function(exports) {
       const stat = el$1("span", dirty ? CLS_AUDIT_STATUS_DIRTY : CLS_AUDIT_STATUS_CLEAN);
       stat.textContent = dirty ? "unsaved changes" : "clean";
       inner.appendChild(stat);
-      const submitBtn = el$1("button", CLS_AUDIT_SUBMIT);
       const input = el$1("input", CLS_AUDIT_INPUT);
       input.type = "text";
-      input.placeholder = "commit note (optional)";
+      input.placeholder = "commit note (optional - auto-summarized if empty)";
       input.value = note;
       input.setAttribute("data-testid", "audit-note-input");
+      input.disabled = submitting;
       input.addEventListener("input", (e) => {
         note = e.target.value;
-        submitBtn.disabled = note.length === 0 && !dirty;
       });
       inputEl = input;
       inner.appendChild(input);
-      submitBtn.type = "button";
-      submitBtn.textContent = "📤 Submit + commit";
-      submitBtn.setAttribute("data-testid", "audit-submit-btn");
-      submitBtn.disabled = note.length === 0 && !dirty;
-      submitBtn.addEventListener("click", () => {
-        p.dispatch({ type: "RESET_PATCHES" });
-        note = "";
-        if (inputEl) inputEl.value = "";
-        submitBtn.disabled = true;
-      });
-      inner.appendChild(submitBtn);
+      const sb = el$1("button", CLS_AUDIT_SUBMIT);
+      sb.type = "button";
+      sb.textContent = submitting ? "Committing..." : "📤 Submit + commit";
+      sb.setAttribute("data-testid", "audit-submit-btn");
+      sb.disabled = !dirty || submitting;
+      sb.addEventListener("click", onSubmitClick);
+      inner.appendChild(sb);
       const rst = el$1("button", CLS_AUDIT_RESET);
       rst.type = "button";
       rst.textContent = "↺ Reset";
       rst.setAttribute("data-testid", "audit-reset-btn");
+      rst.disabled = submitting;
       rst.addEventListener("click", () => {
+        if (dirty && !confirm("Reset all unsaved overrides? This discards every drag/edit you made this session.")) return;
         note = "";
         if (inputEl) inputEl.value = "";
+        lastResult = null;
         p.dispatch({ type: "RESET_PATCHES" });
       });
       inner.appendChild(rst);
       root.appendChild(inner);
+      if (lastResult) {
+        const r = el$1("div", `mt-1.5 text-[11px] ${lastResult.ok ? "text-emerald-700" : "text-rose-700"}`);
+        r.setAttribute("data-testid", "audit-result");
+        r.textContent = (lastResult.ok ? "✓ " : "✗ ") + lastResult.msg;
+        if (lastResult.sha) {
+          const sha = el$1("code", "ml-2 font-mono bg-slate-100 px-1 rounded");
+          sha.textContent = lastResult.sha;
+          r.appendChild(sha);
+        }
+        root.appendChild(r);
+      }
+    }
+    async function onSubmitClick() {
+      const p = latestProps;
+      const pending = p.config.pendingChanges ?? [];
+      if (pending.length === 0) {
+        await runSubmit();
+        return;
+      }
+      openPreviewModal(pending, async () => {
+        await runSubmit();
+      });
+    }
+    async function runSubmit() {
+      const p = latestProps;
+      lastResult = null;
+      if (p.config.onAuditSubmit) {
+        submitting = true;
+        render(p);
+        try {
+          const res = await p.config.onAuditSubmit(note);
+          lastResult = res;
+          if (res.ok) {
+            note = "";
+            p.dispatch({ type: "RESET_PATCHES" });
+          }
+        } catch (e) {
+          lastResult = { ok: false, msg: e instanceof Error ? e.message : String(e) };
+        } finally {
+          submitting = false;
+          render(latestProps);
+        }
+      } else {
+        note = "";
+        p.dispatch({ type: "RESET_PATCHES" });
+        render(latestProps);
+      }
     }
     render(initial);
     return {
@@ -3086,6 +3135,119 @@ var NimbusGanttApp = (function(exports) {
         if (root.parentNode) root.parentNode.removeChild(root);
       }
     };
+  }
+  function openPreviewModal(items, onConfirm) {
+    const existing = document.getElementById("ng-audit-preview-modal");
+    if (existing) existing.remove();
+    const backdrop = document.createElement("div");
+    backdrop.id = "ng-audit-preview-modal";
+    backdrop.setAttribute("role", "dialog");
+    backdrop.setAttribute("aria-modal", "true");
+    backdrop.setAttribute("aria-label", "Audit preview");
+    backdrop.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,0.55);display:flex;align-items:center;justify-content:center;z-index:2147483646;backdrop-filter:blur(2px)";
+    const panel = document.createElement("div");
+    panel.style.cssText = "background:#fff;border-radius:10px;box-shadow:0 20px 40px rgba(15,23,42,0.25);width:min(720px,92vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden;font-family:ui-sans-serif,system-ui,sans-serif";
+    const header = document.createElement("div");
+    header.style.cssText = "padding:14px 18px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between";
+    const title = document.createElement("div");
+    title.style.cssText = "font-size:14px;font-weight:600;color:#0f172a";
+    const kinds = summarizeKinds(items);
+    title.textContent = "Review " + items.length + " change" + (items.length === 1 ? "" : "s") + " - " + kinds;
+    const close = document.createElement("button");
+    close.type = "button";
+    close.textContent = "✕";
+    close.setAttribute("aria-label", "Close preview");
+    close.style.cssText = "background:transparent;border:0;font-size:18px;cursor:pointer;color:#64748b;padding:4px 8px;line-height:1";
+    close.addEventListener("click", cleanup);
+    header.appendChild(title);
+    header.appendChild(close);
+    panel.appendChild(header);
+    const body = document.createElement("div");
+    body.style.cssText = "padding:8px 18px 12px;overflow-y:auto;flex:1";
+    const list = document.createElement("ul");
+    list.style.cssText = "margin:0;padding:0;list-style:none;font-size:12.5px;color:#334155";
+    for (const it of items) {
+      const li = document.createElement("li");
+      li.style.cssText = "padding:8px 0;border-bottom:1px solid #f1f5f9";
+      const head = document.createElement("div");
+      head.style.cssText = "display:flex;align-items:baseline;gap:8px;flex-wrap:wrap";
+      const idEl = document.createElement("code");
+      idEl.style.cssText = "font-family:ui-monospace,monospace;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-size:11.5px;color:#0f172a";
+      idEl.textContent = it.id;
+      head.appendChild(idEl);
+      if (it.title && it.title !== it.id) {
+        const titleEl = document.createElement("span");
+        titleEl.style.cssText = "color:#0f172a;font-weight:500";
+        titleEl.textContent = it.title;
+        head.appendChild(titleEl);
+      }
+      li.appendChild(head);
+      const descs = it.descs && it.descs.length ? it.descs : it.fields.map((f) => f + " edited");
+      const descList = document.createElement("div");
+      descList.style.cssText = "margin-top:3px;color:#475569;font-size:12px;line-height:1.45";
+      descList.textContent = descs.join(" · ");
+      li.appendChild(descList);
+      list.appendChild(li);
+    }
+    body.appendChild(list);
+    panel.appendChild(body);
+    const footer = document.createElement("div");
+    footer.style.cssText = "padding:12px 18px;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:flex-end;gap:8px";
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.textContent = "Cancel";
+    cancel.style.cssText = "padding:6px 14px;font-size:13px;border-radius:6px;border:1px solid #cbd5e1;background:#fff;color:#334155;cursor:pointer";
+    cancel.addEventListener("click", cleanup);
+    const confirmBtn = document.createElement("button");
+    confirmBtn.type = "button";
+    confirmBtn.textContent = "📤 Confirm + commit";
+    confirmBtn.setAttribute("data-testid", "audit-preview-confirm");
+    confirmBtn.style.cssText = "padding:6px 14px;font-size:13px;border-radius:6px;border:1px solid #a21caf;background:#a21caf;color:#fff;cursor:pointer;font-weight:500";
+    confirmBtn.addEventListener("click", async () => {
+      confirmBtn.disabled = true;
+      cancel.disabled = true;
+      confirmBtn.textContent = "Committing...";
+      try {
+        await onConfirm();
+      } finally {
+        cleanup();
+      }
+    });
+    footer.appendChild(cancel);
+    footer.appendChild(confirmBtn);
+    panel.appendChild(footer);
+    backdrop.appendChild(panel);
+    document.body.appendChild(backdrop);
+    backdrop.addEventListener("click", (e) => {
+      if (e.target === backdrop) cleanup();
+    });
+    const onKey = (e) => {
+      if (e.key === "Escape") cleanup();
+    };
+    document.addEventListener("keydown", onKey);
+    function cleanup() {
+      document.removeEventListener("keydown", onKey);
+      if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+    }
+  }
+  function summarizeKinds(items) {
+    const counts = { dates: 0, group: 0, reorder: 0, parent: 0, other: 0 };
+    const covered = /* @__PURE__ */ new Set(["start", "end", "group", "sortOrder", "parentId"]);
+    for (const it of items) {
+      const f = new Set(it.fields);
+      if (f.has("start") || f.has("end")) counts.dates++;
+      if (f.has("group")) counts.group++;
+      if (f.has("sortOrder") && !f.has("start") && !f.has("end") && !f.has("group")) counts.reorder++;
+      if (f.has("parentId")) counts.parent++;
+      if (it.fields.some((k) => !covered.has(k))) counts.other++;
+    }
+    const parts = [];
+    if (counts.dates) parts.push(counts.dates + " date");
+    if (counts.group) parts.push(counts.group + " group");
+    if (counts.reorder) parts.push(counts.reorder + " reorder");
+    if (counts.parent) parts.push(counts.parent + " parent");
+    if (counts.other) parts.push(counts.other + " field");
+    return parts.length ? parts.join(", ") : "changes";
   }
   const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const DAY_MS = 24 * 3600 * 1e3;
@@ -3854,6 +4016,10 @@ var NimbusGanttApp = (function(exports) {
       async function onTaskEditAsync(taskId, nextStart, nextEnd, changes) {
         var _a2, _b2;
         const idx = allTasks.findIndex((t) => t.id === taskId);
+        try {
+          console.log("[NG] onTaskEditAsync hit", taskId, "idx=", idx, "hasOnItemEdit=", !!options.onItemEdit, "hasOnPatch=", !!options.onPatch);
+        } catch (_e2) {
+        }
         if (idx === -1) {
           try {
             diag("warn:task-not-in-allTasks", { taskId, origin: "edit", changes });
@@ -3892,7 +4058,15 @@ var NimbusGanttApp = (function(exports) {
         if (!options.onItemEdit) {
           inflightTaskIds.delete(taskId);
           pendingEdits.delete(taskId);
+          try {
+            console.log("[NG] rawOnPatch firing", { taskId, startDate: nextStart, endDate: nextEnd, hasOnPatch: !!options.onPatch });
+          } catch (_e2) {
+          }
           rawOnPatch({ id: taskId, startDate: nextStart, endDate: nextEnd });
+          try {
+            diag("edit:commit", { taskId, nextStart, nextEnd, via: "rawOnPatch" });
+          } catch (_e2) {
+          }
           refreshGantt();
           return;
         }
@@ -4065,7 +4239,6 @@ var NimbusGanttApp = (function(exports) {
           patchLog.unshift({ ts: /* @__PURE__ */ new Date(), desc: title + ": " + parts.join(", ") });
           if (patchLog.length > 50) patchLog.pop();
         }
-        dispatch({ type: "PATCH", patch });
         rawOnPatch(patch);
         if (_patchRefreshTimer.t) clearTimeout(_patchRefreshTimer.t);
         _patchRefreshTimer.t = setTimeout(() => {
@@ -4214,10 +4387,18 @@ var NimbusGanttApp = (function(exports) {
             (_a3 = options.onTaskHover) == null ? void 0 : _a3.call(options, id);
           },
           onTaskMove: (task, s, e) => {
+            try {
+              console.log("[NG] main onTaskMove received", task == null ? void 0 : task.id, s, e);
+            } catch (_e2) {
+            }
             if (!task || !task.id || isBucketId(task.id)) return;
             onTaskEditAsync(task.id, s, e, { startDate: s, endDate: e });
           },
           onTaskResize: (task, s, e) => {
+            try {
+              console.log("[NG] main onTaskResize received", task == null ? void 0 : task.id, s, e);
+            } catch (_e2) {
+            }
             if (!task || !task.id || isBucketId(task.id)) return;
             const orig = allTasks.find((t) => t.id === task.id);
             const changes = {};
@@ -4512,5 +4693,5 @@ var NimbusGanttApp = (function(exports) {
   exports.NimbusGanttApp = NimbusGanttApp2;
   Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
   return exports;
-})({});
+}({});
 typeof window !== "undefined" && (window.NimbusGanttApp = NimbusGanttApp.NimbusGanttApp || NimbusGanttApp);

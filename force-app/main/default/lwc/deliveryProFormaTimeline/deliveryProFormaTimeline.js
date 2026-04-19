@@ -157,6 +157,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             this._mounted = false;
             this._mountHandle = null;
         }
+        this._uninstallCnEditBridge();
         this._uninstallFullscreenChromeHide();
     }
 
@@ -368,6 +369,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             // undefined; guard all handle-method calls.
             this._mountHandle = window.NimbusGanttApp.mount(container, mountConfig);
             this._mounted = true;
+            this._installCnEditBridge();
         } catch (error) {
             // eslint-disable-next-line no-console
             console.error('[DeliveryTimeline] mount() threw — Locker Service container issue or bundle error:', error);
@@ -604,5 +606,128 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         this.dispatchEvent(new ShowToastEvent({
             title: prefix, message: msg, variant: 'error',
         }));
+    }
+
+    // ------------------------------------------------------------------
+    // __cnEdit bridge — window.__cnEdit publishes a programmatic edit API
+    // so an external driver (Claude, a devtools scratchpad, a Lightning
+    // console shortcut) can push the same patches our drag/reorder
+    // handlers emit. Each mutation routes through _handlePatch so it
+    // writes immediately to Apex and triggers a refetch.
+    //
+    // Shape (mirrors CN's useCnEditBridge):
+    //   window.__cnEdit.help()
+    //   window.__cnEdit.whoami()                 -> Promise<email|null>
+    //   window.__cnEdit.getState()               -> { tasks, mounted, surface }
+    //   window.__cnEdit.moveTask(id, startISO, endISO)
+    //   window.__cnEdit.moveToGroup(id, group)
+    //   window.__cnEdit.reorder(id, newIndex)
+    //   window.__cnEdit.setParent(id, parentId|null)
+    //   window.__cnEdit.submit(note?)            -> informational no-op (DH
+    //                                               persists each patch
+    //                                               immediately; there is
+    //                                               no batched submit)
+    //   window.__cnEdit.reset()                  -> informational no-op
+    //                                               (reload the page to
+    //                                               refetch from server)
+    //
+    // CN and DH deliberately share the same verb names so cross-context
+    // scripts don't have to branch on surface.
+    _installCnEditBridge() {
+        if (typeof window === 'undefined') return;
+        const self = this;
+        const VERSION = '0.1.0';
+        const HELP_TEXT = [
+            '',
+            'cn-edit v' + VERSION + ' (DH/Salesforce) — per-patch Apex write-back',
+            '',
+            '  __cnEdit.help()',
+            '  __cnEdit.whoami()          -> running user email',
+            '  __cnEdit.getState()        -> { tasks, mounted, surface }',
+            '  __cnEdit.moveTask(id, startISO, endISO)',
+            '  __cnEdit.moveToGroup(id, group)',
+            '  __cnEdit.reorder(id, newIndex)',
+            '  __cnEdit.setParent(id, parentId|null)',
+            '  __cnEdit.submit(note?)    -> no-op (DH writes every patch immediately)',
+            '  __cnEdit.reset()          -> no-op (reload page to refetch)',
+            '',
+            'Each mutation calls _handlePatch which POSTs directly to Apex',
+            '(updateWorkItemDates / SortOrder / PriorityGroup / Parent).',
+            ''
+        ].join('\n');
+
+        const bridge = {
+            version: VERSION,
+            help: function () {
+                // eslint-disable-next-line no-console
+                console.log(HELP_TEXT);
+                return HELP_TEXT;
+            },
+            whoami: function () {
+                try {
+                    // eslint-disable-next-line no-undef
+                    const u = (typeof $A \!== 'undefined' && $A.get && $A.get('$SObjectType.CurrentUser.Id'));
+                    return Promise.resolve(u || null);
+                } catch (_e) {
+                    return Promise.resolve(null);
+                }
+            },
+            getState: function () {
+                return {
+                    tasks: self._tasks || [],
+                    mounted: \!\!self._mounted,
+                    surface: (typeof window \!== 'undefined' && window.location && window.location.pathname) || '',
+                };
+            },
+            moveTask: function (id, startISO, endISO) {
+                return self._handlePatch({ id: id, startDate: startISO, endDate: endISO });
+            },
+            moveToGroup: function (id, group) {
+                return self._handlePatch({ id: id, priorityGroup: group });
+            },
+            reorder: function (id, newIndex) {
+                return self._handlePatch({ id: id, sortOrder: Number(newIndex) || 0 });
+            },
+            setParent: function (id, parentId) {
+                return self._handlePatch({ id: id, parentId: parentId || null });
+            },
+            submit: function (_note) {
+                const msg = 'submit() is a no-op in DH: each patch is already persisted. Reload to refetch.';
+                // eslint-disable-next-line no-console
+                console.log('[cn-edit]', msg);
+                return Promise.resolve({ ok: true, msg: msg });
+            },
+            reset: function () {
+                const msg = 'reset() is a no-op in DH: there are no local overrides. Reload the page to refetch.';
+                // eslint-disable-next-line no-console
+                console.log('[cn-edit]', msg);
+                return msg;
+            }
+        };
+
+        try {
+            window.__cnEdit = bridge;
+            this._cnEditBridge = bridge;
+            // eslint-disable-next-line no-console
+            console.log(
+                '%c[cn-edit v' + VERSION + ' DH]%c editable timeline ready. Call %cwindow.__cnEdit.help()%c for the API.',
+                'color:#a21caf;font-weight:bold',
+                'color:inherit',
+                'color:#a21caf;font-family:monospace',
+                'color:inherit'
+            );
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn('[cn-edit] failed to publish window.__cnEdit:', e);
+        }
+    }
+
+    _uninstallCnEditBridge() {
+        try {
+            if (typeof window \!== 'undefined' && window.__cnEdit && window.__cnEdit === this._cnEditBridge) {
+                delete window.__cnEdit;
+            }
+        } catch (_e) { /* swallow */ }
+        this._cnEditBridge = null;
     }
 }
