@@ -132,7 +132,7 @@ export default class DeliveryRecurringConfig extends NavigationMixin(LightningEl
                 type: "standard__recordPage",
                 attributes: {
                     recordId: this.templateSourceId,
-                    objectApiName: "WorkItem__c",
+                    objectApiName: "%%%NAMESPACE_DOT%%%WorkItem__c",
                     actionName: "view"
                 }
             });
