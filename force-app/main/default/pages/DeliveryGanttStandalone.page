@@ -37,10 +37,19 @@
     <div id="gantt-loading">Loading timeline&hellip;</div>
     <div id="gantt-root"></div>
     <script>
-        $Lightning.use('%%%NAMESPACE_OR_C%%%:DeliveryTimelineOut', function() {
+        // CCI's %%%NAMESPACE_OR_C%%% token is NOT reliably substituted inside
+        // VF-page inline JavaScript during package upload (verified 2026-04-19:
+        // the Aura OutApp dep was substituted correctly to `delivery:` but this
+        // VF inline script ended up with `c:`, breaking Full_Bleed in MF-Prod).
+        // Detecting namespace from the page URL works in both contexts:
+        //   /apex/DeliveryGanttStandalone         → ns = 'c'        (scratch/unmanaged)
+        //   /apex/delivery__DeliveryGanttStandalone → ns = 'delivery' (subscriber/namespaced)
+        var nsMatch = window.location.pathname.match(/\/apex\/([^_\/]+)__/);
+        var NG_NS = nsMatch ? nsMatch[1] : 'c';
+        $Lightning.use(NG_NS + ':DeliveryTimelineOut', function() {
             document.getElementById('gantt-loading').style.display = 'none';
             $Lightning.createComponent(
-                '%%%NAMESPACE_OR_C%%%:deliveryProFormaTimeline',
+                NG_NS + ':deliveryProFormaTimeline',
                 { mode: 'fullscreen' },
                 'gantt-root',
                 function(cmp) { /* mounted */ }
