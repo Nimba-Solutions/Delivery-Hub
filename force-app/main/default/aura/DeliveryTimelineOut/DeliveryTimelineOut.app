@@ -5,5 +5,5 @@
     SLDS is loaded via <apex:slds /> in the VF page.
 -->
 <aura:application access="GLOBAL" extends="ltng:outApp">
-    <aura:dependency resource="c:deliveryProFormaTimeline" />
+    <aura:dependency resource="%%%NAMESPACE_OR_C%%%:deliveryProFormaTimeline" />
 </aura:application>
