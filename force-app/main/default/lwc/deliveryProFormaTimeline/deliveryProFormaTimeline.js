@@ -473,18 +473,55 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
      */
     async _handleItemReorder(arg1, payload) {
         const taskId = this._normalizeTaskId(arg1);
+        // Expanded payload logging — plain stringify so Glen can copy from
+        // console without needing to expand collapsed objects. Fields
+        // enumerated so we can spot if NG sends date info via reorder
+        // (misclassified canvas horizontal drag).
+        const p = payload || {};
         // eslint-disable-next-line no-console
-        console.log('[DH onItemReorder]', { arg1Type: typeof arg1, resolvedTaskId: taskId, payload });
+        console.log('[DH onItemReorder]', JSON.stringify({
+            arg1Type: typeof arg1,
+            resolvedTaskId: taskId,
+            newIndex: p.newIndex,
+            newParentId: p.newParentId,
+            newPriorityGroup: p.newPriorityGroup,
+            startDate: p.startDate,
+            endDate: p.endDate,
+            payloadKeys: Object.keys(p),
+        }));
         if (!taskId) { throw new Error('[DH] onItemReorder missing taskId'); }
-        const { newIndex, newParentId, newPriorityGroup } = payload || {};
-        const ops = [
-            updateWorkItemSortOrder({ workItemId: taskId, sortOrder: Number(newIndex) || 0 }),
-        ];
+        const { newIndex, newParentId, newPriorityGroup, startDate, endDate } = p;
+        // If NG smuggled date info through the reorder callback (happens when
+        // the template framework misclassifies a horizontal canvas drag as a
+        // row reorder), route to the date-edit Apex instead of corrupting
+        // sortOrder. Confirmed MF-Prod 2026-04-19: users reported "won't let
+        // me move it" when dragging bars horizontally.
+        if (startDate || endDate) {
+            await updateWorkItemDates({
+                workItemId: taskId,
+                startDate: startDate || null,
+                endDate: endDate || null,
+            });
+            this._scheduleRefetch();
+            return;
+        }
+        const ops = [];
+        // Guard: Number(undefined) is NaN, NaN || 0 is 0 — so the prior code
+        // silently zeroed sortOrder on every reorder with no newIndex. Only
+        // call the sort-order API when we have a real numeric index.
+        if (newIndex !== undefined && newIndex !== null && Number.isFinite(Number(newIndex))) {
+            ops.push(updateWorkItemSortOrder({ workItemId: taskId, sortOrder: Number(newIndex) }));
+        }
         if (newParentId !== undefined) {
             ops.push(updateWorkItemParent({ workItemId: taskId, parentId: newParentId || '' }));
         }
         if (newPriorityGroup !== undefined && newPriorityGroup !== null) {
             ops.push(updateWorkItemPriorityGroup({ workItemId: taskId, priorityGroup: newPriorityGroup }));
+        }
+        if (ops.length === 0) {
+            // eslint-disable-next-line no-console
+            console.warn('[DH onItemReorder] empty payload — skipping Apex calls to avoid corrupting sortOrder');
+            return;
         }
         await Promise.all(ops);
         this._scheduleRefetch();
