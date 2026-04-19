@@ -1994,7 +1994,7 @@ var NimbusGanttApp = (function(exports) {
   const CLS_SEP = "text-slate-200";
   const CLS_TB_FILL = "flex-1";
   const CLS_TB_SUMMARY = "text-[10px] text-slate-500 font-mono";
-  const CLS_PILL_BTN_BASE = "text-[10px] font-semibold px-2 py-1 rounded-full border transition-colors";
+  const CLS_PILL_BTN_BASE = "text-[10px] font-semibold px-2 py-1 rounded-full border transition-colors cursor-pointer";
   const CLS_PILL_BTN_ACTIVE_VIOLET = "bg-violet-600 text-white border-violet-600";
   const CLS_PILL_BTN_IDLE_VIOLET = "bg-white text-slate-500 border-slate-200 hover:border-violet-300";
   const CLS_PILL_BTN_ACTIVE_BLUE = "bg-blue-600 text-white border-blue-600";
@@ -2098,7 +2098,6 @@ var NimbusGanttApp = (function(exports) {
   const CLS_GROUP_GANTT = "bg-indigo-100 text-indigo-700 border-indigo-400";
   const CLS_GROUP_SIDE = "bg-blue-100 text-blue-700 border-blue-400";
   const CLS_GROUP_NEITHER = "bg-white text-slate-500 border-slate-200 hover:border-indigo-300";
-  const CLS_RIGHT_UNPIN_ON = "bg-amber-500 text-white border-amber-500";
   const CLS_RIGHT_UNPIN_OFF = "bg-white text-slate-500 border-slate-200 hover:border-amber-300";
   const CLS_RIGHT_FS_ON = "bg-slate-700 text-white border-slate-700";
   const CLS_RIGHT_FS_OFF = "bg-white text-slate-500 border-slate-200 hover:border-slate-400";
@@ -2124,7 +2123,6 @@ var NimbusGanttApp = (function(exports) {
     let currentProps = initial;
     let adminOn = false;
     let advisorOn = false;
-    let unpinOn = false;
     function render(p) {
       clear(root);
       const { config, state, dispatch, data } = p;
@@ -2225,14 +2223,17 @@ var NimbusGanttApp = (function(exports) {
       rowMain.appendChild(summary);
       const unpinBtn = el$1(
         "button",
-        CLS_PILL_BTN_BASE + " " + (unpinOn ? CLS_RIGHT_UNPIN_ON : CLS_RIGHT_UNPIN_OFF)
+        CLS_PILL_BTN_BASE + " " + CLS_RIGHT_UNPIN_OFF
       );
-      unpinBtn.textContent = unpinOn ? "Pin" : "Unpin";
-      unpinBtn.title = unpinOn ? "Pin toolbar" : "Unpin toolbar";
+      unpinBtn.textContent = "Unpin";
+      unpinBtn.title = "Hide toolbar";
+      unpinBtn.setAttribute("data-nga-unpin", "1");
       unpinBtn.addEventListener("click", () => {
-        unpinOn = !unpinOn;
-        console.log("[TitleBar] unpin toggled →", unpinOn);
-        render(currentProps);
+        if (typeof config.toggleChrome === "function") {
+          config.toggleChrome(false);
+        } else {
+          render(currentProps);
+        }
       });
       rowMain.appendChild(unpinBtn);
       const fsUrl = config.fullscreenUrl;
@@ -3445,7 +3446,14 @@ var NimbusGanttApp = (function(exports) {
       '.ng-grid-row:not(.ng-group-row) .ng-tree-cell[style*="padding-left: 28px"]{padding-left:8px!important}',
       '.ng-grid-row:not(.ng-group-row) .ng-tree-cell[style*="padding-left: 48px"]{padding-left:18px!important}',
       '.ng-grid-row:not(.ng-group-row) .ng-tree-cell[style*="padding-left: 68px"]{padding-left:28px!important}',
-      '.ng-grid-row:not(.ng-group-row) .ng-tree-cell[style*="padding-left: 88px"]{padding-left:38px!important}'
+      '.ng-grid-row:not(.ng-group-row) .ng-tree-cell[style*="padding-left: 88px"]{padding-left:38px!important}',
+      /* 0.183.1 — chrome button cursor. CLS_PILL_BTN_BASE (Tailwind) doesn't
+       * declare cursor, so the UA default for <button> (which is 'default'
+       * per spec, regardless of Chrome's old override) renders a non-click-
+       * signal arrow. Force pointer inside every chrome surface so users
+       * read the buttons as interactive. VF/Locker-safe — bare selector,
+       * no Tailwind arbitrary-value syntax. */
+      ".nga-titlebar button,.nga-filterbar button,.nga-zoombar button,.nga-audit button,.nga-stats button,.nga-sidebar button{cursor:pointer}"
     ].join("");
     document.head.appendChild(s);
   }
@@ -3796,6 +3804,14 @@ var NimbusGanttApp = (function(exports) {
         }
       }
       applyChromeVisibility();
+      function runToggleChrome(visible) {
+        const next = typeof visible === "boolean" ? visible : !chromeVisible;
+        if (next === chromeVisible) return;
+        chromeVisible = next;
+        applyChromeVisibility();
+        renderSlots();
+      }
+      tplConfig.toggleChrome = runToggleChrome;
       injectLegacyNgCss();
       const themeStyleEl = document.createElement("style");
       themeStyleEl.setAttribute("data-nga-theme", tplConfig.templateName);
@@ -3836,9 +3852,31 @@ var NimbusGanttApp = (function(exports) {
         return "#" + full + "80";
       }
       async function onTaskEditAsync(taskId, nextStart, nextEnd, changes) {
-        var _a2;
+        var _a2, _b2;
         const idx = allTasks.findIndex((t) => t.id === taskId);
-        if (idx === -1) return;
+        if (idx === -1) {
+          try {
+            diag("warn:task-not-in-allTasks", { taskId, origin: "edit", changes });
+          } catch (_e2) {
+          }
+          try {
+            if (options.onItemEdit) {
+              await options.onItemEdit(taskId, changes);
+            } else {
+              rawOnPatch({ id: taskId, startDate: nextStart, endDate: nextEnd });
+            }
+          } catch (err) {
+            try {
+              (_a2 = options.onItemEditError) == null ? void 0 : _a2.call(
+                options,
+                taskId,
+                err instanceof Error ? err : new Error(String(err))
+              );
+            } catch (_e2) {
+            }
+          }
+          return;
+        }
         const existing = pendingEdits.get(taskId);
         const origStart = existing ? existing.origStart : allTasks[idx].startDate || "";
         const origEnd = existing ? existing.origEnd : allTasks[idx].endDate || "";
@@ -3876,7 +3914,7 @@ var NimbusGanttApp = (function(exports) {
           inflightTaskIds.delete(taskId);
           refreshGantt();
           try {
-            (_a2 = options.onItemEditError) == null ? void 0 : _a2.call(
+            (_b2 = options.onItemEditError) == null ? void 0 : _b2.call(
               options,
               taskId,
               err instanceof Error ? err : new Error(String(err))
@@ -3888,10 +3926,36 @@ var NimbusGanttApp = (function(exports) {
       const pendingReorders = /* @__PURE__ */ new Map();
       let nextReorderSeq = 0;
       async function onTaskReorderAsync(patch) {
-        var _a2;
+        var _a2, _b2;
         const taskId = patch.id;
         const idx = allTasks.findIndex((t) => t.id === taskId);
-        if (idx === -1) return;
+        if (idx === -1) {
+          try {
+            diag("warn:task-not-in-allTasks", { taskId, origin: "reorder", patch });
+          } catch (_e2) {
+          }
+          try {
+            if (options.onItemReorder) {
+              const newIndex = typeof patch.sortOrder === "number" ? patch.sortOrder : 0;
+              const reorderPayload = { newIndex };
+              if (patch.parentId !== void 0) reorderPayload.newParentId = patch.parentId;
+              if (patch.priorityGroup !== void 0) reorderPayload.newPriorityGroup = patch.priorityGroup;
+              await options.onItemReorder(taskId, reorderPayload);
+            } else {
+              rawOnPatch(patch);
+            }
+          } catch (err) {
+            try {
+              (_a2 = options.onItemReorderError) == null ? void 0 : _a2.call(
+                options,
+                taskId,
+                err instanceof Error ? err : new Error(String(err))
+              );
+            } catch (_e2) {
+            }
+          }
+          return;
+        }
         const existing = pendingReorders.get(taskId);
         const origTask = allTasks[idx];
         const origParentId = existing ? existing.origParentId : origTask.parentWorkItemId;
@@ -3923,8 +3987,10 @@ var NimbusGanttApp = (function(exports) {
         }
         try {
           const newIndex = typeof patch.sortOrder === "number" ? patch.sortOrder : 0;
-          const newParentId = patch.parentId !== void 0 ? patch.parentId : void 0;
-          await options.onItemReorder(taskId, { newIndex, newParentId });
+          const reorderPayload = { newIndex };
+          if (patch.parentId !== void 0) reorderPayload.newParentId = patch.parentId;
+          if (patch.priorityGroup !== void 0) reorderPayload.newPriorityGroup = patch.priorityGroup;
+          await options.onItemReorder(taskId, reorderPayload);
           const current = pendingReorders.get(taskId);
           if (!current || current.seq !== seq) return;
           pendingReorders.delete(taskId);
@@ -3945,7 +4011,7 @@ var NimbusGanttApp = (function(exports) {
           inflightTaskIds.delete(taskId);
           refreshGantt();
           try {
-            (_a2 = options.onItemReorderError) == null ? void 0 : _a2.call(
+            (_b2 = options.onItemReorderError) == null ? void 0 : _b2.call(
               options,
               taskId,
               err instanceof Error ? err : new Error(String(err))
@@ -3954,11 +4020,24 @@ var NimbusGanttApp = (function(exports) {
           }
         }
       }
+      const _reorderBuffer = /* @__PURE__ */ new Map();
+      let _reorderFlushScheduled = false;
+      function flushReorderBuffer() {
+        _reorderFlushScheduled = false;
+        const merged = Array.from(_reorderBuffer.values());
+        _reorderBuffer.clear();
+        merged.forEach((p) => onTaskReorderAsync(p));
+      }
       function interceptedOnPatch(patch) {
         const hasStructural = patch.parentId !== void 0 || patch.priorityGroup !== void 0 || patch.sortOrder !== void 0;
         const hasDates = patch.startDate !== void 0 || patch.endDate !== void 0;
         if (hasStructural && !hasDates) {
-          onTaskReorderAsync(patch);
+          const prev = _reorderBuffer.get(patch.id);
+          _reorderBuffer.set(patch.id, prev ? { ...prev, ...patch } : { ...patch });
+          if (!_reorderFlushScheduled) {
+            _reorderFlushScheduled = true;
+            Promise.resolve().then(flushReorderBuffer);
+          }
         } else {
           onTaskPatch(patch);
         }
@@ -4395,13 +4474,11 @@ var NimbusGanttApp = (function(exports) {
          *  flips current state; boolean arg sets explicitly. Embedded-mode
          *  mounts cannot re-show chrome this way because features were
          *  scrubbed at resolve time (mount with mode='fullscreen' first if
-         *  runtime re-show is needed). */
+         *  runtime re-show is needed). Delegates to runToggleChrome so
+         *  slot-dispatched toggles (TitleBar Unpin) and handle-dispatched
+         *  toggles share one code path. */
         toggleChrome(visible) {
-          const next = typeof visible === "boolean" ? visible : !chromeVisible;
-          if (next === chromeVisible) return;
-          chromeVisible = next;
-          applyChromeVisibility();
-          renderSlots();
+          runToggleChrome(visible);
         },
         destroy() {
           IIFEApp.unmount(container);
