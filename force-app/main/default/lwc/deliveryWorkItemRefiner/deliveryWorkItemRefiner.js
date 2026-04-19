@@ -121,7 +121,7 @@ export default class DeliveryWorkItemRefiner extends NavigationMixin(LightningEl
             type: 'standard__recordPage',
             attributes: {
                 recordId: this.newRequestId,
-                objectApiName: 'WorkRequest__c',
+                objectApiName: '%%%NAMESPACE_DOT%%%WorkRequest__c',
                 actionName: 'view'
             }
         });

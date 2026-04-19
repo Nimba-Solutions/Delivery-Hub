@@ -41,11 +41,22 @@
         // VF-page inline JavaScript during package upload (verified 2026-04-19:
         // the Aura OutApp dep was substituted correctly to `delivery:` but this
         // VF inline script ended up with `c:`, breaking Full_Bleed in MF-Prod).
-        // Detecting namespace from the page URL works in both contexts:
-        //   /apex/DeliveryGanttStandalone         → ns = 'c'        (scratch/unmanaged)
-        //   /apex/delivery__DeliveryGanttStandalone → ns = 'delivery' (subscriber/namespaced)
-        var nsMatch = window.location.pathname.match(/\/apex\/([^_\/]+)__/);
-        var NG_NS = nsMatch ? nsMatch[1] : 'c';
+        //
+        // Detect namespace at runtime. On namespaced VF the subdomain carries
+        // the namespace (e.g. `mobilizationfunding123--delivery.vf.force.com`),
+        // while the /apex/ path does NOT have the `delivery__` prefix. On
+        // scratch (`...--c.scratch.vf.force.com`) the subdomain shows `--c`.
+        // Hostname-first detection is reliable for both — pathname fallback
+        // covers the unlikely case of a subscriber load without the `--<ns>`
+        // subdomain.
+        var NG_NS = 'c';
+        var hostMatch = window.location.hostname.match(/--([^.]+)\./);
+        if (hostMatch && hostMatch[1]) {
+            NG_NS = hostMatch[1];
+        } else {
+            var pathMatch = window.location.pathname.match(/\/apex\/([^_\/]+)__/);
+            if (pathMatch) NG_NS = pathMatch[1];
+        }
         $Lightning.use(NG_NS + ':DeliveryTimelineOut', function() {
             document.getElementById('gantt-loading').style.display = 'none';
             $Lightning.createComponent(

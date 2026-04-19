@@ -100,7 +100,7 @@ export default class DeliveryBudgetSummary extends NavigationMixin(LightningElem
             this[NavigationMixin.Navigate]({ type: 'standard__webPage', attributes: { url: `/lightning/r/Report/${reportId}/view` } });
             return;
         }
-        this[NavigationMixin.Navigate]({ type: 'standard__objectPage', attributes: { objectApiName: '%%%NAMESPACED_ORG%%%SyncItem__c', actionName: 'list' }, state: { filterName: 'Recent' } });
+        this[NavigationMixin.Navigate]({ type: 'standard__objectPage', attributes: { objectApiName: '%%%NAMESPACE_DOT%%%SyncItem__c', actionName: 'list' }, state: { filterName: 'Recent' } });
     }
 
     handleFailedClick() {
@@ -109,7 +109,7 @@ export default class DeliveryBudgetSummary extends NavigationMixin(LightningElem
             this[NavigationMixin.Navigate]({ type: 'standard__webPage', attributes: { url: `/lightning/r/Report/${reportId}/view` } });
             return;
         }
-        this[NavigationMixin.Navigate]({ type: 'standard__objectPage', attributes: { objectApiName: '%%%NAMESPACED_ORG%%%SyncItem__c', actionName: 'list' }, state: { filterName: 'Recent' } });
+        this[NavigationMixin.Navigate]({ type: 'standard__objectPage', attributes: { objectApiName: '%%%NAMESPACE_DOT%%%SyncItem__c', actionName: 'list' }, state: { filterName: 'Recent' } });
     }
 
     handleRefresh() {
@@ -134,7 +134,7 @@ export default class DeliveryBudgetSummary extends NavigationMixin(LightningElem
         this[NavigationMixin.Navigate]({
             type: 'standard__objectPage',
             attributes: {
-                objectApiName: '%%%NAMESPACED_ORG%%%WorkItem__c',
+                objectApiName: '%%%NAMESPACE_DOT%%%WorkItem__c',
                 actionName: 'list'
             },
             state: { filterName: 'In_Flight' }
@@ -177,7 +177,7 @@ export default class DeliveryBudgetSummary extends NavigationMixin(LightningElem
         }
         this[NavigationMixin.Navigate]({
             type: 'standard__objectPage',
-            attributes: { objectApiName: '%%%NAMESPACED_ORG%%%WorkLog__c', actionName: 'list' },
+            attributes: { objectApiName: '%%%NAMESPACE_DOT%%%WorkLog__c', actionName: 'list' },
             state: { filterName: offsetMonths === 0 ? 'This_Month' : 'Last_Month' }
         });
     }

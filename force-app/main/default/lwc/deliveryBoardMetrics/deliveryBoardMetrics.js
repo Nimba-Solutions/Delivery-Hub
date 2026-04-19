@@ -327,7 +327,7 @@ export default class DeliveryBoardMetrics extends NavigationMixin(LightningEleme
         this[NavigationMixin.Navigate]({
             type: 'standard__objectPage',
             attributes: {
-                objectApiName: 'WorkItem__c',
+                objectApiName: '%%%NAMESPACE_DOT%%%WorkItem__c',
                 actionName: 'list'
             }
         });

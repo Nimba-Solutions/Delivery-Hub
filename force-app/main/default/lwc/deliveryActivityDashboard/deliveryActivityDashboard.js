@@ -189,7 +189,7 @@ export default class DeliveryActivityDashboard extends NavigationMixin(Lightning
         this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
             attributes: {
                 actionName: 'list',
-                objectApiName: '%%%NAMESPACED_ORG%%%ActivityLog__c'
+                objectApiName: '%%%NAMESPACE_DOT%%%ActivityLog__c'
             },
             state: {
                 filterName: 'Recent'

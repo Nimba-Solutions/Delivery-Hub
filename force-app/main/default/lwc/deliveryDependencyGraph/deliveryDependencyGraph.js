@@ -452,7 +452,7 @@ export default class DeliveryDependencyGraph extends NavigationMixin(LightningEl
                 type: 'standard__recordPage',
                 attributes: {
                     recordId: nodeId,
-                    objectApiName: 'WorkItem__c',
+                    objectApiName: '%%%NAMESPACE_DOT%%%WorkItem__c',
                     actionName: 'view'
                 }
             });
