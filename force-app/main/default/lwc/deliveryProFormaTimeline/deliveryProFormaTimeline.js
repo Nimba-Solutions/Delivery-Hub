@@ -345,25 +345,26 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             // eslint-disable-next-line no-console
             console.log('[DH mount]', JSON.stringify(mountSnapshot));
             // Triple-publish so the probe has multiple reading paths that
-            // don't all depend on the same LWS/Locker proxy behaving. If
-            // window.* and globalThis.* are both swallowed silently by the
-            // sandbox, the CustomEvent at least crosses shadow boundaries
-            // (composed:true) and can be caught by a document listener.
-            // Warn (not silent swallow) on throw so probe can grep console
-            // for [DH] mount-state publish failed — tells us if all three
-            // paths rejected.
+            // don't all depend on the same LWS/Locker proxy behaving. Each
+            // publish target gets its own try/catch — in LWS strict mode on
+            // subscriber orgs (verified on MF-Prod 2026-04-19), globalThis
+            // evaluates to undefined and throws "Cannot set properties of
+            // undefined", which in a single-try block aborts the downstream
+            // CustomEvent dispatch too. Individual try/catches prevent one
+            // silent fail from cascading.
+            try { window.__DH_MOUNT_STATE = mountSnapshot; } catch (e) { /* Locker/LWS proxy */ }
             try {
-                window.__DH_MOUNT_STATE = mountSnapshot;
-                globalThis.__DH_MOUNT_STATE = mountSnapshot;
+                if (typeof globalThis !== 'undefined' && globalThis) {
+                    globalThis.__DH_MOUNT_STATE = mountSnapshot;
+                }
+            } catch (e) { /* LWS strict — globalThis undefined */ }
+            try {
                 document.dispatchEvent(new CustomEvent('dh-mount', {
                     detail: mountSnapshot,
                     bubbles: true,
                     composed: true,
                 }));
-            } catch (e) {
-                // eslint-disable-next-line no-console
-                console.warn('[DH] mount-state publish failed:', e);
-            }
+            } catch (e) { /* dispatchEvent unavailable */ }
             // Capture the mount return value — NG 0.183 returns a handle with
             // toggleChrome(), destroy(), and (expected) an update method for
             // pushing fresh tasks after a save. Older bundles may return
