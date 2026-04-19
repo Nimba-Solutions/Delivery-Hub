@@ -46,35 +46,35 @@ import deleteSavedFilter from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliverySaved
 const FIELDS = {
     ID: 'Id',
     NAME: 'Name',
-    BRIEF_DESC: `%%%NAMESPACED_ORG%%%BriefDescriptionTxt__c`,
-    DETAILS: `%%%NAMESPACED_ORG%%%DetailsTxt__c`,
-    STAGE: `%%%NAMESPACED_ORG%%%StageNamePk__c`,
-    PRIORITY: `%%%NAMESPACED_ORG%%%PriorityPk__c`,
-    SORT_ORDER: `%%%NAMESPACED_ORG%%%SortOrderNumber__c`,
-    IS_ACTIVE:  `%%%NAMESPACED_ORG%%%ActivatedDateTime__c`,
-    STATUS_PK:  `%%%NAMESPACED_ORG%%%StatusPk__c`,
-    TAGS: `%%%NAMESPACED_ORG%%%TagsTxt__c`,
-    EPIC: `%%%NAMESPACED_ORG%%%EpicTxt__c`,
-    INTENTION: `%%%NAMESPACED_ORG%%%ClientIntentionPk__c`,
-    DEV_DAYS_SIZE: `%%%NAMESPACED_ORG%%%DeveloperDaysSizeNumber__c`,
-    CALCULATED_ETA: `%%%NAMESPACED_ORG%%%CalculatedETADate__c`,
+    BRIEF_DESC: `%%%NAMESPACE_DOT%%%BriefDescriptionTxt__c`,
+    DETAILS: `%%%NAMESPACE_DOT%%%DetailsTxt__c`,
+    STAGE: `%%%NAMESPACE_DOT%%%StageNamePk__c`,
+    PRIORITY: `%%%NAMESPACE_DOT%%%PriorityPk__c`,
+    SORT_ORDER: `%%%NAMESPACE_DOT%%%SortOrderNumber__c`,
+    IS_ACTIVE:  `%%%NAMESPACE_DOT%%%ActivatedDateTime__c`,
+    STATUS_PK:  `%%%NAMESPACE_DOT%%%StatusPk__c`,
+    TAGS: `%%%NAMESPACE_DOT%%%TagsTxt__c`,
+    EPIC: `%%%NAMESPACE_DOT%%%EpicTxt__c`,
+    INTENTION: `%%%NAMESPACE_DOT%%%ClientIntentionPk__c`,
+    DEV_DAYS_SIZE: `%%%NAMESPACE_DOT%%%DeveloperDaysSizeNumber__c`,
+    CALCULATED_ETA: `%%%NAMESPACE_DOT%%%CalculatedETADate__c`,
     
     // NEW FIELDS FOR CARD UI
-    TOTAL_LOGGED_HOURS: `%%%NAMESPACED_ORG%%%TotalLoggedHoursSum__c`,
-    ESTIMATED_HOURS: `%%%NAMESPACED_ORG%%%EstimatedHoursNumber__c`,
-    PROJECTED_UAT_READY: `%%%NAMESPACED_ORG%%%ProjectedUATReadyDate__c`,
+    TOTAL_LOGGED_HOURS: `%%%NAMESPACE_DOT%%%TotalLoggedHoursSum__c`,
+    ESTIMATED_HOURS: `%%%NAMESPACE_DOT%%%EstimatedHoursNumber__c`,
+    PROJECTED_UAT_READY: `%%%NAMESPACE_DOT%%%ProjectedUATReadyDate__c`,
     
     CREATED_DATE: 'CreatedDate',
-    DEVELOPER: `%%%NAMESPACED_ORG%%%DeveloperLookup__c`,
+    DEVELOPER: `%%%NAMESPACE_DOT%%%DeveloperLookup__c`,
     // Relationships
-    DEP_REL_BLOCKED_BY: `%%%NAMESPACED_ORG%%%BlockedByDeps__r`,
-    DEP_REL_BLOCKING: `%%%NAMESPACED_ORG%%%BlockingDeps__r`,
-    BLOCKING_WORK_ITEM: `%%%NAMESPACED_ORG%%%BlockingWorkItemLookup__c`,
-    BLOCKED_WORK_ITEM: `%%%NAMESPACED_ORG%%%BlockedWorkItemLookup__c`,
-    WORKFLOW_TYPE: `%%%NAMESPACED_ORG%%%WorkflowTypeTxt__c`,
+    DEP_REL_BLOCKED_BY: `%%%NAMESPACE_DOT%%%BlockedByDeps__r`,
+    DEP_REL_BLOCKING: `%%%NAMESPACE_DOT%%%BlockingDeps__r`,
+    BLOCKING_WORK_ITEM: `%%%NAMESPACE_DOT%%%BlockingWorkItemLookup__c`,
+    BLOCKED_WORK_ITEM: `%%%NAMESPACE_DOT%%%BlockedWorkItemLookup__c`,
+    WORKFLOW_TYPE: `%%%NAMESPACE_DOT%%%WorkflowTypeTxt__c`,
     // Card enrichment
     LAST_MODIFIED: 'LastModifiedDate',
-    COMMENT_REL: `%%%NAMESPACED_ORG%%%WorkItemComments__r`
+    COMMENT_REL: `%%%NAMESPACE_DOT%%%WorkItemComments__r`
 };
 
 export default class DeliveryHubBoard extends NavigationMixin(LightningElement) {
@@ -313,16 +313,16 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         }
 
         const fields = {
-            '%%%NAMESPACED_ORG%%%WorkItemId__c': workItemId,
-            '%%%NAMESPACED_ORG%%%BodyTxt__c': this.moveComment,
-            '%%%NAMESPACED_ORG%%%SourcePk__c': 'Salesforce',
-            '%%%NAMESPACED_ORG%%%AuthorTxt__c': this.currentUserName 
+            '%%%NAMESPACE_DOT%%%WorkItemId__c': workItemId,
+            '%%%NAMESPACE_DOT%%%BodyTxt__c': this.moveComment,
+            '%%%NAMESPACE_DOT%%%SourcePk__c': 'Salesforce',
+            '%%%NAMESPACE_DOT%%%AuthorTxt__c': this.currentUserName 
         };
 
         const recordInput = { 
             // Note: apiName is a string value, so it was already fine, 
             // but the keys inside 'fields' MUST be quoted.
-            apiName: '%%%NAMESPACED_ORG%%%WorkItemComment__c', 
+            apiName: '%%%NAMESPACE_DOT%%%WorkItemComment__c', 
             fields 
         };
 
@@ -1002,7 +1002,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
         const fields = { 
             Id: rec.Id, 
-            '%%%NAMESPACED_ORG%%%StageNamePk__c': newStage 
+            '%%%NAMESPACE_DOT%%%StageNamePk__c': newStage 
         };
 
         updateRecord({ fields })
@@ -1526,7 +1526,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
                 // Direct update — reuse existing update path
                 const fields = {
                     Id: workItemId,
-                    '%%%NAMESPACED_ORG%%%StageNamePk__c': targetStage
+                    '%%%NAMESPACE_DOT%%%StageNamePk__c': targetStage
                 };
                 await updateRecord({ fields });
                 this.showToast('Success', 'Work item moved to ' + targetStage + '.', 'success');
@@ -1657,7 +1657,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             this.closeDetailPanel();
             this[NavigationMixin.Navigate]({
                 type: 'standard__recordPage',
-                attributes: { recordId: id, objectApiName: 'WorkItem__c', actionName: 'edit' }
+                attributes: { recordId: id, objectApiName: '%%%NAMESPACE_DOT%%%WorkItem__c', actionName: 'edit' }
             });
         }
     }
@@ -1668,7 +1668,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             this.closeDetailPanel();
             this[NavigationMixin.Navigate]({
                 type: 'standard__recordPage',
-                attributes: { recordId: id, objectApiName: 'WorkItem__c', actionName: 'view' }
+                attributes: { recordId: id, objectApiName: '%%%NAMESPACE_DOT%%%WorkItem__c', actionName: 'view' }
             });
         }
     }
