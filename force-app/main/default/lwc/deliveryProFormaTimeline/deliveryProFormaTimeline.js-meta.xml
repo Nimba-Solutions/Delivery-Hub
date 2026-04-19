@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
-    <apiVersion>62.0</apiVersion>
+    <apiVersion>63.0</apiVersion>
     <isExposed>true</isExposed>
     <targets>
         <target>lightning__AppPage</target>
@@ -17,6 +17,17 @@
                 description="embedded (default — minimal chrome, in-app) or fullscreen (full toolbar, standalone app page)"
                 default="embedded"
                 datasource="embedded,fullscreen"/>
+            <property
+                name="fullscreenUrl"
+                type="String"
+                label="Fullscreen URL"
+                description="Outbound URL for the NG fullscreen button (e.g. /apex/DeliveryGanttStandalone). Only set on the Standalone FlexiPage — leave empty on embedded + VF routes. Namespace prefix is applied automatically at runtime for subscriber orgs."/>
+            <property
+                name="chromeHiddenDefault"
+                type="Boolean"
+                label="Hide Chrome by Default"
+                description="Inverted name (LWC1503): set true to hide NG's chrome (titlebar rows) on mount. Default false = chrome visible (good for Standalone). Set true on Embedded to surface a minimal-chrome view when SF chrome already surrounds the component. Honored by NG 0.183+."
+                default="false"/>
         </targetConfig>
     </targetConfigs>
     <masterLabel>Delivery Pro Forma Timeline</masterLabel>

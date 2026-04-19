@@ -41,7 +41,7 @@
             document.getElementById('gantt-loading').style.display = 'none';
             $Lightning.createComponent(
                 'c:deliveryProFormaTimeline',
-                { showCompleted: false, standalone: true },
+                { mode: 'fullscreen' },
                 'gantt-root',
                 function(cmp) { /* mounted */ }
             );
