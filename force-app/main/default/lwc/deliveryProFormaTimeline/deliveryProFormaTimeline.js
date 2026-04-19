@@ -41,6 +41,7 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import NIMBUS_GANTT from '@salesforce/resourceUrl/nimbusgantt';
 import NIMBUS_GANTT_APP from '@salesforce/resourceUrl/nimbusganttapp';
 import CLOUDNIMBUS_CSS from '@salesforce/resourceUrl/cloudnimbustemplatecss';
+import USER_ID from '@salesforce/user/Id';
 import getProFormaTimelineData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getProFormaTimelineData';
 import updateWorkItemDates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemDates';
 import updateWorkItemSortOrder from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemSortOrder';
@@ -642,7 +643,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             'cn-edit v' + VERSION + ' (DH/Salesforce) — per-patch Apex write-back',
             '',
             '  __cnEdit.help()',
-            '  __cnEdit.whoami()          -> running user email',
+            '  __cnEdit.whoami()          -> running user Id',
             '  __cnEdit.getState()        -> { tasks, mounted, surface }',
             '  __cnEdit.moveTask(id, startISO, endISO)',
             '  __cnEdit.moveToGroup(id, group)',
@@ -664,13 +665,11 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 return HELP_TEXT;
             },
             whoami: function () {
-                try {
-                    // eslint-disable-next-line no-undef
-                    const u = (typeof $A !== 'undefined' && $A.get && $A.get('$SObjectType.CurrentUser.Id'));
-                    return Promise.resolve(u || null);
-                } catch (_e) {
-                    return Promise.resolve(null);
-                }
+                // LWC rule (LWC1503): $A is banned. Use @salesforce/user/Id
+                // — synchronous static import, returns the running user's
+                // 18-char Id. Email would require a @wire(getRecord) round
+                // trip; Id is enough for the Aura-parity contract.
+                return Promise.resolve(USER_ID || null);
             },
             getState: function () {
                 return {
