@@ -37,10 +37,10 @@
     <div id="gantt-loading">Loading timeline&hellip;</div>
     <div id="gantt-root"></div>
     <script>
-        $Lightning.use('c:DeliveryTimelineOut', function() {
+        $Lightning.use('%%%NAMESPACE_OR_C%%%:DeliveryTimelineOut', function() {
             document.getElementById('gantt-loading').style.display = 'none';
             $Lightning.createComponent(
-                'c:deliveryProFormaTimeline',
+                '%%%NAMESPACE_OR_C%%%:deliveryProFormaTimeline',
                 { mode: 'fullscreen' },
                 'gantt-root',
                 function(cmp) { /* mounted */ }
