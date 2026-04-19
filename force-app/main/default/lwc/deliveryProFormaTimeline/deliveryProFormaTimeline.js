@@ -247,6 +247,14 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             onItemClick: (taskId) => this._handleItemClick(taskId),
             onViewportChange: (state) => this._handleViewportChange(state),
             initialViewport: this._readInitialViewport(),
+            // Dormant prop wiring — NG implements the handler in a future
+            // release. When NG ships, fullscreen first-load lands on today
+            // instead of dataset earliest date (scrollLeft:0). No-op on
+            // current NG 0.185.0.1 (unknown prop, silently ignored).
+            // Precedence (per NG-side spec): explicit initialViewport.scrollLeft
+            // from localStorage wins over initialFocusDate — so returning
+            // users keep their saved pan position, new users land on today.
+            initialFocusDate: new Date().toISOString().slice(0, 10),
             chromeVisibleDefault: !this.chromeHiddenDefault,
             features: {
                 hoursColumn: true,
@@ -340,6 +348,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 chromeVisibleDefault: mountConfig.chromeVisibleDefault,
                 features: mountConfig.features,
                 initialViewport: mountConfig.initialViewport,
+                initialFocusDate: mountConfig.initialFocusDate,
                 mountedAt: new Date().toISOString(),
             };
             // eslint-disable-next-line no-console
