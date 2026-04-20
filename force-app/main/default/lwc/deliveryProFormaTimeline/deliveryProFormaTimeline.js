@@ -96,6 +96,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     _mountHandle = null;
     _refetchTimer = null;
     _viewportWriteTimer = null;
+    _headerVisible = false;
 
     async connectedCallback() {
         // Fullscreen FlexiPage route renders a Salesforce-injected SLDS page-header
@@ -196,6 +197,33 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         if (s && s.parentNode) s.parentNode.removeChild(s);
     }
 
+    // Builds the host-contributed TitleBar buttons (NG 0.185.26+
+    // titleBarButtons slot). DH contributes a Show/Hide Header toggle.
+    // Full Screen stays owned by NG via the existing fullscreen contract.
+    _buildHostTitleBarButtons() {
+        return [{
+            id: 'dh-show-header',
+            label: this._headerVisible ? 'Hide Header' : 'Show Header',
+            pressed: this._headerVisible,
+            onClick: () => this._toggleHeaderChrome(),
+        }];
+    }
+
+    // Flips the SLDS page-header hide-CSS and re-pushes the TitleBar
+    // buttons so NG updates the button label + pressed state in place.
+    _toggleHeaderChrome() {
+        if (document.getElementById('dh-gantt-fs-chrome-hide')) {
+            this._uninstallFullscreenChromeHide();
+            this._headerVisible = true;
+        } else {
+            this._installFullscreenChromeHide();
+            this._headerVisible = false;
+        }
+        if (this._mountHandle && typeof this._mountHandle.setTitleBarButtons === 'function') {
+            this._mountHandle.setTitleBarButtons(this._buildHostTitleBarButtons());
+        }
+    }
+
     // CLOUDNIMBUS_CSS resolves to `/resource/{ts}/cloudnimbustemplatecss` in a
     // non-namespaced scratch and `/resource/{ts}/delivery__cloudnimbustemplatecss`
     // in a subscriber org. Used to build the VF fullscreen URL so it resolves
@@ -251,6 +279,10 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             onPatch: (patch) => this._handlePatch(patch),
             onItemReorder: (taskId, payload) => this._handleItemReorder(taskId, payload),
             onItemReorderError: (taskId, error) => this._handleItemReorderError(taskId, error),
+            // NG 0.185.26 — generic TitleBar button slot. DH contributes a
+            // Show/Hide Header toggle that reveals the SF page-header chrome
+            // that the Timeline tab hides by default.
+            titleBarButtons: this._buildHostTitleBarButtons(),
             // onItemClick NOT wired — NG 0.185.18+ defaults to dispatching
             // TOGGLE_DETAIL on task click, which opens DetailPanel inline.
             // When a host onItemClick is wired, NG suppresses default action,
@@ -991,15 +1023,10 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             },
             toggleHeader: function () {
                 // Toggles the SLDS page header / FlexiPage chrome hide-CSS.
-                // Embedded Timeline tab opens header-hidden; call this from
-                // the console to reveal the SF chrome (and call again to
-                // hide). A proper toolbar button in NG is TBD.
-                if (document.getElementById('dh-gantt-fs-chrome-hide')) {
-                    self._uninstallFullscreenChromeHide();
-                    return { ok: true, headerVisible: true };
-                }
-                self._installFullscreenChromeHide();
-                return { ok: true, headerVisible: false };
+                // Shared code path with the NG TitleBar button (0.185.26
+                // titleBarButtons slot). Console still works as a backup.
+                self._toggleHeaderChrome();
+                return { ok: true, headerVisible: self._headerVisible };
             },
             scrollToDate: function (date) {
                 // NG 0.185.1+ exposes scrollToDate on the mount handle.
