@@ -51,7 +51,11 @@ import updateWorkItemParent from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGa
 // Tab DeveloperNames used by the fullscreen nav pair. Centralized here so the
 // names are discoverable from a single search.
 const EMBEDDED_TAB_API_NAME = 'Delivery_Timeline';
-const FULLSCREEN_TAB_API_NAME = 'Delivery_Gantt_Standalone';
+// Full_Bleed is the VF-wrapped chromeless tab (no SLDS header). The older
+// Delivery_Gantt_Standalone is a FlexiPage with standard LEX chrome — that
+// surface keeps the menu bar when navigated to, which is NOT the fullscreen
+// UX. Always target Full_Bleed for the enter-fullscreen gesture.
+const FULLSCREEN_TAB_API_NAME = 'Delivery_Gantt_Full_Bleed';
 
 export default class DeliveryProFormaTimeline extends NavigationMixin(LightningElement) {
 
@@ -328,10 +332,13 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             // VF Full_Bleed mount (no @api fullscreenUrl from LightningOut)
             mountConfig.onExitFullscreen = () => this._handleExitFullscreen();
         } else {
-            // Standalone FlexiPage without fullscreenUrl configured — fall back
-            // to computed URL so behavior is preserved even if FlexiPage prop
-            // is missing.
-            mountConfig.fullscreenUrl = `/apex/${this._vfPrefix()}DeliveryGanttStandalone`;
+            // Standalone FlexiPage without fullscreenUrl configured — fall
+            // back to the Full_Bleed TAB URL (NOT /apex/ direct). Direct
+            // /apex/ URLs routed through standard__webPage or NG's internal
+            // window.location land in LEX's alohaPage wrapper which keeps
+            // the menu bar; the tab URL renders chromeless because the VF
+            // tab has showHeader=false + no standardStylesheets.
+            mountConfig.fullscreenUrl = `/lightning/n/${this._vfPrefix()}${FULLSCREEN_TAB_API_NAME}`;
         }
 
         try {
@@ -705,11 +712,14 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     }
 
     _handleEnterFullscreen() {
-        // standard__navItemPage with an unprefixed apiName is inert on
-        // namespaced scratch + LWS-strict subscriber orgs. standard__webPage
-        // with a direct URL is the reliable path.
+        // Target the VF-wrapped Full_Bleed TAB — not the /apex/ URL directly.
+        // /apex/DeliveryGanttStandalone routed through standard__webPage lands
+        // in LEX's alohaPage wrapper which keeps the menu bar (defeats the
+        // point of fullscreen). The tab URL /lightning/n/Delivery_Gantt_Full_Bleed
+        // renders the VF page chromeless because the tab itself is a raw VF
+        // tab (no lightningStylesheets, showHeader=false).
         const prefix = this._vfPrefix();
-        const url = `/apex/${prefix}DeliveryGanttStandalone`;
+        const url = `/lightning/n/${prefix}${FULLSCREEN_TAB_API_NAME}`;
         this[NavigationMixin.Navigate]({
             type: 'standard__webPage',
             attributes: { url },
