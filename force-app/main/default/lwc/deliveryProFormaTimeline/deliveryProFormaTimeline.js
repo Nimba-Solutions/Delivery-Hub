@@ -667,8 +667,15 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         try {
             const data = await getProFormaTimelineData({ showCompleted: false });
             this._tasks = data || [];
-            if (this._mountHandle && typeof this._mountHandle.updateTasks === 'function') {
-                this._mountHandle.updateTasks(this._mapTasksForNg(this._tasks));
+            // NG 0.185.x exposes handle.setTasks (NOT updateTasks). Prior
+            // code typed the wrong method name and the typeof===function
+            // guard silently skipped it, so Apex writes landed but NG never
+            // re-rendered. Root cause of "reorder fires but visual doesn't
+            // update" on MF-Prod 2026-04-20. Keeping the typeof guard so a
+            // future NG rename doesn't throw — fallback is just the stored
+            // data waiting for the next mount cycle.
+            if (this._mountHandle && typeof this._mountHandle.setTasks === 'function') {
+                this._mountHandle.setTasks(this._mapTasksForNg(this._tasks));
             }
         } catch (error) {
             // eslint-disable-next-line no-console
