@@ -2268,8 +2268,10 @@ var NimbusGanttApp = (function(exports) {
     statsOpen: false,
     detailOpen: false,
     detailMode: "view",
-    auditPanelOpen: true,
-    // v9 parity — Audit strip defaults to open
+    auditPanelOpen: false,
+    // default collapsed — Audit toggle in TitleBar opens it
+    hrsWkStripOpen: false,
+    // default collapsed — Hrs/Wk toggle in TitleBar opens it
     fullscreen: false,
     selectedTaskId: null,
     pendingPatchCount: 0,
@@ -2330,6 +2332,8 @@ var NimbusGanttApp = (function(exports) {
         return { ...state, detailMode: event.mode };
       case "TOGGLE_AUDIT_PANEL":
         return { ...state, auditPanelOpen: !state.auditPanelOpen };
+      case "TOGGLE_HRSWK_STRIP":
+        return { ...state, hrsWkStripOpen: !state.hrsWkStripOpen };
       case "TOGGLE_FULLSCREEN":
         return { ...state, fullscreen: !state.fullscreen };
       case "SELECT_TASK":
@@ -2821,6 +2825,9 @@ var NimbusGanttApp = (function(exports) {
       if (config.features.auditPanel) {
         rowMain.appendChild(toggleBtn("Audit", state.auditPanelOpen, () => dispatch({ type: "TOGGLE_AUDIT_PANEL" })));
       }
+      if (config.features.hrsWkStrip) {
+        rowMain.appendChild(toggleBtn("Hrs/Wk", state.hrsWkStripOpen, () => dispatch({ type: "TOGGLE_HRSWK_STRIP" })));
+      }
       rowMain.appendChild(mkSep$1());
       ZOOMS$2.forEach((z) => {
         const on = state.zoom === z;
@@ -3054,8 +3061,15 @@ var NimbusGanttApp = (function(exports) {
     searchInput.setAttribute("data-testid", "gantt-search-input");
     searchInput.type = "text";
     searchInput.placeholder = "Search T-NNNN, title, owner…";
+    let searchInputFocused = false;
+    searchInput.addEventListener("focus", () => {
+      searchInputFocused = true;
+    });
+    searchInput.addEventListener("blur", () => {
+      searchInputFocused = false;
+    });
     function render(p) {
-      const hadSearchFocus = document.activeElement === searchInput;
+      const hadSearchFocus = searchInputFocused;
       const selStart = hadSearchFocus ? searchInput.selectionStart : null;
       const selEnd = hadSearchFocus ? searchInput.selectionEnd : null;
       clear(inner);
@@ -4182,6 +4196,8 @@ var NimbusGanttApp = (function(exports) {
     root.setAttribute("data-slot", "HrsWkStrip");
     function render(p) {
       clear(root);
+      root.style.display = p.state.hrsWkStripOpen ? "" : "none";
+      if (!p.state.hrsWkStripOpen) return;
       const weeks = computeWeeks(p.data.tasks);
       const totalHours = weeks.reduce((s, w) => s + w.hours, 0);
       const maxH = Math.max(1, ...weeks.map((w) => w.hours));
@@ -6099,7 +6115,12 @@ var NimbusGanttApp = (function(exports) {
         setTasks(tasks) {
           allTasks = tasks;
           depthMap = buildDepthMap(allTasks);
-          rebuildView();
+          const live = tplConfig.features.liveDataUpdate !== false;
+          if (live && ganttInst && state.viewMode === "gantt") {
+            refreshGantt();
+          } else {
+            rebuildView();
+          }
         },
         /** CH-1 (0.183) — toggle chrome visibility at runtime. With no arg,
          *  flips current state; boolean arg sets explicitly. Embedded-mode
