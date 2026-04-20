@@ -2763,6 +2763,24 @@ var NimbusGanttApp = (function(exports) {
       rowMain.appendChild(unpinBtn);
       const fsUrl = config.fullscreenUrl;
       const onCurrentFsUrl = !!(fsUrl && typeof location !== "undefined" && location.pathname === fsUrl);
+      try {
+        console.log(
+          "[NG fs-btn render]",
+          "mode=",
+          config.mode,
+          "fsUrl=",
+          fsUrl || "(none)",
+          "location=",
+          typeof location !== "undefined" ? location.pathname : "(no-loc)",
+          "onCurrentFsUrl=",
+          onCurrentFsUrl,
+          "hasOnEnter=",
+          typeof config.onEnterFullscreen === "function",
+          "hasOnExit=",
+          typeof config.onExitFullscreen === "function"
+        );
+      } catch (_e) {
+      }
       if (!onCurrentFsUrl) {
         const hostExit = config.mode === "fullscreen" && typeof config.onExitFullscreen === "function";
         const active = state.fullscreen || hostExit;
@@ -2774,19 +2792,52 @@ var NimbusGanttApp = (function(exports) {
           fsBtn.textContent = "Fullscreen";
           fsBtn.setAttribute("data-nga-fullscreen-url", "1");
           fsBtn.addEventListener("click", () => {
-            window.location.href = fsUrl;
+            try {
+              console.log("[NG fs-btn click] path=url-nav target=", fsUrl);
+            } catch (_e) {
+            }
+            try {
+              window.location.href = fsUrl;
+            } catch (err) {
+              try {
+                console.error("[NG fs-btn click] url-nav threw", err);
+              } catch (_e) {
+              }
+            }
           });
         } else if (hostExit) {
           fsBtn.textContent = "← Exit Full Screen";
           fsBtn.setAttribute("data-nga-fullscreen-exit", "1");
           fsBtn.addEventListener("click", () => {
-            config.onExitFullscreen();
+            try {
+              console.log("[NG fs-btn click] path=host-exit invoking config.onExitFullscreen");
+            } catch (_e) {
+            }
+            try {
+              config.onExitFullscreen();
+            } catch (err) {
+              try {
+                console.error("[NG fs-btn click] host-exit threw", err);
+              } catch (_e) {
+              }
+            }
           });
         } else {
           fsBtn.textContent = state.fullscreen ? "Exit Fullscreen" : "Fullscreen";
-          fsBtn.addEventListener("click", () => dispatch({ type: "TOGGLE_FULLSCREEN" }));
+          fsBtn.addEventListener("click", () => {
+            try {
+              console.log("[NG fs-btn click] path=toggle-state");
+            } catch (_e) {
+            }
+            dispatch({ type: "TOGGLE_FULLSCREEN" });
+          });
         }
         rowMain.appendChild(fsBtn);
+      } else {
+        try {
+          console.log("[NG fs-btn] HIDDEN — onCurrentFsUrl true, no button rendered");
+        } catch (_e) {
+        }
       }
       const adminOn = !!state.adminOpen;
       const adminBtn = el$1(
@@ -4421,9 +4472,26 @@ var NimbusGanttApp = (function(exports) {
       "box-shadow:0 1px 2px rgba(0,0,0,0.04)",
       "cursor:pointer"
     ].join(";");
-    btn.addEventListener("click", onClick);
+    btn.addEventListener("click", () => {
+      try {
+        console.log("[NG fs-enter-btn click] invoking host onEnterFullscreen");
+      } catch (_e) {
+      }
+      try {
+        onClick();
+      } catch (err) {
+        try {
+          console.error("[NG fs-enter-btn click] onEnterFullscreen threw", err);
+        } catch (_e) {
+        }
+      }
+    });
     if (!container.style.position) container.style.position = "relative";
     container.appendChild(btn);
+    try {
+      console.log("[NG fs-enter-btn render] embedded-mode floating button attached");
+    } catch (_e) {
+    }
     return () => {
       try {
         btn.remove();
@@ -4749,8 +4817,54 @@ var NimbusGanttApp = (function(exports) {
         chromeVisible = next;
         applyChromeVisibility();
         renderSlots();
+        updateRepinButton();
       }
       tplConfig.toggleChrome = runToggleChrome;
+      let repinButtonEl = null;
+      function updateRepinButton() {
+        if (chromeVisible) {
+          if (repinButtonEl) {
+            try {
+              repinButtonEl.remove();
+            } catch (_e2) {
+            }
+            repinButtonEl = null;
+          }
+          return;
+        }
+        if (repinButtonEl) return;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.setAttribute("data-nga-repin", "1");
+        btn.textContent = "📌 Show toolbar";
+        btn.title = "Restore toolbar";
+        btn.style.cssText = [
+          "position:absolute",
+          "top:8px",
+          "right:8px",
+          "z-index:60",
+          "padding:6px 12px",
+          "font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif",
+          "font-size:11px",
+          "font-weight:600",
+          "color:#1f2937",
+          "background:#ffffff",
+          "border:1px solid #e5e7eb",
+          "border-radius:6px",
+          "box-shadow:0 2px 6px rgba(15,23,42,0.08)",
+          "cursor:pointer"
+        ].join(";");
+        btn.addEventListener("click", () => {
+          try {
+            console.log("[NG repin click] restoring chrome");
+          } catch (_e2) {
+          }
+          runToggleChrome(true);
+        });
+        if (!container.style.position) container.style.position = "relative";
+        container.appendChild(btn);
+        repinButtonEl = btn;
+      }
       injectLegacyNgCss();
       const themeStyleEl = document.createElement("style");
       themeStyleEl.setAttribute("data-nga-theme", tplConfig.templateName);
@@ -5574,6 +5688,13 @@ var NimbusGanttApp = (function(exports) {
         if (cleanupShading) cleanupShading();
         if (cleanupDrag) cleanupDrag();
         if (cleanupEmbeddedBtn) cleanupEmbeddedBtn();
+        if (repinButtonEl) {
+          try {
+            repinButtonEl.remove();
+          } catch (_e2) {
+          }
+          repinButtonEl = null;
+        }
         if (ganttInst) {
           try {
             ganttInst.destroy();
