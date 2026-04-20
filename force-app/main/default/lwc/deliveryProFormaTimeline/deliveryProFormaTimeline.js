@@ -168,7 +168,9 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     }
 
     _installFullscreenChromeHide() {
-        if (this.mode !== 'fullscreen') return;
+        // Default both embedded and fullscreen modes to chrome-hidden.
+        // Glen's spec: one Timeline tab, opens headerless by default.
+        // A future toggle will let users reveal the SF page header.
         if (document.getElementById('dh-gantt-fs-chrome-hide')) return;
         const style = document.createElement('style');
         style.id = 'dh-gantt-fs-chrome-hide';
