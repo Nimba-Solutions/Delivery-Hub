@@ -386,13 +386,132 @@ public with sharing class DeliveryGanttController {
     @AuraEnabled
     public static void updateWorkItemSortOrder(String workItemId, Decimal sortOrder) {
         try {
-            WorkItem__c item = new WorkItem__c(Id = workItemId, SortOrderNumber__c = sortOrder);
+            // Collision guard: NG's midpoint algorithm can emit the SAME
+            // sortOrder value on repeated drags into the same "between
+            // neighbors" slot (e.g., midpoint(15000,17000)=16000 every
+            // time). Multiple records at the same SortOrderNumber__c cause
+            // ORDER BY to tiebreak by Name alphabetically — user's intended
+            // order is lost. Nudge the incoming value by 0.5 increments
+            // until it's unique within the target task's priority group.
+            Decimal finalSort = sortOrder;
+            if (finalSort != null) {
+                // Collision guard: check ALL other records' sortOrder values
+                // regardless of priority group. The prior bucket-scoped check
+                // missed the case where a task with explicit PriorityGroupPk__c
+                // ('active') collides with a task with null group that derives
+                // at render time to the same bucket — visually they're in the
+                // same lane and their sortOrders must be unique. Global check
+                // is cheap (one soql) and handles both explicit and derived
+                // bucket collisions.
+                Set<Decimal> siblingValues = new Set<Decimal>();
+                List<WorkItem__c> siblings = [SELECT SortOrderNumber__c FROM WorkItem__c WHERE Id != :workItemId AND SortOrderNumber__c != null];
+                for (WorkItem__c s : siblings) {
+                    siblingValues.add(s.SortOrderNumber__c);
+                }
+                Integer maxNudges = siblings.size() + 2;
+                Integer nudged = 0;
+                while (siblingValues.contains(finalSort) && nudged < maxNudges) {
+                    finalSort = finalSort + 0.5;
+                    nudged++;
+                }
+            }
+            WorkItem__c item = new WorkItem__c(Id = workItemId, SortOrderNumber__c = finalSort);
             update item; //NOPMD - with sharing class handles CRUD; as user breaks managed package tests
         } catch (Exception e) {
             AuraHandledException ahe = new AuraHandledException(e.getMessage());
             ahe.setMessage(e.getMessage());
             throw ahe;
         }
+    }
+
+    /**
+     * @description Generic field-level patch endpoint for NG's DetailPanel
+     *              fieldSchema. Caller passes an arbitrary Map<String,Object>
+     *              of field writes; FLS is checked per field; non-updateable
+     *              or unknown fields are silently skipped rather than failing
+     *              the whole patch. Field API names are accepted in any form
+     *              the running context might provide (map key, unprefixed,
+     *              or prefixed), to sidestep the managed-pkg describe
+     *              behavior quirk that killed the 2026-04-20 build. Date
+     *              fields accept Date or ISO 'YYYY-MM-DD' strings.
+     * @param workItemId The Salesforce record Id.
+     * @param fields     Map of field API name → new value.
+     */
+    @AuraEnabled
+    public static void updateWorkItemFields(String workItemId, Map<String, Object> fields) {
+        if (String.isBlank(workItemId)) {
+            throw new AuraHandledException('workItemId is required');
+        }
+        if (fields == null || fields.isEmpty()) {
+            return;
+        }
+        try {
+            Id rid = Id.valueOf(workItemId);
+            WorkItem__c item = new WorkItem__c(Id = rid);
+            Map<String, Schema.SObjectField> fieldMap =
+                WorkItem__c.SObjectType.getDescribe().fields.getMap();
+            // Comprehensive 3-form index: map key, getLocalName(), getName()
+            // — all lowercased. Lookup by any of those forms finds the token.
+            Map<String, Schema.SObjectField> byAnyName =
+                new Map<String, Schema.SObjectField>();
+            for (String mapKey : fieldMap.keySet()) {
+                Schema.SObjectField sf = fieldMap.get(mapKey);
+                Schema.DescribeFieldResult dfr = sf.getDescribe();
+                byAnyName.put(mapKey.toLowerCase(), sf);
+                byAnyName.put(dfr.getLocalName().toLowerCase(), sf);
+                byAnyName.put(dfr.getName().toLowerCase(), sf);
+            }
+            Boolean anyAssigned = false;
+            for (String fieldKey : fields.keySet()) {
+                if (String.isBlank(fieldKey)) {
+                    continue;
+                }
+                Schema.SObjectField fToken = byAnyName.get(fieldKey.toLowerCase());
+                if (fToken == null) {
+                    continue;
+                }
+                Schema.DescribeFieldResult dfr = fToken.getDescribe();
+                if (!dfr.isUpdateable()) {
+                    continue;
+                }
+                Object rawValue = fields.get(fieldKey);
+                Object coerced = coerceFieldValue(dfr, rawValue);
+                item.put(fToken, coerced);
+                anyAssigned = true;
+            }
+            if (!anyAssigned) {
+                return;
+            }
+            update item; //NOPMD - with sharing class handles CRUD; as user breaks managed package tests
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
+        }
+    }
+
+    /**
+     * @description Coerce JSON-ish caller values into types sObject.put expects.
+     *              Date and DateTime picklist payloads arrive as ISO strings from
+     *              the LWC layer; sObject.put needs native Date/DateTime.
+     * @param dfr Describe for the target field (used to read DisplayType).
+     * @param raw Raw value from the caller's fields map.
+     * @return Coerced value suitable for sObject.put, or null if raw was null.
+     */
+    private static Object coerceFieldValue(Schema.DescribeFieldResult dfr, Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        Schema.DisplayType t = dfr.getType();
+        if (t == Schema.DisplayType.DATE && raw instanceof String) {
+            String s = (String) raw;
+            return String.isBlank(s) ? null : Date.valueOf(s);
+        }
+        if (t == Schema.DisplayType.DATETIME && raw instanceof String) {
+            String s = (String) raw;
+            return String.isBlank(s) ? null : (Datetime) JSON.deserialize('"' + s + '"', Datetime.class);
+        }
+        return raw;
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -527,7 +646,13 @@ public with sharing class DeliveryGanttController {
      *                      as getGanttData's showCompleted flag).
      * @return List of ProFormaTimelineRow ordered by entity then start date.
      */
-    @AuraEnabled(cacheable=true)
+    // cacheable=false because this method is called after every mutation
+    // (drag reorder, date edit, field patch) to refresh the NG view. With
+    // cacheable=true, Lightning Data Service would return stale cached rows
+    // instead of reading the just-committed DB state, causing "drag saves
+    // but UI doesn't update" symptoms. Performance cost on initial mount
+    // is negligible (50 tasks × ~6 fields = one SOQL, ~200ms).
+    @AuraEnabled
     public static List<ProFormaTimelineRow> getProFormaTimelineData(Boolean showCompleted) {
         try {
             String query = 'SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, '
