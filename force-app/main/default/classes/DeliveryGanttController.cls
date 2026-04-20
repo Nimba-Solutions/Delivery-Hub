@@ -418,18 +418,25 @@ public with sharing class DeliveryGanttController {
             WorkItem__c item = new WorkItem__c(Id = rid);
             Map<String, Schema.SObjectField> fieldMap =
                 WorkItem__c.SObjectType.getDescribe().fields.getMap();
-            // In managed-package context, fieldMap keys include the namespace
-            // prefix (e.g. "delivery__stagenamepkxc"). Callers pass unprefixed
-            // field names (e.g. "StageNamePk__c"). Index by local name so the
-            // lookup works in both namespaced-managed and unprefixed-scratch
-            // contexts — use getLocalName() which always returns the name
-            // without the package prefix. Confirmed MF-Prod 2026-04-20:
-            // namespaced upload-beta failed because direct getMap().get(lowercase)
-            // returned null for caller-supplied unprefixed keys.
+            // Namespace-agnostic field lookup. Different contexts return
+            // different shapes from fields.getMap() and the describe calls,
+            // so index each field by every name form the caller might pass:
+            //   - map key (whatever getMap() uses in this context)
+            //   - getLocalName() (unprefixed)
+            //   - getName() (prefixed in managed context, unprefixed in scratch)
+            // Result: lookup by ANY of those forms finds the field token.
+            // Prior attempt (PR #659) indexed by getLocalName() alone and
+            // STILL failed upload-beta on 2026-04-20 — empirical evidence that
+            // managed-pkg describe behavior isn't what a simple mental model
+            // suggests. Comprehensive index sidesteps the guessing game.
             Map<String, Schema.SObjectField> byLocalName =
                 new Map<String, Schema.SObjectField>();
-            for (Schema.SObjectField sf : fieldMap.values()) {
-                byLocalName.put(sf.getDescribe().getLocalName().toLowerCase(), sf);
+            for (String mapKey : fieldMap.keySet()) {
+                Schema.SObjectField sf = fieldMap.get(mapKey);
+                Schema.DescribeFieldResult dfr = sf.getDescribe();
+                byLocalName.put(mapKey.toLowerCase(), sf);
+                byLocalName.put(dfr.getLocalName().toLowerCase(), sf);
+                byLocalName.put(dfr.getName().toLowerCase(), sf);
             }
             Boolean anyFieldAssigned = false;
             for (String fieldKey : fields.keySet()) {
