@@ -2898,6 +2898,22 @@ var NimbusGanttApp = (function(exports) {
         }
       });
       rowMain.appendChild(unpinBtn);
+      const hostBtns = config.titleBarButtons || [];
+      hostBtns.forEach((b) => {
+        const cls = CLS_PILL_BTN_BASE + " " + (b.pressed ? CLS_PILL_BTN_ACTIVE_BLUE : CLS_PILL_BTN_IDLE_BLUE);
+        const btn = el$1("button", cls);
+        btn.type = "button";
+        btn.textContent = b.label;
+        if (b.title) btn.title = b.title;
+        btn.setAttribute("data-nga-host-btn", b.id);
+        btn.addEventListener("click", () => {
+          try {
+            b.onClick();
+          } catch (_e) {
+          }
+        });
+        rowMain.appendChild(btn);
+      });
       const fsApi = resolveFullscreenApi();
       const fsUrl = config.fullscreenUrl;
       const onCurrentFsUrl = !!(fsUrl && typeof location !== "undefined" && location.pathname === fsUrl);
@@ -4827,6 +4843,7 @@ var NimbusGanttApp = (function(exports) {
       if (options.engine) tplConfig.engine = options.engine;
       if (options.recordUrlTemplate) tplConfig.recordUrlTemplate = options.recordUrlTemplate;
       if (options.fieldSchema) tplConfig.fieldSchema = options.fieldSchema;
+      if (options.titleBarButtons) tplConfig.titleBarButtons = options.titleBarButtons;
       tplConfig.features.enableDragReparent = options.enableDragReparent === true;
       try {
         console.log("[NG config] enableDragReparent=", tplConfig.features.enableDragReparent);
@@ -6210,6 +6227,14 @@ var NimbusGanttApp = (function(exports) {
             if (typeof x === "number") (_d2 = (_c2 = gi.scrollManager) == null ? void 0 : _c2.scrollToX) == null ? void 0 : _d2.call(_c2, Math.max(0, x));
           } catch (_e2) {
           }
+        },
+        /** 0.185.26 — runtime update of host-supplied TitleBar buttons. Pass
+         *  the full desired array (not a diff); replacing `pressed` state on
+         *  an existing button is the typical use. Re-renders slots so the
+         *  TitleBar picks up the new array immediately — no remount. */
+        setTitleBarButtons(buttons) {
+          tplConfig.titleBarButtons = buttons;
+          renderSlots();
         },
         /** 0.185 — visual-only revert. Restores `original` on every buffered
          *  task and clears the buffer. Host never sees a callback. Use when
