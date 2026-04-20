@@ -388,6 +388,91 @@ public with sharing class DeliveryGanttController {
         }
     }
 
+    /**
+     * @description Generic field-level patch endpoint. Applies an arbitrary
+     *              Map<String,Object> of field writes to a single WorkItem__c.
+     *              Built for NG's TaskEditModal fieldSchema — caller passes
+     *              whatever fields the template exposes (status, assignee,
+     *              parent, comments, etc.). FLS is checked per field; fields
+     *              not updateable by the running user are silently skipped
+     *              rather than failing the whole patch.
+     *              Field API names must match the WorkItem__c sObject's field
+     *              map exactly (unprefixed for package-owned fields — e.g.,
+     *              'StageNamePk__c', not 'delivery__StageNamePk__c'). Date
+     *              fields accept either Date or ISO 'YYYY-MM-DD' strings;
+     *              other types are passed through to sObject.put() as-is.
+     * @param workItemId The Salesforce record Id.
+     * @param fields Map of field API name → new value. Unknown or non-
+     *               updateable fields are skipped.
+     */
+    @AuraEnabled
+    public static void updateWorkItemFields(String workItemId, Map<String, Object> fields) {
+        if (String.isBlank(workItemId)) {
+            throw new AuraHandledException('workItemId is required');
+        }
+        if (fields == null || fields.isEmpty()) {
+            return; // nothing to do, no-op rather than error
+        }
+        try {
+            Id rid = Id.valueOf(workItemId);
+            WorkItem__c item = new WorkItem__c(Id = rid);
+            Map<String, Schema.SObjectField> fieldMap =
+                WorkItem__c.SObjectType.getDescribe().fields.getMap();
+            Boolean anyFieldAssigned = false;
+            for (String fieldKey : fields.keySet()) {
+                if (String.isBlank(fieldKey)) {
+                    continue;
+                }
+                Schema.SObjectField fToken = fieldMap.get(fieldKey.toLowerCase());
+                if (fToken == null) {
+                    continue; // unknown field — skip silently, don't fail the whole patch
+                }
+                Schema.DescribeFieldResult dfr = fToken.getDescribe();
+                if (!dfr.isUpdateable()) {
+                    continue; // FLS: caller lacks edit on this field — skip
+                }
+                Object rawValue = fields.get(fieldKey);
+                Object coerced = coerceFieldValue(dfr, rawValue);
+                item.put(fToken, coerced);
+                anyFieldAssigned = true;
+            }
+            if (!anyFieldAssigned) {
+                return; // all fields were unknown or not updateable — no DML needed
+            }
+            update item; //NOPMD - with sharing class handles CRUD; as user breaks managed package tests
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
+        }
+    }
+
+    /**
+     * @description Coerce caller-supplied JSON-ish values into the types the
+     *              sObject's put() expects. LWC JSON marshals Date fields as
+     *              ISO strings, but put() on a Date field requires a Date.
+     *              Similarly for DateTime. Other types pass through.
+     * @param dfr Field describe for type introspection.
+     * @param raw Caller-supplied value (from a Map<String,Object> payload).
+     * @return Value coerced to the type sObject.put expects, or null when the
+     *         caller passed an empty string for a date/datetime field.
+     */
+    private static Object coerceFieldValue(Schema.DescribeFieldResult dfr, Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        Schema.DisplayType t = dfr.getType();
+        if (t == Schema.DisplayType.DATE && raw instanceof String) {
+            String s = (String) raw;
+            return String.isBlank(s) ? null : Date.valueOf(s);
+        }
+        if (t == Schema.DisplayType.DATETIME && raw instanceof String) {
+            String s = (String) raw;
+            return String.isBlank(s) ? null : (Datetime) JSON.deserialize('"' + s + '"', Datetime.class);
+        }
+        return raw;
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     //  PRO FORMA TIMELINE — ported from cloudnimbusllc.com /mf/delivery-timeline-v5
     // ═══════════════════════════════════════════════════════════════════════
