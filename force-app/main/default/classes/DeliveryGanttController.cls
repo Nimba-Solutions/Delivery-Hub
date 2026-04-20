@@ -442,6 +442,10 @@ public with sharing class DeliveryGanttController {
         @AuraEnabled public String entityName { get; set; }
         /** @description True when the item has no ActivatedDateTime__c (completed/archived) */
         @AuraEnabled public Boolean isInactive { get; set; }
+        /** @description User-defined sort position within a priority group — set by
+         *  drag-to-reorder in the timeline. Lower values appear first. Null when
+         *  the item has never been reordered; LWC maps null → 0. */
+        @AuraEnabled public Decimal sortOrder { get; set; }
     }
 
     /** Stages where work is actively moving forward (bucket = active or top-priority) */
@@ -520,7 +524,7 @@ public with sharing class DeliveryGanttController {
     public static List<ProFormaTimelineRow> getProFormaTimelineData(Boolean showCompleted) {
         try {
             String query = 'SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, '
-                + 'PriorityPk__c, PriorityGroupPk__c, '
+                + 'PriorityPk__c, PriorityGroupPk__c, SortOrderNumber__c, '
                 + 'EstimatedStartDevDate__c, EstimatedEndDevDate__c, '
                 + 'ProjectedUATReadyDate__c, CalculatedETADate__c, '
                 + 'CreatedDate, LastModifiedDate, '
@@ -538,8 +542,13 @@ public with sharing class DeliveryGanttController {
                 query += 'AND ActivatedDateTime__c != null ';
             }
 
+            // SortOrderNumber__c is the primary sort — drag-to-reorder writes it,
+            // and NG groups tasks by priorityGroup client-side, so returning them
+            // sorted keeps within-group order deterministic across refetches.
+            // NULLS LAST so never-reordered items fall to the tail of each group.
             query += 'WITH SYSTEM_MODE '
-                + 'ORDER BY ClientNetworkEntityLookup__r.Name ASC NULLS LAST, '
+                + 'ORDER BY SortOrderNumber__c ASC NULLS LAST, '
+                + 'ClientNetworkEntityLookup__r.Name ASC NULLS LAST, '
                 + 'EstimatedStartDevDate__c ASC NULLS LAST, CreatedDate ASC';
 
             List<WorkItem__c> items = Database.query(query); // NOPMD — dynamic for conditional WHERE
@@ -572,6 +581,7 @@ public with sharing class DeliveryGanttController {
         row.loggedHours = item.TotalLoggedHoursSum__c;
         row.isInactive = item.ActivatedDateTime__c == null;
         row.parentWorkItemId = item.ParentWorkItemLookup__c;
+        row.sortOrder = item.SortOrderNumber__c;
 
         if (item.EstimatedHoursNumber__c != null && item.EstimatedHoursNumber__c > 0) {
             Decimal logged = item.TotalLoggedHoursSum__c != null ? item.TotalLoggedHoursSum__c : 0;
