@@ -947,6 +947,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             '  __cnEdit.reorder(id, newIndex)',
             '  __cnEdit.setParent(id, parentId|null)',
             '  __cnEdit.scrollToDate(date) -> scroll timeline to focus on date (NG 0.185.1+)',
+            '  __cnEdit.toggleHeader()   -> show/hide the Salesforce page header chrome',
             '  __cnEdit.submit(note?)    -> no-op (DH writes every patch immediately)',
             '  __cnEdit.reset()          -> no-op (reload page to refetch)',
             '',
@@ -987,6 +988,18 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             },
             setParent: function (id, parentId) {
                 return self._handlePatch({ id: id, parentId: parentId || null });
+            },
+            toggleHeader: function () {
+                // Toggles the SLDS page header / FlexiPage chrome hide-CSS.
+                // Embedded Timeline tab opens header-hidden; call this from
+                // the console to reveal the SF chrome (and call again to
+                // hide). A proper toolbar button in NG is TBD.
+                if (document.getElementById('dh-gantt-fs-chrome-hide')) {
+                    self._uninstallFullscreenChromeHide();
+                    return { ok: true, headerVisible: true };
+                }
+                self._installFullscreenChromeHide();
+                return { ok: true, headerVisible: false };
             },
             scrollToDate: function (date) {
                 // NG 0.185.1+ exposes scrollToDate on the mount handle.
