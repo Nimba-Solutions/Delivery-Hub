@@ -255,6 +255,12 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             // from localStorage wins over initialFocusDate — so returning
             // users keep their saved pan position, new users land on today.
             initialFocusDate: new Date().toISOString().slice(0, 10),
+            // NG 0.185.4+ renders the task ID in DetailPanel as an <a target="_top">
+            // with {id} replaced. Namespace-aware via _vfPrefix() so scratch gets
+            // "/lightning/r/WorkItem__c/..." and subscriber gets
+            // "/lightning/r/delivery__WorkItem__c/...". Library never navigates
+            // itself — it just wraps the text; the browser handles the link.
+            recordUrlTemplate: `/lightning/r/${this._vfPrefix()}WorkItem__c/{id}/view`,
             chromeVisibleDefault: !this.chromeHiddenDefault,
             features: {
                 hoursColumn: true,
@@ -349,6 +355,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 features: mountConfig.features,
                 initialViewport: mountConfig.initialViewport,
                 initialFocusDate: mountConfig.initialFocusDate,
+                recordUrlTemplate: mountConfig.recordUrlTemplate,
                 mountedAt: new Date().toISOString(),
             };
             // eslint-disable-next-line no-console
@@ -658,10 +665,25 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
 
     async _refetchAfterPatch() {
         try {
+            // eslint-disable-next-line no-console
+            console.log('[DH refetch] starting — mountHandle type=', typeof this._mountHandle, 'keys=', this._mountHandle ? Object.keys(this._mountHandle) : 'no handle');
             const data = await getProFormaTimelineData({ showCompleted: false });
             this._tasks = data || [];
-            if (this._mountHandle && typeof this._mountHandle.updateTasks === 'function') {
-                this._mountHandle.updateTasks(this._mapTasksForNg(this._tasks));
+            // eslint-disable-next-line no-console
+            console.log('[DH refetch] fetched', this._tasks.length, 'tasks. Sample sortOrder values:', this._tasks.slice(0, 5).map(t => ({ id: t.id, so: t.sortOrder })));
+            const setTasksType = this._mountHandle ? typeof this._mountHandle.setTasks : 'no handle';
+            // eslint-disable-next-line no-console
+            console.log('[DH refetch] handle.setTasks typeof=', setTasksType);
+            if (this._mountHandle && typeof this._mountHandle.setTasks === 'function') {
+                const mapped = this._mapTasksForNg(this._tasks);
+                // eslint-disable-next-line no-console
+                console.log('[DH refetch] calling setTasks with', mapped.length, 'tasks');
+                this._mountHandle.setTasks(mapped);
+                // eslint-disable-next-line no-console
+                console.log('[DH refetch] setTasks returned');
+            } else {
+                // eslint-disable-next-line no-console
+                console.warn('[DH refetch] NG handle missing setTasks — visual state will not refresh');
             }
         } catch (error) {
             // eslint-disable-next-line no-console
@@ -677,9 +699,17 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     }
 
     _handleExitFullscreen() {
+        // NavigationMixin standard__navItemPage with an unprefixed apiName
+        // fails silently under LWS strict mode on managed-namespace subscriber
+        // orgs — the nav "succeeds" but the target never resolves. Confirmed
+        // inert on MF-Prod 2026-04-20. standard__webPage with a direct URL
+        // routes through a different path that respects VF-iframe boundaries
+        // and honors the namespace prefix reliably.
+        const prefix = this._vfPrefix();
+        const url = `/lightning/n/${prefix}${EMBEDDED_TAB_API_NAME}`;
         this[NavigationMixin.Navigate]({
-            type: 'standard__navItemPage',
-            attributes: { apiName: EMBEDDED_TAB_API_NAME },
+            type: 'standard__webPage',
+            attributes: { url },
         });
     }
 
