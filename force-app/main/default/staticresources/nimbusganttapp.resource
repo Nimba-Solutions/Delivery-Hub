@@ -425,7 +425,7 @@ var NimbusGanttApp = (function(exports) {
       }
     };
   }
-  function startDragReparent(ganttContainer, allTasks, depthMap, onPatch) {
+  function startDragReparent(ganttContainer, allTasks, depthMap, onPatch, isReparentEnabled = () => false) {
     const DRAG_THRESHOLD = 6;
     const LEAF_STEP = 10;
     const INDENT_BASE = 6;
@@ -471,6 +471,7 @@ var NimbusGanttApp = (function(exports) {
         ganttContainer.querySelectorAll(".ng-grid-row:not(.ng-group-row)")
       );
       const vis = allRows.filter((r) => r !== dragRow && r !== spacer);
+      const reparentOn = isReparentEnabled();
       const groupRows = Array.prototype.slice.call(
         ganttContainer.querySelectorAll(".ng-group-row")
       );
@@ -482,7 +483,7 @@ var NimbusGanttApp = (function(exports) {
           break;
         }
       }
-      if (overGroupRow) {
+      if (overGroupRow && reparentOn) {
         const tid = overGroupRow.getAttribute("data-task-id") || "";
         let bucket = "";
         if (tid.indexOf("__bucket_header__") === 0) bucket = tid.slice("__bucket_header__".length);
@@ -502,13 +503,15 @@ var NimbusGanttApp = (function(exports) {
         };
       }
       let nestIntoRow = null;
-      for (const row of vis) {
-        const rect = row.getBoundingClientRect();
-        const nestTop = rect.top + rect.height * 0.25;
-        const nestBottom = rect.top + rect.height * 0.75;
-        if (clientY >= nestTop && clientY <= nestBottom) {
-          nestIntoRow = row;
-          break;
+      if (reparentOn) {
+        for (const row of vis) {
+          const rect = row.getBoundingClientRect();
+          const nestTop = rect.top + rect.height * 0.25;
+          const nestBottom = rect.top + rect.height * 0.75;
+          if (clientY >= nestTop && clientY <= nestBottom) {
+            nestIntoRow = row;
+            break;
+          }
         }
       }
       const targetBucket = getGroupAtY(clientY) || dragSourceGroup || "";
@@ -547,25 +550,35 @@ var NimbusGanttApp = (function(exports) {
           };
         }
       }
+      const targetBucketForHitTest = getGroupAtY(clientY) || dragSourceGroup || "";
+      const bucketVis = targetBucketForHitTest ? vis.filter((r) => {
+        const id = r.getAttribute("data-task-id");
+        if (!id) return false;
+        const t = taskById[id];
+        return !!t && (t.priorityGroup || "") === targetBucketForHitTest;
+      }) : vis;
       let rowAbove = null;
       let rowBelow = null;
-      for (let i = 0; i < vis.length; i++) {
-        const rect = vis[i].getBoundingClientRect();
+      for (let i = 0; i < bucketVis.length; i++) {
+        const rect = bucketVis[i].getBoundingClientRect();
         if (clientY < rect.top + rect.height / 2) {
-          rowBelow = vis[i];
+          rowBelow = bucketVis[i];
           break;
         }
-        rowAbove = vis[i];
+        rowAbove = bucketVis[i];
       }
       const aboveId = rowAbove ? rowAbove.getAttribute("data-task-id") : null;
       const belowId = rowBelow ? rowBelow.getAttribute("data-task-id") : null;
       const aboveDepth = aboveId != null ? depthMap[aboveId] || 0 : -1;
       const aboveHasExpand = !!(rowAbove && rowAbove.querySelector(".ng-expand-icon"));
       const maxDepth = rowAbove == null ? 0 : aboveHasExpand ? aboveDepth + 1 : aboveDepth;
-      const depthDelta = Math.round((clientX - dragStartX) / 25);
+      const depthDelta = reparentOn ? Math.round((clientX - dragStartX) / 25) : 0;
       const desiredDepth = Math.max(0, Math.min(maxDepth, dragStartDepth + depthDelta));
       let parentId = null;
-      if (desiredDepth > 0) {
+      if (!reparentOn) {
+        const currentTask = dragTaskId ? taskById[dragTaskId] : null;
+        parentId = currentTask ? currentTask.parentWorkItemId || null : null;
+      } else if (desiredDepth > 0) {
         let curId = aboveId;
         while (curId) {
           const d = depthMap[curId] || 0;
@@ -577,10 +590,68 @@ var NimbusGanttApp = (function(exports) {
           curId = it ? it.parentWorkItemId : null;
         }
       }
-      const sortAbove = aboveId ? getSortOrder(aboveId) : 0;
-      const sortBelow = belowId ? getSortOrder(belowId) : sortAbove + 2;
-      const aboveIdx = rowAbove ? vis.indexOf(rowAbove) : -1;
-      const targetSort = sortAbove !== sortBelow ? (sortAbove + sortBelow) / 2 : aboveIdx >= 0 ? (aboveIdx + 1) * 1e3 : 500;
+      const sortAbove = aboveId ? getSortOrder(aboveId) : NaN;
+      const sortBelow = belowId ? getSortOrder(belowId) : NaN;
+      const aboveIdx = rowAbove ? bucketVis.indexOf(rowAbove) : -1;
+      const belowIdx = rowBelow ? bucketVis.indexOf(rowBelow) : -1;
+      let targetSort;
+      if (!rowAbove && !rowBelow) {
+        targetSort = 1e3;
+      } else if (!rowAbove) {
+        targetSort = sortBelow > 1e3 ? sortBelow - 1e3 : sortBelow / 2;
+      } else if (!rowBelow) {
+        targetSort = sortAbove + 1e3;
+      } else if (sortAbove !== sortBelow) {
+        targetSort = (sortAbove + sortBelow) / 2;
+      } else {
+        let lo = -Infinity;
+        for (let i = aboveIdx - 1; i >= 0; i--) {
+          const id = bucketVis[i].getAttribute("data-task-id");
+          if (!id) continue;
+          const s = getSortOrder(id);
+          if (s < sortAbove) {
+            lo = s;
+            break;
+          }
+        }
+        let hi = Infinity;
+        for (let i = belowIdx + 1; i < bucketVis.length; i++) {
+          const id = bucketVis[i].getAttribute("data-task-id");
+          if (!id) continue;
+          const s = getSortOrder(id);
+          if (s > sortBelow) {
+            hi = s;
+            break;
+          }
+        }
+        if (isFinite(lo) && isFinite(hi)) {
+          targetSort = (lo + hi) / 2;
+        } else if (isFinite(lo)) {
+          targetSort = sortAbove + 1e3;
+        } else if (isFinite(hi)) {
+          targetSort = sortBelow - 1e3;
+        } else {
+          targetSort = sortAbove + 1e3;
+        }
+      }
+      try {
+        console.log(
+          "[NG dragReparent] targetSort computed",
+          "clientY=",
+          clientY,
+          "aboveId=",
+          aboveId,
+          "aboveSort=",
+          sortAbove,
+          "belowId=",
+          belowId,
+          "belowSort=",
+          sortBelow,
+          "→ targetSort=",
+          targetSort
+        );
+      } catch (_e) {
+      }
       return { parentId, depth: desiredDepth, targetBucket, targetSortOrder: targetSort, insertBeforeRow: rowBelow, nestIntoRow: null, deparent: false };
     }
     function cleanupDrag() {
@@ -2204,7 +2275,8 @@ var NimbusGanttApp = (function(exports) {
     pendingPatchCount: 0,
     adminOpen: false,
     advisorOpen: false,
-    featureOverrides: {}
+    featureOverrides: {},
+    openDetailTaskIds: []
   };
   function reduceAppState(state, event) {
     switch (event.type) {
@@ -2226,14 +2298,32 @@ var NimbusGanttApp = (function(exports) {
         return { ...state, statsOpen: !state.statsOpen };
       case "TOGGLE_DETAIL": {
         const opening = event.taskId !== void 0;
+        if (opening) {
+          const tid = event.taskId;
+          const existing = state.openDetailTaskIds.filter((id) => id !== tid);
+          return {
+            ...state,
+            detailOpen: true,
+            selectedTaskId: tid,
+            detailMode: event.editMode ? "edit" : "view",
+            openDetailTaskIds: [...existing, tid]
+          };
+        }
         return {
           ...state,
-          detailOpen: opening ? true : !state.detailOpen,
-          selectedTaskId: opening ? event.taskId : state.selectedTaskId,
-          // When opening: use editMode payload (default 'view'). When closing
-          // or toggling (no taskId): keep existing detailMode — v10 dblclick
-          // sets editMode:true, plain click leaves it 'view'.
-          detailMode: opening ? event.editMode ? "edit" : "view" : state.detailMode
+          detailOpen: !state.detailOpen,
+          detailMode: state.detailMode,
+          openDetailTaskIds: state.detailOpen ? [] : state.openDetailTaskIds
+        };
+      }
+      case "CLOSE_DETAIL": {
+        const next = state.openDetailTaskIds.filter((id) => id !== event.taskId);
+        const nextSelected = next.length > 0 ? next[next.length - 1] : null;
+        return {
+          ...state,
+          openDetailTaskIds: next,
+          detailOpen: next.length > 0,
+          selectedTaskId: nextSelected
         };
       }
       case "SET_DETAIL_MODE":
@@ -2621,6 +2711,46 @@ var NimbusGanttApp = (function(exports) {
   };
   const ZOOMS$2 = ["day", "week", "month", "quarter"];
   const GROUPS = ["priority", "epic"];
+  function resolveFullscreenApi() {
+    if (typeof document === "undefined") return null;
+    const doc = document;
+    try {
+      void doc.fullscreenElement;
+    } catch (_e) {
+      return null;
+    }
+    try {
+      if (typeof window !== "undefined" && window.top !== window.self) return null;
+    } catch (_e) {
+      return null;
+    }
+    const request = (el2) => {
+      const anyEl2 = el2;
+      if (anyEl2.requestFullscreen) return anyEl2.requestFullscreen();
+      if (anyEl2.webkitRequestFullscreen) return anyEl2.webkitRequestFullscreen();
+      if (anyEl2.msRequestFullscreen) return anyEl2.msRequestFullscreen();
+      return Promise.reject(new Error("Fullscreen API not supported"));
+    };
+    const exit = () => {
+      try {
+        if (doc.exitFullscreen) return doc.exitFullscreen();
+        if (doc.webkitExitFullscreen) return doc.webkitExitFullscreen();
+        if (doc.msExitFullscreen) return doc.msExitFullscreen();
+      } catch (_e) {
+      }
+      return Promise.reject(new Error("exitFullscreen not supported"));
+    };
+    const element = () => {
+      try {
+        return doc.fullscreenElement || doc.webkitFullscreenElement || doc.msFullscreenElement || null;
+      } catch (_e) {
+        return null;
+      }
+    };
+    const anyEl = document.documentElement;
+    if (!anyEl.requestFullscreen && !anyEl.webkitRequestFullscreen) return null;
+    return { request, exit, element };
+  }
   const CLS_GROUP_BOTH = "bg-indigo-600 text-white border-indigo-600";
   const CLS_GROUP_GANTT = "bg-indigo-100 text-indigo-700 border-indigo-400";
   const CLS_GROUP_SIDE = "bg-blue-100 text-blue-700 border-blue-400";
@@ -2761,83 +2891,53 @@ var NimbusGanttApp = (function(exports) {
         }
       });
       rowMain.appendChild(unpinBtn);
+      const fsApi = resolveFullscreenApi();
       const fsUrl = config.fullscreenUrl;
       const onCurrentFsUrl = !!(fsUrl && typeof location !== "undefined" && location.pathname === fsUrl);
-      try {
-        console.log(
-          "[NG fs-btn render]",
-          "mode=",
-          config.mode,
-          "fsUrl=",
-          fsUrl || "(none)",
-          "location=",
-          typeof location !== "undefined" ? location.pathname : "(no-loc)",
-          "onCurrentFsUrl=",
-          onCurrentFsUrl,
-          "hasOnEnter=",
-          typeof config.onEnterFullscreen === "function",
-          "hasOnExit=",
-          typeof config.onExitFullscreen === "function"
-        );
-      } catch (_e) {
-      }
       if (!onCurrentFsUrl) {
         const hostExit = config.mode === "fullscreen" && typeof config.onExitFullscreen === "function";
-        const active = state.fullscreen || hostExit;
+        const useFsApi = !fsUrl && !hostExit && !!fsApi;
+        const fsApiActive = !!(fsApi && fsApi.element());
+        const active = state.fullscreen || hostExit || fsApiActive;
         const fsBtn = el$1(
           "button",
           CLS_PILL_BTN_BASE + " " + (active ? CLS_RIGHT_FS_ON : CLS_RIGHT_FS_OFF)
         );
         if (fsUrl) {
-          fsBtn.textContent = "Fullscreen";
+          fsBtn.textContent = "Full Screen";
           fsBtn.setAttribute("data-nga-fullscreen-url", "1");
           fsBtn.addEventListener("click", () => {
-            try {
-              console.log("[NG fs-btn click] path=url-nav target=", fsUrl);
-            } catch (_e) {
-            }
-            try {
-              window.location.href = fsUrl;
-            } catch (err) {
-              try {
-                console.error("[NG fs-btn click] url-nav threw", err);
-              } catch (_e) {
-              }
-            }
+            window.location.href = fsUrl;
           });
         } else if (hostExit) {
           fsBtn.textContent = "← Exit Full Screen";
           fsBtn.setAttribute("data-nga-fullscreen-exit", "1");
           fsBtn.addEventListener("click", () => {
+            config.onExitFullscreen();
+          });
+        } else if (useFsApi) {
+          fsBtn.textContent = fsApiActive ? "← Exit Full Screen" : "Full Screen";
+          fsBtn.setAttribute("data-nga-fullscreen-api", "1");
+          fsBtn.addEventListener("click", async () => {
             try {
-              console.log("[NG fs-btn click] path=host-exit invoking config.onExitFullscreen");
-            } catch (_e) {
-            }
-            try {
-              config.onExitFullscreen();
+              if (fsApi.element()) {
+                await fsApi.exit();
+              } else {
+                const target = root.closest("[data-nga-template-root]") || root.parentElement || document.documentElement;
+                await fsApi.request(target);
+              }
             } catch (err) {
               try {
-                console.error("[NG fs-btn click] host-exit threw", err);
+                console.error("[NG fs-btn] Fullscreen API threw", err);
               } catch (_e) {
               }
             }
           });
         } else {
-          fsBtn.textContent = state.fullscreen ? "Exit Fullscreen" : "Fullscreen";
-          fsBtn.addEventListener("click", () => {
-            try {
-              console.log("[NG fs-btn click] path=toggle-state");
-            } catch (_e) {
-            }
-            dispatch({ type: "TOGGLE_FULLSCREEN" });
-          });
+          fsBtn.textContent = state.fullscreen ? "Exit Full Screen" : "Full Screen";
+          fsBtn.addEventListener("click", () => dispatch({ type: "TOGGLE_FULLSCREEN" }));
         }
         rowMain.appendChild(fsBtn);
-      } else {
-        try {
-          console.log("[NG fs-btn] HIDDEN — onCurrentFsUrl true, no button rendered");
-        } catch (_e) {
-        }
       }
       const adminOn = !!state.adminOpen;
       const adminBtn = el$1(
@@ -2955,6 +3055,9 @@ var NimbusGanttApp = (function(exports) {
     searchInput.type = "text";
     searchInput.placeholder = "Search T-NNNN, title, owner…";
     function render(p) {
+      const hadSearchFocus = document.activeElement === searchInput;
+      const selStart = hadSearchFocus ? searchInput.selectionStart : null;
+      const selEnd = hadSearchFocus ? searchInput.selectionEnd : null;
       clear(inner);
       const { config, state, dispatch, data } = p;
       const viewLbl = el$1("span", CLS_FILTERBAR_LABEL);
@@ -3039,6 +3142,18 @@ var NimbusGanttApp = (function(exports) {
         rst.textContent = "Reset changes";
         rst.addEventListener("click", () => dispatch({ type: "RESET_PATCHES" }));
         inner.appendChild(rst);
+      }
+      if (hadSearchFocus) {
+        try {
+          searchInput.focus();
+        } catch (_e) {
+        }
+        if (selStart !== null && selEnd !== null) {
+          try {
+            searchInput.setSelectionRange(selStart, selEnd);
+          } catch (_e) {
+          }
+        }
       }
     }
     render(initial);
@@ -3420,21 +3535,46 @@ var NimbusGanttApp = (function(exports) {
       }
     };
   }
-  function DetailPanelVanilla(initial) {
+  function DetailPanelVanilla(initial, forTaskId) {
     const root = el$1("div", CLS_DETAIL);
     root.setAttribute("data-slot", "DetailPanel");
-    let draftStart = "";
-    let draftEnd = "";
+    if (forTaskId) root.setAttribute("data-task-id", forTaskId);
+    let drafts = {};
     let lastRenderedKey = "";
+    let panelX = null;
+    let panelY = null;
+    let headerDragging = false;
+    let headerDragStartX = 0;
+    let headerDragStartY = 0;
+    let headerDragOrigX = 0;
+    let headerDragOrigY = 0;
+    function onHeaderDragMove(e) {
+      if (!headerDragging) return;
+      const dx = e.clientX - headerDragStartX;
+      const dy = e.clientY - headerDragStartY;
+      panelX = headerDragOrigX + dx;
+      panelY = headerDragOrigY + dy;
+      root.style.left = panelX + "px";
+      root.style.top = panelY + "px";
+      root.style.right = "";
+      root.style.bottom = "";
+    }
+    function onHeaderDragEnd() {
+      headerDragging = false;
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onHeaderDragMove);
+      window.removeEventListener("mouseup", onHeaderDragEnd);
+    }
     function render(p) {
       var _a;
       clear(root);
       const { state, data, dispatch } = p;
-      if (!state.selectedTaskId) {
+      const targetId = forTaskId || state.selectedTaskId;
+      if (!targetId) {
         root.style.display = "none";
         return;
       }
-      const task = data.tasks.find((t) => String(t.id) === state.selectedTaskId);
+      const task = data.tasks.find((t) => String(t.id) === targetId);
       if (!task) {
         root.style.display = "none";
         return;
@@ -3442,19 +3582,60 @@ var NimbusGanttApp = (function(exports) {
       root.style.display = "";
       const editing = state.detailMode === "edit";
       const catColor = "#64748b";
-      root.style.bottom = "80px";
-      root.style.right = "24px";
+      if (panelX != null && panelY != null) {
+        root.style.left = panelX + "px";
+        root.style.top = panelY + "px";
+        root.style.right = "";
+        root.style.bottom = "";
+      } else {
+        root.style.bottom = "80px";
+        root.style.right = "24px";
+        root.style.left = "";
+        root.style.top = "";
+      }
       root.style.width = "380px";
       root.style.borderColor = catColor;
       root.setAttribute("data-detail-mode", state.detailMode);
-      const renderKey = `${task.id}|${editing ? 1 : 0}|${task.startDate || ""}|${task.endDate || ""}`;
+      const schema = p.config.fieldSchema;
+      const schemaKey = schema ? schema.map((f) => f.key).join(",") : "";
+      const renderKey = `${task.id}|${editing ? 1 : 0}|${task.startDate || ""}|${task.endDate || ""}|${schemaKey}`;
       if (renderKey !== lastRenderedKey) {
-        draftStart = task.startDate || "";
-        draftEnd = task.endDate || "";
+        drafts = {};
+        if (schema && schema.length) {
+          for (const f of schema) {
+            drafts[f.key] = task[f.key];
+          }
+        } else {
+          drafts.startDate = task.startDate || "";
+          drafts.endDate = task.endDate || "";
+        }
         lastRenderedKey = renderKey;
       }
       const header = el$1("div", CLS_DETAIL_HEADER);
       header.style.background = catColor + "15";
+      header.style.cursor = "move";
+      header.style.userSelect = "none";
+      header.addEventListener("mousedown", (e) => {
+        const target = e.target;
+        if (!target) return;
+        if (target.closest("button, a, input, select, textarea")) return;
+        e.preventDefault();
+        if (panelX == null || panelY == null) {
+          const rect = root.getBoundingClientRect();
+          const parent = root.parentElement;
+          const parentRect = parent ? parent.getBoundingClientRect() : { left: 0, top: 0 };
+          panelX = rect.left - parentRect.left;
+          panelY = rect.top - parentRect.top;
+        }
+        headerDragging = true;
+        headerDragStartX = e.clientX;
+        headerDragStartY = e.clientY;
+        headerDragOrigX = panelX;
+        headerDragOrigY = panelY;
+        document.body.style.userSelect = "none";
+        window.addEventListener("mousemove", onHeaderDragMove);
+        window.addEventListener("mouseup", onHeaderDragEnd);
+      });
       const lwrap = el$1("div", "flex items-center gap-2 min-w-0");
       const dot = el$1("span", "w-2.5 h-2.5 rounded-full flex-shrink-0");
       dot.style.background = catColor;
@@ -3478,7 +3659,21 @@ var NimbusGanttApp = (function(exports) {
       }
       lwrap.appendChild(idEl);
       const titleSp = el$1("span", "text-xs font-bold text-slate-900 truncate");
-      titleSp.textContent = task.title;
+      let dirty = false;
+      if (editing) {
+        const dirtyKeys = schema && schema.length ? schema.filter((f) => !f.readOnly).map((f) => f.key) : ["startDate", "endDate"];
+        for (const k of dirtyKeys) {
+          const dv = drafts[k];
+          const tv = task[k];
+          const dn = dv == null || dv === "" ? null : dv;
+          const tn = tv == null || tv === "" ? null : tv;
+          if (dn !== tn) {
+            dirty = true;
+            break;
+          }
+        }
+      }
+      titleSp.textContent = (dirty ? "• " : "") + task.title;
       lwrap.appendChild(titleSp);
       header.appendChild(lwrap);
       const rwrap = el$1("div", "flex items-center gap-1 flex-shrink-0 ml-2");
@@ -3497,7 +3692,10 @@ var NimbusGanttApp = (function(exports) {
       const closeBtn = el$1("button", "text-slate-400 hover:text-slate-700 text-sm px-1 transition-colors");
       closeBtn.textContent = "×";
       closeBtn.setAttribute("title", "Close");
-      closeBtn.addEventListener("click", () => dispatch({ type: "TOGGLE_DETAIL" }));
+      closeBtn.addEventListener("click", () => {
+        if (forTaskId) dispatch({ type: "CLOSE_DETAIL", taskId: forTaskId });
+        else dispatch({ type: "TOGGLE_DETAIL" });
+      });
       rwrap.appendChild(closeBtn);
       header.appendChild(rwrap);
       root.appendChild(header);
@@ -3510,44 +3708,92 @@ var NimbusGanttApp = (function(exports) {
       pillWrap.appendChild(pill);
       body.appendChild(pillWrap);
       const grid = el$1("div", "grid grid-cols-2 gap-x-4 gap-y-1.5 pt-1");
-      function fld(label, value) {
-        const w = el$1("div", "");
+      function fld(label, value, fullWidth = false) {
+        const w = el$1("div", fullWidth ? "col-span-2" : "");
         const l = el$1("p", "text-[9px] text-slate-400 uppercase tracking-wide");
         l.textContent = label;
-        const v = el$1("p", "text-slate-900");
+        const v = el$1("p", "text-slate-900 whitespace-pre-wrap");
         v.textContent = value;
         w.appendChild(l);
         w.appendChild(v);
         grid.appendChild(w);
       }
-      function inpField(label, type, value, onInput) {
-        const w = el$1("div", "");
+      function renderField(desc) {
+        const fullWidth = desc.type === "textarea";
+        const raw = drafts[desc.key];
+        const currentVal = raw == null ? "" : String(raw);
+        const readOnly = !!desc.readOnly;
+        if (!editing || readOnly) {
+          const displayVal = currentVal || "—";
+          fld(desc.label, displayVal, fullWidth);
+          return;
+        }
+        const w = el$1("div", fullWidth ? "col-span-2" : "");
         const l = el$1("p", "text-[9px] text-slate-400 uppercase tracking-wide");
-        l.textContent = label;
-        const input = document.createElement("input");
-        input.type = type;
-        input.value = value;
-        input.className = "w-full px-1.5 py-0.5 text-xs text-slate-900 border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-fuchsia-400";
-        input.addEventListener("input", () => onInput(input.value));
+        l.textContent = desc.label;
         w.appendChild(l);
-        w.appendChild(input);
+        const inputCls = "w-full px-1.5 py-0.5 text-xs text-slate-900 border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-fuchsia-400";
+        if (desc.type === "textarea") {
+          const ta = document.createElement("textarea");
+          ta.value = currentVal;
+          ta.rows = 3;
+          ta.className = inputCls + " resize-y";
+          if (desc.placeholder) ta.placeholder = desc.placeholder;
+          ta.addEventListener("input", () => {
+            drafts[desc.key] = ta.value;
+          });
+          w.appendChild(ta);
+        } else if (desc.type === "picklist") {
+          const sel = document.createElement("select");
+          sel.className = inputCls;
+          const blank = document.createElement("option");
+          blank.value = "";
+          blank.textContent = desc.placeholder || "—";
+          sel.appendChild(blank);
+          for (const opt of desc.options || []) {
+            const o = document.createElement("option");
+            o.value = opt;
+            o.textContent = opt;
+            if (opt === currentVal) o.selected = true;
+            sel.appendChild(o);
+          }
+          if (!currentVal) blank.selected = true;
+          sel.addEventListener("change", () => {
+            drafts[desc.key] = sel.value;
+          });
+          w.appendChild(sel);
+        } else {
+          const input = document.createElement("input");
+          input.type = desc.type === "number" ? "number" : desc.type === "date" ? "date" : "text";
+          input.value = currentVal;
+          input.className = inputCls;
+          if (desc.placeholder) input.placeholder = desc.placeholder;
+          if (desc.type === "number") {
+            if (desc.min !== void 0) input.min = String(desc.min);
+            if (desc.max !== void 0) input.max = String(desc.max);
+          }
+          input.addEventListener("input", () => {
+            drafts[desc.key] = desc.type === "number" ? input.value === "" ? null : Number(input.value) : input.value;
+          });
+          w.appendChild(input);
+        }
         grid.appendChild(w);
       }
-      fld("Status", task.stage || "—");
-      fld("Priority", task.priorityGroup || "—");
-      if (editing) {
-        inpField("Start", "date", draftStart, (v) => {
-          draftStart = v;
-        });
-        inpField("End", "date", draftEnd, (v) => {
-          draftEnd = v;
-        });
+      if (schema && schema.length) {
+        for (const desc of schema) renderField(desc);
       } else {
-        fld("Start", task.startDate || "—");
-        fld("End", task.endDate || "—");
+        fld("Status", task.stage || "—");
+        fld("Priority", task.priorityGroup || "—");
+        if (editing) {
+          renderField({ key: "startDate", label: "Start", type: "date" });
+          renderField({ key: "endDate", label: "End", type: "date" });
+        } else {
+          fld("Start", task.startDate || "—");
+          fld("End", task.endDate || "—");
+        }
+        fld("Estimated", task.estimatedHours ? task.estimatedHours + "h" : "—");
+        fld("Logged", task.loggedHours ? task.loggedHours + "h" : "—");
       }
-      fld("Estimated", task.estimatedHours ? task.estimatedHours + "h" : "—");
-      fld("Logged", task.loggedHours ? task.loggedHours + "h" : "—");
       body.appendChild(grid);
       if (editing) {
         const actions = el$1("div", "pt-2 border-t border-slate-100 flex gap-2");
@@ -3557,12 +3803,17 @@ var NimbusGanttApp = (function(exports) {
         );
         saveBtn.textContent = "Save";
         saveBtn.addEventListener("click", () => {
-          const patch = {
-            id: String(task.id)
-          };
-          if (draftStart !== (task.startDate || "")) patch.startDate = draftStart;
-          if (draftEnd !== (task.endDate || "")) patch.endDate = draftEnd;
-          if (patch.startDate !== void 0 || patch.endDate !== void 0) {
+          const changes = {};
+          const keys = schema && schema.length ? schema.filter((f) => !f.readOnly).map((f) => f.key) : ["startDate", "endDate"];
+          for (const k of keys) {
+            const draftVal = drafts[k];
+            const taskVal = task[k];
+            const dNorm = draftVal == null || draftVal === "" ? null : draftVal;
+            const tNorm = taskVal == null || taskVal === "" ? null : taskVal;
+            if (dNorm !== tNorm) changes[k] = draftVal;
+          }
+          if (Object.keys(changes).length > 0) {
+            const patch = { id: String(task.id), ...changes };
             dispatch({ type: "PATCH", patch });
           }
           dispatch({ type: "SET_DETAIL_MODE", mode: "view" });
@@ -3574,8 +3825,15 @@ var NimbusGanttApp = (function(exports) {
         );
         cancelBtn.textContent = "Cancel";
         cancelBtn.addEventListener("click", () => {
-          draftStart = task.startDate || "";
-          draftEnd = task.endDate || "";
+          if (schema && schema.length) {
+            drafts = {};
+            for (const f of schema) {
+              drafts[f.key] = task[f.key];
+            }
+          } else {
+            drafts.startDate = task.startDate || "";
+            drafts.endDate = task.endDate || "";
+          }
           dispatch({ type: "SET_DETAIL_MODE", mode: "view" });
         });
         actions.appendChild(cancelBtn);
@@ -3588,6 +3846,9 @@ var NimbusGanttApp = (function(exports) {
       el: root,
       update: render,
       destroy() {
+        window.removeEventListener("mousemove", onHeaderDragMove);
+        window.removeEventListener("mouseup", onHeaderDragEnd);
+        document.body.style.userSelect = "";
         clear(root);
         if (root.parentNode) root.parentNode.removeChild(root);
       }
@@ -3599,7 +3860,7 @@ var NimbusGanttApp = (function(exports) {
     const host = el$1("div", CLS_CONTENT);
     host.setAttribute("data-nga-gantt-host", "1");
     let sidebarInst = null;
-    let detailInst = null;
+    const detailInsts = /* @__PURE__ */ new Map();
     function render(p) {
       clear(root);
       if (p.state.sidebarOpen && p.config.features.sidebar) {
@@ -3616,13 +3877,28 @@ var NimbusGanttApp = (function(exports) {
         sidebarInst = null;
       }
       root.appendChild(host);
-      if (p.state.detailOpen && p.config.features.detailPanel) {
-        if (!detailInst) detailInst = DetailPanelVanilla(p);
-        else detailInst.update(p);
-        root.appendChild(detailInst.el);
-      } else if (detailInst) {
-        detailInst.destroy();
-        detailInst = null;
+      if (p.config.features.detailPanel) {
+        const openIds = p.state.openDetailTaskIds || [];
+        for (const [tid, inst] of detailInsts) {
+          if (!openIds.includes(tid)) {
+            inst.destroy();
+            detailInsts.delete(tid);
+          }
+        }
+        openIds.forEach((tid, index) => {
+          let inst = detailInsts.get(tid);
+          if (!inst) {
+            inst = DetailPanelVanilla(p, tid);
+            detailInsts.set(tid, inst);
+            const offset = index * 30;
+            inst.el.style.transform = `translate(-${offset}px, -${offset}px)`;
+          }
+          inst.update(p);
+          root.appendChild(inst.el);
+        });
+      } else if (detailInsts.size > 0) {
+        for (const inst of detailInsts.values()) inst.destroy();
+        detailInsts.clear();
       }
     }
     render(initial);
@@ -3631,7 +3907,8 @@ var NimbusGanttApp = (function(exports) {
       update: render,
       destroy() {
         if (sidebarInst) sidebarInst.destroy();
-        if (detailInst) detailInst.destroy();
+        for (const inst of detailInsts.values()) inst.destroy();
+        detailInsts.clear();
         clear(root);
         if (root.parentNode) root.parentNode.removeChild(root);
       }
@@ -4301,7 +4578,15 @@ var NimbusGanttApp = (function(exports) {
     { key: "depthShading", label: "Depth shading" },
     { key: "hoursColumn", label: "Hours column" },
     { key: "budgetUsedColumn", label: "Budget-used column" },
-    { key: "headerRowCompletionBar", label: "Header completion bar" }
+    { key: "headerRowCompletionBar", label: "Header completion bar" },
+    // 0.185.11 — drag-to-reparent. Default OFF. When ON: drop-onto-row
+    // middle = nest under, drop-on-bucket-header = deparent, horizontal
+    // drag changes depth. When OFF: pure reorder, no parent changes.
+    { key: "enableDragReparent", label: "Enable drag to reparent" },
+    // 0.185.16 — canvas-bar vertical drag reprioritize. Default OFF.
+    // When ON: vertical-dominant drag of a bar commits a reorder
+    // instead of shifting dates. Horizontal drags still shift dates.
+    { key: "enableDragBarToReprioritize", label: "Prioritize by Gantt bar" }
   ];
   function renderAdminPanel(container, state, dispatch, tplConfig) {
     const id = "nga-admin-panel";
@@ -4472,26 +4757,9 @@ var NimbusGanttApp = (function(exports) {
       "box-shadow:0 1px 2px rgba(0,0,0,0.04)",
       "cursor:pointer"
     ].join(";");
-    btn.addEventListener("click", () => {
-      try {
-        console.log("[NG fs-enter-btn click] invoking host onEnterFullscreen");
-      } catch (_e) {
-      }
-      try {
-        onClick();
-      } catch (err) {
-        try {
-          console.error("[NG fs-enter-btn click] onEnterFullscreen threw", err);
-        } catch (_e) {
-        }
-      }
-    });
+    btn.addEventListener("click", onClick);
     if (!container.style.position) container.style.position = "relative";
     container.appendChild(btn);
-    try {
-      console.log("[NG fs-enter-btn render] embedded-mode floating button attached");
-    } catch (_e) {
-    }
     return () => {
       try {
         btn.remove();
@@ -4542,6 +4810,17 @@ var NimbusGanttApp = (function(exports) {
       if (options.cssUrl) tplConfig.stylesheet = { ...tplConfig.stylesheet, url: options.cssUrl };
       if (options.engine) tplConfig.engine = options.engine;
       if (options.recordUrlTemplate) tplConfig.recordUrlTemplate = options.recordUrlTemplate;
+      if (options.fieldSchema) tplConfig.fieldSchema = options.fieldSchema;
+      tplConfig.features.enableDragReparent = options.enableDragReparent === true;
+      try {
+        console.log("[NG config] enableDragReparent=", tplConfig.features.enableDragReparent);
+      } catch (_e2) {
+      }
+      tplConfig.features.enableDragBarToReprioritize = options.enableDragBarToReprioritize === true;
+      try {
+        console.log("[NG config] enableDragBarToReprioritize=", tplConfig.features.enableDragBarToReprioritize);
+      } catch (_e2) {
+      }
       if (options.engineOnly) {
         let _syncToCanvas = function() {
           const f = applyFilter(allTasks2, state2.filter, state2.search);
@@ -4701,7 +4980,7 @@ var NimbusGanttApp = (function(exports) {
         let cleanupDrag2 = null;
         if (tplConfig.features.depthShading) cleanupShading2 = startDepthShading(ganttEl, depthMap2);
         if (tplConfig.features.dragReparent) cleanupDrag2 = startDragReparent(ganttEl, allTasks2, depthMap2, options.onPatch || (() => {
-        }));
+        }), () => !!tplConfig.features.enableDragReparent);
         const cleanup2 = () => {
           if (cleanupShading2) cleanupShading2();
           if (cleanupDrag2) cleanupDrag2();
@@ -4876,6 +5155,7 @@ var NimbusGanttApp = (function(exports) {
       container.className = "nga-root";
       container.setAttribute("data-template", tplConfig.templateName);
       container.setAttribute("data-mode", mode);
+      container.setAttribute("data-nga-template-root", "1");
       container.style.display = "flex";
       container.style.flexDirection = "column";
       container.style.overflow = "hidden";
@@ -5443,6 +5723,89 @@ var NimbusGanttApp = (function(exports) {
             if (!orig || orig.startDate !== s) changes.startDate = s;
             if (!orig || orig.endDate !== e) changes.endDate = e;
             onTaskEditAsync(task.id, s, e, changes);
+          },
+          // 0.185.16 — canvas bar vertical-drag reprioritize. Getter reads
+          // the live feature flag (via tplConfig.features.enableDragBarToReprioritize
+          // which is already reconciled by reconcileFeatureOverrides each
+          // state change). Callback resolves target row → newSortOrder +
+          // optional newPriorityGroup, then routes through the existing
+          // onItemReorder chain so DH's handler receives the same payload
+          // shape as the sidebar reorder path.
+          isBarReprioritizeEnabled: () => !!tplConfig.features.enableDragBarToReprioritize,
+          onBarReorderDrag: (task, targetTaskId, targetRowIndex, targetBucketId) => {
+            try {
+              console.log("[NG] main onBarReorderDrag received", task == null ? void 0 : task.id, "→ target=", targetTaskId, "rowIdx=", targetRowIndex, "bucket=", targetBucketId);
+            } catch (_e2) {
+            }
+            if (!task || !task.id || isBucketId(task.id)) return;
+            const srcTask = allTasks.find((t) => t.id === task.id);
+            if (!srcTask) return;
+            const tgtTask = targetTaskId && !isBucketId(targetTaskId) ? allTasks.find((t) => t.id === targetTaskId) : null;
+            const resolvedBucket = targetBucketId || (tgtTask && tgtTask.priorityGroup ? tgtTask.priorityGroup : null) || srcTask.priorityGroup || null;
+            const patch = { id: task.id };
+            if (resolvedBucket && resolvedBucket !== srcTask.priorityGroup) {
+              patch.priorityGroup = resolvedBucket;
+            }
+            const bucketTasks = allTasks.filter((t) => t.priorityGroup === resolvedBucket && t.id !== task.id).sort((a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0));
+            if (bucketTasks.length === 0) {
+              patch.sortOrder = 1e3;
+            } else if (!tgtTask || !bucketTasks.find((t) => t.id === tgtTask.id)) {
+              const maxSort = bucketTasks[bucketTasks.length - 1];
+              patch.sortOrder = (Number(maxSort.sortOrder) || 0) + 1e3;
+            } else {
+              const tgtIdx = bucketTasks.findIndex((t) => t.id === tgtTask.id);
+              const tgtSort = Number(tgtTask.sortOrder) || 0;
+              const srcSort = Number(srcTask.sortOrder) || 0;
+              const crossBucket = srcTask.priorityGroup !== resolvedBucket;
+              if (crossBucket) {
+                const prev = tgtIdx > 0 ? bucketTasks[tgtIdx - 1] : null;
+                if (prev) {
+                  const prevSort = Number(prev.sortOrder) || 0;
+                  patch.sortOrder = (prevSort + tgtSort) / 2;
+                } else {
+                  patch.sortOrder = tgtSort - 500;
+                }
+              } else {
+                if (srcSort < tgtSort) {
+                  const next = tgtIdx < bucketTasks.length - 1 ? bucketTasks[tgtIdx + 1] : null;
+                  if (next) {
+                    patch.sortOrder = (tgtSort + (Number(next.sortOrder) || 0)) / 2;
+                  } else {
+                    patch.sortOrder = tgtSort + 500;
+                  }
+                } else {
+                  const prev = tgtIdx > 0 ? bucketTasks[tgtIdx - 1] : null;
+                  if (prev) {
+                    patch.sortOrder = ((Number(prev.sortOrder) || 0) + tgtSort) / 2;
+                  } else {
+                    patch.sortOrder = tgtSort - 500;
+                  }
+                }
+              }
+            }
+            try {
+              console.log(
+                "[NG bar-reorder] emitting",
+                "src=",
+                task.id,
+                "srcSort=",
+                Number(srcTask.sortOrder) || 0,
+                "srcBucket=",
+                srcTask.priorityGroup,
+                "target=",
+                targetTaskId,
+                "targetBucket=",
+                targetBucketId,
+                "resolvedBucket=",
+                resolvedBucket,
+                "bucketTaskCount=",
+                bucketTasks.length,
+                "→ patch=",
+                JSON.stringify(patch)
+              );
+            } catch (_e2) {
+            }
+            interceptedOnPatch(patch);
           }
         });
         const findTaskById = (id) => id ? allTasks.find((t) => t.id === id) ?? null : null;
@@ -5530,7 +5893,7 @@ var NimbusGanttApp = (function(exports) {
         if (cleanupShading) cleanupShading();
         if (cleanupDrag) cleanupDrag();
         if (tplConfig.features.depthShading) cleanupShading = startDepthShading(ganttEl, depthMap);
-        if (tplConfig.features.dragReparent) cleanupDrag = startDragReparent(ganttEl, allTasks, depthMap, interceptedOnPatch);
+        if (tplConfig.features.dragReparent) cleanupDrag = startDragReparent(ganttEl, allTasks, depthMap, interceptedOnPatch, () => !!tplConfig.features.enableDragReparent);
         if (options.onViewportChange) {
           try {
             const wrapper = ganttEl.querySelector(".ng-scroll-wrapper");
@@ -5684,6 +6047,22 @@ var NimbusGanttApp = (function(exports) {
           }
         );
       }
+      const onFullscreenChange = () => {
+        try {
+          renderSlots();
+        } catch (_e2) {
+        }
+        try {
+          updateRepinButton();
+        } catch (_e2) {
+        }
+      };
+      try {
+        document.addEventListener("fullscreenchange", onFullscreenChange);
+        document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+        document.addEventListener("msfullscreenchange", onFullscreenChange);
+      } catch (_e2) {
+      }
       const cleanup = () => {
         if (cleanupShading) cleanupShading();
         if (cleanupDrag) cleanupDrag();
@@ -5694,6 +6073,12 @@ var NimbusGanttApp = (function(exports) {
           } catch (_e2) {
           }
           repinButtonEl = null;
+        }
+        try {
+          document.removeEventListener("fullscreenchange", onFullscreenChange);
+          document.removeEventListener("webkitfullscreenchange", onFullscreenChange);
+          document.removeEventListener("msfullscreenchange", onFullscreenChange);
+        } catch (_e2) {
         }
         if (ganttInst) {
           try {
