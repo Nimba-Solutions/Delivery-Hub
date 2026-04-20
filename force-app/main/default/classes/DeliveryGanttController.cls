@@ -371,56 +371,23 @@ public with sharing class DeliveryGanttController {
     }
 
     /**
-     * @description Moves a work item to a new position within its priority
-     *              group and re-spaces siblings to stable 1000-step values.
-     *              The `sortOrder` parameter is interpreted as the desired
-     *              POSITION (newIndex) within the lane, not as a raw
-     *              SortOrderNumber__c value — writing raw newIndex caused
-     *              collisions (two tasks at sortOrder=0) which made the
-     *              ORDER BY tiebreaker decide winner, producing the
-     *              snap-back-after-drag symptom. Atomic renumber here
-     *              guarantees strictly-ordered siblings after each drag.
+     * @description Writes NG's pre-computed sortOrder value directly to the
+     *              record. NG 0.183.1+ emits sparse, collision-safe values
+     *              (midpoint of neighbors: 500/1000/1500/2500...), so Apex
+     *              just persists what the client sends. Prior PR #662 added
+     *              an atomic renumber here that reinterpreted the parameter
+     *              as a position index — which broke reorder entirely for
+     *              NG clients passing sparse values (500 interpreted as
+     *              "move to index 500" → clamped to list size → task
+     *              bumped to bottom).
      * @param workItemId The Salesforce record Id.
-     * @param sortOrder  Desired position (newIndex) within the task's
-     *                   priority group; 0 = top. Clamped to [0, size].
+     * @param sortOrder  NG-computed SortOrderNumber__c value (sparse).
      */
     @AuraEnabled
     public static void updateWorkItemSortOrder(String workItemId, Decimal sortOrder) {
-        if (String.isBlank(workItemId)) {
-            throw new AuraHandledException('workItemId is required');
-        }
-        Integer newIndex = sortOrder == null ? 0 : Integer.valueOf(sortOrder);
         try {
-            WorkItem__c target = [
-                SELECT Id, PriorityGroupPk__c, SortOrderNumber__c
-                FROM WorkItem__c WHERE Id = :workItemId LIMIT 1
-            ];
-            String pg = target.PriorityGroupPk__c;
-            List<WorkItem__c> siblings = pg == null
-                ? [SELECT Id, SortOrderNumber__c FROM WorkItem__c
-                   WHERE PriorityGroupPk__c = null
-                   ORDER BY SortOrderNumber__c ASC NULLS LAST, Name ASC]
-                : [SELECT Id, SortOrderNumber__c FROM WorkItem__c
-                   WHERE PriorityGroupPk__c = :pg
-                   ORDER BY SortOrderNumber__c ASC NULLS LAST, Name ASC];
-            List<WorkItem__c> reordered = new List<WorkItem__c>();
-            for (WorkItem__c s : siblings) {
-                if (s.Id != target.Id) {
-                    reordered.add(s);
-                }
-            }
-            Integer clamped = Math.min(Math.max(newIndex, 0), reordered.size());
-            reordered.add(clamped, target);
-            List<WorkItem__c> toUpdate = new List<WorkItem__c>();
-            for (Integer i = 0; i < reordered.size(); i++) {
-                Decimal newSort = (i + 1) * 1000;
-                if (reordered[i].SortOrderNumber__c != newSort) {
-                    toUpdate.add(new WorkItem__c(Id = reordered[i].Id, SortOrderNumber__c = newSort));
-                }
-            }
-            if (!toUpdate.isEmpty()) {
-                update toUpdate; //NOPMD - with sharing class handles CRUD; as user breaks managed package tests
-            }
+            WorkItem__c item = new WorkItem__c(Id = workItemId, SortOrderNumber__c = sortOrder);
+            update item; //NOPMD - with sharing class handles CRUD; as user breaks managed package tests
         } catch (Exception e) {
             AuraHandledException ahe = new AuraHandledException(e.getMessage());
             ahe.setMessage(e.getMessage());
