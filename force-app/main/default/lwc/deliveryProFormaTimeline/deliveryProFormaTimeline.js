@@ -283,16 +283,30 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         if (this.mode === 'fullscreen') {
             mountConfig.onItemEdit = async (taskId, changes) => {
                 const id = this._normalizeTaskId(taskId);
+                // Stringify so empty Proxy vs populated object is distinguishable
+                // in the log. NG was silently nuking record dates: it fires
+                // onItemEdit with changes={} on every canvas drag-commit-move
+                // because dates flow via onTaskMove instead. Previous handler
+                // destructured undefined start/end and wrote null to both,
+                // wiping the record. Guard against empty payloads.
+                let changesLog = {};
+                try { changesLog = JSON.parse(JSON.stringify(changes || {})); } catch (e) { changesLog = { _unserializable: true }; }
                 // eslint-disable-next-line no-console
-                console.log('[DH onItemEdit inline]', { arg1Type: typeof taskId, resolvedId: id, changes });
+                console.log('[DH onItemEdit inline]', { arg1Type: typeof taskId, resolvedId: id, changes: changesLog });
                 if (!id) { throw new Error('[DH] onItemEdit missing taskId'); }
                 const { startDate, endDate } = changes || {};
+                if (startDate === undefined && endDate === undefined) {
+                    // eslint-disable-next-line no-console
+                    console.warn('[DH onItemEdit inline] empty changes payload — skipping updateWorkItemDates to avoid nulling the record dates');
+                    return;
+                }
                 await updateWorkItemDates({
                     workItemId: id,
                     startDate: startDate || null,
                     endDate: endDate || null,
                 });
-                this._scheduleRefetch();
+                // No refetch — NG holds optimistic state for the new dates.
+                // Refetch races the DB commit and setTasks(stale) clobbers.
             };
             mountConfig.onItemEditError = (taskId, error) => this._showError('Failed to save date change', error);
         }
@@ -419,6 +433,8 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     }
 
     async _handlePatch(patch) {
+        // eslint-disable-next-line no-console
+        console.log('[DH onPatch]', JSON.stringify(patch || {}));
         const { id, sortOrder, priorityGroup, parentId, startDate, endDate } = patch;
         const ops = [];
 
@@ -439,9 +455,13 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             }));
         }
 
+        if (ops.length === 0) return;
         try {
             await Promise.all(ops);
-            this._scheduleRefetch();
+            // No refetch — NG holds optimistic state for all mutation paths
+            // (reorder, date-edit, priority-group, parent). Refetch was racing
+            // the DB commit and setTasks(stale) was clobbering. Trust NG's
+            // local model on success; surface errors via toast.
         } catch (error) {
             this._showError('Failed to save change', error);
         }
@@ -463,12 +483,17 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         console.log('[DH onItemEdit]', { arg1Type: typeof arg1, resolvedTaskId: taskId, changes });
         if (!taskId) { throw new Error('[DH] onItemEdit missing taskId'); }
         const { startDate, endDate } = changes || {};
+        if (startDate === undefined && endDate === undefined) {
+            // eslint-disable-next-line no-console
+            console.warn('[DH onItemEdit] empty changes — skipping to avoid nulling dates');
+            return;
+        }
         await updateWorkItemDates({
             workItemId: taskId,
             startDate: startDate || null,
             endDate: endDate || null,
         });
-        this._scheduleRefetch();
+        // No refetch — NG holds optimistic state; refetch races commit.
     }
 
     _handleItemEditError(taskId, error) {
@@ -492,17 +517,13 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         // enumerated so we can spot if NG sends date info via reorder
         // (misclassified canvas horizontal drag).
         const p = payload || {};
+        // Stringify full payload so deparent flags + any NG-side metadata is
+        // visible. Earlier log omitted fields like `deparent: true` which NG
+        // emits for bucket-header drops; handler couldn't branch on them.
+        let fullPayloadJson = '';
+        try { fullPayloadJson = JSON.stringify(p); } catch (e) { fullPayloadJson = '[unserializable]'; }
         // eslint-disable-next-line no-console
-        console.log('[DH onItemReorder]', JSON.stringify({
-            arg1Type: typeof arg1,
-            resolvedTaskId: taskId,
-            newIndex: p.newIndex,
-            newParentId: p.newParentId,
-            newPriorityGroup: p.newPriorityGroup,
-            startDate: p.startDate,
-            endDate: p.endDate,
-            payloadKeys: Object.keys(p),
-        }));
+        console.log('[DH onItemReorder]', 'taskId=', taskId, 'payload=', fullPayloadJson);
         if (!taskId) { throw new Error('[DH] onItemReorder missing taskId'); }
         const { newIndex, newParentId, newPriorityGroup, startDate, endDate } = p;
         // If NG smuggled date info through the reorder callback (happens when
@@ -727,29 +748,34 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     }
 
     _handleExitFullscreen() {
-        // Exit fires from inside the VF /apex page rendered via Lightning
-        // Out in an iframe. NavigationMixin dispatches inside the iframe —
-        // the parent LEX never sees it. window.top.location breaks out of
-        // the iframe directly. Fallback chain: top → parent → self for
-        // surfaces where window.top is cross-origin-blocked.
+        // The VF page may be rendered:
+        //   (a) standalone at /apex/DeliveryGanttStandalone on the VF
+        //       subdomain (host ends .vf.force.com) — window.top === window
+        //   (b) inside a LEX Lightning Out iframe — window.top is LEX
+        // Case (a): relative /lightning/n/... resolves against the VF
+        // domain which has no /lightning path. Must navigate to absolute
+        // LEX URL. Case (b): window.top.location.href breaks out to LEX.
         const prefix = this._vfPrefix();
-        const url = `/lightning/n/${prefix}${EMBEDDED_TAB_API_NAME}`;
+        const path = `/lightning/n/${prefix}${EMBEDDED_TAB_API_NAME}`;
+        const host = window.location.hostname || '';
+        // VF host shape: "<instance>--<ns>.scratch.vf.force.com" or
+        // "<instance>.<mydomain>.vf.force.com". LEX host drops the --<ns>
+        // segment (or the plain vf. segment) and uses .lightning.force.com.
+        let lexHost = host.replace('.vf.force.com', '.lightning.force.com');
+        const nsPrefixMatch = lexHost.match(/^(.*?)--[^.]+\.(.*)$/);
+        if (nsPrefixMatch) {
+            lexHost = `${nsPrefixMatch[1]}.${nsPrefixMatch[2]}`;
+        }
+        const isVfHost = host.indexOf('.vf.force.com') !== -1;
+        const url = isVfHost ? `${window.location.protocol}//${lexHost}${path}` : path;
         try {
             if (window.top && window.top !== window) {
                 window.top.location.href = url;
                 return;
             }
         } catch (e) { /* cross-origin; fall through */ }
-        try {
-            if (window.parent && window.parent !== window) {
-                window.parent.location.href = url;
-                return;
-            }
-        } catch (e) { /* fall through */ }
-        this[NavigationMixin.Navigate]({
-            type: 'standard__webPage',
-            attributes: { url },
-        });
+        // Standalone VF or same-origin iframe — direct nav.
+        window.location.href = url;
     }
 
     _showError(prefix, error) {
