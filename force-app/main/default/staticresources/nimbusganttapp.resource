@@ -522,6 +522,10 @@ var NimbusGanttApp = (function(exports) {
         dragRow.style.outline = "";
       }
       document.body.style.cursor = "";
+      ganttContainer.querySelectorAll(".ng-group-row.ng-drop-target").forEach((row) => {
+        row.classList.remove("ng-drop-target");
+        row.style.boxShadow = "";
+      });
       dragTaskId = null;
       dragSourceGroup = null;
       dragRow = null;
@@ -617,6 +621,25 @@ var NimbusGanttApp = (function(exports) {
         const indent = INDENT_BASE + ip.depth * LEAF_STEP;
         const lbl = spacer.querySelector("td span");
         if (lbl) lbl.style.paddingLeft = indent + 8 + "px";
+      }
+      updateBucketHighlight(ip.targetBucket);
+    }
+    function updateBucketHighlight(targetBucket) {
+      const allGroupRows = ganttContainer.querySelectorAll(".ng-group-row");
+      allGroupRows.forEach((row) => {
+        row.classList.remove("ng-drop-target");
+        row.style.boxShadow = "";
+      });
+      if (!targetBucket || targetBucket === dragSourceGroup) return;
+      const target = Array.from(allGroupRows).find((row) => {
+        const tid = row.getAttribute("data-task-id") || "";
+        if (tid === `__bucket_header__${targetBucket}`) return true;
+        if (tid === `group-${targetBucket}`) return true;
+        return false;
+      });
+      if (target) {
+        target.classList.add("ng-drop-target");
+        target.style.boxShadow = "inset 0 0 0 2px #3b82f6";
       }
     }
     function onMouseUp(e) {
@@ -822,6 +845,7 @@ var NimbusGanttApp = (function(exports) {
     const expandedIds = /* @__PURE__ */ new Set();
     const progressLabel = (options == null ? void 0 : options.progressLabel) ?? "Budget Used";
     const hideRecordIds = (options == null ? void 0 : options.hideRecordIds) ?? true;
+    const onReorder = options == null ? void 0 : options.onReorder;
     const audits = /* @__PURE__ */ new Map();
     for (const t of tasks) audits.set(t.id, auditTask(t));
     const dupeIds = /* @__PURE__ */ new Set();
@@ -975,6 +999,129 @@ var NimbusGanttApp = (function(exports) {
       if (!clearLink) return;
       const anyFilter = filterChip !== "all" || search.trim() !== "" || sortKey !== "default";
       clearLink.style.display = anyFilter ? "" : "none";
+    }
+    let drgTaskId = null;
+    let drgGhost = null;
+    let drgLine = null;
+    let drgInsertAfter = null;
+    let drgInsertBefore = null;
+    function cleanupReorderDrag() {
+      if (drgGhost) {
+        drgGhost.remove();
+        drgGhost = null;
+      }
+      if (drgLine) {
+        drgLine.remove();
+        drgLine = null;
+      }
+      drgTaskId = null;
+      drgInsertAfter = null;
+      drgInsertBefore = null;
+      document.body.style.cursor = "";
+    }
+    function startReorderDrag(e, task) {
+      if (!onReorder) return;
+      e.preventDefault();
+      e.stopPropagation();
+      drgTaskId = task.id;
+      document.body.style.cursor = "grabbing";
+      drgGhost = document.createElement("div");
+      drgGhost.style.cssText = [
+        "position:fixed",
+        "z-index:10000",
+        "pointer-events:none",
+        `left:${e.clientX - 12}px`,
+        `top:${e.clientY - 14}px`,
+        "background:#dbeafe",
+        "border:2px solid #2563eb",
+        "border-radius:8px",
+        "padding:6px 12px",
+        "font-size:12px",
+        "font-weight:700",
+        "color:#1d4ed8",
+        "white-space:nowrap",
+        "max-width:320px",
+        "overflow:hidden",
+        "text-overflow:ellipsis",
+        "box-shadow:0 16px 40px rgba(37,99,235,0.4)",
+        "transform:rotate(-1.5deg) scale(1.04)"
+      ].join(";");
+      drgGhost.textContent = (task.title || task.name || task.id).slice(0, 60);
+      document.body.appendChild(drgGhost);
+      drgLine = document.createElement("div");
+      drgLine.style.cssText = [
+        "position:fixed",
+        "z-index:9999",
+        "pointer-events:none",
+        "height:2px",
+        "background:#3b82f6",
+        "box-shadow:0 0 4px rgba(59,130,246,0.5)",
+        "display:none"
+      ].join(";");
+      document.body.appendChild(drgLine);
+      window.addEventListener("mousemove", onReorderMove, true);
+      window.addEventListener("mouseup", onReorderUp, true);
+    }
+    function onReorderMove(e) {
+      if (!drgTaskId || !drgGhost) return;
+      drgGhost.style.left = e.clientX - 12 + "px";
+      drgGhost.style.top = e.clientY - 14 + "px";
+      const rows = Array.from(host.querySelectorAll('[data-list-row="1"]'));
+      let above = null;
+      let below = null;
+      for (const r of rows) {
+        const rect = r.getBoundingClientRect();
+        const mid = rect.top + rect.height / 2;
+        if (e.clientY < mid) {
+          below = r;
+          break;
+        }
+        above = r;
+      }
+      const aboveId = (above == null ? void 0 : above.getAttribute("data-task-id")) || null;
+      const belowId = (below == null ? void 0 : below.getAttribute("data-task-id")) || null;
+      drgInsertAfter = aboveId ? tasks.find((t) => t.id === aboveId) || null : null;
+      drgInsertBefore = belowId ? tasks.find((t) => t.id === belowId) || null : null;
+      if (drgLine) {
+        if (below) {
+          const rect = below.getBoundingClientRect();
+          drgLine.style.display = "block";
+          drgLine.style.left = rect.left + "px";
+          drgLine.style.top = rect.top - 1 + "px";
+          drgLine.style.width = rect.width + "px";
+        } else if (above) {
+          const rect = above.getBoundingClientRect();
+          drgLine.style.display = "block";
+          drgLine.style.left = rect.left + "px";
+          drgLine.style.top = rect.bottom - 1 + "px";
+          drgLine.style.width = rect.width + "px";
+        } else {
+          drgLine.style.display = "none";
+        }
+      }
+    }
+    function onReorderUp() {
+      window.removeEventListener("mousemove", onReorderMove, true);
+      window.removeEventListener("mouseup", onReorderUp, true);
+      const taskId = drgTaskId;
+      const after = drgInsertAfter;
+      const before = drgInsertBefore;
+      cleanupReorderDrag();
+      if (!taskId || !onReorder) return;
+      if (!after && !before) return;
+      const afterSort = after ? Number(after.sortOrder) || 0 : 0;
+      const beforeSort = before ? Number(before.sortOrder) || 0 : 0;
+      let newIndex;
+      if (after && before && afterSort !== beforeSort) {
+        newIndex = (afterSort + beforeSort) / 2;
+      } else if (after && !before) {
+        newIndex = afterSort + 1e3;
+      } else if (!after && before) {
+        newIndex = beforeSort - 1e3;
+      } else {
+        newIndex = afterSort + 500;
+      }
+      onReorder(taskId, { newIndex });
     }
     function resetAllFilters() {
       search = "";
@@ -1273,13 +1420,21 @@ var NimbusGanttApp = (function(exports) {
       drag.style.cssText = [
         "color:#cbd5e1",
         "font-size:14px",
-        "cursor:grab",
+        "cursor:" + (onReorder ? "grab" : "default"),
         "user-select:none",
-        "flex-shrink:0"
+        "flex-shrink:0",
+        "padding:0 4px"
       ].join(";");
       drag.textContent = "⠇";
-      drag.title = "Drag to reorder (coming in 0.183)";
+      drag.title = onReorder ? "Drag to reorder" : "Drag to reorder (disabled)";
+      drag.setAttribute("data-reorder-handle", "1");
+      drag.setAttribute("data-task-id", task.id);
+      if (onReorder) {
+        drag.addEventListener("mousedown", (e) => startReorderDrag(e, task));
+      }
       top.appendChild(drag);
+      row.setAttribute("data-list-row", "1");
+      row.setAttribute("data-task-id", task.id);
       const chev = el$1("span", "");
       chev.style.cssText = "color:#64748b;font-size:11px;flex-shrink:0;width:12px;text-align:center";
       chev.textContent = isExpanded ? "▼" : "▶";
@@ -2303,6 +2458,30 @@ var NimbusGanttApp = (function(exports) {
       v3.textContent = "v3 (Canvas)";
       rowMain.appendChild(v3);
       root.appendChild(rowMain);
+      const legend = el$1("div", "flex items-center gap-3 px-3 py-1 text-[10px] text-slate-500 border-t border-slate-100");
+      legend.setAttribute("data-slot-part", "status-legend");
+      const legendItems = [
+        { label: "In Flight", color: "#10b981" },
+        { label: "Next Up", color: "#3b82f6" },
+        { label: "Backlog", color: "#f59e0b" },
+        { label: "Blocked", color: "#ef4444" },
+        { label: "Paused", color: "#94a3b8" },
+        { label: "Done", color: "#cbd5e1" }
+      ];
+      const legendLabel = el$1("span", "text-[9px] text-slate-400 uppercase tracking-wide");
+      legendLabel.textContent = "Status";
+      legend.appendChild(legendLabel);
+      for (const item of legendItems) {
+        const chip = el$1("span", "flex items-center gap-1");
+        const dot = el$1("span", "");
+        dot.style.cssText = `width:8px;height:8px;border-radius:50%;background:${item.color};display:inline-block`;
+        chip.appendChild(dot);
+        const lbl = el$1("span", "");
+        lbl.textContent = item.label;
+        chip.appendChild(lbl);
+        legend.appendChild(chip);
+      }
+      root.appendChild(legend);
     }
     render(initial);
     return {
@@ -4765,7 +4944,13 @@ var NimbusGanttApp = (function(exports) {
         } else if (state.viewMode === "list") {
           renderAuditListView(ganttHost, allTasks, {
             progressLabel: tplConfig.progressLabel,
-            hideRecordIds: tplConfig.hideRecordIds
+            hideRecordIds: tplConfig.hideRecordIds,
+            // 0.185.5 — forward the host's onItemReorder contract so the
+            // list-view 3-dot handle persists drops through the same path
+            // the gantt sidebar uses.
+            onReorder: options.onItemReorder ? (taskId, payload) => {
+              void options.onItemReorder(taskId, payload);
+            } : void 0
           });
         } else {
           const labelMap = {
