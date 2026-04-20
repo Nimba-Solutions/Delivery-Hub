@@ -531,7 +531,13 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             return;
         }
         await Promise.all(ops);
-        this._scheduleRefetch();
+        // Intentional: do NOT refetch after reorder. NG has already applied
+        // the optimistic state and the Apex save persisted NG's sparse
+        // sortOrder value. A refetch here races the DB commit and can
+        // return pre-save rows, which setTasks() then pushes back into NG —
+        // producing the visual "snap-back" symptom even though the save
+        // succeeded. Reorder is trusted-optimistic; refetch only runs on
+        // error (handled by onItemReorderError) or other mutation paths.
     }
 
     _handleItemReorderError(taskId, error) {
@@ -597,6 +603,13 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 budgetUsedPercent,
                 developerName: r.developerName || '',
                 entityName: r.entityName || '',
+                // NG's TaskData spec uses `parentId`. Prior code emitted
+                // `parentWorkItemId` (mirroring the Apex field name), which
+                // NG silently ignored — tasks with parents always appeared
+                // root-level, so drag-to-parent saved to DB but never
+                // rendered as nested. Use NG's name. Keep parentWorkItemId
+                // alias too in case a plugin still reads the old key.
+                parentId: r.parentWorkItemId || null,
                 parentWorkItemId: r.parentWorkItemId || null,
                 sortOrder: Number(r.sortOrder) || 0,
                 isInactive: !!r.isInactive,
@@ -692,21 +705,37 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     }
 
     _handleEnterFullscreen() {
+        // standard__navItemPage with an unprefixed apiName is inert on
+        // namespaced scratch + LWS-strict subscriber orgs. standard__webPage
+        // with a direct URL is the reliable path.
+        const prefix = this._vfPrefix();
+        const url = `/apex/${prefix}DeliveryGanttStandalone`;
         this[NavigationMixin.Navigate]({
-            type: 'standard__navItemPage',
-            attributes: { apiName: FULLSCREEN_TAB_API_NAME },
+            type: 'standard__webPage',
+            attributes: { url },
         });
     }
 
     _handleExitFullscreen() {
-        // NavigationMixin standard__navItemPage with an unprefixed apiName
-        // fails silently under LWS strict mode on managed-namespace subscriber
-        // orgs — the nav "succeeds" but the target never resolves. Confirmed
-        // inert on MF-Prod 2026-04-20. standard__webPage with a direct URL
-        // routes through a different path that respects VF-iframe boundaries
-        // and honors the namespace prefix reliably.
+        // Exit fires from inside the VF /apex page rendered via Lightning
+        // Out in an iframe. NavigationMixin dispatches inside the iframe —
+        // the parent LEX never sees it. window.top.location breaks out of
+        // the iframe directly. Fallback chain: top → parent → self for
+        // surfaces where window.top is cross-origin-blocked.
         const prefix = this._vfPrefix();
         const url = `/lightning/n/${prefix}${EMBEDDED_TAB_API_NAME}`;
+        try {
+            if (window.top && window.top !== window) {
+                window.top.location.href = url;
+                return;
+            }
+        } catch (e) { /* cross-origin; fall through */ }
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.location.href = url;
+                return;
+            }
+        } catch (e) { /* fall through */ }
         this[NavigationMixin.Navigate]({
             type: 'standard__webPage',
             attributes: { url },
