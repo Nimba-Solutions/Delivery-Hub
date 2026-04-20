@@ -371,16 +371,56 @@ public with sharing class DeliveryGanttController {
     }
 
     /**
-     * @description Updates the sort order of a work item after a drag-to-reorder
-     *              action in the Gantt chart.
+     * @description Moves a work item to a new position within its priority
+     *              group and re-spaces siblings to stable 1000-step values.
+     *              The `sortOrder` parameter is interpreted as the desired
+     *              POSITION (newIndex) within the lane, not as a raw
+     *              SortOrderNumber__c value — writing raw newIndex caused
+     *              collisions (two tasks at sortOrder=0) which made the
+     *              ORDER BY tiebreaker decide winner, producing the
+     *              snap-back-after-drag symptom. Atomic renumber here
+     *              guarantees strictly-ordered siblings after each drag.
      * @param workItemId The Salesforce record Id.
-     * @param sortOrder  New sort position value.
+     * @param sortOrder  Desired position (newIndex) within the task's
+     *                   priority group; 0 = top. Clamped to [0, size].
      */
     @AuraEnabled
     public static void updateWorkItemSortOrder(String workItemId, Decimal sortOrder) {
+        if (String.isBlank(workItemId)) {
+            throw new AuraHandledException('workItemId is required');
+        }
+        Integer newIndex = sortOrder == null ? 0 : Integer.valueOf(sortOrder);
         try {
-            WorkItem__c item = new WorkItem__c(Id = workItemId, SortOrderNumber__c = sortOrder);
-            update item; //NOPMD - with sharing class handles CRUD; as user breaks managed package tests
+            WorkItem__c target = [
+                SELECT Id, PriorityGroupPk__c, SortOrderNumber__c
+                FROM WorkItem__c WHERE Id = :workItemId LIMIT 1
+            ];
+            String pg = target.PriorityGroupPk__c;
+            List<WorkItem__c> siblings = pg == null
+                ? [SELECT Id, SortOrderNumber__c FROM WorkItem__c
+                   WHERE PriorityGroupPk__c = null
+                   ORDER BY SortOrderNumber__c ASC NULLS LAST, Name ASC]
+                : [SELECT Id, SortOrderNumber__c FROM WorkItem__c
+                   WHERE PriorityGroupPk__c = :pg
+                   ORDER BY SortOrderNumber__c ASC NULLS LAST, Name ASC];
+            List<WorkItem__c> reordered = new List<WorkItem__c>();
+            for (WorkItem__c s : siblings) {
+                if (s.Id != target.Id) {
+                    reordered.add(s);
+                }
+            }
+            Integer clamped = Math.min(Math.max(newIndex, 0), reordered.size());
+            reordered.add(clamped, target);
+            List<WorkItem__c> toUpdate = new List<WorkItem__c>();
+            for (Integer i = 0; i < reordered.size(); i++) {
+                Decimal newSort = (i + 1) * 1000;
+                if (reordered[i].SortOrderNumber__c != newSort) {
+                    toUpdate.add(new WorkItem__c(Id = reordered[i].Id, SortOrderNumber__c = newSort));
+                }
+            }
+            if (!toUpdate.isEmpty()) {
+                update toUpdate; //NOPMD - with sharing class handles CRUD; as user breaks managed package tests
+            }
         } catch (Exception e) {
             AuraHandledException ahe = new AuraHandledException(e.getMessage());
             ahe.setMessage(e.getMessage());
@@ -442,6 +482,10 @@ public with sharing class DeliveryGanttController {
         @AuraEnabled public String entityName { get; set; }
         /** @description True when the item has no ActivatedDateTime__c (completed/archived) */
         @AuraEnabled public Boolean isInactive { get; set; }
+        /** @description User-defined sort position within a priority group — set by
+         *  drag-to-reorder in the timeline. Lower values appear first. Null when
+         *  the item has never been reordered; LWC maps null → 0. */
+        @AuraEnabled public Decimal sortOrder { get; set; }
     }
 
     /** Stages where work is actively moving forward (bucket = active or top-priority) */
@@ -520,7 +564,7 @@ public with sharing class DeliveryGanttController {
     public static List<ProFormaTimelineRow> getProFormaTimelineData(Boolean showCompleted) {
         try {
             String query = 'SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, '
-                + 'PriorityPk__c, PriorityGroupPk__c, '
+                + 'PriorityPk__c, PriorityGroupPk__c, SortOrderNumber__c, '
                 + 'EstimatedStartDevDate__c, EstimatedEndDevDate__c, '
                 + 'ProjectedUATReadyDate__c, CalculatedETADate__c, '
                 + 'CreatedDate, LastModifiedDate, '
@@ -538,8 +582,13 @@ public with sharing class DeliveryGanttController {
                 query += 'AND ActivatedDateTime__c != null ';
             }
 
+            // SortOrderNumber__c is the primary sort — drag-to-reorder writes it,
+            // and NG groups tasks by priorityGroup client-side, so returning them
+            // sorted keeps within-group order deterministic across refetches.
+            // NULLS LAST so never-reordered items fall to the tail of each group.
             query += 'WITH SYSTEM_MODE '
-                + 'ORDER BY ClientNetworkEntityLookup__r.Name ASC NULLS LAST, '
+                + 'ORDER BY SortOrderNumber__c ASC NULLS LAST, '
+                + 'ClientNetworkEntityLookup__r.Name ASC NULLS LAST, '
                 + 'EstimatedStartDevDate__c ASC NULLS LAST, CreatedDate ASC';
 
             List<WorkItem__c> items = Database.query(query); // NOPMD — dynamic for conditional WHERE
@@ -572,6 +621,7 @@ public with sharing class DeliveryGanttController {
         row.loggedHours = item.TotalLoggedHoursSum__c;
         row.isInactive = item.ActivatedDateTime__c == null;
         row.parentWorkItemId = item.ParentWorkItemLookup__c;
+        row.sortOrder = item.SortOrderNumber__c;
 
         if (item.EstimatedHoursNumber__c != null && item.EstimatedHoursNumber__c > 0) {
             Decimal logged = item.TotalLoggedHoursSum__c != null ? item.TotalLoggedHoursSum__c : 0;

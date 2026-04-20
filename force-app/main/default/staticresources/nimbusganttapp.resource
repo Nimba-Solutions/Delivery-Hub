@@ -437,7 +437,7 @@ var NimbusGanttApp = (function(exports) {
     let dragSourceGroup = null;
     let dragRow = null;
     let startY = 0, startX = 0, dragStartX = 0, dragStartDepth = 0;
-    let hasMoved = false, didDrag = false;
+    let hasMoved = false;
     let ghost = null;
     let spacer = null;
     let pendingIP = null;
@@ -471,6 +471,82 @@ var NimbusGanttApp = (function(exports) {
         ganttContainer.querySelectorAll(".ng-grid-row:not(.ng-group-row)")
       );
       const vis = allRows.filter((r) => r !== dragRow && r !== spacer);
+      const groupRows = Array.prototype.slice.call(
+        ganttContainer.querySelectorAll(".ng-group-row")
+      );
+      let overGroupRow = null;
+      for (const gr of groupRows) {
+        const rect = gr.getBoundingClientRect();
+        if (clientY >= rect.top && clientY <= rect.bottom) {
+          overGroupRow = gr;
+          break;
+        }
+      }
+      if (overGroupRow) {
+        const tid = overGroupRow.getAttribute("data-task-id") || "";
+        let bucket = "";
+        if (tid.indexOf("__bucket_header__") === 0) bucket = tid.slice("__bucket_header__".length);
+        else if (tid.indexOf("group-") === 0) bucket = tid.slice(6);
+        const bucketFinal = bucket || dragSourceGroup || "";
+        return {
+          parentId: null,
+          depth: 0,
+          targetBucket: bucketFinal,
+          // Put the deparented task at the top of the bucket (before any
+          // existing root-level tasks). Index-based value matches the
+          // sparse-int convention used elsewhere.
+          targetSortOrder: 500,
+          insertBeforeRow: null,
+          nestIntoRow: null,
+          deparent: true
+        };
+      }
+      let nestIntoRow = null;
+      for (const row of vis) {
+        const rect = row.getBoundingClientRect();
+        const nestTop = rect.top + rect.height * 0.25;
+        const nestBottom = rect.top + rect.height * 0.75;
+        if (clientY >= nestTop && clientY <= nestBottom) {
+          nestIntoRow = row;
+          break;
+        }
+      }
+      const targetBucket = getGroupAtY(clientY) || dragSourceGroup || "";
+      if (nestIntoRow) {
+        const targetId = nestIntoRow.getAttribute("data-task-id");
+        let cycleDetected = false;
+        if (targetId && dragTaskId) {
+          let cur = targetId;
+          while (cur) {
+            if (cur === dragTaskId) {
+              cycleDetected = true;
+              break;
+            }
+            const t = taskById[cur];
+            cur = t ? t.parentWorkItemId || null : null;
+          }
+        }
+        if (!cycleDetected && targetId) {
+          let maxChildSort = 0;
+          Object.keys(depthMap).forEach((id) => {
+            const t = taskById[id];
+            if (t && t.parentWorkItemId === targetId) {
+              const s = getSortOrder(id);
+              if (s > maxChildSort) maxChildSort = s;
+            }
+          });
+          const nestDepth = (depthMap[targetId] || 0) + 1;
+          return {
+            parentId: targetId,
+            depth: nestDepth,
+            targetBucket,
+            targetSortOrder: maxChildSort + 1e3,
+            insertBeforeRow: null,
+            nestIntoRow,
+            deparent: false
+          };
+        }
+      }
       let rowAbove = null;
       let rowBelow = null;
       for (let i = 0; i < vis.length; i++) {
@@ -505,8 +581,7 @@ var NimbusGanttApp = (function(exports) {
       const sortBelow = belowId ? getSortOrder(belowId) : sortAbove + 2;
       const aboveIdx = rowAbove ? vis.indexOf(rowAbove) : -1;
       const targetSort = sortAbove !== sortBelow ? (sortAbove + sortBelow) / 2 : aboveIdx >= 0 ? (aboveIdx + 1) * 1e3 : 500;
-      const targetBucket = getGroupAtY(clientY) || dragSourceGroup || "";
-      return { parentId, depth: desiredDepth, targetBucket, targetSortOrder: targetSort, insertBeforeRow: rowBelow };
+      return { parentId, depth: desiredDepth, targetBucket, targetSortOrder: targetSort, insertBeforeRow: rowBelow, nestIntoRow: null, deparent: false };
     }
     function cleanupDrag() {
       if (ghost) {
@@ -522,6 +597,19 @@ var NimbusGanttApp = (function(exports) {
         dragRow.style.outline = "";
       }
       document.body.style.cursor = "";
+      ganttContainer.querySelectorAll(".ng-group-row.ng-drop-target").forEach((row) => {
+        row.classList.remove("ng-drop-target");
+        row.style.boxShadow = "";
+      });
+      ganttContainer.querySelectorAll(".ng-nest-target").forEach((row) => {
+        row.classList.remove("ng-nest-target");
+        row.style.boxShadow = "";
+        row.style.background = "";
+      });
+      ganttContainer.querySelectorAll(".ng-deparent-target").forEach((row) => {
+        row.classList.remove("ng-deparent-target");
+        row.style.boxShadow = "";
+      });
       dragTaskId = null;
       dragSourceGroup = null;
       dragRow = null;
@@ -541,173 +629,156 @@ var NimbusGanttApp = (function(exports) {
       autoScrollRAF = requestAnimationFrame(tickAutoScroll);
     }
     function onMouseDown(e) {
-      var _a;
-      try {
-        console.log("[NG dragReparent] mousedown enter x=", e.clientX, "y=", e.clientY, "targetTag=", (_a = e.target) == null ? void 0 : _a.tagName);
-      } catch (_e) {
-      }
-      try {
-        const tgt = e.target;
-        if (!tgt) {
-          try {
-            console.log("[NG dragReparent] mousedown exit reason=null-target");
-          } catch (_e) {
-          }
-          return;
-        }
-        const row = tgt.closest(".ng-grid-row:not(.ng-group-row)");
-        if (!row) {
-          try {
-            console.log("[NG dragReparent] mousedown exit reason=not-grid-row");
-          } catch (_e) {
-          }
-          return;
-        }
-        const tag = e.target.tagName.toLowerCase();
-        if (tag === "input" || tag === "button" || tag === "select" || tag === "textarea") {
-          try {
-            console.log("[NG dragReparent] mousedown exit reason=form-control tag=", tag);
-          } catch (_e) {
-          }
-          return;
-        }
-        const taskId = row.getAttribute("data-task-id");
-        if (!taskId) {
-          try {
-            console.log("[NG dragReparent] mousedown exit reason=no-task-id");
-          } catch (_e) {
-          }
-          return;
-        }
-        const grp = getGroup(taskId) || getGroupAtY(e.clientY) || "";
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        dragTaskId = taskId;
-        dragSourceGroup = grp;
-        dragRow = row;
-        startY = e.clientY;
-        startX = e.clientX;
-        dragStartX = e.clientX;
-        dragStartDepth = depthMap[taskId] || 0;
-        hasMoved = false;
-        didDrag = false;
-        pendingIP = null;
-        document.body.style.cursor = "grabbing";
-        row.style.outline = "2px solid #3b82f6";
-        try {
-          console.log("[NG dragReparent] mousedown exit reason=row-drag-armed taskId=", taskId, "grp=", grp);
-        } catch (_e) {
-        }
-      } catch (err) {
-        try {
-          const stack = err && err.stack ? err.stack : String(err);
-          const msg = err && err.message ? err.message : String(err);
-          console.error("[NG dragReparent] mousedown threw msg=", msg, " stack=", stack);
-        } catch (_e) {
-        }
-      }
+      const row = e.target.closest(".ng-grid-row:not(.ng-group-row)");
+      if (!row) return;
+      const tag = e.target.tagName.toLowerCase();
+      if (tag === "input" || tag === "button" || tag === "select" || tag === "textarea") return;
+      const taskId = row.getAttribute("data-task-id");
+      if (!taskId) return;
+      const grp = getGroup(taskId) || getGroupAtY(e.clientY) || "";
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      dragTaskId = taskId;
+      dragSourceGroup = grp;
+      dragRow = row;
+      startY = e.clientY;
+      startX = e.clientX;
+      dragStartX = e.clientX;
+      dragStartDepth = depthMap[taskId] || 0;
+      hasMoved = false;
+      pendingIP = null;
+      document.body.style.cursor = "grabbing";
+      row.style.outline = "2px solid #3b82f6";
     }
     function onMouseMove(e) {
-      try {
-        if (!dragTaskId || !dragRow) return;
-        const dx = e.clientX - startX, dy = e.clientY - startY;
-        if (!hasMoved && (Math.abs(dy) > DRAG_THRESHOLD || Math.abs(dx) > DRAG_THRESHOLD)) {
-          hasMoved = true;
-          didDrag = true;
-          const firstCell = dragRow.querySelector("td");
-          ghost = document.createElement("div");
-          ghost.style.cssText = "position:fixed;z-index:10000;pointer-events:none;left:" + (e.clientX - 16) + "px;top:" + (e.clientY - 18) + "px;background:#dbeafe;border:2px solid #2563eb;border-radius:8px;box-shadow:0 16px 40px rgba(37,99,235,0.4);padding:6px 12px;font-size:12px;font-weight:700;color:#1d4ed8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:grabbing;transform:rotate(-1.5deg) scale(1.04);display:flex;align-items:center;gap:8px;max-width:320px";
-          ghost.innerHTML = '<span style="opacity:.6;font-size:14px">⠇</span><span style="overflow:hidden;text-overflow:ellipsis">' + (firstCell ? firstCell.innerText.replace(/\s+/g, " ").slice(0, 60) : "") + "</span>";
-          document.body.appendChild(ghost);
-          const tbody = dragRow.parentElement;
-          if (tbody) {
-            spacer = document.createElement("tr");
-            spacer.setAttribute("data-drag-spacer", "1");
-            spacer.style.pointerEvents = "none";
-            const numCols = dragRow.querySelectorAll("td").length || 6;
-            const td = document.createElement("td");
-            td.setAttribute("colspan", String(numCols));
-            td.style.cssText = "padding:0;height:34px;background:rgba(59,130,246,0.07);border-top:2px solid #3b82f6;border-bottom:2px solid rgba(59,130,246,0.3)";
-            const span = document.createElement("span");
-            span.style.cssText = "display:flex;align-items:center;height:100%;padding-left:10px;font-size:10px;font-weight:700;color:#3b82f6;letter-spacing:.05em;opacity:.7";
-            span.textContent = "↓ drop here";
-            td.appendChild(span);
-            spacer.appendChild(td);
-            tbody.insertBefore(spacer, dragRow.nextSibling);
-          }
-          dragRow.style.opacity = "0.25";
-          dragRow.style.outline = "";
+      if (!dragTaskId || !dragRow) return;
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      if (!hasMoved && (Math.abs(dy) > DRAG_THRESHOLD || Math.abs(dx) > DRAG_THRESHOLD)) {
+        hasMoved = true;
+        const firstCell = dragRow.querySelector("td");
+        ghost = document.createElement("div");
+        ghost.style.cssText = "position:fixed;z-index:10000;pointer-events:none;left:" + (e.clientX - 16) + "px;top:" + (e.clientY - 18) + "px;background:#dbeafe;border:2px solid #2563eb;border-radius:8px;box-shadow:0 16px 40px rgba(37,99,235,0.4);padding:6px 12px;font-size:12px;font-weight:700;color:#1d4ed8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:grabbing;transform:rotate(-1.5deg) scale(1.04);display:flex;align-items:center;gap:8px;max-width:320px";
+        ghost.innerHTML = '<span style="opacity:.6;font-size:14px">⠇</span><span style="overflow:hidden;text-overflow:ellipsis">' + (firstCell ? firstCell.innerText.replace(/\s+/g, " ").slice(0, 60) : "") + "</span>";
+        document.body.appendChild(ghost);
+        const tbody = dragRow.parentElement;
+        if (tbody) {
+          spacer = document.createElement("tr");
+          spacer.setAttribute("data-drag-spacer", "1");
+          spacer.style.pointerEvents = "none";
+          const numCols = dragRow.querySelectorAll("td").length || 6;
+          const td = document.createElement("td");
+          td.setAttribute("colspan", String(numCols));
+          td.style.cssText = "padding:0;height:34px;background:rgba(59,130,246,0.07);border-top:2px solid #3b82f6;border-bottom:2px solid rgba(59,130,246,0.3)";
+          const span = document.createElement("span");
+          span.style.cssText = "display:flex;align-items:center;height:100%;padding-left:10px;font-size:10px;font-weight:700;color:#3b82f6;letter-spacing:.05em;opacity:.7";
+          span.textContent = "↓ drop here";
+          td.appendChild(span);
+          spacer.appendChild(td);
+          tbody.insertBefore(spacer, dragRow.nextSibling);
         }
-        if (!hasMoved) return;
-        if (ghost) {
-          ghost.style.left = e.clientX - 12 + "px";
-          ghost.style.top = e.clientY - 14 + "px";
-        }
-        const scrollEl = findScrollEl();
-        if (scrollEl) {
-          const sr = scrollEl.getBoundingClientRect(), EDGE = 60, MAX = 18;
-          let v = 0;
-          if (e.clientY < sr.top + EDGE) v = -Math.ceil(MAX * Math.min(1, (sr.top + EDGE - e.clientY) / EDGE));
-          else if (e.clientY > sr.bottom - EDGE) v = Math.ceil(MAX * Math.min(1, (e.clientY - (sr.bottom - EDGE)) / EDGE));
-          autoScrollVel = v;
-          if (v !== 0 && autoScrollRAF == null) autoScrollRAF = requestAnimationFrame(tickAutoScroll);
-        }
-        const ip = getInsertionPoint(e.clientY, e.clientX);
-        pendingIP = ip;
-        if (spacer) {
-          const tb = dragRow ? dragRow.parentElement : null;
-          if (tb) {
-            if (ip.insertBeforeRow && ip.insertBeforeRow !== spacer) tb.insertBefore(spacer, ip.insertBeforeRow);
-            else if (!ip.insertBeforeRow) tb.appendChild(spacer);
-          }
+        dragRow.style.opacity = "0.25";
+        dragRow.style.outline = "";
+      }
+      if (!hasMoved) return;
+      if (ghost) {
+        ghost.style.left = e.clientX - 12 + "px";
+        ghost.style.top = e.clientY - 14 + "px";
+      }
+      const scrollEl = findScrollEl();
+      if (scrollEl) {
+        const sr = scrollEl.getBoundingClientRect(), EDGE = 60, MAX = 18;
+        let v = 0;
+        if (e.clientY < sr.top + EDGE) v = -Math.ceil(MAX * Math.min(1, (sr.top + EDGE - e.clientY) / EDGE));
+        else if (e.clientY > sr.bottom - EDGE) v = Math.ceil(MAX * Math.min(1, (e.clientY - (sr.bottom - EDGE)) / EDGE));
+        autoScrollVel = v;
+        if (v !== 0 && autoScrollRAF == null) autoScrollRAF = requestAnimationFrame(tickAutoScroll);
+      }
+      const ip = getInsertionPoint(e.clientY, e.clientX);
+      pendingIP = ip;
+      if (spacer) {
+        const tb = dragRow ? dragRow.parentElement : null;
+        if (ip.nestIntoRow || ip.deparent) {
+          if (tb && spacer.parentElement === tb) spacer.remove();
+        } else if (tb) {
+          if (ip.insertBeforeRow && ip.insertBeforeRow !== spacer) tb.insertBefore(spacer, ip.insertBeforeRow);
+          else if (!ip.insertBeforeRow) tb.appendChild(spacer);
           const indent = INDENT_BASE + ip.depth * LEAF_STEP;
           const lbl = spacer.querySelector("td span");
           if (lbl) lbl.style.paddingLeft = indent + 8 + "px";
         }
-      } catch (err) {
-        try {
-          const stack = err && err.stack ? err.stack : String(err);
-          const msg = err && err.message ? err.message : String(err);
-          console.error("[NG dragReparent] mousemove threw msg=", msg, " stack=", stack);
-        } catch (_e) {
-        }
+      }
+      updateBucketHighlight(ip.deparent ? null : ip.targetBucket);
+      updateNestHighlight(ip.nestIntoRow);
+      updateDeparentHighlight(ip.deparent ? getGroupRowForBucket(ip.targetBucket) : null);
+    }
+    function getGroupRowForBucket(bucket) {
+      if (!bucket) return null;
+      const rows = ganttContainer.querySelectorAll(".ng-group-row");
+      for (const row of Array.from(rows)) {
+        const tid = row.getAttribute("data-task-id") || "";
+        if (tid === `__bucket_header__${bucket}` || tid === `group-${bucket}`) return row;
+      }
+      return null;
+    }
+    function updateDeparentHighlight(target) {
+      ganttContainer.querySelectorAll(".ng-deparent-target").forEach((row) => {
+        row.classList.remove("ng-deparent-target");
+        row.style.boxShadow = "";
+      });
+      if (!target) return;
+      target.classList.add("ng-deparent-target");
+      target.style.boxShadow = "inset 0 0 0 3px #f59e0b";
+    }
+    function updateNestHighlight(target) {
+      const prev = ganttContainer.querySelectorAll(".ng-nest-target");
+      prev.forEach((row) => {
+        row.classList.remove("ng-nest-target");
+        row.style.boxShadow = "";
+        row.style.background = "";
+      });
+      if (!target) return;
+      target.classList.add("ng-nest-target");
+      target.style.boxShadow = "inset 0 0 0 2px #10b981";
+      target.style.background = "rgba(16,185,129,0.08)";
+    }
+    function updateBucketHighlight(targetBucket) {
+      const allGroupRows = ganttContainer.querySelectorAll(".ng-group-row");
+      allGroupRows.forEach((row) => {
+        row.classList.remove("ng-drop-target");
+        row.style.boxShadow = "";
+      });
+      if (!targetBucket || targetBucket === dragSourceGroup) return;
+      const target = Array.from(allGroupRows).find((row) => {
+        const tid = row.getAttribute("data-task-id") || "";
+        if (tid === `__bucket_header__${targetBucket}`) return true;
+        if (tid === `group-${targetBucket}`) return true;
+        return false;
+      });
+      if (target) {
+        target.classList.add("ng-drop-target");
+        target.style.boxShadow = "inset 0 0 0 2px #3b82f6";
       }
     }
     function onMouseUp(e) {
-      try {
-        console.log("[NG dragReparent] mouseup enter dragTaskId=", dragTaskId, "hasMoved=", hasMoved, "pendingIP=", !!pendingIP);
-      } catch (_e) {
+      autoScrollVel = 0;
+      if (autoScrollRAF != null) {
+        cancelAnimationFrame(autoScrollRAF);
+        autoScrollRAF = null;
       }
-      try {
-        void e;
-        autoScrollVel = 0;
-        if (autoScrollRAF != null) {
-          cancelAnimationFrame(autoScrollRAF);
-          autoScrollRAF = null;
-        }
-        const savedId = dragTaskId, savedGroup = dragSourceGroup, savedMoved = hasMoved, ip = pendingIP;
-        cleanupDrag();
-        if (!savedId) return;
-        if (!savedMoved) return;
-        if (!ip) return;
-        if (ip.targetBucket && ip.targetBucket !== savedGroup) {
-          onPatch({ id: savedId, priorityGroup: ip.targetBucket });
-        }
-        const currentParent = taskById[savedId] ? taskById[savedId].parentWorkItemId : void 0;
-        if (ip.parentId !== currentParent) {
-          onPatch({ id: savedId, parentId: ip.parentId || null });
-        }
-        onPatch({ id: savedId, sortOrder: ip.targetSortOrder });
-        void didDrag;
-      } catch (err) {
-        try {
-          const stack = err && err.stack ? err.stack : String(err);
-          const msg = err && err.message ? err.message : String(err);
-          console.error("[NG dragReparent] mouseup threw msg=", msg, " stack=", stack);
-        } catch (_e) {
-        }
+      const savedId = dragTaskId, savedGroup = dragSourceGroup, savedMoved = hasMoved, ip = pendingIP;
+      cleanupDrag();
+      if (!savedId) return;
+      if (!savedMoved) return;
+      if (!ip) return;
+      if (ip.targetBucket && ip.targetBucket !== savedGroup) {
+        onPatch({ id: savedId, priorityGroup: ip.targetBucket });
       }
+      const currentParent = taskById[savedId] ? taskById[savedId].parentWorkItemId : void 0;
+      if (ip.parentId !== currentParent) {
+        onPatch({ id: savedId, parentId: ip.parentId || null });
+      }
+      onPatch({ id: savedId, sortOrder: ip.targetSortOrder });
     }
     ganttContainer.addEventListener("mousedown", onMouseDown, true);
     window.addEventListener("mousemove", onMouseMove, true);
@@ -892,6 +963,7 @@ var NimbusGanttApp = (function(exports) {
     const expandedIds = /* @__PURE__ */ new Set();
     const progressLabel = (options == null ? void 0 : options.progressLabel) ?? "Budget Used";
     const hideRecordIds = (options == null ? void 0 : options.hideRecordIds) ?? true;
+    const onReorder = options == null ? void 0 : options.onReorder;
     const audits = /* @__PURE__ */ new Map();
     for (const t of tasks) audits.set(t.id, auditTask(t));
     const dupeIds = /* @__PURE__ */ new Set();
@@ -1045,6 +1117,129 @@ var NimbusGanttApp = (function(exports) {
       if (!clearLink) return;
       const anyFilter = filterChip !== "all" || search.trim() !== "" || sortKey !== "default";
       clearLink.style.display = anyFilter ? "" : "none";
+    }
+    let drgTaskId = null;
+    let drgGhost = null;
+    let drgLine = null;
+    let drgInsertAfter = null;
+    let drgInsertBefore = null;
+    function cleanupReorderDrag() {
+      if (drgGhost) {
+        drgGhost.remove();
+        drgGhost = null;
+      }
+      if (drgLine) {
+        drgLine.remove();
+        drgLine = null;
+      }
+      drgTaskId = null;
+      drgInsertAfter = null;
+      drgInsertBefore = null;
+      document.body.style.cursor = "";
+    }
+    function startReorderDrag(e, task) {
+      if (!onReorder) return;
+      e.preventDefault();
+      e.stopPropagation();
+      drgTaskId = task.id;
+      document.body.style.cursor = "grabbing";
+      drgGhost = document.createElement("div");
+      drgGhost.style.cssText = [
+        "position:fixed",
+        "z-index:10000",
+        "pointer-events:none",
+        `left:${e.clientX - 12}px`,
+        `top:${e.clientY - 14}px`,
+        "background:#dbeafe",
+        "border:2px solid #2563eb",
+        "border-radius:8px",
+        "padding:6px 12px",
+        "font-size:12px",
+        "font-weight:700",
+        "color:#1d4ed8",
+        "white-space:nowrap",
+        "max-width:320px",
+        "overflow:hidden",
+        "text-overflow:ellipsis",
+        "box-shadow:0 16px 40px rgba(37,99,235,0.4)",
+        "transform:rotate(-1.5deg) scale(1.04)"
+      ].join(";");
+      drgGhost.textContent = (task.title || task.name || task.id).slice(0, 60);
+      document.body.appendChild(drgGhost);
+      drgLine = document.createElement("div");
+      drgLine.style.cssText = [
+        "position:fixed",
+        "z-index:9999",
+        "pointer-events:none",
+        "height:2px",
+        "background:#3b82f6",
+        "box-shadow:0 0 4px rgba(59,130,246,0.5)",
+        "display:none"
+      ].join(";");
+      document.body.appendChild(drgLine);
+      window.addEventListener("mousemove", onReorderMove, true);
+      window.addEventListener("mouseup", onReorderUp, true);
+    }
+    function onReorderMove(e) {
+      if (!drgTaskId || !drgGhost) return;
+      drgGhost.style.left = e.clientX - 12 + "px";
+      drgGhost.style.top = e.clientY - 14 + "px";
+      const rows = Array.from(host.querySelectorAll('[data-list-row="1"]'));
+      let above = null;
+      let below = null;
+      for (const r of rows) {
+        const rect = r.getBoundingClientRect();
+        const mid = rect.top + rect.height / 2;
+        if (e.clientY < mid) {
+          below = r;
+          break;
+        }
+        above = r;
+      }
+      const aboveId = (above == null ? void 0 : above.getAttribute("data-task-id")) || null;
+      const belowId = (below == null ? void 0 : below.getAttribute("data-task-id")) || null;
+      drgInsertAfter = aboveId ? tasks.find((t) => t.id === aboveId) || null : null;
+      drgInsertBefore = belowId ? tasks.find((t) => t.id === belowId) || null : null;
+      if (drgLine) {
+        if (below) {
+          const rect = below.getBoundingClientRect();
+          drgLine.style.display = "block";
+          drgLine.style.left = rect.left + "px";
+          drgLine.style.top = rect.top - 1 + "px";
+          drgLine.style.width = rect.width + "px";
+        } else if (above) {
+          const rect = above.getBoundingClientRect();
+          drgLine.style.display = "block";
+          drgLine.style.left = rect.left + "px";
+          drgLine.style.top = rect.bottom - 1 + "px";
+          drgLine.style.width = rect.width + "px";
+        } else {
+          drgLine.style.display = "none";
+        }
+      }
+    }
+    function onReorderUp() {
+      window.removeEventListener("mousemove", onReorderMove, true);
+      window.removeEventListener("mouseup", onReorderUp, true);
+      const taskId = drgTaskId;
+      const after = drgInsertAfter;
+      const before = drgInsertBefore;
+      cleanupReorderDrag();
+      if (!taskId || !onReorder) return;
+      if (!after && !before) return;
+      const afterSort = after ? Number(after.sortOrder) || 0 : 0;
+      const beforeSort = before ? Number(before.sortOrder) || 0 : 0;
+      let newIndex;
+      if (after && before && afterSort !== beforeSort) {
+        newIndex = (afterSort + beforeSort) / 2;
+      } else if (after && !before) {
+        newIndex = afterSort + 1e3;
+      } else if (!after && before) {
+        newIndex = beforeSort - 1e3;
+      } else {
+        newIndex = afterSort + 500;
+      }
+      onReorder(taskId, { newIndex });
     }
     function resetAllFilters() {
       search = "";
@@ -1343,13 +1538,21 @@ var NimbusGanttApp = (function(exports) {
       drag.style.cssText = [
         "color:#cbd5e1",
         "font-size:14px",
-        "cursor:grab",
+        "cursor:" + (onReorder ? "grab" : "default"),
         "user-select:none",
-        "flex-shrink:0"
+        "flex-shrink:0",
+        "padding:0 4px"
       ].join(";");
       drag.textContent = "⠇";
-      drag.title = "Drag to reorder (coming in 0.183)";
+      drag.title = onReorder ? "Drag to reorder" : "Drag to reorder (disabled)";
+      drag.setAttribute("data-reorder-handle", "1");
+      drag.setAttribute("data-task-id", task.id);
+      if (onReorder) {
+        drag.addEventListener("mousedown", (e) => startReorderDrag(e, task));
+      }
       top.appendChild(drag);
+      row.setAttribute("data-list-row", "1");
+      row.setAttribute("data-task-id", task.id);
       const chev = el$1("span", "");
       chev.style.cssText = "color:#64748b;font-size:11px;flex-shrink:0;width:12px;text-align:center";
       chev.textContent = isExpanded ? "▼" : "▶";
@@ -1523,6 +1726,243 @@ var NimbusGanttApp = (function(exports) {
     renderBody();
     return function cleanup() {
     };
+  }
+  function squarify(items, rect) {
+    items = items.filter((i) => i.area > 0);
+    if (items.length === 0) return [];
+    const total = items.reduce((s, i) => s + i.area, 0);
+    if (total <= 0) return [];
+    const rects = [];
+    let { x, y, w, h } = rect;
+    for (const item of items) {
+      const ratio = item.area / total;
+      if (w >= h) {
+        const iw = w * ratio;
+        rects.push({ x, y, w: iw, h, task: item.task, label: item.label });
+        x += iw;
+        w -= iw;
+      } else {
+        const ih = h * ratio;
+        rects.push({ x, y, w, h: ih, task: item.task, label: item.label });
+        y += ih;
+        h -= ih;
+      }
+    }
+    return rects;
+  }
+  function roundRect(ctx, x, y, w, h, r) {
+    if (w <= 0 || h <= 0) return;
+    r = Math.max(0, Math.min(r, w / 2, h / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + h - r, r);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+  }
+  function renderTreemap(ctx, w, h, tasks, opts) {
+    const { theme, colorMap, hoveredId } = opts;
+    const pad2 = 16;
+    const titleH = 40;
+    ctx.fillStyle = theme.bg;
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = theme.text;
+    ctx.font = `bold 16px ${theme.font}`;
+    ctx.textAlign = "center";
+    ctx.fillText("Task Treemap — Area by Hours", w / 2, titleH / 2 + 6);
+    const areaX = pad2, areaY = titleH + pad2 / 2;
+    const areaW = w - pad2 * 2, areaH = h - titleH - pad2;
+    const validTasks = tasks.filter(
+      (t) => !t.isInactive && (t.estimatedHours || 0) > 0 && t.startDate && t.endDate
+    );
+    if (validTasks.length === 0) return;
+    const groups = /* @__PURE__ */ new Map();
+    for (const t of validTasks) {
+      const key = t.priorityGroup || t.stage || "Other";
+      const arr = groups.get(key) || [];
+      arr.push(t);
+      groups.set(key, arr);
+    }
+    const groupItems = Array.from(groups.entries()).map(([name, ts]) => ({
+      area: ts.reduce((s, t) => s + (Number(t.estimatedHours) || 0), 0),
+      label: name,
+      tasks: ts
+    }));
+    groupItems.sort((a, b) => b.area - a.area);
+    const groupRects = squarify(
+      groupItems.map((g) => ({ area: g.area, label: g.label })),
+      { x: areaX, y: areaY, w: areaW, h: areaH }
+    );
+    for (let gi = 0; gi < groupRects.length; gi++) {
+      const gr = groupRects[gi];
+      const gData = groupItems[gi];
+      const inset = 3;
+      ctx.fillStyle = theme.altRowBg;
+      roundRect(ctx, gr.x + inset, gr.y + inset, gr.w - inset * 2, gr.h - inset * 2, 8);
+      ctx.fill();
+      const labelH = gr.h > 50 ? 22 : 0;
+      if (labelH > 0) {
+        ctx.fillStyle = theme.textMuted;
+        ctx.font = `bold 11px ${theme.font}`;
+        ctx.textAlign = "left";
+        ctx.fillText(gData.label, gr.x + inset + 8, gr.y + inset + 15);
+      }
+      const taskItems = gData.tasks.map((t) => ({ area: Number(t.estimatedHours) || 0, task: t })).sort((a, b) => b.area - a.area);
+      const innerPad = 4;
+      const taskRects = squarify(taskItems, {
+        x: gr.x + inset + innerPad,
+        y: gr.y + inset + labelH + innerPad,
+        w: gr.w - inset * 2 - innerPad * 2,
+        h: gr.h - inset * 2 - labelH - innerPad * 2
+      });
+      for (const tr of taskRects) {
+        if (tr.w < 2 || tr.h < 2) continue;
+        const color = tr.task && colorMap[tr.task.stage || ""] || "#6b7280";
+        ctx.fillStyle = color;
+        roundRect(ctx, tr.x + 1, tr.y + 1, tr.w - 2, tr.h - 2, 5);
+        ctx.fill();
+        if (hoveredId && tr.task && tr.task.id === hoveredId) {
+          ctx.strokeStyle = "#fff";
+          ctx.lineWidth = 2;
+          roundRect(ctx, tr.x + 1, tr.y + 1, tr.w - 2, tr.h - 2, 5);
+          ctx.stroke();
+        }
+        if (tr.w > 50 && tr.h > 28 && tr.task) {
+          ctx.fillStyle = "#fff";
+          ctx.font = `bold 10px ${theme.font}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          const cx = tr.x + tr.w / 2, cy = tr.y + tr.h / 2;
+          const maxChars = Math.floor(tr.w / 7);
+          const name = tr.task.title || tr.task.name || tr.task.id;
+          const label = name.length > maxChars ? name.slice(0, maxChars - 1) + "…" : name;
+          ctx.fillText(label, cx, cy - 7);
+          ctx.font = `10px ${theme.font}`;
+          ctx.fillText((Number(tr.task.estimatedHours) || 0) + "h", cx, cy + 7);
+        }
+      }
+    }
+    ctx.textBaseline = "alphabetic";
+  }
+  function parseDate(s) {
+    return new Date(s).getTime();
+  }
+  function renderBubble(ctx, w, h, tasks, opts) {
+    const { theme, colorMap, hoveredId } = opts;
+    const pad2 = 16;
+    const titleH = 40;
+    const labelW = 120;
+    const bottomH = 36;
+    ctx.fillStyle = theme.bg;
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = theme.text;
+    ctx.font = `bold 16px ${theme.font}`;
+    ctx.textAlign = "center";
+    ctx.fillText("Bubble Chart — Size by Hours", w / 2, titleH / 2 + 6);
+    const valid = tasks.filter((t) => t.startDate && t.endDate && (t.estimatedHours || 0) > 0);
+    if (valid.length === 0) return;
+    const chartX = labelW + pad2;
+    const chartY = titleH + pad2;
+    const chartW = w - chartX - pad2;
+    const chartH = h - chartY - bottomH - pad2;
+    const groupNames = Array.from(new Set(valid.map((t) => t.priorityGroup || t.stage || "Other")));
+    const allDates = valid.flatMap((t) => [parseDate(t.startDate), parseDate(t.endDate)]);
+    const minDate = Math.min(...allDates);
+    const maxDate = Math.max(...allDates);
+    const dateRange = maxDate - minDate || 1;
+    const rowH = chartH / groupNames.length;
+    const maxHours = Math.max(...valid.map((t) => Number(t.estimatedHours) || 0), 1);
+    const scaleFactor = Math.min(rowH * 0.35, 28) / Math.sqrt(maxHours);
+    for (let i = 0; i < groupNames.length; i++) {
+      const rowY = chartY + i * rowH;
+      if (i % 2 === 1) {
+        ctx.fillStyle = theme.altRowBg;
+        ctx.fillRect(chartX, rowY, chartW, rowH);
+      }
+      ctx.strokeStyle = theme.gridLine;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(chartX, rowY + rowH);
+      ctx.lineTo(chartX + chartW, rowY + rowH);
+      ctx.stroke();
+      ctx.fillStyle = theme.text;
+      ctx.font = `12px ${theme.font}`;
+      ctx.textAlign = "right";
+      ctx.fillText(groupNames[i], chartX - 10, rowY + rowH / 2 + 4);
+    }
+    const today = Date.now();
+    if (today >= minDate && today <= maxDate) {
+      const tx = chartX + (today - minDate) / dateRange * chartW;
+      ctx.save();
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = theme.todayLine;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(tx, chartY);
+      ctx.lineTo(tx, chartY + chartH);
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = theme.todayLine;
+      ctx.font = `bold 10px ${theme.font}`;
+      ctx.textAlign = "center";
+      ctx.fillText("Today", tx, chartY - 4);
+    }
+    ctx.fillStyle = theme.textMuted;
+    ctx.font = `10px ${theme.font}`;
+    ctx.textAlign = "center";
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const startD = new Date(minDate);
+    const endD = new Date(maxDate);
+    const cur = new Date(startD.getFullYear(), startD.getMonth(), 1);
+    while (cur <= endD) {
+      const t = cur.getTime();
+      if (t >= minDate) {
+        const mx = chartX + (t - minDate) / dateRange * chartW;
+        ctx.fillText(months[cur.getMonth()] + " " + cur.getFullYear().toString().slice(2), mx, chartY + chartH + 16);
+      }
+      cur.setMonth(cur.getMonth() + 1);
+    }
+    for (const task of valid) {
+      const midTime = (parseDate(task.startDate) + parseDate(task.endDate)) / 2;
+      const grpKey = task.priorityGroup || task.stage || "Other";
+      const gIdx = groupNames.indexOf(grpKey);
+      const bx = chartX + (midTime - minDate) / dateRange * chartW;
+      const by = chartY + gIdx * rowH + rowH / 2;
+      const r = Math.max(Math.sqrt(Number(task.estimatedHours) || 0) * scaleFactor, 4);
+      const color = colorMap[task.stage || ""] || "#6b7280";
+      ctx.beginPath();
+      ctx.arc(bx + 1, by + 1, r, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(0,0,0,0.15)";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(bx, by, r, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.8;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      if (hoveredId === task.id) {
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      if (r > 18) {
+        ctx.fillStyle = "#fff";
+        ctx.font = `bold 9px ${theme.font}`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const name = task.title || task.name || task.id;
+        const maxChars = Math.floor(r * 2 / 6);
+        const label = name.length > maxChars ? name.slice(0, maxChars - 1) + "…" : name;
+        ctx.fillText(label, bx, by);
+        ctx.textBaseline = "alphabetic";
+      }
+    }
+    ctx.textBaseline = "alphabetic";
   }
   const registry$1 = [];
   function findIndex(name) {
@@ -1761,7 +2201,10 @@ var NimbusGanttApp = (function(exports) {
     // v9 parity — Audit strip defaults to open
     fullscreen: false,
     selectedTaskId: null,
-    pendingPatchCount: 0
+    pendingPatchCount: 0,
+    adminOpen: false,
+    advisorOpen: false,
+    featureOverrides: {}
   };
   function reduceAppState(state, event) {
     switch (event.type) {
@@ -1805,6 +2248,20 @@ var NimbusGanttApp = (function(exports) {
         return { ...state, pendingPatchCount: state.pendingPatchCount + 1 };
       case "RESET_PATCHES":
         return { ...state, pendingPatchCount: 0 };
+      case "TOGGLE_ADMIN":
+        return { ...state, adminOpen: !state.adminOpen };
+      case "TOGGLE_ADVISOR":
+        return { ...state, advisorOpen: !state.advisorOpen };
+      case "TOGGLE_FEATURE": {
+        const current = state.featureOverrides[event.key];
+        return {
+          ...state,
+          featureOverrides: {
+            ...state.featureOverrides,
+            [event.key]: current === void 0 ? false : !current
+          }
+        };
+      }
       default:
         return state;
     }
@@ -2191,8 +2648,6 @@ var NimbusGanttApp = (function(exports) {
     const root = el$1("div", CLS_TITLEBAR);
     root.setAttribute("data-slot", "TitleBar");
     let currentProps = initial;
-    let adminOn = false;
-    let advisorOn = false;
     function render(p) {
       clear(root);
       const { config, state, dispatch, data } = p;
@@ -2333,28 +2788,26 @@ var NimbusGanttApp = (function(exports) {
         }
         rowMain.appendChild(fsBtn);
       }
+      const adminOn = !!state.adminOpen;
       const adminBtn = el$1(
         "button",
         CLS_PILL_BTN_BASE + " " + (adminOn ? CLS_RIGHT_ADMIN_ON : CLS_RIGHT_ADMIN_OFF)
       );
       adminBtn.textContent = "Admin";
-      adminBtn.title = "Advanced feature toggles";
+      adminBtn.title = "Feature toggles";
       adminBtn.addEventListener("click", () => {
-        adminOn = !adminOn;
-        console.log("[TitleBar] admin toggled →", adminOn);
-        render(currentProps);
+        dispatch({ type: "TOGGLE_ADMIN" });
       });
       rowMain.appendChild(adminBtn);
+      const advisorOn = !!state.advisorOpen;
       const advisorBtn = el$1(
         "button",
         CLS_PILL_BTN_BASE + " " + (advisorOn ? CLS_RIGHT_ADVISOR_ON : CLS_RIGHT_ADVISOR_OFF)
       );
       advisorBtn.textContent = "Advisor";
-      advisorBtn.title = "Scope advisor — local analysis, no API needed";
+      advisorBtn.title = "Claude-powered narrative mode";
       advisorBtn.addEventListener("click", () => {
-        advisorOn = !advisorOn;
-        console.log("[TitleBar] advisor toggled →", advisorOn);
-        render(currentProps);
+        dispatch({ type: "TOGGLE_ADVISOR" });
       });
       rowMain.appendChild(advisorBtn);
       if (config.apiDocsUrl) {
@@ -2373,6 +2826,30 @@ var NimbusGanttApp = (function(exports) {
       v3.textContent = "v3 (Canvas)";
       rowMain.appendChild(v3);
       root.appendChild(rowMain);
+      const legend = el$1("div", "flex items-center gap-3 px-3 py-1 text-[10px] text-slate-500 border-t border-slate-100");
+      legend.setAttribute("data-slot-part", "status-legend");
+      const legendItems = [
+        { label: "In Flight", color: "#10b981" },
+        { label: "Next Up", color: "#3b82f6" },
+        { label: "Backlog", color: "#f59e0b" },
+        { label: "Blocked", color: "#ef4444" },
+        { label: "Paused", color: "#94a3b8" },
+        { label: "Done", color: "#cbd5e1" }
+      ];
+      const legendLabel = el$1("span", "text-[9px] text-slate-400 uppercase tracking-wide");
+      legendLabel.textContent = "Status";
+      legend.appendChild(legendLabel);
+      for (const item of legendItems) {
+        const chip = el$1("span", "flex items-center gap-1");
+        const dot = el$1("span", "");
+        dot.style.cssText = `width:8px;height:8px;border-radius:50%;background:${item.color};display:inline-block`;
+        chip.appendChild(dot);
+        const lbl = el$1("span", "");
+        lbl.textContent = item.label;
+        chip.appendChild(lbl);
+        legend.appendChild(chip);
+      }
+      root.appendChild(legend);
     }
     render(initial);
     return {
@@ -2899,6 +3376,7 @@ var NimbusGanttApp = (function(exports) {
     let draftEnd = "";
     let lastRenderedKey = "";
     function render(p) {
+      var _a;
       clear(root);
       const { state, data, dispatch } = p;
       if (!state.selectedTaskId) {
@@ -2930,9 +3408,24 @@ var NimbusGanttApp = (function(exports) {
       const dot = el$1("span", "w-2.5 h-2.5 rounded-full flex-shrink-0");
       dot.style.background = catColor;
       lwrap.appendChild(dot);
-      const idSp = el$1("span", "text-[10px] font-mono font-bold text-slate-500 flex-shrink-0");
-      idSp.textContent = String(task.id);
-      lwrap.appendChild(idSp);
+      const urlTemplate = (_a = p.config) == null ? void 0 : _a.recordUrlTemplate;
+      let idEl;
+      if (urlTemplate && task.id) {
+        const a = document.createElement("a");
+        a.className = "text-[10px] font-mono font-bold text-slate-500 hover:text-slate-900 hover:underline flex-shrink-0";
+        a.textContent = String(task.id);
+        a.href = urlTemplate.replace("{id}", encodeURIComponent(String(task.id)));
+        a.setAttribute("target", "_top");
+        a.setAttribute("title", "Open record");
+        a.addEventListener("click", (e) => {
+          e.stopPropagation();
+        });
+        idEl = a;
+      } else {
+        idEl = el$1("span", "text-[10px] font-mono font-bold text-slate-500 flex-shrink-0");
+        idEl.textContent = String(task.id);
+      }
+      lwrap.appendChild(idEl);
       const titleSp = el$1("span", "text-xs font-bold text-slate-900 truncate");
       titleSp.textContent = task.title;
       lwrap.appendChild(titleSp);
@@ -3717,6 +4210,154 @@ var NimbusGanttApp = (function(exports) {
     if (css) e.style.cssText = css;
     return e;
   }
+  function mountAltCanvasView(container, tasks, renderer, colorMap) {
+    container.innerHTML = "";
+    const canvas = document.createElement("canvas");
+    canvas.style.display = "block";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    container.appendChild(canvas);
+    const rect = container.getBoundingClientRect();
+    const w = Math.max(320, Math.floor(rect.width));
+    const h = Math.max(240, Math.floor(rect.height));
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+    renderer(ctx, w, h, tasks, {
+      colorMap,
+      hoveredId: null,
+      theme: {
+        bg: "#ffffff",
+        text: "#1f2937",
+        altRowBg: "rgba(229,231,235,0.4)",
+        textMuted: "#64748b",
+        font: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif"
+      }
+    });
+  }
+  const ADMIN_TOGGLEABLE_FEATURES = [
+    { key: "statsPanel", label: "Stats panel" },
+    { key: "filterBar", label: "Filter bar" },
+    { key: "zoomBar", label: "Zoom bar" },
+    { key: "sidebar", label: "Sidebar" },
+    { key: "auditPanel", label: "Audit panel" },
+    { key: "hrsWkStrip", label: "Hours/week strip" },
+    { key: "depthShading", label: "Depth shading" },
+    { key: "hoursColumn", label: "Hours column" },
+    { key: "budgetUsedColumn", label: "Budget-used column" },
+    { key: "headerRowCompletionBar", label: "Header completion bar" }
+  ];
+  function renderAdminPanel(container, state, dispatch, tplConfig) {
+    const id = "nga-admin-panel";
+    let panel = container.querySelector(`#${id}`);
+    if (!state.adminOpen) {
+      if (panel) panel.remove();
+      return;
+    }
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.id = id;
+      panel.style.cssText = [
+        "position:absolute",
+        "top:60px",
+        "right:12px",
+        "width:260px",
+        "max-height:calc(100vh - 120px)",
+        "overflow:auto",
+        "background:#ffffff",
+        "border:1px solid #e5e7eb",
+        "border-radius:8px",
+        "box-shadow:0 12px 32px rgba(15,23,42,0.18)",
+        "padding:12px 14px",
+        "z-index:9998",
+        "font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif"
+      ].join(";");
+      container.appendChild(panel);
+    }
+    panel.innerHTML = "";
+    const header = document.createElement("div");
+    header.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-bottom:10px";
+    const title = document.createElement("div");
+    title.textContent = "Admin — Feature Toggles";
+    title.style.cssText = "font-size:12px;font-weight:700;color:#1f2937";
+    header.appendChild(title);
+    const close = document.createElement("button");
+    close.textContent = "×";
+    close.style.cssText = "background:none;border:none;font-size:18px;line-height:1;color:#64748b;cursor:pointer;padding:0 4px";
+    close.addEventListener("click", () => dispatch({ type: "TOGGLE_ADMIN" }));
+    header.appendChild(close);
+    panel.appendChild(header);
+    const hint = document.createElement("div");
+    hint.textContent = "Toggle chrome surfaces on/off. Changes apply immediately.";
+    hint.style.cssText = "font-size:10px;color:#64748b;margin-bottom:10px;line-height:1.4";
+    panel.appendChild(hint);
+    const features = tplConfig.features;
+    for (const item of ADMIN_TOGGLEABLE_FEATURES) {
+      const base = features[item.key];
+      const override = state.featureOverrides[item.key];
+      const on = override === void 0 ? !!base : override;
+      const row = document.createElement("label");
+      row.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:11px;color:#1f2937";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = on;
+      cb.style.cssText = "cursor:pointer";
+      cb.addEventListener("change", () => dispatch({ type: "TOGGLE_FEATURE", key: item.key }));
+      row.appendChild(cb);
+      const lbl = document.createElement("span");
+      lbl.textContent = item.label;
+      row.appendChild(lbl);
+      panel.appendChild(row);
+    }
+  }
+  function renderAdvisorPanel(container, state, dispatch) {
+    const id = "nga-advisor-panel";
+    let panel = container.querySelector(`#${id}`);
+    if (!state.advisorOpen) {
+      if (panel) panel.remove();
+      return;
+    }
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.id = id;
+      panel.style.cssText = [
+        "position:absolute",
+        "top:60px",
+        "right:282px",
+        "width:300px",
+        "background:#ffffff",
+        "border:1px solid #e5e7eb",
+        "border-radius:8px",
+        "box-shadow:0 12px 32px rgba(15,23,42,0.18)",
+        "padding:14px 16px",
+        "z-index:9998",
+        "font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif"
+      ].join(";");
+      container.appendChild(panel);
+    }
+    panel.innerHTML = "";
+    const header = document.createElement("div");
+    header.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-bottom:10px";
+    const title = document.createElement("div");
+    title.textContent = "Advisor — Narrative Mode";
+    title.style.cssText = "font-size:12px;font-weight:700;color:#1f2937";
+    header.appendChild(title);
+    const close = document.createElement("button");
+    close.textContent = "×";
+    close.style.cssText = "background:none;border:none;font-size:18px;line-height:1;color:#64748b;cursor:pointer;padding:0 4px";
+    close.addEventListener("click", () => dispatch({ type: "TOGGLE_ADVISOR" }));
+    header.appendChild(close);
+    panel.appendChild(header);
+    const body = document.createElement("div");
+    body.style.cssText = "font-size:11px;color:#475569;line-height:1.5";
+    body.innerHTML = '<p style="margin:0 0 8px 0"><strong>Coming in a later cut.</strong></p><p style="margin:0 0 8px 0">Advisor mode turns the visible task list + date range into a Claude-generated narrative walkthrough of what the timeline actually says.</p><p style="margin:0;color:#64748b">Restoration pending API infrastructure decisions (auth, CSP under LWS, streaming UX, error handling).</p>';
+    panel.appendChild(body);
+  }
   function renderComingSoon(container, viewLabel) {
     container.innerHTML = "";
     const wrap = el("div", [
@@ -3832,6 +4473,7 @@ var NimbusGanttApp = (function(exports) {
       if (options.onExitFullscreen) tplConfig.onExitFullscreen = options.onExitFullscreen;
       if (options.cssUrl) tplConfig.stylesheet = { ...tplConfig.stylesheet, url: options.cssUrl };
       if (options.engine) tplConfig.engine = options.engine;
+      if (options.recordUrlTemplate) tplConfig.recordUrlTemplate = options.recordUrlTemplate;
       if (options.engineOnly) {
         let _syncToCanvas = function() {
           const f = applyFilter(allTasks2, state2.filter, state2.search);
@@ -4521,13 +5163,29 @@ var NimbusGanttApp = (function(exports) {
         if (stateChanged) {
           if (state.fullscreen) container.classList.add("nga-fullscreen");
           else container.classList.remove("nga-fullscreen");
+          reconcileFeatureOverrides();
           renderSlots();
-          if (ev.type === "SET_VIEW" || ev.type === "SET_GROUP_BY" || ev.type === "SET_FILTER" || ev.type === "SET_SEARCH" || ev.type === "TOGGLE_HIDE_COMPLETED") {
+          const viewChangingEvents = ["SET_VIEW", "SET_GROUP_BY", "SET_FILTER", "SET_SEARCH", "TOGGLE_HIDE_COMPLETED"];
+          if (viewChangingEvents.indexOf(ev.type) >= 0) {
+            rebuildView();
+          } else if (ev.type === "TOGGLE_FEATURE") {
             rebuildView();
           } else if (ev.type === "SET_ZOOM") {
             if (ganttInst && typeof ganttInst.setZoom === "function") ganttInst.setZoom(state.zoom);
             emitViewport();
           }
+        }
+      }
+      const FEATURE_DEFAULTS = {};
+      function snapshotFeatureDefaults() {
+        const f = tplConfig.features;
+        for (const k of Object.keys(f)) FEATURE_DEFAULTS[k] = f[k];
+      }
+      function reconcileFeatureOverrides() {
+        const f = tplConfig.features;
+        for (const k of Object.keys(FEATURE_DEFAULTS)) {
+          const override = state.featureOverrides[k];
+          f[k] = override === void 0 ? FEATURE_DEFAULTS[k] : override;
         }
       }
       function buildSlotData() {
@@ -4579,6 +5237,8 @@ var NimbusGanttApp = (function(exports) {
         if (contentInst) {
           ganttHost = contentInst.el.querySelector('[data-nga-gantt-host="1"]');
         }
+        renderAdminPanel(container, state, dispatch, tplConfig);
+        renderAdvisorPanel(container, state, dispatch);
       }
       let ganttInst = null;
       let cleanupShading = null;
@@ -4796,6 +5456,7 @@ var NimbusGanttApp = (function(exports) {
         renderSlots();
       }
       function rebuildView() {
+        var _a2;
         if (!ganttHost) return;
         if (cleanupShading) {
           cleanupShading();
@@ -4818,12 +5479,23 @@ var NimbusGanttApp = (function(exports) {
         } else if (state.viewMode === "list") {
           renderAuditListView(ganttHost, allTasks, {
             progressLabel: tplConfig.progressLabel,
-            hideRecordIds: tplConfig.hideRecordIds
+            hideRecordIds: tplConfig.hideRecordIds,
+            // 0.185.5 — forward the host's onItemReorder contract so the
+            // list-view 3-dot handle persists drops through the same path
+            // the gantt sidebar uses.
+            onReorder: options.onItemReorder ? (taskId, payload) => {
+              void options.onItemReorder(taskId, payload);
+            } : void 0
           });
+        } else if (state.viewMode === "treemap" || state.viewMode === "bubbles") {
+          mountAltCanvasView(
+            ganttHost,
+            allTasks,
+            state.viewMode === "treemap" ? renderTreemap : renderBubble,
+            ((_a2 = options.config) == null ? void 0 : _a2.colorMap) || { ...STAGE_COLORS, ...STAGE_TO_CATEGORY_COLOR }
+          );
         } else {
           const labelMap = {
-            treemap: "Treemap",
-            bubbles: "Bubbles",
             calendar: "Calendar",
             flow: "Flow"
           };
@@ -4831,6 +5503,7 @@ var NimbusGanttApp = (function(exports) {
         }
         renderSlots();
       }
+      snapshotFeatureDefaults();
       renderSlots();
       try {
         const renderedSlots = [];
