@@ -452,6 +452,10 @@ public with sharing class DeliveryGanttController {
      *              sObject's put() expects. LWC JSON marshals Date fields as
      *              ISO strings, but put() on a Date field requires a Date.
      *              Similarly for DateTime. Other types pass through.
+     * @param dfr Field describe for type introspection.
+     * @param raw Caller-supplied value (from a Map<String,Object> payload).
+     * @return Value coerced to the type sObject.put expects, or null when the
+     *         caller passed an empty string for a date/datetime field.
      */
     private static Object coerceFieldValue(Schema.DescribeFieldResult dfr, Object raw) {
         if (raw == null) {
