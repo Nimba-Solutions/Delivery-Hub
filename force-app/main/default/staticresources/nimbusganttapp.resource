@@ -471,6 +471,82 @@ var NimbusGanttApp = (function(exports) {
         ganttContainer.querySelectorAll(".ng-grid-row:not(.ng-group-row)")
       );
       const vis = allRows.filter((r) => r !== dragRow && r !== spacer);
+      const groupRows = Array.prototype.slice.call(
+        ganttContainer.querySelectorAll(".ng-group-row")
+      );
+      let overGroupRow = null;
+      for (const gr of groupRows) {
+        const rect = gr.getBoundingClientRect();
+        if (clientY >= rect.top && clientY <= rect.bottom) {
+          overGroupRow = gr;
+          break;
+        }
+      }
+      if (overGroupRow) {
+        const tid = overGroupRow.getAttribute("data-task-id") || "";
+        let bucket = "";
+        if (tid.indexOf("__bucket_header__") === 0) bucket = tid.slice("__bucket_header__".length);
+        else if (tid.indexOf("group-") === 0) bucket = tid.slice(6);
+        const bucketFinal = bucket || dragSourceGroup || "";
+        return {
+          parentId: null,
+          depth: 0,
+          targetBucket: bucketFinal,
+          // Put the deparented task at the top of the bucket (before any
+          // existing root-level tasks). Index-based value matches the
+          // sparse-int convention used elsewhere.
+          targetSortOrder: 500,
+          insertBeforeRow: null,
+          nestIntoRow: null,
+          deparent: true
+        };
+      }
+      let nestIntoRow = null;
+      for (const row of vis) {
+        const rect = row.getBoundingClientRect();
+        const nestTop = rect.top + rect.height * 0.25;
+        const nestBottom = rect.top + rect.height * 0.75;
+        if (clientY >= nestTop && clientY <= nestBottom) {
+          nestIntoRow = row;
+          break;
+        }
+      }
+      const targetBucket = getGroupAtY(clientY) || dragSourceGroup || "";
+      if (nestIntoRow) {
+        const targetId = nestIntoRow.getAttribute("data-task-id");
+        let cycleDetected = false;
+        if (targetId && dragTaskId) {
+          let cur = targetId;
+          while (cur) {
+            if (cur === dragTaskId) {
+              cycleDetected = true;
+              break;
+            }
+            const t = taskById[cur];
+            cur = t ? t.parentWorkItemId || null : null;
+          }
+        }
+        if (!cycleDetected && targetId) {
+          let maxChildSort = 0;
+          Object.keys(depthMap).forEach((id) => {
+            const t = taskById[id];
+            if (t && t.parentWorkItemId === targetId) {
+              const s = getSortOrder(id);
+              if (s > maxChildSort) maxChildSort = s;
+            }
+          });
+          const nestDepth = (depthMap[targetId] || 0) + 1;
+          return {
+            parentId: targetId,
+            depth: nestDepth,
+            targetBucket,
+            targetSortOrder: maxChildSort + 1e3,
+            insertBeforeRow: null,
+            nestIntoRow,
+            deparent: false
+          };
+        }
+      }
       let rowAbove = null;
       let rowBelow = null;
       for (let i = 0; i < vis.length; i++) {
@@ -505,8 +581,7 @@ var NimbusGanttApp = (function(exports) {
       const sortBelow = belowId ? getSortOrder(belowId) : sortAbove + 2;
       const aboveIdx = rowAbove ? vis.indexOf(rowAbove) : -1;
       const targetSort = sortAbove !== sortBelow ? (sortAbove + sortBelow) / 2 : aboveIdx >= 0 ? (aboveIdx + 1) * 1e3 : 500;
-      const targetBucket = getGroupAtY(clientY) || dragSourceGroup || "";
-      return { parentId, depth: desiredDepth, targetBucket, targetSortOrder: targetSort, insertBeforeRow: rowBelow };
+      return { parentId, depth: desiredDepth, targetBucket, targetSortOrder: targetSort, insertBeforeRow: rowBelow, nestIntoRow: null, deparent: false };
     }
     function cleanupDrag() {
       if (ghost) {
@@ -524,6 +599,15 @@ var NimbusGanttApp = (function(exports) {
       document.body.style.cursor = "";
       ganttContainer.querySelectorAll(".ng-group-row.ng-drop-target").forEach((row) => {
         row.classList.remove("ng-drop-target");
+        row.style.boxShadow = "";
+      });
+      ganttContainer.querySelectorAll(".ng-nest-target").forEach((row) => {
+        row.classList.remove("ng-nest-target");
+        row.style.boxShadow = "";
+        row.style.background = "";
+      });
+      ganttContainer.querySelectorAll(".ng-deparent-target").forEach((row) => {
+        row.classList.remove("ng-deparent-target");
         row.style.boxShadow = "";
       });
       dragTaskId = null;
@@ -614,15 +698,49 @@ var NimbusGanttApp = (function(exports) {
       pendingIP = ip;
       if (spacer) {
         const tb = dragRow ? dragRow.parentElement : null;
-        if (tb) {
+        if (ip.nestIntoRow || ip.deparent) {
+          if (tb && spacer.parentElement === tb) spacer.remove();
+        } else if (tb) {
           if (ip.insertBeforeRow && ip.insertBeforeRow !== spacer) tb.insertBefore(spacer, ip.insertBeforeRow);
           else if (!ip.insertBeforeRow) tb.appendChild(spacer);
+          const indent = INDENT_BASE + ip.depth * LEAF_STEP;
+          const lbl = spacer.querySelector("td span");
+          if (lbl) lbl.style.paddingLeft = indent + 8 + "px";
         }
-        const indent = INDENT_BASE + ip.depth * LEAF_STEP;
-        const lbl = spacer.querySelector("td span");
-        if (lbl) lbl.style.paddingLeft = indent + 8 + "px";
       }
-      updateBucketHighlight(ip.targetBucket);
+      updateBucketHighlight(ip.deparent ? null : ip.targetBucket);
+      updateNestHighlight(ip.nestIntoRow);
+      updateDeparentHighlight(ip.deparent ? getGroupRowForBucket(ip.targetBucket) : null);
+    }
+    function getGroupRowForBucket(bucket) {
+      if (!bucket) return null;
+      const rows = ganttContainer.querySelectorAll(".ng-group-row");
+      for (const row of Array.from(rows)) {
+        const tid = row.getAttribute("data-task-id") || "";
+        if (tid === `__bucket_header__${bucket}` || tid === `group-${bucket}`) return row;
+      }
+      return null;
+    }
+    function updateDeparentHighlight(target) {
+      ganttContainer.querySelectorAll(".ng-deparent-target").forEach((row) => {
+        row.classList.remove("ng-deparent-target");
+        row.style.boxShadow = "";
+      });
+      if (!target) return;
+      target.classList.add("ng-deparent-target");
+      target.style.boxShadow = "inset 0 0 0 3px #f59e0b";
+    }
+    function updateNestHighlight(target) {
+      const prev = ganttContainer.querySelectorAll(".ng-nest-target");
+      prev.forEach((row) => {
+        row.classList.remove("ng-nest-target");
+        row.style.boxShadow = "";
+        row.style.background = "";
+      });
+      if (!target) return;
+      target.classList.add("ng-nest-target");
+      target.style.boxShadow = "inset 0 0 0 2px #10b981";
+      target.style.background = "rgba(16,185,129,0.08)";
     }
     function updateBucketHighlight(targetBucket) {
       const allGroupRows = ganttContainer.querySelectorAll(".ng-group-row");
@@ -1609,6 +1727,243 @@ var NimbusGanttApp = (function(exports) {
     return function cleanup() {
     };
   }
+  function squarify(items, rect) {
+    items = items.filter((i) => i.area > 0);
+    if (items.length === 0) return [];
+    const total = items.reduce((s, i) => s + i.area, 0);
+    if (total <= 0) return [];
+    const rects = [];
+    let { x, y, w, h } = rect;
+    for (const item of items) {
+      const ratio = item.area / total;
+      if (w >= h) {
+        const iw = w * ratio;
+        rects.push({ x, y, w: iw, h, task: item.task, label: item.label });
+        x += iw;
+        w -= iw;
+      } else {
+        const ih = h * ratio;
+        rects.push({ x, y, w, h: ih, task: item.task, label: item.label });
+        y += ih;
+        h -= ih;
+      }
+    }
+    return rects;
+  }
+  function roundRect(ctx, x, y, w, h, r) {
+    if (w <= 0 || h <= 0) return;
+    r = Math.max(0, Math.min(r, w / 2, h / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + h - r, r);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+  }
+  function renderTreemap(ctx, w, h, tasks, opts) {
+    const { theme, colorMap, hoveredId } = opts;
+    const pad2 = 16;
+    const titleH = 40;
+    ctx.fillStyle = theme.bg;
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = theme.text;
+    ctx.font = `bold 16px ${theme.font}`;
+    ctx.textAlign = "center";
+    ctx.fillText("Task Treemap — Area by Hours", w / 2, titleH / 2 + 6);
+    const areaX = pad2, areaY = titleH + pad2 / 2;
+    const areaW = w - pad2 * 2, areaH = h - titleH - pad2;
+    const validTasks = tasks.filter(
+      (t) => !t.isInactive && (t.estimatedHours || 0) > 0 && t.startDate && t.endDate
+    );
+    if (validTasks.length === 0) return;
+    const groups = /* @__PURE__ */ new Map();
+    for (const t of validTasks) {
+      const key = t.priorityGroup || t.stage || "Other";
+      const arr = groups.get(key) || [];
+      arr.push(t);
+      groups.set(key, arr);
+    }
+    const groupItems = Array.from(groups.entries()).map(([name, ts]) => ({
+      area: ts.reduce((s, t) => s + (Number(t.estimatedHours) || 0), 0),
+      label: name,
+      tasks: ts
+    }));
+    groupItems.sort((a, b) => b.area - a.area);
+    const groupRects = squarify(
+      groupItems.map((g) => ({ area: g.area, label: g.label })),
+      { x: areaX, y: areaY, w: areaW, h: areaH }
+    );
+    for (let gi = 0; gi < groupRects.length; gi++) {
+      const gr = groupRects[gi];
+      const gData = groupItems[gi];
+      const inset = 3;
+      ctx.fillStyle = theme.altRowBg;
+      roundRect(ctx, gr.x + inset, gr.y + inset, gr.w - inset * 2, gr.h - inset * 2, 8);
+      ctx.fill();
+      const labelH = gr.h > 50 ? 22 : 0;
+      if (labelH > 0) {
+        ctx.fillStyle = theme.textMuted;
+        ctx.font = `bold 11px ${theme.font}`;
+        ctx.textAlign = "left";
+        ctx.fillText(gData.label, gr.x + inset + 8, gr.y + inset + 15);
+      }
+      const taskItems = gData.tasks.map((t) => ({ area: Number(t.estimatedHours) || 0, task: t })).sort((a, b) => b.area - a.area);
+      const innerPad = 4;
+      const taskRects = squarify(taskItems, {
+        x: gr.x + inset + innerPad,
+        y: gr.y + inset + labelH + innerPad,
+        w: gr.w - inset * 2 - innerPad * 2,
+        h: gr.h - inset * 2 - labelH - innerPad * 2
+      });
+      for (const tr of taskRects) {
+        if (tr.w < 2 || tr.h < 2) continue;
+        const color = tr.task && colorMap[tr.task.stage || ""] || "#6b7280";
+        ctx.fillStyle = color;
+        roundRect(ctx, tr.x + 1, tr.y + 1, tr.w - 2, tr.h - 2, 5);
+        ctx.fill();
+        if (hoveredId && tr.task && tr.task.id === hoveredId) {
+          ctx.strokeStyle = "#fff";
+          ctx.lineWidth = 2;
+          roundRect(ctx, tr.x + 1, tr.y + 1, tr.w - 2, tr.h - 2, 5);
+          ctx.stroke();
+        }
+        if (tr.w > 50 && tr.h > 28 && tr.task) {
+          ctx.fillStyle = "#fff";
+          ctx.font = `bold 10px ${theme.font}`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          const cx = tr.x + tr.w / 2, cy = tr.y + tr.h / 2;
+          const maxChars = Math.floor(tr.w / 7);
+          const name = tr.task.title || tr.task.name || tr.task.id;
+          const label = name.length > maxChars ? name.slice(0, maxChars - 1) + "…" : name;
+          ctx.fillText(label, cx, cy - 7);
+          ctx.font = `10px ${theme.font}`;
+          ctx.fillText((Number(tr.task.estimatedHours) || 0) + "h", cx, cy + 7);
+        }
+      }
+    }
+    ctx.textBaseline = "alphabetic";
+  }
+  function parseDate(s) {
+    return new Date(s).getTime();
+  }
+  function renderBubble(ctx, w, h, tasks, opts) {
+    const { theme, colorMap, hoveredId } = opts;
+    const pad2 = 16;
+    const titleH = 40;
+    const labelW = 120;
+    const bottomH = 36;
+    ctx.fillStyle = theme.bg;
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = theme.text;
+    ctx.font = `bold 16px ${theme.font}`;
+    ctx.textAlign = "center";
+    ctx.fillText("Bubble Chart — Size by Hours", w / 2, titleH / 2 + 6);
+    const valid = tasks.filter((t) => t.startDate && t.endDate && (t.estimatedHours || 0) > 0);
+    if (valid.length === 0) return;
+    const chartX = labelW + pad2;
+    const chartY = titleH + pad2;
+    const chartW = w - chartX - pad2;
+    const chartH = h - chartY - bottomH - pad2;
+    const groupNames = Array.from(new Set(valid.map((t) => t.priorityGroup || t.stage || "Other")));
+    const allDates = valid.flatMap((t) => [parseDate(t.startDate), parseDate(t.endDate)]);
+    const minDate = Math.min(...allDates);
+    const maxDate = Math.max(...allDates);
+    const dateRange = maxDate - minDate || 1;
+    const rowH = chartH / groupNames.length;
+    const maxHours = Math.max(...valid.map((t) => Number(t.estimatedHours) || 0), 1);
+    const scaleFactor = Math.min(rowH * 0.35, 28) / Math.sqrt(maxHours);
+    for (let i = 0; i < groupNames.length; i++) {
+      const rowY = chartY + i * rowH;
+      if (i % 2 === 1) {
+        ctx.fillStyle = theme.altRowBg;
+        ctx.fillRect(chartX, rowY, chartW, rowH);
+      }
+      ctx.strokeStyle = theme.gridLine;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(chartX, rowY + rowH);
+      ctx.lineTo(chartX + chartW, rowY + rowH);
+      ctx.stroke();
+      ctx.fillStyle = theme.text;
+      ctx.font = `12px ${theme.font}`;
+      ctx.textAlign = "right";
+      ctx.fillText(groupNames[i], chartX - 10, rowY + rowH / 2 + 4);
+    }
+    const today = Date.now();
+    if (today >= minDate && today <= maxDate) {
+      const tx = chartX + (today - minDate) / dateRange * chartW;
+      ctx.save();
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = theme.todayLine;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(tx, chartY);
+      ctx.lineTo(tx, chartY + chartH);
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = theme.todayLine;
+      ctx.font = `bold 10px ${theme.font}`;
+      ctx.textAlign = "center";
+      ctx.fillText("Today", tx, chartY - 4);
+    }
+    ctx.fillStyle = theme.textMuted;
+    ctx.font = `10px ${theme.font}`;
+    ctx.textAlign = "center";
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const startD = new Date(minDate);
+    const endD = new Date(maxDate);
+    const cur = new Date(startD.getFullYear(), startD.getMonth(), 1);
+    while (cur <= endD) {
+      const t = cur.getTime();
+      if (t >= minDate) {
+        const mx = chartX + (t - minDate) / dateRange * chartW;
+        ctx.fillText(months[cur.getMonth()] + " " + cur.getFullYear().toString().slice(2), mx, chartY + chartH + 16);
+      }
+      cur.setMonth(cur.getMonth() + 1);
+    }
+    for (const task of valid) {
+      const midTime = (parseDate(task.startDate) + parseDate(task.endDate)) / 2;
+      const grpKey = task.priorityGroup || task.stage || "Other";
+      const gIdx = groupNames.indexOf(grpKey);
+      const bx = chartX + (midTime - minDate) / dateRange * chartW;
+      const by = chartY + gIdx * rowH + rowH / 2;
+      const r = Math.max(Math.sqrt(Number(task.estimatedHours) || 0) * scaleFactor, 4);
+      const color = colorMap[task.stage || ""] || "#6b7280";
+      ctx.beginPath();
+      ctx.arc(bx + 1, by + 1, r, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(0,0,0,0.15)";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(bx, by, r, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.8;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      if (hoveredId === task.id) {
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      if (r > 18) {
+        ctx.fillStyle = "#fff";
+        ctx.font = `bold 9px ${theme.font}`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const name = task.title || task.name || task.id;
+        const maxChars = Math.floor(r * 2 / 6);
+        const label = name.length > maxChars ? name.slice(0, maxChars - 1) + "…" : name;
+        ctx.fillText(label, bx, by);
+        ctx.textBaseline = "alphabetic";
+      }
+    }
+    ctx.textBaseline = "alphabetic";
+  }
   const registry$1 = [];
   function findIndex(name) {
     for (let i = 0; i < registry$1.length; i++) {
@@ -1846,7 +2201,10 @@ var NimbusGanttApp = (function(exports) {
     // v9 parity — Audit strip defaults to open
     fullscreen: false,
     selectedTaskId: null,
-    pendingPatchCount: 0
+    pendingPatchCount: 0,
+    adminOpen: false,
+    advisorOpen: false,
+    featureOverrides: {}
   };
   function reduceAppState(state, event) {
     switch (event.type) {
@@ -1890,6 +2248,20 @@ var NimbusGanttApp = (function(exports) {
         return { ...state, pendingPatchCount: state.pendingPatchCount + 1 };
       case "RESET_PATCHES":
         return { ...state, pendingPatchCount: 0 };
+      case "TOGGLE_ADMIN":
+        return { ...state, adminOpen: !state.adminOpen };
+      case "TOGGLE_ADVISOR":
+        return { ...state, advisorOpen: !state.advisorOpen };
+      case "TOGGLE_FEATURE": {
+        const current = state.featureOverrides[event.key];
+        return {
+          ...state,
+          featureOverrides: {
+            ...state.featureOverrides,
+            [event.key]: current === void 0 ? false : !current
+          }
+        };
+      }
       default:
         return state;
     }
@@ -2276,8 +2648,6 @@ var NimbusGanttApp = (function(exports) {
     const root = el$1("div", CLS_TITLEBAR);
     root.setAttribute("data-slot", "TitleBar");
     let currentProps = initial;
-    let adminOn = false;
-    let advisorOn = false;
     function render(p) {
       clear(root);
       const { config, state, dispatch, data } = p;
@@ -2418,28 +2788,26 @@ var NimbusGanttApp = (function(exports) {
         }
         rowMain.appendChild(fsBtn);
       }
+      const adminOn = !!state.adminOpen;
       const adminBtn = el$1(
         "button",
         CLS_PILL_BTN_BASE + " " + (adminOn ? CLS_RIGHT_ADMIN_ON : CLS_RIGHT_ADMIN_OFF)
       );
       adminBtn.textContent = "Admin";
-      adminBtn.title = "Advanced feature toggles";
+      adminBtn.title = "Feature toggles";
       adminBtn.addEventListener("click", () => {
-        adminOn = !adminOn;
-        console.log("[TitleBar] admin toggled →", adminOn);
-        render(currentProps);
+        dispatch({ type: "TOGGLE_ADMIN" });
       });
       rowMain.appendChild(adminBtn);
+      const advisorOn = !!state.advisorOpen;
       const advisorBtn = el$1(
         "button",
         CLS_PILL_BTN_BASE + " " + (advisorOn ? CLS_RIGHT_ADVISOR_ON : CLS_RIGHT_ADVISOR_OFF)
       );
       advisorBtn.textContent = "Advisor";
-      advisorBtn.title = "Scope advisor — local analysis, no API needed";
+      advisorBtn.title = "Claude-powered narrative mode";
       advisorBtn.addEventListener("click", () => {
-        advisorOn = !advisorOn;
-        console.log("[TitleBar] advisor toggled →", advisorOn);
-        render(currentProps);
+        dispatch({ type: "TOGGLE_ADVISOR" });
       });
       rowMain.appendChild(advisorBtn);
       if (config.apiDocsUrl) {
@@ -3842,6 +4210,154 @@ var NimbusGanttApp = (function(exports) {
     if (css) e.style.cssText = css;
     return e;
   }
+  function mountAltCanvasView(container, tasks, renderer, colorMap) {
+    container.innerHTML = "";
+    const canvas = document.createElement("canvas");
+    canvas.style.display = "block";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    container.appendChild(canvas);
+    const rect = container.getBoundingClientRect();
+    const w = Math.max(320, Math.floor(rect.width));
+    const h = Math.max(240, Math.floor(rect.height));
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+    renderer(ctx, w, h, tasks, {
+      colorMap,
+      hoveredId: null,
+      theme: {
+        bg: "#ffffff",
+        text: "#1f2937",
+        altRowBg: "rgba(229,231,235,0.4)",
+        textMuted: "#64748b",
+        font: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif"
+      }
+    });
+  }
+  const ADMIN_TOGGLEABLE_FEATURES = [
+    { key: "statsPanel", label: "Stats panel" },
+    { key: "filterBar", label: "Filter bar" },
+    { key: "zoomBar", label: "Zoom bar" },
+    { key: "sidebar", label: "Sidebar" },
+    { key: "auditPanel", label: "Audit panel" },
+    { key: "hrsWkStrip", label: "Hours/week strip" },
+    { key: "depthShading", label: "Depth shading" },
+    { key: "hoursColumn", label: "Hours column" },
+    { key: "budgetUsedColumn", label: "Budget-used column" },
+    { key: "headerRowCompletionBar", label: "Header completion bar" }
+  ];
+  function renderAdminPanel(container, state, dispatch, tplConfig) {
+    const id = "nga-admin-panel";
+    let panel = container.querySelector(`#${id}`);
+    if (!state.adminOpen) {
+      if (panel) panel.remove();
+      return;
+    }
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.id = id;
+      panel.style.cssText = [
+        "position:absolute",
+        "top:60px",
+        "right:12px",
+        "width:260px",
+        "max-height:calc(100vh - 120px)",
+        "overflow:auto",
+        "background:#ffffff",
+        "border:1px solid #e5e7eb",
+        "border-radius:8px",
+        "box-shadow:0 12px 32px rgba(15,23,42,0.18)",
+        "padding:12px 14px",
+        "z-index:9998",
+        "font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif"
+      ].join(";");
+      container.appendChild(panel);
+    }
+    panel.innerHTML = "";
+    const header = document.createElement("div");
+    header.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-bottom:10px";
+    const title = document.createElement("div");
+    title.textContent = "Admin — Feature Toggles";
+    title.style.cssText = "font-size:12px;font-weight:700;color:#1f2937";
+    header.appendChild(title);
+    const close = document.createElement("button");
+    close.textContent = "×";
+    close.style.cssText = "background:none;border:none;font-size:18px;line-height:1;color:#64748b;cursor:pointer;padding:0 4px";
+    close.addEventListener("click", () => dispatch({ type: "TOGGLE_ADMIN" }));
+    header.appendChild(close);
+    panel.appendChild(header);
+    const hint = document.createElement("div");
+    hint.textContent = "Toggle chrome surfaces on/off. Changes apply immediately.";
+    hint.style.cssText = "font-size:10px;color:#64748b;margin-bottom:10px;line-height:1.4";
+    panel.appendChild(hint);
+    const features = tplConfig.features;
+    for (const item of ADMIN_TOGGLEABLE_FEATURES) {
+      const base = features[item.key];
+      const override = state.featureOverrides[item.key];
+      const on = override === void 0 ? !!base : override;
+      const row = document.createElement("label");
+      row.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;font-size:11px;color:#1f2937";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = on;
+      cb.style.cssText = "cursor:pointer";
+      cb.addEventListener("change", () => dispatch({ type: "TOGGLE_FEATURE", key: item.key }));
+      row.appendChild(cb);
+      const lbl = document.createElement("span");
+      lbl.textContent = item.label;
+      row.appendChild(lbl);
+      panel.appendChild(row);
+    }
+  }
+  function renderAdvisorPanel(container, state, dispatch) {
+    const id = "nga-advisor-panel";
+    let panel = container.querySelector(`#${id}`);
+    if (!state.advisorOpen) {
+      if (panel) panel.remove();
+      return;
+    }
+    if (!panel) {
+      panel = document.createElement("div");
+      panel.id = id;
+      panel.style.cssText = [
+        "position:absolute",
+        "top:60px",
+        "right:282px",
+        "width:300px",
+        "background:#ffffff",
+        "border:1px solid #e5e7eb",
+        "border-radius:8px",
+        "box-shadow:0 12px 32px rgba(15,23,42,0.18)",
+        "padding:14px 16px",
+        "z-index:9998",
+        "font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif"
+      ].join(";");
+      container.appendChild(panel);
+    }
+    panel.innerHTML = "";
+    const header = document.createElement("div");
+    header.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-bottom:10px";
+    const title = document.createElement("div");
+    title.textContent = "Advisor — Narrative Mode";
+    title.style.cssText = "font-size:12px;font-weight:700;color:#1f2937";
+    header.appendChild(title);
+    const close = document.createElement("button");
+    close.textContent = "×";
+    close.style.cssText = "background:none;border:none;font-size:18px;line-height:1;color:#64748b;cursor:pointer;padding:0 4px";
+    close.addEventListener("click", () => dispatch({ type: "TOGGLE_ADVISOR" }));
+    header.appendChild(close);
+    panel.appendChild(header);
+    const body = document.createElement("div");
+    body.style.cssText = "font-size:11px;color:#475569;line-height:1.5";
+    body.innerHTML = '<p style="margin:0 0 8px 0"><strong>Coming in a later cut.</strong></p><p style="margin:0 0 8px 0">Advisor mode turns the visible task list + date range into a Claude-generated narrative walkthrough of what the timeline actually says.</p><p style="margin:0;color:#64748b">Restoration pending API infrastructure decisions (auth, CSP under LWS, streaming UX, error handling).</p>';
+    panel.appendChild(body);
+  }
   function renderComingSoon(container, viewLabel) {
     container.innerHTML = "";
     const wrap = el("div", [
@@ -4647,13 +5163,29 @@ var NimbusGanttApp = (function(exports) {
         if (stateChanged) {
           if (state.fullscreen) container.classList.add("nga-fullscreen");
           else container.classList.remove("nga-fullscreen");
+          reconcileFeatureOverrides();
           renderSlots();
-          if (ev.type === "SET_VIEW" || ev.type === "SET_GROUP_BY" || ev.type === "SET_FILTER" || ev.type === "SET_SEARCH" || ev.type === "TOGGLE_HIDE_COMPLETED") {
+          const viewChangingEvents = ["SET_VIEW", "SET_GROUP_BY", "SET_FILTER", "SET_SEARCH", "TOGGLE_HIDE_COMPLETED"];
+          if (viewChangingEvents.indexOf(ev.type) >= 0) {
+            rebuildView();
+          } else if (ev.type === "TOGGLE_FEATURE") {
             rebuildView();
           } else if (ev.type === "SET_ZOOM") {
             if (ganttInst && typeof ganttInst.setZoom === "function") ganttInst.setZoom(state.zoom);
             emitViewport();
           }
+        }
+      }
+      const FEATURE_DEFAULTS = {};
+      function snapshotFeatureDefaults() {
+        const f = tplConfig.features;
+        for (const k of Object.keys(f)) FEATURE_DEFAULTS[k] = f[k];
+      }
+      function reconcileFeatureOverrides() {
+        const f = tplConfig.features;
+        for (const k of Object.keys(FEATURE_DEFAULTS)) {
+          const override = state.featureOverrides[k];
+          f[k] = override === void 0 ? FEATURE_DEFAULTS[k] : override;
         }
       }
       function buildSlotData() {
@@ -4705,6 +5237,8 @@ var NimbusGanttApp = (function(exports) {
         if (contentInst) {
           ganttHost = contentInst.el.querySelector('[data-nga-gantt-host="1"]');
         }
+        renderAdminPanel(container, state, dispatch, tplConfig);
+        renderAdvisorPanel(container, state, dispatch);
       }
       let ganttInst = null;
       let cleanupShading = null;
@@ -4922,6 +5456,7 @@ var NimbusGanttApp = (function(exports) {
         renderSlots();
       }
       function rebuildView() {
+        var _a2;
         if (!ganttHost) return;
         if (cleanupShading) {
           cleanupShading();
@@ -4952,10 +5487,15 @@ var NimbusGanttApp = (function(exports) {
               void options.onItemReorder(taskId, payload);
             } : void 0
           });
+        } else if (state.viewMode === "treemap" || state.viewMode === "bubbles") {
+          mountAltCanvasView(
+            ganttHost,
+            allTasks,
+            state.viewMode === "treemap" ? renderTreemap : renderBubble,
+            ((_a2 = options.config) == null ? void 0 : _a2.colorMap) || { ...STAGE_COLORS, ...STAGE_TO_CATEGORY_COLOR }
+          );
         } else {
           const labelMap = {
-            treemap: "Treemap",
-            bubbles: "Bubbles",
             calendar: "Calendar",
             flow: "Flow"
           };
@@ -4963,6 +5503,7 @@ var NimbusGanttApp = (function(exports) {
         }
         renderSlots();
       }
+      snapshotFeatureDefaults();
       renderSlots();
       try {
         const renderedSlots = [];

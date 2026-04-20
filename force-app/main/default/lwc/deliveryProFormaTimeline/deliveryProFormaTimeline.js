@@ -665,17 +665,25 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
 
     async _refetchAfterPatch() {
         try {
+            // eslint-disable-next-line no-console
+            console.log('[DH refetch] starting — mountHandle type=', typeof this._mountHandle, 'keys=', this._mountHandle ? Object.keys(this._mountHandle) : 'no handle');
             const data = await getProFormaTimelineData({ showCompleted: false });
             this._tasks = data || [];
-            // NG 0.185.x exposes handle.setTasks (NOT updateTasks). Prior
-            // code typed the wrong method name and the typeof===function
-            // guard silently skipped it, so Apex writes landed but NG never
-            // re-rendered. Root cause of "reorder fires but visual doesn't
-            // update" on MF-Prod 2026-04-20. Keeping the typeof guard so a
-            // future NG rename doesn't throw — fallback is just the stored
-            // data waiting for the next mount cycle.
+            // eslint-disable-next-line no-console
+            console.log('[DH refetch] fetched', this._tasks.length, 'tasks. Sample sortOrder values:', this._tasks.slice(0, 5).map(t => ({ id: t.id, so: t.sortOrder })));
+            const setTasksType = this._mountHandle ? typeof this._mountHandle.setTasks : 'no handle';
+            // eslint-disable-next-line no-console
+            console.log('[DH refetch] handle.setTasks typeof=', setTasksType);
             if (this._mountHandle && typeof this._mountHandle.setTasks === 'function') {
-                this._mountHandle.setTasks(this._mapTasksForNg(this._tasks));
+                const mapped = this._mapTasksForNg(this._tasks);
+                // eslint-disable-next-line no-console
+                console.log('[DH refetch] calling setTasks with', mapped.length, 'tasks');
+                this._mountHandle.setTasks(mapped);
+                // eslint-disable-next-line no-console
+                console.log('[DH refetch] setTasks returned');
+            } else {
+                // eslint-disable-next-line no-console
+                console.warn('[DH refetch] NG handle missing setTasks — visual state will not refresh');
             }
         } catch (error) {
             // eslint-disable-next-line no-console
