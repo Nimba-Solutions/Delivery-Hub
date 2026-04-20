@@ -35,15 +35,15 @@
                             <lightning-icon icon-name="standard:log_a_call" size="medium"></lightning-icon>
                         </div>
                         <div class="slds-media__body">
-                            <div class="slds-text-heading_large slds-var-m-bottom_xx-small" style="cursor: pointer;" onclick={handleHoursEnteredThisMonthClick}>
-                                <strong>{metrics.hoursLoggedThisMonth}</strong>
+                            <div class="slds-text-heading_large slds-var-m-bottom_xx-small" style="cursor: pointer;" onclick={handleHoursPerformedThisMonthClick}>
+                                <strong>{metrics.hoursThisMonth}</strong>
                             </div>
-                            <div class="slds-text-title_caps slds-text-color_weak">Hours Entered This Month</div>
-                            <div class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small" style="cursor: pointer; text-decoration: underline;" onclick={handleHoursPerformedThisMonthClick}>
-                                {metrics.hoursThisMonth} hours performed
+                            <div class="slds-text-title_caps slds-text-color_weak">Hours Performed This Month</div>
+                            <div class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small" style="cursor: pointer; text-decoration: underline;" onclick={handleHoursEnteredThisMonthClick}>
+                                {metrics.hoursLoggedThisMonth} hours entered
                             </div>
                             <div class="slds-text-body_small slds-text-color_weak">
-                                Last Month: <span style="cursor: pointer; text-decoration: underline;" onclick={handleHoursEnteredLastMonthClick}>{metrics.hoursLoggedLastMonth} entered</span> · <span style="cursor: pointer; text-decoration: underline;" onclick={handleHoursPerformedLastMonthClick}>{metrics.hoursLastMonth} performed</span>
+                                Last Month: <span style="cursor: pointer; text-decoration: underline;" onclick={handleHoursPerformedLastMonthClick}>{metrics.hoursLastMonth} performed</span> · <span style="cursor: pointer; text-decoration: underline;" onclick={handleHoursEnteredLastMonthClick}>{metrics.hoursLoggedLastMonth} entered</span>
                             </div>
                         </div>
                     </div>
