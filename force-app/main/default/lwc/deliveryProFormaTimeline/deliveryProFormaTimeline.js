@@ -677,9 +677,17 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     }
 
     _handleExitFullscreen() {
+        // NavigationMixin standard__navItemPage with an unprefixed apiName
+        // fails silently under LWS strict mode on managed-namespace subscriber
+        // orgs — the nav "succeeds" but the target never resolves. Confirmed
+        // inert on MF-Prod 2026-04-20. standard__webPage with a direct URL
+        // routes through a different path that respects VF-iframe boundaries
+        // and honors the namespace prefix reliably.
+        const prefix = this._vfPrefix();
+        const url = `/lightning/n/${prefix}${EMBEDDED_TAB_API_NAME}`;
         this[NavigationMixin.Navigate]({
-            type: 'standard__navItemPage',
-            attributes: { apiName: EMBEDDED_TAB_API_NAME },
+            type: 'standard__webPage',
+            attributes: { url },
         });
     }
 
