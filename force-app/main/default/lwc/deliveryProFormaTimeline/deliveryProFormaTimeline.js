@@ -47,6 +47,7 @@ import updateWorkItemDates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGan
 import updateWorkItemSortOrder from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemSortOrder';
 import updateWorkItemPriorityGroup from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemPriorityGroup';
 import updateWorkItemParent from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemParent';
+import updateWorkItemFields from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemFields';
 
 // Tab DeveloperNames used by the fullscreen nav pair. Centralized here so the
 // names are discoverable from a single search.
@@ -248,7 +249,11 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             onPatch: (patch) => this._handlePatch(patch),
             onItemReorder: (taskId, payload) => this._handleItemReorder(taskId, payload),
             onItemReorderError: (taskId, error) => this._handleItemReorderError(taskId, error),
-            onItemClick: (taskId) => this._handleItemClick(taskId),
+            // onItemClick NOT wired — NG 0.185.18+ defaults to dispatching
+            // TOGGLE_DETAIL on task click, which opens DetailPanel inline.
+            // When a host onItemClick is wired, NG suppresses default action,
+            // leaving clicks with no effect. Removing the wiring lets NG
+            // handle it natively.
             onViewportChange: (state) => this._handleViewportChange(state),
             initialViewport: this._readInitialViewport(),
             // Dormant prop wiring — NG implements the handler in a future
@@ -270,6 +275,38 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 hoursColumn: true,
                 budgetUsedColumn: true,
             },
+            // NG 0.185.16 — vertical-dominant canvas bar drag (absY > absX × 1.5,
+            // 12px threshold) emits onItemReorder. Horizontal drag still shifts
+            // dates. Default ON for DH because sidebar drag-hit-testing has
+            // known issues for distant rows (705 → 704 case) and bar-drag is
+            // the reliable reprioritize gesture. Admin panel can still toggle.
+            enableDragBarToReprioritize: true,
+            // NG 0.185.15+ DetailPanel fieldSchema. Keys map to
+            // WorkItem__c fields (unprefixed — Apex updateWorkItemFields
+            // handles namespace resolution). Picklist options mirror the
+            // sObject's current picklist values. Changes emitted via
+            // onItemEdit flow through _handleItemEdit → updateWorkItemFields
+            // for bulk patch. Date fields still work via the existing
+            // startDate/endDate path.
+            fieldSchema: [
+                { key: 'BriefDescriptionTxt__c', label: 'Title', type: 'text', placeholder: 'Short task description' },
+                { key: 'StageNamePk__c', label: 'Stage', type: 'picklist', options: [
+                    'Backlog','Scoping In Progress','Clarification Requested (Pre-Dev)',
+                    'Ready for Sizing','Sizing Underway','Ready for Prioritization',
+                    'Proposal Requested','Drafting Proposal','Ready for Tech Review',
+                    'Ready for Final Approval','Ready for Development','In Development',
+                    'Dev Blocked','Ready for QA','QA In Progress','Ready for Internal UAT',
+                    'Ready for Client UAT','In Client UAT','Ready for UAT Sign-off',
+                    'Ready for Merge','Ready for Deployment','Deployed to Prod',
+                    'Done','Cancelled'
+                ] },
+                { key: 'PriorityPk__c', label: 'Priority', type: 'picklist', options: ['Low','Medium','High'] },
+                { key: 'EstimatedHoursNumber__c', label: 'Estimated Hours', type: 'number', min: 0 },
+                { key: 'startDate', label: 'Start Date', type: 'date' },
+                { key: 'endDate', label: 'End Date', type: 'date' },
+                { key: 'AcceptanceCriteriaTxt__c', label: 'Acceptance Criteria', type: 'textarea', placeholder: 'Given / When / Then...' },
+                { key: 'DetailsTxt__c', label: 'Details', type: 'textarea' },
+            ],
             cssUrl: CLOUDNIMBUS_CSS,
             // Passed explicitly to avoid window-lookup races; the app shell
             // would otherwise reach for window.NimbusGantt at a point where
@@ -277,38 +314,54 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             engine: window.NimbusGantt,
         };
 
-        // Fullscreen-only: wire onItemEdit/onItemEditError INLINE. Arrow
-        // forwards directly to updateWorkItemDates without method-reference
-        // indirection. Embedded stays on legacy onPatch (verified working).
-        if (this.mode === 'fullscreen') {
+        // Wire onItemEdit on both embedded + fullscreen. NG 0.185.15's
+        // DetailPanel uses this callback for form-submit regardless of
+        // surface. Prior fullscreen-only gate left embedded's DetailPanel
+        // silently unable to save when user edited fields from task click.
+        if (true) {
             mountConfig.onItemEdit = async (taskId, changes) => {
                 const id = this._normalizeTaskId(taskId);
-                // Stringify so empty Proxy vs populated object is distinguishable
-                // in the log. NG was silently nuking record dates: it fires
-                // onItemEdit with changes={} on every canvas drag-commit-move
-                // because dates flow via onTaskMove instead. Previous handler
-                // destructured undefined start/end and wrote null to both,
-                // wiping the record. Guard against empty payloads.
                 let changesLog = {};
                 try { changesLog = JSON.parse(JSON.stringify(changes || {})); } catch (e) { changesLog = { _unserializable: true }; }
                 // eslint-disable-next-line no-console
-                console.log('[DH onItemEdit inline]', { arg1Type: typeof taskId, resolvedId: id, changes: changesLog });
+                console.log('[DH onItemEdit inline]', { resolvedId: id, changes: changesLog });
                 if (!id) { throw new Error('[DH] onItemEdit missing taskId'); }
-                const { startDate, endDate } = changes || {};
-                if (startDate === undefined && endDate === undefined) {
+                const keys = Object.keys(changes || {});
+                if (keys.length === 0) {
+                    // Canvas drag-commit-move emits onItemEdit with empty changes
+                    // (dates flow via onTaskMove instead). Guard to avoid
+                    // updateWorkItemDates(null, null) nuking the record dates.
                     // eslint-disable-next-line no-console
-                    console.warn('[DH onItemEdit inline] empty changes payload — skipping updateWorkItemDates to avoid nulling the record dates');
+                    console.warn('[DH onItemEdit inline] empty changes — no save');
                     return;
                 }
-                await updateWorkItemDates({
-                    workItemId: id,
-                    startDate: startDate || null,
-                    endDate: endDate || null,
-                });
-                // No refetch — NG holds optimistic state for the new dates.
-                // Refetch races the DB commit and setTasks(stale) clobbers.
+                // DetailPanel multi-field save (NG 0.185.15+). Split into:
+                //  - startDate/endDate → updateWorkItemDates (validated date endpoint)
+                //  - everything else   → updateWorkItemFields (generic patch)
+                // Both fire in parallel. NG holds optimistic state; no refetch.
+                const { startDate, endDate, ...restFields } = changes || {};
+                const ops = [];
+                if (startDate !== undefined || endDate !== undefined) {
+                    ops.push(updateWorkItemDates({
+                        workItemId: id,
+                        startDate: startDate || null,
+                        endDate: endDate || null,
+                    }));
+                }
+                if (Object.keys(restFields).length > 0) {
+                    ops.push(updateWorkItemFields({ workItemId: id, fields: restFields }));
+                }
+                try {
+                    await Promise.all(ops);
+                    // No refetch — causes visual "bounce" as setTasks rebuilds the
+            // whole gantt while NG's optimistic state already has the edit
+            // applied. Next page reload reads fresh from DB.
+                } catch (error) {
+                    this._showError('Failed to save change', error);
+                    throw error;
+                }
             };
-            mountConfig.onItemEditError = (taskId, error) => this._showError('Failed to save date change', error);
+            mountConfig.onItemEditError = (taskId, error) => this._showError('Failed to save change', error);
         }
 
         // Surface-aware fullscreen-button routing. Give NG's shell exactly one
@@ -326,10 +379,16 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         // routing — set declaratively on the FlexiPage. onApexRoute is the
         // fallback discriminator for the fullscreen-mode-no-fullscreenUrl case
         // (VF Lightning Out mount).
-        const onApexRoute = typeof window !== 'undefined'
-            && window.location
-            && typeof window.location.pathname === 'string'
-            && window.location.pathname.indexOf('/apex/') !== -1;
+        const pathname = (typeof window !== 'undefined' && window.location && typeof window.location.pathname === 'string')
+            ? window.location.pathname : '';
+        const onApexRoute = pathname.indexOf('/apex/') !== -1;
+        // Standalone Aura app URL: /<ns>/<AppName>.app — renders at top level
+        // outside /one/one.app, so we're the whole viewport. User entered here
+        // via _handleEnterFullscreen navigation; NG's exit button must navigate
+        // BACK, not call document.exitFullscreen() (browser isn't actually in
+        // fullscreen mode — we just loaded a different URL).
+        const onStandaloneAppRoute = /^\/[^/]+\/[^/]+\.app(\/|$|#)/.test(pathname)
+            || /\.app$/.test(pathname);
         if (this.mode === 'embedded') {
             mountConfig.onEnterFullscreen = () => this._handleEnterFullscreen();
         } else if (this.fullscreenUrl) {
@@ -342,8 +401,10 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 url = url.replace('/apex/', `/apex/${prefix}`);
             }
             mountConfig.fullscreenUrl = url;
-        } else if (onApexRoute) {
-            // VF Full_Bleed mount (no @api fullscreenUrl from LightningOut)
+        } else if (onApexRoute || onStandaloneAppRoute) {
+            // VF Full_Bleed mount (/apex/) OR standalone Aura app route (/c/...app)
+            // — both top-level chromeless surfaces user entered via nav.
+            // NG's toolbar button should fire our exit-nav callback.
             mountConfig.onExitFullscreen = () => this._handleExitFullscreen();
         } else {
             // Standalone FlexiPage without fullscreenUrl configured — fall
@@ -458,10 +519,10 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         if (ops.length === 0) return;
         try {
             await Promise.all(ops);
-            // No refetch — NG holds optimistic state for all mutation paths
-            // (reorder, date-edit, priority-group, parent). Refetch was racing
-            // the DB commit and setTasks(stale) was clobbering. Trust NG's
-            // local model on success; surface errors via toast.
+            // No refetch — setTasks() rebuilds the whole gantt and causes
+            // visual x-axis snap after every drop. NG's optimistic state
+            // already reflects the patch; formula-field rollups refresh on
+            // next page load.
         } catch (error) {
             this._showError('Failed to save change', error);
         }
@@ -510,8 +571,57 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
      * MF-Prod traced to this handler ignoring newPriorityGroup — sort updated
      * on both but lane only changed visually; on refresh items snapped back.
      */
+    /**
+     * Print a flat table of every task grouped by priority bucket so a
+     * drag + console scroll shows exactly where each task is before and
+     * after the save. Use NG's current view (mount handle) if available,
+     * else fall back to this._tasks (last refetch).
+     */
+    /** Refetch fresh data from Apex, push into NG via setTasks, then dump. */
+    async _refetchAfterPatchAndDump(label) {
+        try {
+            const data = await getProFormaTimelineData({ showCompleted: false });
+            this._tasks = data || [];
+            if (this._mountHandle && typeof this._mountHandle.setTasks === 'function') {
+                this._mountHandle.setTasks(this._mapTasksForNg(this._tasks));
+            }
+            this._dumpPositions(label);
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.warn('[DH refetch] failed:', error);
+        }
+    }
+
+    _dumpPositions(label) {
+        let tasks = null;
+        try {
+            if (this._mountHandle && typeof this._mountHandle.getTasks === 'function') {
+                tasks = this._mountHandle.getTasks();
+            }
+        } catch (e) { /* fall through */ }
+        if (!tasks) tasks = this._tasks || [];
+        const rows = tasks.map(t => ({
+            bucket: t.priorityGroup || '(none)',
+            sortOrder: t.sortOrder,
+            name: (t.name || t.title || '').slice(0, 50),
+            id: t.id,
+        }));
+        rows.sort((a, b) => {
+            if (a.bucket !== b.bucket) return String(a.bucket).localeCompare(String(b.bucket));
+            return Number(a.sortOrder) - Number(b.sortOrder);
+        });
+        // Plain text lines so DevTools "Copy all messages" captures them.
+        // console.table prints nicely but is empty in pasted logs.
+        const lines = rows.map(r =>
+            `  ${String(r.bucket).padEnd(14)} ${String(r.sortOrder).padEnd(10)} ${r.id}  ${r.name}`
+        );
+        // eslint-disable-next-line no-console
+        console.log('[DH positions] ' + label + ' (' + rows.length + ' tasks)\n' + lines.join('\n'));
+    }
+
     async _handleItemReorder(arg1, payload) {
         const taskId = this._normalizeTaskId(arg1);
+        this._dumpPositions('BEFORE onItemReorder ' + taskId);
         // Expanded payload logging — plain stringify so Glen can copy from
         // console without needing to expand collapsed objects. Fields
         // enumerated so we can spot if NG sends date info via reorder
@@ -537,7 +647,9 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 startDate: startDate || null,
                 endDate: endDate || null,
             });
-            this._scheduleRefetch();
+            // No refetch — setTasks() rebuilds the whole gantt and causes
+            // visual x-axis snap. NG's optimistic state already reflects
+            // the new dates.
             return;
         }
         const ops = [];
@@ -559,13 +671,10 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             return;
         }
         await Promise.all(ops);
-        // Intentional: do NOT refetch after reorder. NG has already applied
-        // the optimistic state and the Apex save persisted NG's sparse
-        // sortOrder value. A refetch here races the DB commit and can
-        // return pre-save rows, which setTasks() then pushes back into NG —
-        // producing the visual "snap-back" symptom even though the save
-        // succeeded. Reorder is trusted-optimistic; refetch only runs on
-        // error (handled by onItemReorderError) or other mutation paths.
+        // No refetch — setTasks() rebuilds the whole gantt and causes
+        // visual x-axis snap after every drop. NG's optimistic state
+        // already reflects the reorder; Apex collision-nudges show up
+        // on next page load.
     }
 
     _handleItemReorderError(taskId, error) {
@@ -581,19 +690,10 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         const taskId = this._normalizeTaskId(arg1);
         // eslint-disable-next-line no-console
         console.log('[DH onItemClick]', { arg1Type: typeof arg1, resolvedTaskId: taskId });
-        // Guard against NG virtual group-header / bucket rows (ids like
-        // "NEXT", "NOW", "PROPOSED", "follow-on") and any non-SF-Id shape.
-        // SF Ids are 15 or 18 alphanumeric chars. Fires NavigationMixin only
-        // when the id passes this shape check — otherwise PageNotFound modal.
-        if (!taskId || !/^[a-zA-Z0-9]{15}([a-zA-Z0-9]{3})?$/.test(taskId)) return;
-        this[NavigationMixin.Navigate]({
-            type: 'standard__recordPage',
-            attributes: {
-                recordId: taskId,
-                objectApiName: `${this._vfPrefix()}WorkItem__c`,
-                actionName: 'view',
-            },
-        });
+        // Do NOT navigate away — NG 0.185.18's TOGGLE_DETAIL dispatch opens
+        // the DetailPanel for in-place editing. Navigating to the record page
+        // would leave the gantt context. Users reach the SF record via the
+        // Title-as-link in DetailPanel (recordUrlTemplate handles that).
     }
 
     /**
@@ -733,18 +833,35 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     }
 
     _handleEnterFullscreen() {
-        // Target the VF-wrapped Full_Bleed TAB — not the /apex/ URL directly.
-        // /apex/DeliveryGanttStandalone routed through standard__webPage lands
-        // in LEX's alohaPage wrapper which keeps the menu bar (defeats the
-        // point of fullscreen). The tab URL /lightning/n/Delivery_Gantt_Full_Bleed
-        // renders the VF page chromeless because the tab itself is a raw VF
-        // tab (no lightningStylesheets, showHeader=false).
+        // Navigate to the standalone Aura application URL. An <aura:application>
+        // extending force:slds is served at /<ns>/AppName.app as a TOP-LEVEL
+        // page — outside /one/one.app, so no LEX chrome (no app launcher, no
+        // nav tabs, no global header, no sidebar). Browser URL is the app;
+        // viewport is 100% the gantt. User navigates back via browser Back
+        // button or a Back-to-SF link inside the gantt.
+        //
+        // Prior attempts:
+        //  - document.documentElement.requestFullscreen() → in-iframe only,
+        //    LEX chrome stays visible outside the iframe. Doesn't work.
+        //  - /lightning/n/Delivery_Gantt_Full_Bleed (VF tab) → wraps in LEX
+        //    alohaPage, keeps menu bar. Doesn't work.
+        //  - /apex/DeliveryGanttStandalone (raw VF) → same alohaPage wrap
+        //    when routed through standard__webPage. Doesn't work.
+        //
+        // Standalone aura:app URL is the canonical Salesforce-documented
+        // pattern for chromeless rendering inside a SF org session.
         const prefix = this._vfPrefix();
-        const url = `/lightning/n/${prefix}${FULLSCREEN_TAB_API_NAME}`;
-        this[NavigationMixin.Navigate]({
-            type: 'standard__webPage',
-            attributes: { url },
-        });
+        const nsSegment = prefix ? prefix.replace('__', '') : 'c';
+        const url = `/${nsSegment}/DeliveryTimelineStandalone.app`;
+        // Use window.top so navigation escapes any iframe context (Lightning
+        // Out, sub-frames). Falls back to window.location if top is blocked.
+        try {
+            if (window.top && window.top !== window) {
+                window.top.location.href = url;
+                return;
+            }
+        } catch (e) { /* fall through */ }
+        window.location.href = url;
     }
 
     _handleExitFullscreen() {
