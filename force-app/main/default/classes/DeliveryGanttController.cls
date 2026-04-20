@@ -463,17 +463,25 @@ public with sharing class DeliveryGanttController {
             }
             Boolean anyAssigned = false;
             for (String fieldKey : fields.keySet()) {
-                if (String.isBlank(fieldKey)) continue;
+                if (String.isBlank(fieldKey)) {
+                    continue;
+                }
                 Schema.SObjectField fToken = byAnyName.get(fieldKey.toLowerCase());
-                if (fToken == null) continue;
+                if (fToken == null) {
+                    continue;
+                }
                 Schema.DescribeFieldResult dfr = fToken.getDescribe();
-                if (!dfr.isUpdateable()) continue;
+                if (!dfr.isUpdateable()) {
+                    continue;
+                }
                 Object rawValue = fields.get(fieldKey);
                 Object coerced = coerceFieldValue(dfr, rawValue);
                 item.put(fToken, coerced);
                 anyAssigned = true;
             }
-            if (!anyAssigned) return;
+            if (!anyAssigned) {
+                return;
+            }
             update item; //NOPMD - with sharing class handles CRUD; as user breaks managed package tests
         } catch (Exception e) {
             AuraHandledException ahe = new AuraHandledException(e.getMessage());
@@ -482,9 +490,18 @@ public with sharing class DeliveryGanttController {
         }
     }
 
-    /** Coerce JSON-ish caller values into types sObject.put expects. */
+    /**
+     * @description Coerce JSON-ish caller values into types sObject.put expects.
+     *              Date and DateTime picklist payloads arrive as ISO strings from
+     *              the LWC layer; sObject.put needs native Date/DateTime.
+     * @param dfr Describe for the target field (used to read DisplayType).
+     * @param raw Raw value from the caller's fields map.
+     * @return Coerced value suitable for sObject.put, or null if raw was null.
+     */
     private static Object coerceFieldValue(Schema.DescribeFieldResult dfr, Object raw) {
-        if (raw == null) return null;
+        if (raw == null) {
+            return null;
+        }
         Schema.DisplayType t = dfr.getType();
         if (t == Schema.DisplayType.DATE && raw instanceof String) {
             String s = (String) raw;
