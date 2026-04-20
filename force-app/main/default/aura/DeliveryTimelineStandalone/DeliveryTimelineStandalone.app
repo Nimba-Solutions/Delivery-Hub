@@ -5,18 +5,15 @@
     as top-level page OUTSIDE /one/one.app, so no LEX chrome appears —
     the entire viewport is the gantt.
 
-    Unlike DeliveryTimelineOut.app (extends ltng:outApp) which is a
-    Lightning Out bootstrap target for VF embedding, this app is a
-    standalone app you navigate to directly. `force:slds` injects SLDS
-    styles globally so the LWC's lightning-* primitives render natively.
-
-    The `c:` namespace is context-sensitive in Aura — it resolves to the
-    package's own namespace when installed as a managed package, and to
-    the custom (unnamespaced) namespace in scratch orgs. So `c:delivery
-    ProFormaTimeline` renders the local package's LWC in both contexts
-    without needing a CumulusCI namespace token (which can't be used as
-    an XML element-name prefix anyway).
+    Uses the CumulusCI %%%NAMESPACE_OR_C%%% token so `cci task run deploy`
+    substitutes the actual namespace before deploy:
+      unmanaged scratch → <c:deliveryProFormaTimeline/>
+      namespaced scratch/managed package → <delivery:deliveryProFormaTimeline/>
+    A literal `c:` prefix does NOT reliably resolve to the package namespace
+    in Aura managed-package contexts (unlike LWC where `c:` always works).
+    Note: `sf project deploy` does not perform this substitution and will
+    fail with an XML parse error — always deploy via cci for this file.
 -->
 <aura:application extends="force:slds" access="GLOBAL">
-    <c:deliveryProFormaTimeline mode="fullscreen" />
+    <%%%NAMESPACE_OR_C%%%:deliveryProFormaTimeline mode="fullscreen" />
 </aura:application>

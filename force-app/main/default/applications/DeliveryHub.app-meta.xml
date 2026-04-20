@@ -194,7 +194,6 @@
     <tabs>Delivery_Workspace</tabs>
     <tabs>Delivery_Board</tabs>
     <tabs>Delivery_Timeline</tabs>
-    <tabs>Delivery_Gantt_Full_Bleed</tabs>
     <tabs>Delivery_Activity</tabs>
     <tabs>WorkItem__c</tabs>
     <tabs>WorkItemComment__c</tabs>
