@@ -371,126 +371,61 @@ public with sharing class DeliveryGanttController {
     }
 
     /**
-     * @description Updates the sort order of a work item after a drag-to-reorder
-     *              action in the Gantt chart.
+     * @description Moves a work item to a new position within its priority
+     *              group and re-spaces siblings to stable 1000-step values.
+     *              The `sortOrder` parameter is interpreted as the desired
+     *              POSITION (newIndex) within the lane, not as a raw
+     *              SortOrderNumber__c value — writing raw newIndex caused
+     *              collisions (two tasks at sortOrder=0) which made the
+     *              ORDER BY tiebreaker decide winner, producing the
+     *              snap-back-after-drag symptom. Atomic renumber here
+     *              guarantees strictly-ordered siblings after each drag.
      * @param workItemId The Salesforce record Id.
-     * @param sortOrder  New sort position value.
+     * @param sortOrder  Desired position (newIndex) within the task's
+     *                   priority group; 0 = top. Clamped to [0, size].
      */
     @AuraEnabled
     public static void updateWorkItemSortOrder(String workItemId, Decimal sortOrder) {
-        try {
-            WorkItem__c item = new WorkItem__c(Id = workItemId, SortOrderNumber__c = sortOrder);
-            update item; //NOPMD - with sharing class handles CRUD; as user breaks managed package tests
-        } catch (Exception e) {
-            AuraHandledException ahe = new AuraHandledException(e.getMessage());
-            ahe.setMessage(e.getMessage());
-            throw ahe;
-        }
-    }
-
-    /**
-     * @description Generic field-level patch endpoint. Applies an arbitrary
-     *              Map<String,Object> of field writes to a single WorkItem__c.
-     *              Built for NG's TaskEditModal fieldSchema — caller passes
-     *              whatever fields the template exposes (status, assignee,
-     *              parent, comments, etc.). FLS is checked per field; fields
-     *              not updateable by the running user are silently skipped
-     *              rather than failing the whole patch.
-     *              Field API names must match the WorkItem__c sObject's field
-     *              map exactly (unprefixed for package-owned fields — e.g.,
-     *              'StageNamePk__c', not 'delivery__StageNamePk__c'). Date
-     *              fields accept either Date or ISO 'YYYY-MM-DD' strings;
-     *              other types are passed through to sObject.put() as-is.
-     * @param workItemId The Salesforce record Id.
-     * @param fields Map of field API name → new value. Unknown or non-
-     *               updateable fields are skipped.
-     */
-    @AuraEnabled
-    public static void updateWorkItemFields(String workItemId, Map<String, Object> fields) {
         if (String.isBlank(workItemId)) {
             throw new AuraHandledException('workItemId is required');
         }
-        if (fields == null || fields.isEmpty()) {
-            return; // nothing to do, no-op rather than error
-        }
+        Integer newIndex = sortOrder == null ? 0 : Integer.valueOf(sortOrder);
         try {
-            Id rid = Id.valueOf(workItemId);
-            WorkItem__c item = new WorkItem__c(Id = rid);
-            Map<String, Schema.SObjectField> fieldMap =
-                WorkItem__c.SObjectType.getDescribe().fields.getMap();
-            // Namespace-agnostic field lookup. Different contexts return
-            // different shapes from fields.getMap() and the describe calls,
-            // so index each field by every name form the caller might pass:
-            //   - map key (whatever getMap() uses in this context)
-            //   - getLocalName() (unprefixed)
-            //   - getName() (prefixed in managed context, unprefixed in scratch)
-            // Result: lookup by ANY of those forms finds the field token.
-            // Prior attempt (PR #659) indexed by getLocalName() alone and
-            // STILL failed upload-beta on 2026-04-20 — empirical evidence that
-            // managed-pkg describe behavior isn't what a simple mental model
-            // suggests. Comprehensive index sidesteps the guessing game.
-            Map<String, Schema.SObjectField> byLocalName =
-                new Map<String, Schema.SObjectField>();
-            for (String mapKey : fieldMap.keySet()) {
-                Schema.SObjectField sf = fieldMap.get(mapKey);
-                Schema.DescribeFieldResult dfr = sf.getDescribe();
-                byLocalName.put(mapKey.toLowerCase(), sf);
-                byLocalName.put(dfr.getLocalName().toLowerCase(), sf);
-                byLocalName.put(dfr.getName().toLowerCase(), sf);
-            }
-            Boolean anyFieldAssigned = false;
-            for (String fieldKey : fields.keySet()) {
-                if (String.isBlank(fieldKey)) {
-                    continue;
+            WorkItem__c target = [
+                SELECT Id, PriorityGroupPk__c, SortOrderNumber__c
+                FROM WorkItem__c WHERE Id = :workItemId LIMIT 1
+            ];
+            String pg = target.PriorityGroupPk__c;
+            List<WorkItem__c> siblings = pg == null
+                ? [SELECT Id, SortOrderNumber__c FROM WorkItem__c
+                   WHERE PriorityGroupPk__c = null
+                   ORDER BY SortOrderNumber__c ASC NULLS LAST, Name ASC]
+                : [SELECT Id, SortOrderNumber__c FROM WorkItem__c
+                   WHERE PriorityGroupPk__c = :pg
+                   ORDER BY SortOrderNumber__c ASC NULLS LAST, Name ASC];
+            List<WorkItem__c> reordered = new List<WorkItem__c>();
+            for (WorkItem__c s : siblings) {
+                if (s.Id != target.Id) {
+                    reordered.add(s);
                 }
-                Schema.SObjectField fToken = byLocalName.get(fieldKey.toLowerCase());
-                if (fToken == null) {
-                    continue; // unknown field — skip silently, don't fail the whole patch
-                }
-                Schema.DescribeFieldResult dfr = fToken.getDescribe();
-                if (!dfr.isUpdateable()) {
-                    continue; // FLS: caller lacks edit on this field — skip
-                }
-                Object rawValue = fields.get(fieldKey);
-                Object coerced = coerceFieldValue(dfr, rawValue);
-                item.put(fToken, coerced);
-                anyFieldAssigned = true;
             }
-            if (!anyFieldAssigned) {
-                return; // all fields were unknown or not updateable — no DML needed
+            Integer clamped = Math.min(Math.max(newIndex, 0), reordered.size());
+            reordered.add(clamped, target);
+            List<WorkItem__c> toUpdate = new List<WorkItem__c>();
+            for (Integer i = 0; i < reordered.size(); i++) {
+                Decimal newSort = (i + 1) * 1000;
+                if (reordered[i].SortOrderNumber__c != newSort) {
+                    toUpdate.add(new WorkItem__c(Id = reordered[i].Id, SortOrderNumber__c = newSort));
+                }
             }
-            update item; //NOPMD - with sharing class handles CRUD; as user breaks managed package tests
+            if (!toUpdate.isEmpty()) {
+                update toUpdate; //NOPMD - with sharing class handles CRUD; as user breaks managed package tests
+            }
         } catch (Exception e) {
             AuraHandledException ahe = new AuraHandledException(e.getMessage());
             ahe.setMessage(e.getMessage());
             throw ahe;
         }
-    }
-
-    /**
-     * @description Coerce caller-supplied JSON-ish values into the types the
-     *              sObject's put() expects. LWC JSON marshals Date fields as
-     *              ISO strings, but put() on a Date field requires a Date.
-     *              Similarly for DateTime. Other types pass through.
-     * @param dfr Field describe for type introspection.
-     * @param raw Caller-supplied value (from a Map<String,Object> payload).
-     * @return Value coerced to the type sObject.put expects, or null when the
-     *         caller passed an empty string for a date/datetime field.
-     */
-    private static Object coerceFieldValue(Schema.DescribeFieldResult dfr, Object raw) {
-        if (raw == null) {
-            return null;
-        }
-        Schema.DisplayType t = dfr.getType();
-        if (t == Schema.DisplayType.DATE && raw instanceof String) {
-            String s = (String) raw;
-            return String.isBlank(s) ? null : Date.valueOf(s);
-        }
-        if (t == Schema.DisplayType.DATETIME && raw instanceof String) {
-            String s = (String) raw;
-            return String.isBlank(s) ? null : (Datetime) JSON.deserialize('"' + s + '"', Datetime.class);
-        }
-        return raw;
     }
 
     // ═══════════════════════════════════════════════════════════════════════
