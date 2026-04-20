@@ -255,6 +255,12 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             // from localStorage wins over initialFocusDate — so returning
             // users keep their saved pan position, new users land on today.
             initialFocusDate: new Date().toISOString().slice(0, 10),
+            // NG 0.185.4+ renders the task ID in DetailPanel as an <a target="_top">
+            // with {id} replaced. Namespace-aware via _vfPrefix() so scratch gets
+            // "/lightning/r/WorkItem__c/..." and subscriber gets
+            // "/lightning/r/delivery__WorkItem__c/...". Library never navigates
+            // itself — it just wraps the text; the browser handles the link.
+            recordUrlTemplate: `/lightning/r/${this._vfPrefix()}WorkItem__c/{id}/view`,
             chromeVisibleDefault: !this.chromeHiddenDefault,
             features: {
                 hoursColumn: true,
@@ -349,6 +355,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 features: mountConfig.features,
                 initialViewport: mountConfig.initialViewport,
                 initialFocusDate: mountConfig.initialFocusDate,
+                recordUrlTemplate: mountConfig.recordUrlTemplate,
                 mountedAt: new Date().toISOString(),
             };
             // eslint-disable-next-line no-console
