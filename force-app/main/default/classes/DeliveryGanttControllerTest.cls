@@ -683,4 +683,132 @@ private class DeliveryGanttControllerTest {
         System.assert(threw, 'Blank depId must throw');
     }
 
+    // ── reorderWorkItemDense (NG 0.185.35+ dense renumber) ───────────────
+
+    /**
+     * @description Builds a fresh set of 4 active items in the 'active' bucket
+     *              with sparse/negative sortOrders so we can assert the
+     *              dense-renumber path actually rewrites them to 1..N.
+     * @return Id list in the order they were inserted (for reorder assertions).
+     */
+    private static List<Id> seedBucketItems() {
+        // Deactivate setup items so they don't pollute the bucket query
+        List<WorkItem__c> setup = [SELECT Id FROM WorkItem__c];
+        for (WorkItem__c w : setup) w.ActivatedDateTime__c = null;
+        update setup;
+
+        List<WorkItem__c> items = new List<WorkItem__c>();
+        for (Integer i = 0; i < 4; i++) {
+            items.add(new WorkItem__c(
+                BriefDescriptionTxt__c = 'Dense item ' + i,
+                StageNamePk__c = 'In Development',
+                PriorityPk__c = 'Medium',
+                ActivatedDateTime__c = Datetime.now(),
+                PriorityGroupPk__c = 'active',
+                SortOrderNumber__c = -964 + (i * 0.5) // messy sparse values
+            ));
+        }
+        insert items;
+        List<Id> ids = new List<Id>();
+        for (WorkItem__c w : items) ids.add(w.Id);
+        return ids;
+    }
+
+    @IsTest
+    static void testReorderDenseAboveAllRenumbersBucketTo1N() {
+        System.runAs(testUser) {
+            List<Id> ids = seedBucketItems();
+            // ids[0..3] ordered by insert; sort order ascending in bucket.
+            // Move the LAST item to above-all.
+            Test.startTest();
+            DeliveryGanttController.reorderWorkItemDense(
+                ids[3], 'above-all', null, null, 'active'
+            );
+            Test.stopTest();
+
+            Map<Id, WorkItem__c> updated = new Map<Id, WorkItem__c>(
+                [SELECT Id, SortOrderNumber__c FROM WorkItem__c WHERE Id IN :ids]
+            );
+            System.assertEquals(1, updated.get(ids[3]).SortOrderNumber__c, 'Moved item should be 1');
+            System.assertEquals(2, updated.get(ids[0]).SortOrderNumber__c, 'Former 1st should shift to 2');
+            System.assertEquals(3, updated.get(ids[1]).SortOrderNumber__c);
+            System.assertEquals(4, updated.get(ids[2]).SortOrderNumber__c);
+        }
+    }
+
+    @IsTest
+    static void testReorderDenseBelowAllRenumbersBucketTo1N() {
+        System.runAs(testUser) {
+            List<Id> ids = seedBucketItems();
+            Test.startTest();
+            DeliveryGanttController.reorderWorkItemDense(
+                ids[0], 'below-all', null, null, 'active'
+            );
+            Test.stopTest();
+
+            Map<Id, WorkItem__c> updated = new Map<Id, WorkItem__c>(
+                [SELECT Id, SortOrderNumber__c FROM WorkItem__c WHERE Id IN :ids]
+            );
+            System.assertEquals(1, updated.get(ids[1]).SortOrderNumber__c);
+            System.assertEquals(2, updated.get(ids[2]).SortOrderNumber__c);
+            System.assertEquals(3, updated.get(ids[3]).SortOrderNumber__c);
+            System.assertEquals(4, updated.get(ids[0]).SortOrderNumber__c, 'Moved item should be last');
+        }
+    }
+
+    @IsTest
+    static void testReorderDenseBetweenAfterTaskIdSplicesCorrectly() {
+        System.runAs(testUser) {
+            List<Id> ids = seedBucketItems();
+            // Move ids[3] to land after ids[0] (so between ids[0] and ids[1])
+            Test.startTest();
+            DeliveryGanttController.reorderWorkItemDense(
+                ids[3], 'between', null, ids[0], 'active'
+            );
+            Test.stopTest();
+
+            Map<Id, WorkItem__c> updated = new Map<Id, WorkItem__c>(
+                [SELECT Id, SortOrderNumber__c FROM WorkItem__c WHERE Id IN :ids]
+            );
+            System.assertEquals(1, updated.get(ids[0]).SortOrderNumber__c);
+            System.assertEquals(2, updated.get(ids[3]).SortOrderNumber__c, 'Moved item lands after ids[0]');
+            System.assertEquals(3, updated.get(ids[1]).SortOrderNumber__c);
+            System.assertEquals(4, updated.get(ids[2]).SortOrderNumber__c);
+        }
+    }
+
+    @IsTest
+    static void testReorderDenseBetweenBeforeTaskIdSplicesCorrectly() {
+        System.runAs(testUser) {
+            List<Id> ids = seedBucketItems();
+            // Move ids[0] to land before ids[3]
+            Test.startTest();
+            DeliveryGanttController.reorderWorkItemDense(
+                ids[0], 'between', ids[3], null, 'active'
+            );
+            Test.stopTest();
+
+            Map<Id, WorkItem__c> updated = new Map<Id, WorkItem__c>(
+                [SELECT Id, SortOrderNumber__c FROM WorkItem__c WHERE Id IN :ids]
+            );
+            System.assertEquals(1, updated.get(ids[1]).SortOrderNumber__c);
+            System.assertEquals(2, updated.get(ids[2]).SortOrderNumber__c);
+            System.assertEquals(3, updated.get(ids[0]).SortOrderNumber__c, 'Moved item lands before ids[3]');
+            System.assertEquals(4, updated.get(ids[3]).SortOrderNumber__c);
+        }
+    }
+
+    @IsTest
+    static void testReorderDenseMissingArgsThrows() {
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryGanttController.reorderWorkItemDense('', 'above-all', null, null, 'active');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+        System.assert(threw, 'Blank workItemId must throw');
+    }
+
 }

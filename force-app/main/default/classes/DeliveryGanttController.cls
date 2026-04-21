@@ -490,6 +490,149 @@ public with sharing class DeliveryGanttController {
     }
 
     /**
+     * @description Dense 1..N sortOrder renumber for a single bucket on drag.
+     *              NG 0.185.35+ emits position/beforeTaskId/afterTaskId so the
+     *              server can deterministically splice the dragged task at the
+     *              right spot and rewrite every row in the bucket to contiguous
+     *              integers 1..N. Replaces the sparse-midpoint scheme (which
+     *              produces the -964, -481, -481.5 drift users see after many
+     *              reorders).
+     *
+     *              The moved task always lands with a positive integer in the
+     *              final 1..N sequence; no negatives survive a drag.
+     *
+     * @param workItemId     Id of the dragged task.
+     * @param position       'above-all' | 'below-all' | 'between'.
+     * @param beforeTaskId   Task the dragged item lands BEFORE (position=between). Nullable.
+     * @param afterTaskId    Task the dragged item lands AFTER (position=between). Nullable.
+     * @param priorityGroup  Bucket the drop is in (top-priority/active/follow-on/proposed/deferred).
+     */
+    @AuraEnabled
+    @SuppressWarnings('PMD.ExcessiveParameterList')
+    public static void reorderWorkItemDense(String workItemId, String position, String beforeTaskId, String afterTaskId, String priorityGroup) {
+        try {
+            if (String.isBlank(workItemId) || String.isBlank(position) || String.isBlank(priorityGroup)) {
+                throw new AuraHandledException('workItemId, position, and priorityGroup are required');
+            }
+            // Load every active item + compute its effective bucket (explicit or derived),
+            // then filter to the target bucket. Echo-suppressed so the bulk update doesn't
+            // cascade into peer-org sync traffic.
+            DeliverySyncEngine.setSyncContext();
+
+            List<WorkItem__c> all = [
+                SELECT Id, PriorityPk__c, StageNamePk__c, PriorityGroupPk__c, SortOrderNumber__c
+                FROM WorkItem__c
+                WHERE IsActiveBool__c = true
+                WITH SYSTEM_MODE
+            ];
+            List<WorkItem__c> bucket = new List<WorkItem__c>();
+            for (WorkItem__c w : all) {
+                String effective = String.isNotBlank(w.PriorityGroupPk__c)
+                    ? w.PriorityGroupPk__c
+                    : derivePriorityGroup(w.PriorityPk__c, w.StageNamePk__c);
+                if (effective == priorityGroup) {
+                    bucket.add(w);
+                }
+            }
+            // Stable pre-sort by current SortOrder (nulls last) to establish the baseline
+            // order we're about to rewrite.
+            bucket.sort(new SortOrderComparator());
+
+            // Remove the dragged task from its current position in the bucket, then
+            // re-insert at the implied position.
+            List<WorkItem__c> others = new List<WorkItem__c>();
+            WorkItem__c moving = null;
+            for (WorkItem__c w : bucket) {
+                if (w.Id == workItemId) {
+                    moving = w;
+                } else {
+                    others.add(w);
+                }
+            }
+            if (moving == null) {
+                // The dragged task isn't in this bucket yet — NG already updated the bucket
+                // field client-side, but the server hasn't seen it. Fabricate a stub so the
+                // splice logic can place it; subsequent PriorityGroupPk__c update arrives
+                // via a separate patch endpoint.
+                moving = new WorkItem__c(Id = workItemId);
+            }
+
+            Integer insertAt;
+            if (position == 'above-all') {
+                insertAt = 0;
+            } else if (position == 'below-all') {
+                insertAt = others.size();
+            } else {
+                // 'between' — locate the afterTaskId in the list and insert just after it,
+                // or the beforeTaskId and insert just before it. Prefer afterTaskId.
+                insertAt = others.size();
+                if (String.isNotBlank(afterTaskId)) {
+                    for (Integer i = 0; i < others.size(); i++) {
+                        if (others[i].Id == afterTaskId) {
+                            insertAt = i + 1;
+                            break;
+                        }
+                    }
+                } else if (String.isNotBlank(beforeTaskId)) {
+                    for (Integer i = 0; i < others.size(); i++) {
+                        if (others[i].Id == beforeTaskId) {
+                            insertAt = i;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            List<WorkItem__c> finalOrder = new List<WorkItem__c>();
+            for (Integer i = 0; i < insertAt && i < others.size(); i++) {
+                finalOrder.add(others[i]);
+            }
+            finalOrder.add(moving);
+            for (Integer i = insertAt; i < others.size(); i++) {
+                finalOrder.add(others[i]);
+            }
+
+            // Write contiguous 1..N. Only include rows whose sortOrder actually changes
+            // to keep the DML narrow.
+            List<WorkItem__c> toUpdate = new List<WorkItem__c>();
+            for (Integer i = 0; i < finalOrder.size(); i++) {
+                Decimal desired = Decimal.valueOf(i + 1);
+                WorkItem__c row = finalOrder[i];
+                if (row.SortOrderNumber__c != desired) {
+                    toUpdate.add(new WorkItem__c(Id = row.Id, SortOrderNumber__c = desired));
+                }
+            }
+            if (!toUpdate.isEmpty()) {
+                Database.update(toUpdate, AccessLevel.SYSTEM_MODE);
+            }
+        } catch (AuraHandledException ahe) {
+            throw ahe;
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
+        }
+    }
+
+    /**
+     * @description Sorts WorkItem__c by SortOrderNumber__c ascending, nulls last.
+     */
+    private class SortOrderComparator implements Comparator<WorkItem__c> {
+        public Integer compare(WorkItem__c a, WorkItem__c b) {
+            if (a.SortOrderNumber__c == b.SortOrderNumber__c) {
+                return 0;
+            }
+            if (a.SortOrderNumber__c == null) {
+                return 1;
+            }
+            if (b.SortOrderNumber__c == null) {
+                return -1;
+            }
+            return a.SortOrderNumber__c > b.SortOrderNumber__c ? 1 : -1;
+        }
+    }
+
+    /**
      * @description Generic field-level patch endpoint for NG's DetailPanel
      *              fieldSchema. Caller passes an arbitrary Map<String,Object>
      *              of field writes; FLS is checked per field; non-updateable
