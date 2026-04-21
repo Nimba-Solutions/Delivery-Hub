@@ -332,6 +332,67 @@ public with sharing class DeliveryGanttController {
     }
 
     /**
+     * @description Creates a new WorkItemDependency__c row linking blocking → blocked.
+     *              Returns the new dep DTO so the LWC can append it to the local
+     *              dependency array without a refetch.
+     * @param blockingId  Predecessor work item Id (source).
+     * @param blockedId   Successor work item Id (target).
+     * @param depType     Picklist value on TypePk__c (e.g. 'Blocks', 'Relates To').
+     * @return GanttDependency DTO in the shape the LWC already consumes.
+     */
+    @AuraEnabled
+    public static GanttDependency createWorkItemDependency(String blockingId, String blockedId, String depType) {
+        try {
+            if (String.isBlank(blockingId) || String.isBlank(blockedId)) {
+                throw new AuraHandledException('Both blocking and blocked work item ids are required');
+            }
+            if (blockingId == blockedId) {
+                throw new AuraHandledException('A work item cannot depend on itself');
+            }
+            String resolvedType = String.isNotBlank(depType) ? depType : 'Blocks';
+            WorkItemDependency__c row = new WorkItemDependency__c(
+                BlockingWorkItemLookup__c = blockingId,
+                BlockedWorkItemLookup__c = blockedId,
+                TypePk__c = resolvedType
+            );
+            insert row;
+            GanttDependency dto = new GanttDependency();
+            dto.id = row.Id;
+            dto.source = blockingId;
+            dto.target = blockedId;
+            dto.dependencyType = resolvedType;
+            return dto;
+        } catch (AuraHandledException ahe) {
+            throw ahe;
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
+        }
+    }
+
+    /**
+     * @description Deletes a WorkItemDependency__c record by id.
+     * @param depId  The WorkItemDependency__c record Id.
+     */
+    @AuraEnabled
+    public static void deleteWorkItemDependency(String depId) {
+        try {
+            if (String.isBlank(depId)) {
+                throw new AuraHandledException('depId is required');
+            }
+            WorkItemDependency__c row = new WorkItemDependency__c(Id = depId);
+            delete row;
+        } catch (AuraHandledException ahe) {
+            throw ahe;
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
+        }
+    }
+
+    /**
      * @description Saves the priority bucket when a user drags a task into a
      *              different group in the PriorityGroupingPlugin. Writes
      *              PriorityGroupPk__c so the bucket persists across reloads
