@@ -37,8 +37,25 @@ public without sharing class DeliverySyncItemIngestor {
             throw new IllegalArgumentException('Invalid Object Type: ' + objectType);
         }
 
-        String sourceId = (String) payload.get('SourceId'); 
-        String targetId = (String) payload.get('TargetId'); 
+        // Cross-org file-byte transport (2026-04-21 rewrite):
+        //   New senders emit metadata-only ContentVersion payloads with
+        //   FileTransport="pull-callout" and NO VersionData. Route those to
+        //   DeliveryFileBytesFetcher which fetches bytes via authenticated
+        //   callout to the source org. Legacy inline-bytes payloads
+        //   (VersionData present) continue to flow through the generic
+        //   mapFields/insert path below for 30d backward compat.
+        if (objectType.equalsIgnoreCase('ContentVersion')
+                && 'pull-callout'.equalsIgnoreCase(String.valueOf(payload.get('FileTransport')))) {
+            return handlePullCalloutFile(payload);
+        }
+        if (objectType.equalsIgnoreCase('ContentVersion') && payload.containsKey('VersionData')) {
+            System.debug(LoggingLevel.WARN,
+                'Deprecated: inbound ContentVersion with inline VersionData. ' +
+                'Senders should emit FileTransport="pull-callout" — legacy path retained for 30d backward compat.');
+        }
+
+        String sourceId = (String) payload.get('SourceId');
+        String targetId = (String) payload.get('TargetId');
         
         // Extract Traceability & Identity IDs from the incoming payload
         String globalSourceId = (String) payload.get('GlobalSourceId'); 
@@ -330,6 +347,106 @@ public without sharing class DeliverySyncItemIngestor {
             AccessLevel.SYSTEM_MODE
         );
         return !existing.isEmpty();
+    }
+
+    /**
+     * @description Handles the "metadata + binary-by-reference" inbound file
+     *              path. Resolves the local parent WorkItem, inserts an
+     *              inbound SyncItem__c ledger row carrying the metadata, and
+     *              enqueues DeliveryFileBytesFetcher to pull the bytes from
+     *              the source org via authenticated callout. Idempotent per
+     *              GlobalSourceId — duplicate inbounds (e.g. re-polls) re-use
+     *              the existing ledger row rather than forking new fetchers.
+     * @param payload Deserialized ContentVersion metadata payload.
+     * @return The SyncItem__c Id that owns this fetch (sync row Id, not the
+     *         eventual ContentVersion Id — that populates once bytes arrive).
+     */
+    @SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+    private static Id handlePullCalloutFile(Map<String, Object> payload) {
+        String sourceId = (String) payload.get('SourceId');
+        String targetId = (String) payload.get('TargetId');
+        String globalSourceId = (String) payload.get('GlobalSourceId');
+        Id localParentId = resolveParentWorkItem(targetId);
+
+        // Idempotency: de-dupe by (GlobalSourceId or SourceId) — if we already
+        // have an inbound ledger row for this file we do NOT re-enqueue the
+        // fetcher. This mirrors the create-once semantics the generic inbound
+        // path gets for free via findLocalId.
+        String dedupeKey = String.isNotBlank(globalSourceId) ? globalSourceId : sourceId;
+        if (String.isNotBlank(dedupeKey)) {
+            List<SyncItem__c> existing = [
+                SELECT Id FROM SyncItem__c
+                WHERE DirectionPk__c = 'Inbound'
+                AND ObjectTypePk__c = 'ContentVersion'
+                AND (GlobalSourceIdTxt__c = :dedupeKey OR RemoteExternalIdTxt__c = :dedupeKey)
+                WITH SYSTEM_MODE
+                LIMIT 1
+            ];
+            if (!existing.isEmpty()) {
+                return existing[0].Id;
+            }
+        }
+
+        SyncItem__c ledger = new SyncItem__c(
+            DirectionPk__c = 'Inbound',
+            StatusPk__c = 'Queued',
+            ObjectTypePk__c = 'ContentVersion',
+            RemoteExternalIdTxt__c = sourceId,
+            GlobalSourceIdTxt__c = globalSourceId,
+            WorkItemLookup__c = localParentId,
+            PayloadTxt__c = JSON.serialize(payload)
+        );
+        Database.insert(ledger, AccessLevel.SYSTEM_MODE);
+
+        // Enqueue the callout Queueable unless we're in a context that
+        // already has pending callouts pending commit (avoid nested queueable
+        // limit). Tests rely on Test.startTest/stopTest boundaries to flush.
+        if (Limits.getQueueableJobs() < Limits.getLimitQueueableJobs()) {
+            System.enqueueJob(new DeliveryFileBytesFetcher(ledger.Id, localParentId));
+        }
+
+        return ledger.Id;
+    }
+
+    /**
+     * @description Resolves a metadata payload's TargetId into a local
+     *              WorkItem Id, walking bridge → ledger → direct-id fallback.
+     * @param targetRef Identifier string from payload.TargetId (bridge
+     *                  RemoteWorkItemIdTxt__c, ledger RemoteExternalIdTxt__c,
+     *                  or a local Id as last resort).
+     * @return Local WorkItem Id, or null when nothing resolves.
+     */
+    private static Id resolveParentWorkItem(String targetRef) {
+        if (String.isBlank(targetRef)) {
+            return null;
+        }
+        WorkRequest__c bridge = findWorkItemBridge(targetRef);
+        if (bridge != null && bridge.WorkItemId__c != null) {
+            return bridge.WorkItemId__c;
+        }
+        List<SyncItem__c> ledger = [
+            SELECT LocalRecordIdTxt__c FROM SyncItem__c
+            WHERE RemoteExternalIdTxt__c = :targetRef
+            AND ObjectTypePk__c = 'WorkItem__c'
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (!ledger.isEmpty()) {
+            try {
+                return (Id) ledger[0].LocalRecordIdTxt__c;
+            } catch (Exception e) {
+                System.debug(LoggingLevel.FINE, 'Invalid ledger LocalRecordIdTxt__c: ' + e.getMessage());
+            }
+        }
+        try {
+            Id castId = (Id) targetRef;
+            if (castId.getSobjectType().getDescribe().getName().endsWithIgnoreCase('WorkItem__c')) {
+                return castId;
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.FINE, 'TargetId not a local WorkItem Id: ' + e.getMessage());
+        }
+        return null;
     }
 
     // Helper to grab both the Work Item ID and the Request ID
