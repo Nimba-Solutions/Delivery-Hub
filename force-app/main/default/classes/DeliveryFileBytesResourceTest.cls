@@ -148,8 +148,11 @@ private class DeliveryFileBytesResourceTest {
 
     @IsTest
     static void testUnknownContentDocumentIdReturns404() {
-        // Made-up ContentDocumentId prefix 069 with valid shape
-        String fakeCdId = '069000000000000AAA';
+        // SOQL `WHERE ContentDocumentId = :x` requires valid Id format, so
+        // build one dynamically from the ContentDocument key prefix rather
+        // than hardcoding '069...' — same pattern used in
+        // DeliveryHubBoardControllerTest.
+        String fakeCdId = ContentDocument.SObjectType.getDescribe().getKeyPrefix() + '000000000001';
         String ts = String.valueOf(Datetime.now().getTime() / 1000L);
         String sig = signFor(fakeCdId, ts);
 

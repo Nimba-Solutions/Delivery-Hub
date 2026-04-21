@@ -326,11 +326,11 @@ private class DeliverySyncItemIngestorTest {
             WorkItem__c wi = [SELECT Id FROM WorkItem__c LIMIT 1];
 
             Map<String, Object> payload = new Map<String, Object>{
-                'SourceId' => '068999000000001',
+                'SourceId' => 'REMOTE-CV-PULL-ABC',
                 'TargetId' => 'REMOTE-123', // matches WorkRequest.RemoteWorkItemIdTxt__c
                 'GlobalSourceId' => 'GSID-ABC',
-                'SenderOrgId' => '00D000000000002',
-                'ContentDocumentId' => '069999000000001AAA',
+                'SenderOrgId' => 'REMOTE-ORG-PULL-ABC',
+                'ContentDocumentId' => 'REMOTE-CD-PULL-ABC',
                 'Title' => 'Pulled file',
                 'PathOnClient' => 'pulled.txt',
                 'FileTransport' => 'pull-callout',
@@ -374,11 +374,11 @@ private class DeliverySyncItemIngestorTest {
     static void testInboundContentVersionPullCalloutIdempotent() {
         System.runAs(testUser) {
             Map<String, Object> payload = new Map<String, Object>{
-                'SourceId' => '068999000000002',
+                'SourceId' => 'REMOTE-CV-PULL-DUPE',
                 'TargetId' => 'REMOTE-123',
                 'GlobalSourceId' => 'GSID-DUPE',
-                'SenderOrgId' => '00D000000000002',
-                'ContentDocumentId' => '069999000000002AAA',
+                'SenderOrgId' => 'REMOTE-ORG-PULL-DUPE',
+                'ContentDocumentId' => 'REMOTE-CD-PULL-DUPE',
                 'Title' => 'Dup file',
                 'PathOnClient' => 'dup.txt',
                 'FileTransport' => 'pull-callout',

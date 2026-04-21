@@ -10,7 +10,18 @@
 @IsTest
 private class DeliveryFileBytesFetcherTest {
 
-    private static final String PEER_ORG_ID = '00D000000000001';
+    // Payload tokens — the fetcher stores these into text fields
+    // (OrgIdTxt__c, LocalRecordIdTxt__c, etc.) and passes ContentDocumentId
+    // through the callout URL. None are parsed as Salesforce Ids, so any
+    // non-empty string works and Id-shaped literals aren't needed.
+    private static final String PEER_ORG_ID = 'peer-org-test-1';
+    private static final String UNREG_ORG_ID = 'peer-org-unregistered';
+    private static final String SRC_CV = 'remote-cv-src-1';
+    private static final String SRC_CV_ORPHAN = 'remote-cv-src-orphan';
+    private static final String CD_HAPPY = 'remote-cd-happy';
+    private static final String CD_SHA_MISMATCH = 'remote-cd-sha-mismatch';
+    private static final String CD_HTTP_500 = 'remote-cd-http-500';
+    private static final String CD_ORPHAN = 'remote-cd-orphan';
     private static final String TEST_BYTES = 'received bytes payload';
 
     @TestSetup
@@ -37,11 +48,14 @@ private class DeliveryFileBytesFetcherTest {
     /**
      * @description Builds a Queued inbound SyncItem__c with the desired
      *              pull-callout payload and returns its Id.
+     * @param sourceCdId Remote org's ContentDocumentId embedded in the payload.
+     * @param sha256 Expected sha256 hex digest of the bytes the fetcher will pull.
+     * @return Id of the inserted SyncItem__c record.
      */
     private static Id insertInboundItem(String sourceCdId, String sha256) {
         WorkItem__c wi = [SELECT Id FROM WorkItem__c LIMIT 1];
         Map<String, Object> payload = new Map<String, Object>{
-            'SourceId' => '068000000000001',
+            'SourceId' => SRC_CV,
             'ContentDocumentId' => sourceCdId,
             'SenderOrgId' => PEER_ORG_ID,
             'Title' => 'Received File',
@@ -55,7 +69,7 @@ private class DeliveryFileBytesFetcherTest {
             ObjectTypePk__c = 'ContentVersion',
             PayloadTxt__c = JSON.serialize(payload),
             WorkItemLookup__c = wi.Id,
-            RemoteExternalIdTxt__c = '068000000000001'
+            RemoteExternalIdTxt__c = SRC_CV
         );
         insert item;
         return item.Id;
@@ -63,7 +77,7 @@ private class DeliveryFileBytesFetcherTest {
 
     @IsTest
     static void testHappyPathInsertsContentVersionAndLink() {
-        String cdId = '069000000000100AAA';
+        String cdId = CD_HAPPY;
         String expectedSha = EncodingUtil.convertToHex(
             Crypto.generateDigest('SHA-256', Blob.valueOf(TEST_BYTES))
         );
@@ -92,7 +106,7 @@ private class DeliveryFileBytesFetcherTest {
 
     @IsTest
     static void testSha256MismatchFailsItem() {
-        String cdId = '069000000000200AAA';
+        String cdId = CD_SHA_MISMATCH;
         // Intentionally supply the wrong expected hash
         String wrongSha = '0'.repeat(64);
         Id syncId = insertInboundItem(cdId, wrongSha);
@@ -114,7 +128,7 @@ private class DeliveryFileBytesFetcherTest {
 
     @IsTest
     static void testCalloutHttp500FailsItem() {
-        String cdId = '069000000000300AAA';
+        String cdId = CD_HTTP_500;
         String expectedSha = EncodingUtil.convertToHex(
             Crypto.generateDigest('SHA-256', Blob.valueOf(TEST_BYTES))
         );
@@ -138,9 +152,9 @@ private class DeliveryFileBytesFetcherTest {
     static void testUnknownSenderOrgFailsItem() {
         WorkItem__c wi = [SELECT Id FROM WorkItem__c LIMIT 1];
         Map<String, Object> payload = new Map<String, Object>{
-            'SourceId' => '068000000000999',
-            'ContentDocumentId' => '069000000000999AAA',
-            'SenderOrgId' => '00D000000000ZZZ', // not a registered peer
+            'SourceId' => SRC_CV_ORPHAN,
+            'ContentDocumentId' => CD_ORPHAN,
+            'SenderOrgId' => UNREG_ORG_ID, // not a registered peer
             'Title' => 'Orphan',
             'FileTransport' => 'pull-callout',
             'Sha256' => null
@@ -151,7 +165,7 @@ private class DeliveryFileBytesFetcherTest {
             ObjectTypePk__c = 'ContentVersion',
             PayloadTxt__c = JSON.serialize(payload),
             WorkItemLookup__c = wi.Id,
-            RemoteExternalIdTxt__c = '068000000000999'
+            RemoteExternalIdTxt__c = SRC_CV_ORPHAN
         );
         insert item;
 

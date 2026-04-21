@@ -43,92 +43,106 @@ global without sharing class DeliveryFileBytesResource {
     global static void handleGet() {
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
-
         try {
-            // 1. Extract ContentDocumentId from path or query string
             String contentDocumentId = extractContentDocumentId(req);
             if (String.isBlank(contentDocumentId)) {
                 writeJsonError(res, 400, 'Missing contentDocumentId');
                 return;
             }
-
-            // 2. Resolve caller from X-Api-Key
-            String apiKey = req.headers.get('X-Api-Key');
-            if (String.isBlank(apiKey)) {
-                writeJsonError(res, 401, 'Missing X-Api-Key');
-                return;
+            NetworkEntity__c caller = authenticateCaller(req, res, contentDocumentId);
+            if (caller == null) {
+                return; // authenticateCaller has already written the error
             }
-
-            List<NetworkEntity__c> entities = [
-                SELECT Id, HmacSecretTxt__c, ConnectionStatusPk__c
-                FROM NetworkEntity__c
-                WHERE ApiKeyTxt__c = :apiKey
-                AND ConnectionStatusPk__c = 'Connected'
-                WITH SYSTEM_MODE
-                LIMIT 1
-            ];
-            if (entities.isEmpty()) {
-                writeJsonError(res, 401, 'Invalid API key or entity not connected');
-                return;
-            }
-
-            String hmacSecret = entities[0].HmacSecretTxt__c;
-            if (String.isBlank(hmacSecret)) {
-                // Binary transfer requires HMAC — refuse anonymous callers even
-                // if their API key is otherwise valid.
-                writeJsonError(res, 401, 'Peer entity has no HMAC secret configured — refusing to serve bytes');
-                return;
-            }
-
-            // 3. HMAC check (body + timestamp + contentDocumentId)
-            String timestamp = req.headers.get('X-Timestamp');
-            String signature = req.headers.get('X-Signature');
-            if (String.isBlank(timestamp) || String.isBlank(signature)) {
-                writeJsonError(res, 401, 'Missing X-Timestamp or X-Signature');
-                return;
-            }
-
-            // Reject timestamps outside the skew window to prevent replay
-            if (!isTimestampFresh(timestamp)) {
-                writeJsonError(res, 401, 'Request timestamp outside tolerance window');
-                return;
-            }
-
-            String signingString = contentDocumentId + '|' + timestamp;
-            if (!DeliveryCryptoService.verifyHMAC(hmacSecret, signingString, signature)) {
-                writeJsonError(res, 401, 'Invalid signature');
-                return;
-            }
-
-            // 4. Lookup the latest ContentVersion for this ContentDocumentId
-            List<ContentVersion> cvs = [
-                SELECT Id, VersionData, FileType, Title, ContentSize
-                FROM ContentVersion
-                WHERE ContentDocumentId = :contentDocumentId
-                AND IsLatest = true
-                WITH SYSTEM_MODE
-                LIMIT 1
-            ];
-            if (cvs.isEmpty()) {
-                writeJsonError(res, 404, 'ContentDocumentId not found');
-                return;
-            }
-
-            // 5. Stream bytes back
-            ContentVersion cv = cvs[0];
-            res.statusCode = 200;
-            res.addHeader('Content-Type', 'application/octet-stream');
-            if (String.isNotBlank(cv.Title)) {
-                res.addHeader('X-File-Title', cv.Title);
-            }
-            if (cv.ContentSize != null) {
-                res.addHeader('X-File-Size', String.valueOf(cv.ContentSize));
-            }
-            res.responseBody = cv.VersionData;
-
+            streamLatestBytes(res, contentDocumentId);
         } catch (Exception e) {
             writeJsonError(res, 500, e.getMessage());
         }
+    }
+
+    /**
+     * @description Resolves the caller via X-Api-Key, verifies the HMAC
+     *              signature + timestamp freshness, and returns the matching
+     *              NetworkEntity__c. Writes a 401 JSON error to `res` and
+     *              returns null on any failure.
+     * @param req The inbound REST request.
+     * @param res The REST response, written to on auth failure.
+     * @param contentDocumentId The contentDocumentId from the URL, part of
+     *              the signing string.
+     * @return Authenticated NetworkEntity__c, or null if auth failed.
+     */
+    private static NetworkEntity__c authenticateCaller(RestRequest req, RestResponse res, String contentDocumentId) {
+        String apiKey = req.headers.get('X-Api-Key');
+        if (String.isBlank(apiKey)) {
+            writeJsonError(res, 401, 'Missing X-Api-Key');
+            return null;
+        }
+        List<NetworkEntity__c> entities = [
+            SELECT Id, HmacSecretTxt__c, ConnectionStatusPk__c
+            FROM NetworkEntity__c
+            WHERE ApiKeyTxt__c = :apiKey
+            AND ConnectionStatusPk__c = 'Connected'
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (entities.isEmpty()) {
+            writeJsonError(res, 401, 'Invalid API key or entity not connected');
+            return null;
+        }
+        String hmacSecret = entities[0].HmacSecretTxt__c;
+        if (String.isBlank(hmacSecret)) {
+            // Binary transfer requires HMAC — refuse anonymous callers even
+            // if their API key is otherwise valid.
+            writeJsonError(res, 401, 'Peer entity has no HMAC secret configured — refusing to serve bytes');
+            return null;
+        }
+        String timestamp = req.headers.get('X-Timestamp');
+        String signature = req.headers.get('X-Signature');
+        if (String.isBlank(timestamp) || String.isBlank(signature)) {
+            writeJsonError(res, 401, 'Missing X-Timestamp or X-Signature');
+            return null;
+        }
+        if (!isTimestampFresh(timestamp)) {
+            writeJsonError(res, 401, 'Request timestamp outside tolerance window');
+            return null;
+        }
+        String signingString = contentDocumentId + '|' + timestamp;
+        if (!DeliveryCryptoService.verifyHMAC(hmacSecret, signingString, signature)) {
+            writeJsonError(res, 401, 'Invalid signature');
+            return null;
+        }
+        return entities[0];
+    }
+
+    /**
+     * @description Looks up the latest ContentVersion bytes for the supplied
+     *              ContentDocumentId and writes them to the response. Writes
+     *              a 404 if no ContentVersion exists.
+     * @param res The REST response.
+     * @param contentDocumentId The ContentDocumentId to stream.
+     */
+    private static void streamLatestBytes(RestResponse res, String contentDocumentId) {
+        List<ContentVersion> cvs = [
+            SELECT Id, VersionData, FileType, Title, ContentSize
+            FROM ContentVersion
+            WHERE ContentDocumentId = :contentDocumentId
+            AND IsLatest = true
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (cvs.isEmpty()) {
+            writeJsonError(res, 404, 'ContentDocumentId not found');
+            return;
+        }
+        ContentVersion cv = cvs[0];
+        res.statusCode = 200;
+        res.addHeader('Content-Type', 'application/octet-stream');
+        if (String.isNotBlank(cv.Title)) {
+            res.addHeader('X-File-Title', cv.Title);
+        }
+        if (cv.ContentSize != null) {
+            res.addHeader('X-File-Size', String.valueOf(cv.ContentSize));
+        }
+        res.responseBody = cv.VersionData;
     }
 
     /**
