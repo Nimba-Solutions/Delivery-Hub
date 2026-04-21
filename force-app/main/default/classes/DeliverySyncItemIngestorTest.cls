@@ -344,10 +344,11 @@ private class DeliverySyncItemIngestorTest {
 
             Test.startTest();
             Id resultId = DeliverySyncItemIngestor.processInboundItem('ContentVersion', payload);
-            Test.stopTest();
 
+            // Assert the ingestor's write state BEFORE Test.stopTest() flushes
+            // the enqueued fetcher (which would otherwise transition the row
+            // to Failed or Synced depending on peer-resolution outcome).
             System.assertNotEquals(null, resultId, 'Should return the ledger row Id');
-
             SyncItem__c ledger = [
                 SELECT Id, DirectionPk__c, StatusPk__c, ObjectTypePk__c,
                        WorkItemLookup__c, GlobalSourceIdTxt__c
@@ -360,7 +361,11 @@ private class DeliverySyncItemIngestorTest {
             System.assertEquals(wi.Id, ledger.WorkItemLookup__c, 'Ledger should point at the resolved local WorkItem');
             System.assertEquals('GSID-ABC', ledger.GlobalSourceIdTxt__c, 'GlobalSourceId should be recorded for idempotency');
 
-            // No ContentVersion should have been inserted in-band — the fetcher does that
+            Test.stopTest();
+
+            // No ContentVersion should have been inserted in-band — the fetcher
+            // would have failed its lookup for the unregistered sender org and
+            // written ErrorLogTxt__c rather than creating a ContentVersion.
             Integer cvCount = [SELECT COUNT() FROM ContentVersion WHERE Title = 'Pulled file'];
             System.assertEquals(0, cvCount, 'Ingestor must not insert ContentVersion directly in the pull-callout path');
         }
