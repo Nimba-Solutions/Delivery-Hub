@@ -40,7 +40,7 @@ public without sharing class DeliveryContentDocLinkTriggerHandler {
      *              to either skip verification or defer to a post-insert job.
      */
     @TestVisible
-    private static final Integer MAX_SYNC_HASH_BYTES = 4_000_000;
+    private static final Integer MAX_SYNC_HASH_BYTES = 4000000;
 
     /**
      * @description Evaluates ContentDocumentLink records inserted on Work Items,
