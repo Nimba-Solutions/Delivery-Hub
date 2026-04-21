@@ -82,11 +82,24 @@ public without sharing class DeliveryContentDocLinkTriggerHandler {
             Map<String, Object> payload = new Map<String, Object>();
             payload.put('Title', cv.Title);
             payload.put('PathOnClient', cv.PathOnClient);
-            payload.put('SourceId', cv.Id); 
-            
-            // ARCHITECTURE WARNING: Long Text Area limits are ~131k characters. 
+            payload.put('SourceId', cv.Id);
+            payload.put('FileExtension', cv.FileExtension);
+            payload.put('FileType', cv.FileType);
+
+            // PayloadTxt__c is a Long Text Area (131,072 char cap). A base64-
+            // encoded binary pushes serialized payload past the limit for
+            // anything ~95 KB+ (see MF-Prod ghost-recorder attachment failure
+            // 2026-04-21). Inline bytes only when they fit with envelope
+            // headroom; otherwise mark the row so the receiver fetches
+            // VersionData via ContentVersion SOQL on the source side.
             if (cv.VersionData != null) {
-                payload.put('VersionData', EncodingUtil.base64Encode(cv.VersionData));
+                String encoded = EncodingUtil.base64Encode(cv.VersionData);
+                if (encoded.length() < 90000) {
+                    payload.put('VersionData', encoded);
+                } else {
+                    payload.put('VersionDataTooLarge', true);
+                    payload.put('ContentSize', encoded.length());
+                }
             }
 
             if (reqs != null && !reqs.isEmpty()) {
