@@ -499,7 +499,11 @@ var NimbusGanttApp = (function(exports) {
           targetSortOrder: 500,
           insertBeforeRow: null,
           nestIntoRow: null,
-          deparent: true
+          deparent: true,
+          // 0.185.35 — deparent drop lands at the top of the bucket.
+          position: "above-all",
+          beforeTaskId: null,
+          afterTaskId: null
         };
       }
       let nestIntoRow = null;
@@ -546,7 +550,13 @@ var NimbusGanttApp = (function(exports) {
             targetSortOrder: maxChildSort + 1e3,
             insertBeforeRow: null,
             nestIntoRow,
-            deparent: false
+            deparent: false,
+            // 0.185.35 — nest drop: dragged becomes last child of targetId.
+            // Not strictly bucket-positional, but closest semantic is
+            // "below all existing children under this parent."
+            position: "below-all",
+            beforeTaskId: null,
+            afterTaskId: targetId
           };
         }
       }
@@ -682,7 +692,21 @@ var NimbusGanttApp = (function(exports) {
         );
       } catch (_e) {
       }
-      return { parentId, depth: desiredDepth, targetBucket, targetSortOrder: targetSort, insertBeforeRow: rowBelow, nestIntoRow: null, deparent: false };
+      const position = !rowAbove ? "above-all" : !rowBelow ? "below-all" : "between";
+      const beforeTaskId = rowBelow ? rowBelow.getAttribute("data-task-id") : null;
+      const afterTaskId = rowAbove ? rowAbove.getAttribute("data-task-id") : null;
+      return {
+        parentId,
+        depth: desiredDepth,
+        targetBucket,
+        targetSortOrder: targetSort,
+        insertBeforeRow: rowBelow,
+        nestIntoRow: null,
+        deparent: false,
+        position,
+        beforeTaskId,
+        afterTaskId
+      };
     }
     function cleanupDrag() {
       if (ghost) {
@@ -879,7 +903,13 @@ var NimbusGanttApp = (function(exports) {
       if (ip.parentId !== currentParent) {
         onPatch({ id: savedId, parentId: ip.parentId || null });
       }
-      onPatch({ id: savedId, sortOrder: ip.targetSortOrder });
+      onPatch({
+        id: savedId,
+        sortOrder: ip.targetSortOrder,
+        position: ip.position,
+        beforeTaskId: ip.beforeTaskId,
+        afterTaskId: ip.afterTaskId
+      });
     }
     ganttContainer.addEventListener("mousedown", onMouseDown, true);
     window.addEventListener("mousemove", onMouseMove, true);
@@ -5531,6 +5561,9 @@ var NimbusGanttApp = (function(exports) {
               const reorderPayload = { newIndex };
               if (patch.parentId !== void 0) reorderPayload.newParentId = patch.parentId;
               if (patch.priorityGroup !== void 0) reorderPayload.newPriorityGroup = patch.priorityGroup;
+              if (patch.position !== void 0) reorderPayload.position = patch.position;
+              if (patch.beforeTaskId !== void 0) reorderPayload.beforeTaskId = patch.beforeTaskId;
+              if (patch.afterTaskId !== void 0) reorderPayload.afterTaskId = patch.afterTaskId;
               await options.onItemReorder(taskId, reorderPayload);
             } else {
               rawOnPatch(patch);
@@ -5565,6 +5598,9 @@ var NimbusGanttApp = (function(exports) {
           if (patch.priorityGroup !== void 0) reorderDelta.priorityGroup = patch.priorityGroup;
           if (patch.sortOrder !== void 0) reorderDelta.sortOrder = patch.sortOrder;
           if (patch.parentId !== void 0) reorderDelta.parentId = patch.parentId;
+          if (patch.position !== void 0) reorderDelta.position = patch.position;
+          if (patch.beforeTaskId !== void 0) reorderDelta.beforeTaskId = patch.beforeTaskId;
+          if (patch.afterTaskId !== void 0) reorderDelta.afterTaskId = patch.afterTaskId;
           bufferEdit(taskId, "reorder", reorderDelta, {
             priorityGroup: origTaskB.priorityGroup ?? void 0,
             sortOrder: origTaskB.sortOrder,
@@ -5609,6 +5645,9 @@ var NimbusGanttApp = (function(exports) {
           const reorderPayload = { newIndex };
           if (patch.parentId !== void 0) reorderPayload.newParentId = patch.parentId;
           if (patch.priorityGroup !== void 0) reorderPayload.newPriorityGroup = patch.priorityGroup;
+          if (patch.position !== void 0) reorderPayload.position = patch.position;
+          if (patch.beforeTaskId !== void 0) reorderPayload.beforeTaskId = patch.beforeTaskId;
+          if (patch.afterTaskId !== void 0) reorderPayload.afterTaskId = patch.afterTaskId;
           await options.onItemReorder(taskId, reorderPayload);
           const current = pendingReorders.get(taskId);
           if (!current || current.seq !== seq) return;
@@ -6342,6 +6381,10 @@ var NimbusGanttApp = (function(exports) {
                   const payload = { newIndex };
                   if (p.reorderPayload.parentId !== void 0) payload.newParentId = p.reorderPayload.parentId;
                   if (p.reorderPayload.priorityGroup !== void 0) payload.newPriorityGroup = p.reorderPayload.priorityGroup;
+                  const rp = p.reorderPayload;
+                  if (rp.position !== void 0) payload.position = rp.position;
+                  if (rp.beforeTaskId !== void 0) payload.beforeTaskId = rp.beforeTaskId;
+                  if (rp.afterTaskId !== void 0) payload.afterTaskId = rp.afterTaskId;
                   await options.onItemReorder(p.taskId, payload);
                 } else if (options.onPatch) {
                   await Promise.resolve(options.onPatch({

@@ -490,6 +490,188 @@ public with sharing class DeliveryGanttController {
     }
 
     /**
+     * @description Dense 1..N sortOrder renumber for a single bucket on drag.
+     *              NG 0.185.35+ emits position/beforeTaskId/afterTaskId so the
+     *              server can deterministically splice the dragged task at the
+     *              right spot and rewrite every row in the bucket to contiguous
+     *              integers 1..N. Replaces the sparse-midpoint scheme (which
+     *              produces the -964, -481, -481.5 drift users see after many
+     *              reorders).
+     *
+     *              The moved task always lands with a positive integer in the
+     *              final 1..N sequence; no negatives survive a drag.
+     *
+     * @param workItemId     Id of the dragged task.
+     * @param position       'above-all' | 'below-all' | 'between'.
+     * @param beforeTaskId   Task the dragged item lands BEFORE (position=between). Nullable.
+     * @param afterTaskId    Task the dragged item lands AFTER (position=between). Nullable.
+     * @param priorityGroup  Bucket the drop is in (top-priority/active/follow-on/proposed/deferred).
+     */
+    @AuraEnabled
+    @SuppressWarnings('PMD.ExcessiveParameterList')
+    public static void reorderWorkItemDense(String workItemId, String position, String beforeTaskId, String afterTaskId, String priorityGroup) {
+        try {
+            if (String.isBlank(workItemId) || String.isBlank(position) || String.isBlank(priorityGroup)) {
+                throw new AuraHandledException('workItemId, position, and priorityGroup are required');
+            }
+            DeliverySyncEngine.setSyncContext();
+            List<WorkItem__c> bucket = loadBucketItems(priorityGroup);
+            List<WorkItem__c> finalOrder = spliceForReorder(bucket, workItemId, position, beforeTaskId, afterTaskId);
+            applyDenseSortOrders(finalOrder);
+        } catch (AuraHandledException ahe) {
+            throw ahe;
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
+        }
+    }
+
+    /**
+     * @description Loads active WorkItems whose effective priority bucket
+     *              (explicit `PriorityGroupPk__c` or derived from priority/stage)
+     *              equals the target bucket, sorted by current SortOrder nulls-last.
+     * @param priorityGroup Target bucket name.
+     * @return Items in the bucket, ordered by current SortOrderNumber__c ascending.
+     */
+    private static List<WorkItem__c> loadBucketItems(String priorityGroup) {
+        List<WorkItem__c> all = [
+            SELECT Id, PriorityPk__c, StageNamePk__c, PriorityGroupPk__c, SortOrderNumber__c
+            FROM WorkItem__c
+            WHERE ActivatedDateTime__c != null
+            WITH SYSTEM_MODE
+        ];
+        List<WorkItem__c> bucket = new List<WorkItem__c>();
+        for (WorkItem__c w : all) {
+            String effective = String.isNotBlank(w.PriorityGroupPk__c)
+                ? w.PriorityGroupPk__c
+                : derivePriorityGroup(w.PriorityPk__c, w.StageNamePk__c);
+            if (effective == priorityGroup) {
+                bucket.add(w);
+            }
+        }
+        bucket.sort(new SortOrderComparator());
+        return bucket;
+    }
+
+    /**
+     * @description Splices the dragged task at the position implied by
+     *              position + beforeTaskId / afterTaskId, returning the new
+     *              intended ordering. Defensive: if the task isn't currently
+     *              in the bucket (e.g., bucket change landed client-side but
+     *              server hasn't seen the PriorityGroup write yet), a stub
+     *              record is inserted at the implied index.
+     * @param bucket       Current bucket ordered by SortOrder.
+     * @param workItemId   Id of the dragged task.
+     * @param position     'above-all' | 'below-all' | 'between'.
+     * @param beforeTaskId Task the dragged item lands BEFORE (nullable).
+     * @param afterTaskId  Task the dragged item lands AFTER (nullable).
+     * @return New ordered list — ready to be renumbered 1..N.
+     */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
+    private static List<WorkItem__c> spliceForReorder(List<WorkItem__c> bucket, String workItemId, String position, String beforeTaskId, String afterTaskId) {
+        List<WorkItem__c> others = new List<WorkItem__c>();
+        WorkItem__c moving = null;
+        for (WorkItem__c w : bucket) {
+            if (w.Id == workItemId) {
+                moving = w;
+            } else {
+                others.add(w);
+            }
+        }
+        if (moving == null) {
+            moving = new WorkItem__c(Id = workItemId);
+        }
+        Integer insertAt = computeInsertIndex(others, position, beforeTaskId, afterTaskId);
+        List<WorkItem__c> finalOrder = new List<WorkItem__c>();
+        for (Integer i = 0; i < insertAt && i < others.size(); i++) {
+            finalOrder.add(others[i]);
+        }
+        finalOrder.add(moving);
+        for (Integer i = insertAt; i < others.size(); i++) {
+            finalOrder.add(others[i]);
+        }
+        return finalOrder;
+    }
+
+    /**
+     * @description Computes the splice index for the dragged task in the
+     *              bucket (excluding the moving task itself).
+     * @param others       Bucket minus the moving task, ordered.
+     * @param position     'above-all' | 'below-all' | 'between'.
+     * @param beforeTaskId Task the dragged item lands BEFORE (nullable).
+     * @param afterTaskId  Task the dragged item lands AFTER (nullable).
+     * @return Zero-based index where the moving task should be inserted.
+     */
+    private static Integer computeInsertIndex(List<WorkItem__c> others, String position, String beforeTaskId, String afterTaskId) {
+        if (position == 'above-all') {
+            return 0;
+        }
+        if (position == 'below-all') {
+            return others.size();
+        }
+        if (String.isNotBlank(afterTaskId)) {
+            for (Integer i = 0; i < others.size(); i++) {
+                if (others[i].Id == afterTaskId) {
+                    return i + 1;
+                }
+            }
+        }
+        if (String.isNotBlank(beforeTaskId)) {
+            for (Integer i = 0; i < others.size(); i++) {
+                if (others[i].Id == beforeTaskId) {
+                    return i;
+                }
+            }
+        }
+        return others.size();
+    }
+
+    /**
+     * @description Writes contiguous 1..N SortOrder values, only updating
+     *              rows whose sort actually changes (narrow DML).
+     * @param finalOrder The target order.
+     */
+    private static void applyDenseSortOrders(List<WorkItem__c> finalOrder) {
+        List<WorkItem__c> toUpdate = new List<WorkItem__c>();
+        for (Integer i = 0; i < finalOrder.size(); i++) {
+            Decimal desired = Decimal.valueOf(i + 1);
+            WorkItem__c row = finalOrder[i];
+            if (row.SortOrderNumber__c != desired) {
+                toUpdate.add(new WorkItem__c(Id = row.Id, SortOrderNumber__c = desired));
+            }
+        }
+        if (!toUpdate.isEmpty()) {
+            Database.update(toUpdate, AccessLevel.SYSTEM_MODE);
+        }
+    }
+
+    /**
+     * @description Sorts WorkItem__c by SortOrderNumber__c ascending, nulls last.
+     */
+    private class SortOrderComparator implements Comparator<WorkItem__c> {
+        /**
+         * @description Comparator for WorkItem__c SortOrderNumber__c ascending
+         *              with nulls sorted to the end.
+         * @param a First record.
+         * @param b Second record.
+         * @return -1 if a < b, 1 if a > b, 0 if equal.
+         */
+        public Integer compare(WorkItem__c a, WorkItem__c b) {
+            if (a.SortOrderNumber__c == b.SortOrderNumber__c) {
+                return 0;
+            }
+            if (a.SortOrderNumber__c == null) {
+                return 1;
+            }
+            if (b.SortOrderNumber__c == null) {
+                return -1;
+            }
+            return a.SortOrderNumber__c > b.SortOrderNumber__c ? 1 : -1;
+        }
+    }
+
+    /**
      * @description Generic field-level patch endpoint for NG's DetailPanel
      *              fieldSchema. Caller passes an arbitrary Map<String,Object>
      *              of field writes; FLS is checked per field; non-updateable
