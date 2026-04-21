@@ -554,9 +554,13 @@ var NimbusGanttApp = (function(exports) {
       const bucketVis = targetBucketForHitTest ? vis.filter((r) => {
         const id = r.getAttribute("data-task-id");
         if (!id) return false;
+        if (id === dragTaskId) return false;
         const t = taskById[id];
         return !!t && (t.priorityGroup || "") === targetBucketForHitTest;
-      }) : vis;
+      }) : vis.filter((r) => {
+        const id = r.getAttribute("data-task-id");
+        return !!id && id !== dragTaskId;
+      });
       let rowAbove = null;
       let rowBelow = null;
       for (let i = 0; i < bucketVis.length; i++) {
@@ -634,6 +638,28 @@ var NimbusGanttApp = (function(exports) {
           targetSort = sortAbove + 1e3;
         }
       }
+      const dragCurrentSort = dragTaskId ? getSortOrder(dragTaskId) : NaN;
+      let collided = false;
+      if (dragTaskId && isFinite(dragCurrentSort) && targetSort === dragCurrentSort) {
+        collided = true;
+        const dragRect = dragRow ? dragRow.getBoundingClientRect() : null;
+        const dragMidY = dragRect ? dragRect.top + dragRect.height / 2 : clientY;
+        const goingUp = clientY < dragMidY;
+        let nearestAboveSort = -Infinity;
+        let nearestBelowSort = Infinity;
+        for (let i = 0; i < bucketVis.length; i++) {
+          const id = bucketVis[i].getAttribute("data-task-id");
+          if (!id) continue;
+          const s = getSortOrder(id);
+          if (s < dragCurrentSort && s > nearestAboveSort) nearestAboveSort = s;
+          if (s > dragCurrentSort && s < nearestBelowSort) nearestBelowSort = s;
+        }
+        if (goingUp) {
+          targetSort = isFinite(nearestAboveSort) ? (nearestAboveSort + dragCurrentSort) / 2 : dragCurrentSort / 2;
+        } else {
+          targetSort = isFinite(nearestBelowSort) ? (dragCurrentSort + nearestBelowSort) / 2 : dragCurrentSort + 1e3;
+        }
+      }
       try {
         console.log(
           "[NG dragReparent] targetSort computed",
@@ -647,6 +673,10 @@ var NimbusGanttApp = (function(exports) {
           belowId,
           "belowSort=",
           sortBelow,
+          "dragSort=",
+          dragCurrentSort,
+          "collided=",
+          collided,
           "→ targetSort=",
           targetSort
         );
@@ -4469,6 +4499,51 @@ var NimbusGanttApp = (function(exports) {
     selectionColor: "#3b82f6",
     singleRowHeader: true
   };
+  function normalizeDependencies(input) {
+    if (!input || input.length === 0) return [];
+    const VALID_TYPES = /* @__PURE__ */ new Set(["FS", "SS", "FF", "SF"]);
+    const ALIAS = {
+      "FS": "FS",
+      "fs": "FS",
+      "FINISH-START": "FS",
+      "FINISH_START": "FS",
+      "FINISH TO START": "FS",
+      "FINISHTOSTART": "FS",
+      "SS": "SS",
+      "ss": "SS",
+      "START-START": "SS",
+      "START_START": "SS",
+      "START TO START": "SS",
+      "STARTTOSTART": "SS",
+      "FF": "FF",
+      "ff": "FF",
+      "FINISH-FINISH": "FF",
+      "FINISH_FINISH": "FF",
+      "FINISH TO FINISH": "FF",
+      "FINISHTOFINISH": "FF",
+      "SF": "SF",
+      "sf": "SF",
+      "START-FINISH": "SF",
+      "START_FINISH": "SF",
+      "START TO FINISH": "SF",
+      "STARTTOFINISH": "SF"
+    };
+    const out = [];
+    for (const d of input) {
+      if (!d || !d.source || !d.target) continue;
+      let t = "FS";
+      if (d.type) {
+        if (VALID_TYPES.has(d.type)) {
+          t = d.type;
+        } else {
+          const key = String(d.type).toUpperCase().trim();
+          t = ALIAS[key] || ALIAS[String(d.type)] || "FS";
+        }
+      }
+      out.push({ id: d.id, source: d.source, target: d.target, type: t, lag: d.lag });
+    }
+    return out;
+  }
   function buildGanttCols(features) {
     const cols = [
       { field: "title", header: "", width: 210, tree: true },
@@ -4887,7 +4962,7 @@ var NimbusGanttApp = (function(exports) {
         }
         injectLegacyNgCss();
         let allTasks2 = options.tasks || [];
-        let allDependencies2 = options.dependencies || [];
+        let allDependencies2 = normalizeDependencies(options.dependencies);
         const state2 = { ...INITIAL_STATE };
         const depthMap2 = buildDepthMap(allTasks2);
         const filtered = applyFilter(allTasks2, state2.filter, state2.search);
@@ -4963,21 +5038,38 @@ var NimbusGanttApp = (function(exports) {
             (_a2 = options.onTaskHover) == null ? void 0 : _a2.call(options, null);
           }
         };
-        const handleContextMenu = (e) => {
-          var _a2;
-          if (!options.onTaskContextMenu) return;
-          const target = e.target;
-          const row = (_a2 = target == null ? void 0 : target.closest) == null ? void 0 : _a2.call(target, ".ng-grid-row[data-task-id]");
+        const resolveTaskAt = (clientX, clientY, target) => {
+          var _a2, _b2, _c2;
+          const el2 = target;
+          const row = (_a2 = el2 == null ? void 0 : el2.closest) == null ? void 0 : _a2.call(el2, ".ng-grid-row[data-task-id]");
           const rowId = (row == null ? void 0 : row.getAttribute("data-task-id")) ?? null;
-          const taskId = rowId && !isBucketId(rowId) ? rowId : lastHoveredTaskId;
-          const t = findTaskById(taskId);
-          if (!t) return;
-          e.preventDefault();
-          options.onTaskContextMenu(t, { x: e.clientX, y: e.clientY });
+          let taskId = rowId && !isBucketId(rowId) ? rowId : lastHoveredTaskId;
+          if (!taskId) {
+            const hit = (_b2 = document.elementFromPoint) == null ? void 0 : _b2.call(document, clientX, clientY);
+            const hitRow = (_c2 = hit == null ? void 0 : hit.closest) == null ? void 0 : _c2.call(hit, "[data-task-id]");
+            const hitId = hitRow == null ? void 0 : hitRow.getAttribute("data-task-id");
+            if (hitId && !isBucketId(hitId)) taskId = hitId;
+          }
+          return findTaskById(taskId);
+        };
+        const fireContextMenu = (clientX, clientY, target) => {
+          if (!options.onTaskContextMenu) return false;
+          const t = resolveTaskAt(clientX, clientY, target);
+          if (!t) return false;
+          options.onTaskContextMenu(t, { x: clientX, y: clientY });
+          return true;
+        };
+        const handleContextMenu = (e) => {
+          if (fireContextMenu(e.clientX, e.clientY, e.target)) e.preventDefault();
+        };
+        const handlePointerDown = (e) => {
+          if (e.button !== 2) return;
+          if (fireContextMenu(e.clientX, e.clientY, e.target)) e.preventDefault();
         };
         ganttEl.addEventListener("mouseover", handleMouseOver);
         ganttEl.addEventListener("mouseleave", handleMouseLeave);
         ganttEl.addEventListener("contextmenu", handleContextMenu);
+        ganttEl.addEventListener("pointerdown", handlePointerDown);
         if (typeof ((_e = tplConfig.engine) == null ? void 0 : _e.PriorityGroupingPlugin) === "function") {
           inst.use(tplConfig.engine.PriorityGroupingPlugin({
             buckets: tplConfig.buckets,
@@ -5021,6 +5113,7 @@ var NimbusGanttApp = (function(exports) {
           ganttEl.removeEventListener("mouseover", handleMouseOver);
           ganttEl.removeEventListener("mouseleave", handleMouseLeave);
           ganttEl.removeEventListener("contextmenu", handleContextMenu);
+          ganttEl.removeEventListener("pointerdown", handlePointerDown);
           try {
             inst.destroy();
           } catch (_e2) {
@@ -5040,8 +5133,15 @@ var NimbusGanttApp = (function(exports) {
            *  — equivalent to `setTasks(tasks)`. */
           setData(tasks, dependencies) {
             allTasks2 = tasks;
-            if (dependencies !== void 0) allDependencies2 = dependencies;
+            if (dependencies !== void 0) allDependencies2 = normalizeDependencies(dependencies);
             _syncToCanvas();
+          },
+          /** 0.185.32 — coordinate-based hit-test for host-driven right-click
+           *  UX in LWS/Locker contexts where NG's internal document listeners
+           *  silently no-op. Host attaches its own document listener, calls
+           *  taskAt(e.clientX, e.clientY) to resolve the task under the cursor. */
+          taskAt(clientX, clientY) {
+            return resolveTaskAt(clientX, clientY, null);
           },
           /** Called by NimbusGanttAppReact when the React filter/search state changes. */
           setFilter(filter, search) {
@@ -5100,7 +5200,7 @@ var NimbusGanttApp = (function(exports) {
         state = { ...state, zoom: options.initialViewport.zoom };
       }
       let allTasks = options.tasks || [];
-      let allDependencies = options.dependencies || [];
+      let allDependencies = normalizeDependencies(options.dependencies);
       const patchLog = [];
       const _viewportEmitTimer = { t: null };
       function emitViewport() {
@@ -5683,6 +5783,7 @@ var NimbusGanttApp = (function(exports) {
       let cleanupShading = null;
       let cleanupDrag = null;
       let depthMap = buildDepthMap(allTasks);
+      let chromeTaskAt = null;
       function resolveEngine() {
         if (options.engine) return options.engine;
         const w = window;
@@ -5871,26 +5972,45 @@ var NimbusGanttApp = (function(exports) {
             (_a3 = options.onTaskHover) == null ? void 0 : _a3.call(options, null);
           }
         };
-        const onContextMenu = (e) => {
-          var _a3;
-          if (!options.onTaskContextMenu) return;
-          const target = e.target;
-          const row = (_a3 = target == null ? void 0 : target.closest) == null ? void 0 : _a3.call(target, ".ng-grid-row[data-task-id]");
+        const resolveTaskAtChrome = (clientX, clientY, target) => {
+          var _a3, _b2, _c2;
+          const el2 = target;
+          const row = (_a3 = el2 == null ? void 0 : el2.closest) == null ? void 0 : _a3.call(el2, ".ng-grid-row[data-task-id]");
           const rowId = (row == null ? void 0 : row.getAttribute("data-task-id")) ?? null;
-          const taskId = rowId && !isBucketId(rowId) ? rowId : lastHoveredTaskId;
-          const t = findTaskById(taskId);
-          if (!t) return;
-          e.preventDefault();
-          options.onTaskContextMenu(t, { x: e.clientX, y: e.clientY });
+          let taskId = rowId && !isBucketId(rowId) ? rowId : lastHoveredTaskId;
+          if (!taskId) {
+            const hit = (_b2 = document.elementFromPoint) == null ? void 0 : _b2.call(document, clientX, clientY);
+            const hitRow = (_c2 = hit == null ? void 0 : hit.closest) == null ? void 0 : _c2.call(hit, "[data-task-id]");
+            const hitId = hitRow == null ? void 0 : hitRow.getAttribute("data-task-id");
+            if (hitId && !isBucketId(hitId)) taskId = hitId;
+          }
+          return findTaskById(taskId);
+        };
+        chromeTaskAt = (x, y) => resolveTaskAtChrome(x, y, null);
+        const fireCtxMenu = (clientX, clientY, target) => {
+          if (!options.onTaskContextMenu) return false;
+          const t = resolveTaskAtChrome(clientX, clientY, target);
+          if (!t) return false;
+          options.onTaskContextMenu(t, { x: clientX, y: clientY });
+          return true;
+        };
+        const onContextMenu = (e) => {
+          if (fireCtxMenu(e.clientX, e.clientY, e.target)) e.preventDefault();
+        };
+        const onPointerDown = (e) => {
+          if (e.button !== 2) return;
+          if (fireCtxMenu(e.clientX, e.clientY, e.target)) e.preventDefault();
         };
         ganttEl.addEventListener("mouseover", onMouseOver);
         ganttEl.addEventListener("mouseleave", onMouseLeave);
         ganttEl.addEventListener("contextmenu", onContextMenu);
+        ganttEl.addEventListener("pointerdown", onPointerDown);
         const prevCleanupDrag = cleanupDrag;
         cleanupDrag = () => {
           ganttEl.removeEventListener("mouseover", onMouseOver);
           ganttEl.removeEventListener("mouseleave", onMouseLeave);
           ganttEl.removeEventListener("contextmenu", onContextMenu);
+          ganttEl.removeEventListener("pointerdown", onPointerDown);
           if (prevCleanupDrag) prevCleanupDrag();
         };
         if (typeof PGP === "function") {
@@ -6159,7 +6279,7 @@ var NimbusGanttApp = (function(exports) {
          *  same liveDataUpdate-gated refresh path as setTasks. */
         setData(tasks, dependencies) {
           allTasks = tasks;
-          if (dependencies !== void 0) allDependencies = dependencies;
+          if (dependencies !== void 0) allDependencies = normalizeDependencies(dependencies);
           depthMap = buildDepthMap(allTasks);
           const live = tplConfig.features.liveDataUpdate !== false;
           if (live && ganttInst && state.viewMode === "gantt") {
@@ -6167,6 +6287,13 @@ var NimbusGanttApp = (function(exports) {
           } else {
             rebuildView();
           }
+        },
+        /** 0.185.32 — coordinate-based hit-test for host-driven right-click
+         *  UX in LWS/Locker contexts where NG's internal document listeners
+         *  silently no-op. Host attaches its own document listener, calls
+         *  taskAt(e.clientX, e.clientY) to resolve the task under the cursor. */
+        taskAt(clientX, clientY) {
+          return chromeTaskAt ? chromeTaskAt(clientX, clientY) : null;
         },
         /** CH-1 (0.183) — toggle chrome visibility at runtime. With no arg,
          *  flips current state; boolean arg sets explicitly. Embedded-mode
