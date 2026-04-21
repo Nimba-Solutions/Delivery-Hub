@@ -1,5 +1,51 @@
 <template>
-    <div class="timeline-root">
-        <div class="timeline-container" lwc:dom="manual"></div>
+    <div class="timeline-root" onclick={handleRootClick}>
+        <div class="timeline-container" lwc:dom="manual" oncontextmenu={handleCanvasContextMenu}></div>
+        <template if:true={menuVisible}>
+            <div class="dh-ctx-menu" style={menuStyle} onclick={handleMenuClick}>
+                <template if:true={menuShowMain}>
+                    <button class="dh-ctx-item" data-action="move-top" onclick={handleMenuAction}>Move to top of bucket</button>
+                    <button class="dh-ctx-item" data-action="move-bottom" onclick={handleMenuAction}>Move to bottom of bucket</button>
+                    <button class="dh-ctx-item" data-action="change-priority" onclick={handleMenuAction}>Change priority group ▸</button>
+                    <div class="dh-ctx-sep"></div>
+                    <button class="dh-ctx-item" data-action="add-successor" onclick={handleMenuAction}>Add successor (this blocks…) ▸</button>
+                    <button class="dh-ctx-item" data-action="add-predecessor" onclick={handleMenuAction}>Add predecessor (blocked by…) ▸</button>
+                    <template if:true={hasPredecessors}>
+                        <button class="dh-ctx-item" data-action="remove-predecessor" onclick={handleMenuAction}>Remove predecessor ▸</button>
+                    </template>
+                    <template if:true={hasSuccessors}>
+                        <button class="dh-ctx-item" data-action="remove-successor" onclick={handleMenuAction}>Remove successor ▸</button>
+                    </template>
+                    <div class="dh-ctx-sep"></div>
+                    <button class="dh-ctx-item" data-action="copy-id" onclick={handleMenuAction}>Copy task ID</button>
+                </template>
+                <template if:true={menuShowPriority}>
+                    <button class="dh-ctx-item" data-action="priority-top-priority" onclick={handleMenuAction}>Top priority (NOW)</button>
+                    <button class="dh-ctx-item" data-action="priority-active" onclick={handleMenuAction}>Active</button>
+                    <button class="dh-ctx-item" data-action="priority-follow-on" onclick={handleMenuAction}>Follow-on</button>
+                    <button class="dh-ctx-item" data-action="priority-proposed" onclick={handleMenuAction}>Proposed</button>
+                    <div class="dh-ctx-sep"></div>
+                    <button class="dh-ctx-item dh-ctx-back" data-action="back" onclick={handleMenuAction}>◂ Back</button>
+                </template>
+                <template if:true={menuShowPicker}>
+                    <div class="dh-ctx-header">{pickerHeading}</div>
+                    <input class="dh-ctx-search" type="text" placeholder="Filter tasks…"
+                           value={pickerFilter} oninput={handlePickerFilter} />
+                    <div class="dh-ctx-list">
+                        <template for:each={pickerOptions} for:item="opt">
+                            <button key={opt.id} class="dh-ctx-item dh-ctx-picker-item"
+                                    data-opt-id={opt.id} data-opt-label={opt.label} onclick={handlePickerSelect}>
+                                {opt.label}
+                            </button>
+                        </template>
+                        <template if:true={pickerEmpty}>
+                            <div class="dh-ctx-empty">No matches</div>
+                        </template>
+                    </div>
+                    <div class="dh-ctx-sep"></div>
+                    <button class="dh-ctx-item dh-ctx-back" data-action="back" onclick={handleMenuAction}>◂ Back</button>
+                </template>
+            </div>
+        </template>
     </div>
 </template>

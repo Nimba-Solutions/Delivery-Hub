@@ -48,6 +48,8 @@ import updateWorkItemDates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGan
 import updateWorkItemSortOrder from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemSortOrder';
 import updateWorkItemPriorityGroup from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemPriorityGroup';
 import updateWorkItemParent from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemParent';
+import createWorkItemDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.createWorkItemDependency';
+import deleteWorkItemDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.deleteWorkItemDependency';
 import updateWorkItemFields from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemFields';
 
 // Tab DeveloperNames used by the fullscreen nav pair. Centralized here so the
@@ -99,6 +101,81 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     _refetchTimer = null;
     _viewportWriteTimer = null;
     _headerVisible = false;
+    menuVisible = false;
+    menuX = 0;
+    menuY = 0;
+    menuView = 'main';
+    pickerFilter = '';
+    _pickerMode = null; // 'add-successor' | 'add-predecessor' | 'remove-predecessor' | 'remove-successor'
+    _menuTaskId = null;
+    _menuTaskPriorityGroup = null;
+
+    get menuStyle() {
+        return `left:${this.menuX}px;top:${this.menuY}px;`;
+    }
+    get menuShowMain() { return this.menuView === 'main'; }
+    get menuShowPriority() { return this.menuView === 'priority'; }
+    get menuShowPicker() { return this.menuView === 'picker'; }
+
+    get hasPredecessors() {
+        return (this._dependencies || []).some(d => d.target === this._menuTaskId);
+    }
+    get hasSuccessors() {
+        return (this._dependencies || []).some(d => d.source === this._menuTaskId);
+    }
+
+    get pickerHeading() {
+        switch (this._pickerMode) {
+            case 'add-successor': return 'Block which task?';
+            case 'add-predecessor': return 'Blocked by which task?';
+            case 'remove-predecessor': return 'Remove which predecessor?';
+            case 'remove-successor': return 'Remove which successor?';
+            default: return 'Select a task';
+        }
+    }
+
+    get pickerOptions() {
+        const filter = (this.pickerFilter || '').trim().toLowerCase();
+        const all = this._tasks || [];
+        const byId = new Map(all.map(t => [t.id, t]));
+        const mode = this._pickerMode;
+        const me = this._menuTaskId;
+        let list = [];
+        if (mode === 'add-successor' || mode === 'add-predecessor') {
+            // Exclude self and any existing direct pairing in that direction.
+            const existing = new Set();
+            (this._dependencies || []).forEach(d => {
+                if (mode === 'add-successor' && d.source === me) existing.add(d.target);
+                if (mode === 'add-predecessor' && d.target === me) existing.add(d.source);
+            });
+            list = all.filter(t => t.id !== me && !existing.has(t.id)).map(t => ({
+                id: t.id,
+                label: `${t.name || t.id} — ${t.priorityGroup || 'proposed'}`,
+            }));
+        } else if (mode === 'remove-predecessor') {
+            list = (this._dependencies || [])
+                .filter(d => d.target === me)
+                .map(d => {
+                    const t = byId.get(d.source);
+                    return { id: d.id, label: t ? `${t.name || t.id}` : d.source };
+                });
+        } else if (mode === 'remove-successor') {
+            list = (this._dependencies || [])
+                .filter(d => d.source === me)
+                .map(d => {
+                    const t = byId.get(d.target);
+                    return { id: d.id, label: t ? `${t.name || t.id}` : d.target };
+                });
+        }
+        if (filter) {
+            list = list.filter(o => (o.label || '').toLowerCase().includes(filter));
+        }
+        return list;
+    }
+
+    get pickerEmpty() {
+        return this.pickerOptions.length === 0;
+    }
 
     async connectedCallback() {
         // Fullscreen FlexiPage route renders a Salesforce-injected SLDS page-header
@@ -199,6 +276,154 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         if (s && s.parentNode) s.parentNode.removeChild(s);
     }
 
+    // LEX closed-source (aura_prod.js) suppresses document-level contextmenu
+    // for LWC hosts. Per-element listeners bound via the LWC template
+    // (`oncontextmenu={handler}`) compile to elem.addEventListener and
+    // bypass that document-proxy. Right-click on any NG-rendered child
+    // bubbles up to .timeline-container, fires this handler, we call
+    // handle.taskAt(x, y) for the hit-test (NG 0.185.32).
+    handleCanvasContextMenu(e) {
+        const handle = this._mountHandle;
+        if (!handle || typeof handle.taskAt !== 'function') return;
+        const task = handle.taskAt(e.clientX, e.clientY);
+        if (!task) return;
+        e.preventDefault();
+        this._openContextMenu(task, e.clientX, e.clientY);
+    }
+
+    _openContextMenu(task, x, y) {
+        const id = (task && task.id) || task;
+        // eslint-disable-next-line no-console
+        console.log('[DH ctx-open]', id, { x, y });
+        const full = (this._tasks || []).find(t => t.id === id) || task || {};
+        this._menuTaskId = id;
+        this._menuTaskPriorityGroup = full.priorityGroup || null;
+        this.menuX = x;
+        this.menuY = y;
+        this.menuView = 'main';
+        this.menuVisible = true;
+    }
+
+    _dismissMenu() {
+        this.menuVisible = false;
+        this.menuView = 'main';
+        this._menuTaskId = null;
+        this._menuTaskPriorityGroup = null;
+        this._pickerMode = null;
+        this.pickerFilter = '';
+    }
+
+    handleRootClick() {
+        if (this.menuVisible) this._dismissMenu();
+    }
+
+    handleMenuClick(e) {
+        // Prevent root-click from dismissing when clicking inside menu.
+        e.stopPropagation();
+    }
+
+    async handleMenuAction(e) {
+        const action = e.currentTarget.dataset.action;
+        const taskId = this._menuTaskId;
+        if (!taskId || !action) return;
+        if (action === 'back') {
+            this.menuView = 'main';
+            this._pickerMode = null;
+            this.pickerFilter = '';
+            return;
+        }
+        if (action === 'change-priority') { this.menuView = 'priority'; return; }
+        if (action === 'add-successor' || action === 'add-predecessor'
+            || action === 'remove-predecessor' || action === 'remove-successor') {
+            this._pickerMode = action;
+            this.pickerFilter = '';
+            this.menuView = 'picker';
+            return;
+        }
+
+        if (action === 'copy-id') {
+            try {
+                await navigator.clipboard.writeText(taskId);
+            } catch (err) {
+                // eslint-disable-next-line no-console
+                console.error('[DH ctx] clipboard.writeText failed', err);
+            }
+            this._dismissMenu();
+            return;
+        }
+
+        if (action === 'move-top' || action === 'move-bottom') {
+            const group = this._menuTaskPriorityGroup || 'proposed';
+            const sortOrder = this._computeBucketEdgeSortOrder(group, action === 'move-top' ? 'top' : 'bottom');
+            this._dismissMenu();
+            await this._handlePatch({ id: taskId, sortOrder });
+            this._scheduleRefetch();
+            return;
+        }
+
+        if (action.startsWith('priority-')) {
+            const newGroup = action.slice('priority-'.length);
+            this._dismissMenu();
+            await this._handlePatch({ id: taskId, priorityGroup: newGroup });
+            this._scheduleRefetch();
+            return;
+        }
+    }
+
+    handlePickerFilter(e) {
+        this.pickerFilter = e.target.value || '';
+    }
+
+    async handlePickerSelect(e) {
+        const optId = e.currentTarget.dataset.optId;
+        const mode = this._pickerMode;
+        const taskId = this._menuTaskId;
+        if (!optId || !mode || !taskId) { this._dismissMenu(); return; }
+        try {
+            if (mode === 'add-successor' || mode === 'add-predecessor') {
+                const blocking = mode === 'add-successor' ? taskId : optId;
+                const blocked = mode === 'add-successor' ? optId : taskId;
+                const dto = await createWorkItemDependency({ blockingId: blocking, blockedId: blocked, depType: 'Blocks' });
+                this._dependencies = [
+                    ...this._dependencies,
+                    ...this._mapDependenciesForNg([dto]),
+                ];
+                this._pushDependenciesToNg();
+            } else if (mode === 'remove-predecessor' || mode === 'remove-successor') {
+                await deleteWorkItemDependency({ depId: optId });
+                this._dependencies = (this._dependencies || []).filter(d => d.id !== optId);
+                this._pushDependenciesToNg();
+            }
+        } catch (err) {
+            this._showError('Dependency action failed', err);
+        } finally {
+            this._dismissMenu();
+        }
+    }
+
+    _pushDependenciesToNg() {
+        const h = this._mountHandle;
+        if (!h) return;
+        try {
+            if (typeof h.setDependencies === 'function') {
+                h.setDependencies(this._dependencies);
+            } else if (typeof h.setData === 'function') {
+                h.setData(this._mapTasksForNg(this._tasks), this._dependencies);
+            }
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn('[DH] setDependencies push failed', e);
+        }
+    }
+
+    _computeBucketEdgeSortOrder(group, edge) {
+        const inBucket = (this._tasks || []).filter(t => (t.priorityGroup || 'proposed') === group);
+        if (inBucket.length === 0) return 1000;
+        const sorts = inBucket.map(t => Number(t.sortOrder) || 0);
+        if (edge === 'top') return Math.min(...sorts) - 1000;
+        return Math.max(...sorts) + 1000;
+    }
+
     // Builds the host-contributed TitleBar buttons (NG 0.185.26+
     // titleBarButtons slot). DH contributes a Show/Hide Header toggle.
     // Full Screen stays owned by NG via the existing fullscreen contract.
@@ -260,12 +485,23 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     // managed-package upload. Default 'FS' when the DTO is missing it so
     // old records still render.
     _mapDependenciesForNg(raw) {
-        return (raw || []).map(d => ({
-            id: d.id,
-            source: d.source,
-            target: d.target,
-            type: d.dependencyType || d.type || 'FS',
-        }));
+        // NG's DependencyRenderer throws when a referenced task has no rendered
+        // bar (missing dates or not in the tasks array). Filter defensively so
+        // orphan or date-less dep rows never reach the renderer.
+        const byId = new Map();
+        (this._tasks || []).forEach(t => byId.set(t.id, t));
+        const isRenderable = (taskId) => {
+            const t = byId.get(taskId);
+            return !!(t && t.startDate && t.endDate);
+        };
+        return (raw || [])
+            .filter(d => d && d.source && d.target && isRenderable(d.source) && isRenderable(d.target))
+            .map(d => ({
+                id: d.id,
+                source: d.source,
+                target: d.target,
+                type: d.dependencyType || d.type || 'FS',
+            }));
     }
 
     _mount() {
@@ -286,18 +522,14 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         const mountConfig = {
             mode: this.mode,
             tasks,
-            // NG 0.185.27 — dependencies pipe re-opened. Render arrows
-            // between predecessor/successor bars per WorkItemDependency__c.
+            // NG 0.185.34 shipped the defensive DependencyRenderer —
+            // arrows draw between dated bars, missing endpoints skipped.
             dependencies: this._dependencies,
-            // 2026-04-21 probe — NG CC found onTaskContextMenu appears to
-            // already be wired in 0.185.27 (IIFEApp.ts:768-781 + :2006-2018).
-            // Log-only to confirm it fires in Locker/LWS context. If this
-            // logs on right-click over a task bar in glen-walk, the full
-            // right-click UX is DH-only (no NG release needed).
-            onTaskContextMenu: (task, pos) => {
-                // eslint-disable-next-line no-console
-                console.log('[DH ctx-probe]', (task && task.id) || task, pos);
-            },
+            // NG's own onTaskContextMenu callback never fires under LWS
+            // (document captured inside the IIFE is sandboxed). DH installs
+            // its own document-level contextmenu listener and calls
+            // handle.taskAt(x, y) for the hit-test. See
+            // _installContextMenuListener below.
             // Save-path routing is mode-conditional:
             //
             //   Embedded (Delivery_Timeline tab): NG emits legacy onPatch for

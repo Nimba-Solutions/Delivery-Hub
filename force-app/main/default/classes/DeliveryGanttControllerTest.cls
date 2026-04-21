@@ -586,4 +586,101 @@ private class DeliveryGanttControllerTest {
         }
     }
 
+    // ── createWorkItemDependency / deleteWorkItemDependency ──────────
+
+    @IsTest
+    static void testCreateWorkItemDependencyInsertsRow() {
+        List<WorkItem__c> items = [SELECT Id FROM WorkItem__c LIMIT 2];
+        System.assertEquals(2, items.size(), 'Need two items from TestSetup');
+
+        Test.startTest();
+        DeliveryGanttController.GanttDependency dto =
+            DeliveryGanttController.createWorkItemDependency(items[0].Id, items[1].Id, 'Blocks');
+        Test.stopTest();
+
+        System.assertNotEquals(null, dto, 'DTO returned');
+        System.assertNotEquals(null, dto.id, 'New dep has an id');
+        System.assertEquals(items[0].Id, dto.source, 'Source is blocking item');
+        System.assertEquals(items[1].Id, dto.target, 'Target is blocked item');
+        System.assertEquals('Blocks', dto.dependencyType, 'Type echoed back');
+
+        List<WorkItemDependency__c> rows = [
+            SELECT BlockingWorkItemLookup__c, BlockedWorkItemLookup__c, TypePk__c
+            FROM WorkItemDependency__c WHERE Id = :dto.id
+        ];
+        System.assertEquals(1, rows.size(), 'Row persisted');
+        System.assertEquals(items[0].Id, rows[0].BlockingWorkItemLookup__c);
+        System.assertEquals(items[1].Id, rows[0].BlockedWorkItemLookup__c);
+        System.assertEquals('Blocks', rows[0].TypePk__c);
+    }
+
+    @IsTest
+    static void testCreateWorkItemDependencyDefaultsType() {
+        List<WorkItem__c> items = [SELECT Id FROM WorkItem__c LIMIT 2];
+        Test.startTest();
+        DeliveryGanttController.GanttDependency dto =
+            DeliveryGanttController.createWorkItemDependency(items[0].Id, items[1].Id, null);
+        Test.stopTest();
+        System.assertEquals('Blocks', dto.dependencyType, 'Blank type defaults to Blocks');
+    }
+
+    @IsTest
+    static void testCreateWorkItemDependencyBlankIdsRejected() {
+        WorkItem__c item = [SELECT Id FROM WorkItem__c LIMIT 1];
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryGanttController.createWorkItemDependency('', item.Id, 'Blocks');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+        System.assert(threw, 'Blank blocking id must throw');
+    }
+
+    @IsTest
+    static void testCreateWorkItemDependencySelfRejected() {
+        WorkItem__c item = [SELECT Id FROM WorkItem__c LIMIT 1];
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryGanttController.createWorkItemDependency(item.Id, item.Id, 'Blocks');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+        System.assert(threw, 'Self-reference must throw');
+    }
+
+    @IsTest
+    static void testDeleteWorkItemDependencyRemovesRow() {
+        List<WorkItem__c> items = [SELECT Id FROM WorkItem__c LIMIT 2];
+        WorkItemDependency__c dep = new WorkItemDependency__c(
+            BlockingWorkItemLookup__c = items[0].Id,
+            BlockedWorkItemLookup__c  = items[1].Id,
+            TypePk__c                 = 'Blocks'
+        );
+        insert dep;
+
+        Test.startTest();
+        DeliveryGanttController.deleteWorkItemDependency(dep.Id);
+        Test.stopTest();
+
+        List<WorkItemDependency__c> rows = [SELECT Id FROM WorkItemDependency__c WHERE Id = :dep.Id];
+        System.assertEquals(0, rows.size(), 'Row deleted');
+    }
+
+    @IsTest
+    static void testDeleteWorkItemDependencyBlankIdRejected() {
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryGanttController.deleteWorkItemDependency('');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+        System.assert(threw, 'Blank depId must throw');
+    }
+
 }
