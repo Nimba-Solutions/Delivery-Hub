@@ -312,4 +312,127 @@ private class DeliverySyncItemIngestorTest {
             System.assertEquals(clientEntity.Id, insertedWorkItem.ClientNetworkEntityLookup__c, 'The Ingestor should have automatically stamped the ClientNetworkEntityLookup__c based on the SenderOrgId in the payload.');
         }
     }
+
+    /**
+     * @description Verifies the pull-callout ContentVersion branch: an inbound
+     *              metadata-only payload should create a Queued inbound ledger
+     *              row keyed to the local WorkItem — no ContentVersion insert
+     *              attempted in-band. The DeliveryFileBytesFetcher Queueable
+     *              takes it from there (covered by its own test).
+     */
+    @IsTest
+    static void testInboundContentVersionPullCalloutCreatesLedger() {
+        System.runAs(testUser) {
+            WorkItem__c wi = [SELECT Id FROM WorkItem__c LIMIT 1];
+
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-CV-PULL-ABC',
+                'TargetId' => 'REMOTE-123', // matches WorkRequest.RemoteWorkItemIdTxt__c
+                'GlobalSourceId' => 'GSID-ABC',
+                'SenderOrgId' => 'REMOTE-ORG-PULL-ABC',
+                'ContentDocumentId' => 'REMOTE-CD-PULL-ABC',
+                'Title' => 'Pulled file',
+                'PathOnClient' => 'pulled.txt',
+                'FileTransport' => 'pull-callout',
+                'Sha256' => '0'.repeat(64)
+            };
+
+            // Set a mock so the enqueued DeliveryFileBytesFetcher (if it runs)
+            // doesn't crash the test. We're only validating ingestor behaviour
+            // here; the fetcher is covered by its own test class.
+            Test.setMock(HttpCalloutMock.class, new MockBytesQuiet(500, 'noop'));
+
+            Test.startTest();
+            Id resultId = DeliverySyncItemIngestor.processInboundItem('ContentVersion', payload);
+
+            // Assert the ingestor's write state BEFORE Test.stopTest() flushes
+            // the enqueued fetcher (which would otherwise transition the row
+            // to Failed or Synced depending on peer-resolution outcome).
+            System.assertNotEquals(null, resultId, 'Should return the ledger row Id');
+            SyncItem__c ledger = [
+                SELECT Id, DirectionPk__c, StatusPk__c, ObjectTypePk__c,
+                       WorkItemLookup__c, GlobalSourceIdTxt__c
+                FROM SyncItem__c
+                WHERE Id = :resultId
+            ];
+            System.assertEquals('Inbound', ledger.DirectionPk__c, 'Should be inbound');
+            System.assertEquals('Queued', ledger.StatusPk__c, 'Should be Queued awaiting the fetcher');
+            System.assertEquals('ContentVersion', ledger.ObjectTypePk__c, 'Object type should be ContentVersion');
+            System.assertEquals(wi.Id, ledger.WorkItemLookup__c, 'Ledger should point at the resolved local WorkItem');
+            System.assertEquals('GSID-ABC', ledger.GlobalSourceIdTxt__c, 'GlobalSourceId should be recorded for idempotency');
+
+            Test.stopTest();
+
+            // No ContentVersion should have been inserted in-band — the fetcher
+            // would have failed its lookup for the unregistered sender org and
+            // written ErrorLogTxt__c rather than creating a ContentVersion.
+            Integer cvCount = [SELECT COUNT() FROM ContentVersion WHERE Title = 'Pulled file'];
+            System.assertEquals(0, cvCount, 'Ingestor must not insert ContentVersion directly in the pull-callout path');
+        }
+    }
+
+    /**
+     * @description Second pull-callout inbound with the same GlobalSourceId
+     *              should NOT create a duplicate ledger row (idempotency).
+     */
+    @IsTest
+    static void testInboundContentVersionPullCalloutIdempotent() {
+        System.runAs(testUser) {
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-CV-PULL-DUPE',
+                'TargetId' => 'REMOTE-123',
+                'GlobalSourceId' => 'GSID-DUPE',
+                'SenderOrgId' => 'REMOTE-ORG-PULL-DUPE',
+                'ContentDocumentId' => 'REMOTE-CD-PULL-DUPE',
+                'Title' => 'Dup file',
+                'PathOnClient' => 'dup.txt',
+                'FileTransport' => 'pull-callout',
+                'Sha256' => null
+            };
+
+            Test.setMock(HttpCalloutMock.class, new MockBytesQuiet(500, 'noop'));
+
+            Test.startTest();
+            Id first = DeliverySyncItemIngestor.processInboundItem('ContentVersion', payload);
+            Id second = DeliverySyncItemIngestor.processInboundItem('ContentVersion', payload);
+            Test.stopTest();
+
+            System.assertEquals(first, second, 'Duplicate inbound should return existing ledger Id');
+            Integer count = [SELECT COUNT() FROM SyncItem__c WHERE GlobalSourceIdTxt__c = 'GSID-DUPE'];
+            System.assertEquals(1, count, 'Only one ledger row should exist for a given GlobalSourceId');
+        }
+    }
+
+    /**
+     * @description Minimal HttpCalloutMock for the pull-callout path —
+     *              tests that exercise the ingestor enqueue a fetcher
+     *              Queueable; this mock lets that Queueable fail cleanly
+     *              instead of crashing the test harness.
+     */
+    private class MockBytesQuiet implements HttpCalloutMock {
+        /** @description HTTP status to return. */
+        private final Integer status;
+        /** @description Response body to return. */
+        private final String body;
+        /**
+         * @description Builds a quiet mock with the given status and body.
+         * @param status HTTP status code.
+         * @param body Response body as a string.
+         */
+        public MockBytesQuiet(Integer status, String body) {
+            this.status = status;
+            this.body = body;
+        }
+        /**
+         * @description Returns the pre-configured mock HttpResponse.
+         * @param req Ignored.
+         * @return Mock HttpResponse.
+         */
+        public HttpResponse respond(HttpRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setStatusCode(status);
+            res.setBodyAsBlob(Blob.valueOf(body));
+            return res;
+        }
+    }
 }
