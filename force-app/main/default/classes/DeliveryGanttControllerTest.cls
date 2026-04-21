@@ -694,7 +694,9 @@ private class DeliveryGanttControllerTest {
     private static List<Id> seedBucketItems() {
         // Deactivate setup items so they don't pollute the bucket query
         List<WorkItem__c> setup = [SELECT Id FROM WorkItem__c];
-        for (WorkItem__c w : setup) w.ActivatedDateTime__c = null;
+        for (WorkItem__c w : setup) {
+            w.ActivatedDateTime__c = null;
+        }
         update setup;
 
         List<WorkItem__c> items = new List<WorkItem__c>();
@@ -710,7 +712,9 @@ private class DeliveryGanttControllerTest {
         }
         insert items;
         List<Id> ids = new List<Id>();
-        for (WorkItem__c w : items) ids.add(w.Id);
+        for (WorkItem__c w : items) {
+            ids.add(w.Id);
+        }
         return ids;
     }
 

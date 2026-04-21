@@ -60,7 +60,9 @@ for (delivery__WorkItem__c w : actives) {
             bucket = 'follow-on';
         }
     }
-    if (!byBucket.containsKey(bucket)) byBucket.put(bucket, new List<delivery__WorkItem__c>());
+    if (!byBucket.containsKey(bucket)) {
+        byBucket.put(bucket, new List<delivery__WorkItem__c>());
+    }
     byBucket.get(bucket).add(w);
 }
 

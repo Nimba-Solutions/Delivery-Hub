@@ -514,97 +514,10 @@ public with sharing class DeliveryGanttController {
             if (String.isBlank(workItemId) || String.isBlank(position) || String.isBlank(priorityGroup)) {
                 throw new AuraHandledException('workItemId, position, and priorityGroup are required');
             }
-            // Load every active item + compute its effective bucket (explicit or derived),
-            // then filter to the target bucket. Echo-suppressed so the bulk update doesn't
-            // cascade into peer-org sync traffic.
             DeliverySyncEngine.setSyncContext();
-
-            List<WorkItem__c> all = [
-                SELECT Id, PriorityPk__c, StageNamePk__c, PriorityGroupPk__c, SortOrderNumber__c
-                FROM WorkItem__c
-                WHERE IsActiveBool__c = true
-                WITH SYSTEM_MODE
-            ];
-            List<WorkItem__c> bucket = new List<WorkItem__c>();
-            for (WorkItem__c w : all) {
-                String effective = String.isNotBlank(w.PriorityGroupPk__c)
-                    ? w.PriorityGroupPk__c
-                    : derivePriorityGroup(w.PriorityPk__c, w.StageNamePk__c);
-                if (effective == priorityGroup) {
-                    bucket.add(w);
-                }
-            }
-            // Stable pre-sort by current SortOrder (nulls last) to establish the baseline
-            // order we're about to rewrite.
-            bucket.sort(new SortOrderComparator());
-
-            // Remove the dragged task from its current position in the bucket, then
-            // re-insert at the implied position.
-            List<WorkItem__c> others = new List<WorkItem__c>();
-            WorkItem__c moving = null;
-            for (WorkItem__c w : bucket) {
-                if (w.Id == workItemId) {
-                    moving = w;
-                } else {
-                    others.add(w);
-                }
-            }
-            if (moving == null) {
-                // The dragged task isn't in this bucket yet — NG already updated the bucket
-                // field client-side, but the server hasn't seen it. Fabricate a stub so the
-                // splice logic can place it; subsequent PriorityGroupPk__c update arrives
-                // via a separate patch endpoint.
-                moving = new WorkItem__c(Id = workItemId);
-            }
-
-            Integer insertAt;
-            if (position == 'above-all') {
-                insertAt = 0;
-            } else if (position == 'below-all') {
-                insertAt = others.size();
-            } else {
-                // 'between' — locate the afterTaskId in the list and insert just after it,
-                // or the beforeTaskId and insert just before it. Prefer afterTaskId.
-                insertAt = others.size();
-                if (String.isNotBlank(afterTaskId)) {
-                    for (Integer i = 0; i < others.size(); i++) {
-                        if (others[i].Id == afterTaskId) {
-                            insertAt = i + 1;
-                            break;
-                        }
-                    }
-                } else if (String.isNotBlank(beforeTaskId)) {
-                    for (Integer i = 0; i < others.size(); i++) {
-                        if (others[i].Id == beforeTaskId) {
-                            insertAt = i;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            List<WorkItem__c> finalOrder = new List<WorkItem__c>();
-            for (Integer i = 0; i < insertAt && i < others.size(); i++) {
-                finalOrder.add(others[i]);
-            }
-            finalOrder.add(moving);
-            for (Integer i = insertAt; i < others.size(); i++) {
-                finalOrder.add(others[i]);
-            }
-
-            // Write contiguous 1..N. Only include rows whose sortOrder actually changes
-            // to keep the DML narrow.
-            List<WorkItem__c> toUpdate = new List<WorkItem__c>();
-            for (Integer i = 0; i < finalOrder.size(); i++) {
-                Decimal desired = Decimal.valueOf(i + 1);
-                WorkItem__c row = finalOrder[i];
-                if (row.SortOrderNumber__c != desired) {
-                    toUpdate.add(new WorkItem__c(Id = row.Id, SortOrderNumber__c = desired));
-                }
-            }
-            if (!toUpdate.isEmpty()) {
-                Database.update(toUpdate, AccessLevel.SYSTEM_MODE);
-            }
+            List<WorkItem__c> bucket = loadBucketItems(priorityGroup);
+            List<WorkItem__c> finalOrder = spliceForReorder(bucket, workItemId, position, beforeTaskId, afterTaskId);
+            applyDenseSortOrders(finalOrder);
         } catch (AuraHandledException ahe) {
             throw ahe;
         } catch (Exception e) {
@@ -615,9 +528,135 @@ public with sharing class DeliveryGanttController {
     }
 
     /**
+     * @description Loads active WorkItems whose effective priority bucket
+     *              (explicit `PriorityGroupPk__c` or derived from priority/stage)
+     *              equals the target bucket, sorted by current SortOrder nulls-last.
+     * @param priorityGroup Target bucket name.
+     * @return Items in the bucket, ordered by current SortOrderNumber__c ascending.
+     */
+    private static List<WorkItem__c> loadBucketItems(String priorityGroup) {
+        List<WorkItem__c> all = [
+            SELECT Id, PriorityPk__c, StageNamePk__c, PriorityGroupPk__c, SortOrderNumber__c
+            FROM WorkItem__c
+            WHERE ActivatedDateTime__c != null
+            WITH SYSTEM_MODE
+        ];
+        List<WorkItem__c> bucket = new List<WorkItem__c>();
+        for (WorkItem__c w : all) {
+            String effective = String.isNotBlank(w.PriorityGroupPk__c)
+                ? w.PriorityGroupPk__c
+                : derivePriorityGroup(w.PriorityPk__c, w.StageNamePk__c);
+            if (effective == priorityGroup) {
+                bucket.add(w);
+            }
+        }
+        bucket.sort(new SortOrderComparator());
+        return bucket;
+    }
+
+    /**
+     * @description Splices the dragged task at the position implied by
+     *              position + beforeTaskId / afterTaskId, returning the new
+     *              intended ordering. Defensive: if the task isn't currently
+     *              in the bucket (e.g., bucket change landed client-side but
+     *              server hasn't seen the PriorityGroup write yet), a stub
+     *              record is inserted at the implied index.
+     * @param bucket       Current bucket ordered by SortOrder.
+     * @param workItemId   Id of the dragged task.
+     * @param position     'above-all' | 'below-all' | 'between'.
+     * @param beforeTaskId Task the dragged item lands BEFORE (nullable).
+     * @param afterTaskId  Task the dragged item lands AFTER (nullable).
+     * @return New ordered list — ready to be renumbered 1..N.
+     */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
+    private static List<WorkItem__c> spliceForReorder(List<WorkItem__c> bucket, String workItemId, String position, String beforeTaskId, String afterTaskId) {
+        List<WorkItem__c> others = new List<WorkItem__c>();
+        WorkItem__c moving = null;
+        for (WorkItem__c w : bucket) {
+            if (w.Id == workItemId) {
+                moving = w;
+            } else {
+                others.add(w);
+            }
+        }
+        if (moving == null) {
+            moving = new WorkItem__c(Id = workItemId);
+        }
+        Integer insertAt = computeInsertIndex(others, position, beforeTaskId, afterTaskId);
+        List<WorkItem__c> finalOrder = new List<WorkItem__c>();
+        for (Integer i = 0; i < insertAt && i < others.size(); i++) {
+            finalOrder.add(others[i]);
+        }
+        finalOrder.add(moving);
+        for (Integer i = insertAt; i < others.size(); i++) {
+            finalOrder.add(others[i]);
+        }
+        return finalOrder;
+    }
+
+    /**
+     * @description Computes the splice index for the dragged task in the
+     *              bucket (excluding the moving task itself).
+     * @param others       Bucket minus the moving task, ordered.
+     * @param position     'above-all' | 'below-all' | 'between'.
+     * @param beforeTaskId Task the dragged item lands BEFORE (nullable).
+     * @param afterTaskId  Task the dragged item lands AFTER (nullable).
+     * @return Zero-based index where the moving task should be inserted.
+     */
+    private static Integer computeInsertIndex(List<WorkItem__c> others, String position, String beforeTaskId, String afterTaskId) {
+        if (position == 'above-all') {
+            return 0;
+        }
+        if (position == 'below-all') {
+            return others.size();
+        }
+        if (String.isNotBlank(afterTaskId)) {
+            for (Integer i = 0; i < others.size(); i++) {
+                if (others[i].Id == afterTaskId) {
+                    return i + 1;
+                }
+            }
+        }
+        if (String.isNotBlank(beforeTaskId)) {
+            for (Integer i = 0; i < others.size(); i++) {
+                if (others[i].Id == beforeTaskId) {
+                    return i;
+                }
+            }
+        }
+        return others.size();
+    }
+
+    /**
+     * @description Writes contiguous 1..N SortOrder values, only updating
+     *              rows whose sort actually changes (narrow DML).
+     * @param finalOrder The target order.
+     */
+    private static void applyDenseSortOrders(List<WorkItem__c> finalOrder) {
+        List<WorkItem__c> toUpdate = new List<WorkItem__c>();
+        for (Integer i = 0; i < finalOrder.size(); i++) {
+            Decimal desired = Decimal.valueOf(i + 1);
+            WorkItem__c row = finalOrder[i];
+            if (row.SortOrderNumber__c != desired) {
+                toUpdate.add(new WorkItem__c(Id = row.Id, SortOrderNumber__c = desired));
+            }
+        }
+        if (!toUpdate.isEmpty()) {
+            Database.update(toUpdate, AccessLevel.SYSTEM_MODE);
+        }
+    }
+
+    /**
      * @description Sorts WorkItem__c by SortOrderNumber__c ascending, nulls last.
      */
     private class SortOrderComparator implements Comparator<WorkItem__c> {
+        /**
+         * @description Comparator for WorkItem__c SortOrderNumber__c ascending
+         *              with nulls sorted to the end.
+         * @param a First record.
+         * @param b Second record.
+         * @return -1 if a < b, 1 if a > b, 0 if equal.
+         */
         public Integer compare(WorkItem__c a, WorkItem__c b) {
             if (a.SortOrderNumber__c == b.SortOrderNumber__c) {
                 return 0;
