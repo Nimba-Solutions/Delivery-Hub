@@ -1116,16 +1116,24 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             const setTasksType = this._mountHandle ? typeof this._mountHandle.setTasks : 'no handle';
             // eslint-disable-next-line no-console
             console.log('[DH refetch] handle.setTasks typeof=', setTasksType);
-            if (this._mountHandle && typeof this._mountHandle.setTasks === 'function') {
-                const mapped = this._mapTasksForNg(this._tasks);
+            const mapped = this._mapTasksForNg(this._tasks);
+            // Re-filter deps against the refreshed task set so arrows whose
+            // endpoints just dropped out of view (completed, date-cleared)
+            // don't throw in DependencyRenderer. Map returns a new array
+            // reference, which NG relies on for layoutMap invalidation.
+            const deps = this._mapDependenciesForNg(this._dependencies || []);
+            this._dependencies = deps;
+            if (this._mountHandle && typeof this._mountHandle.setData === 'function') {
                 // eslint-disable-next-line no-console
-                console.log('[DH refetch] calling setTasks with', mapped.length, 'tasks');
+                console.log('[DH refetch] calling setData with', mapped.length, 'tasks,', deps.length, 'deps');
+                this._mountHandle.setData(mapped, deps);
+            } else if (this._mountHandle && typeof this._mountHandle.setTasks === 'function') {
+                // eslint-disable-next-line no-console
+                console.log('[DH refetch] setData unavailable — calling setTasks only with', mapped.length, 'tasks');
                 this._mountHandle.setTasks(mapped);
-                // eslint-disable-next-line no-console
-                console.log('[DH refetch] setTasks returned');
             } else {
                 // eslint-disable-next-line no-console
-                console.warn('[DH refetch] NG handle missing setTasks — visual state will not refresh');
+                console.warn('[DH refetch] NG handle missing setData/setTasks — visual state will not refresh');
             }
         } catch (error) {
             // eslint-disable-next-line no-console

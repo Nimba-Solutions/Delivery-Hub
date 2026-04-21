@@ -355,7 +355,11 @@ public with sharing class DeliveryGanttController {
                 BlockedWorkItemLookup__c = blockedId,
                 TypePk__c = resolvedType
             );
-            insert row;
+            // SYSTEM_MODE: running user on subscriber orgs (e.g. MF-Prod) may
+            // lack Edit FLS on delivery__BlockingWorkItemLookup__c /
+            // delivery__BlockedWorkItemLookup__c. Plain insert strips those
+            // fields and fails with REQUIRED_FIELD_MISSING.
+            Database.insert(new List<WorkItemDependency__c>{ row }, AccessLevel.SYSTEM_MODE);
             GanttDependency dto = new GanttDependency();
             dto.id = row.Id;
             dto.source = blockingId;
@@ -382,7 +386,7 @@ public with sharing class DeliveryGanttController {
                 throw new AuraHandledException('depId is required');
             }
             WorkItemDependency__c row = new WorkItemDependency__c(Id = depId);
-            delete row;
+            Database.delete(new List<WorkItemDependency__c>{ row }, true, AccessLevel.SYSTEM_MODE);
         } catch (AuraHandledException ahe) {
             throw ahe;
         } catch (Exception e) {
