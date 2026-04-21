@@ -46,6 +46,7 @@ import getProFormaTimelineData from '@salesforce/apex/%%%NAMESPACE_DOT%%%Deliver
 import getGanttDependencies from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getGanttDependencies';
 import updateWorkItemDates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemDates';
 import updateWorkItemSortOrder from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemSortOrder';
+import reorderWorkItemDense from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.reorderWorkItemDense';
 import updateWorkItemPriorityGroup from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemPriorityGroup';
 import updateWorkItemParent from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemParent';
 import createWorkItemDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.createWorkItemDependency';
@@ -936,7 +937,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         // eslint-disable-next-line no-console
         console.log('[DH onItemReorder]', 'taskId=', taskId, 'payload=', fullPayloadJson);
         if (!taskId) { throw new Error('[DH] onItemReorder missing taskId'); }
-        const { newIndex, newParentId, newPriorityGroup, startDate, endDate } = p;
+        const { newIndex, newParentId, newPriorityGroup, startDate, endDate, position, beforeTaskId, afterTaskId } = p;
         // If NG smuggled date info through the reorder callback (happens when
         // the template framework misclassifies a horizontal canvas drag as a
         // row reorder), route to the date-edit Apex instead of corrupting
@@ -954,17 +955,58 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             return;
         }
         const ops = [];
-        // Guard: Number(undefined) is NaN, NaN || 0 is 0 — so the prior code
-        // silently zeroed sortOrder on every reorder with no newIndex. Only
-        // call the sort-order API when we have a real numeric index.
-        if (newIndex !== undefined && newIndex !== null && Number.isFinite(Number(newIndex))) {
-            ops.push(updateWorkItemSortOrder({ workItemId: taskId, sortOrder: Number(newIndex) }));
-        }
-        if (newParentId !== undefined) {
-            ops.push(updateWorkItemParent({ workItemId: taskId, parentId: newParentId || '' }));
-        }
-        if (newPriorityGroup !== undefined && newPriorityGroup !== null) {
-            ops.push(updateWorkItemPriorityGroup({ workItemId: taskId, priorityGroup: newPriorityGroup }));
+        // NG 0.185.35+ emits position/beforeTaskId/afterTaskId for dense 1..N
+        // server-side renumber. When present, skip the legacy sparse-sort write
+        // and call reorderWorkItemDense instead — the server deterministically
+        // splices the task and rewrites the whole bucket to contiguous integers,
+        // so no more -964/-481 drift. Legacy (pre-0.185.35) NG bundles still
+        // fall through to updateWorkItemSortOrder via the else branch.
+        // newPriorityGroup still writes separately if NG also sent it (bucket
+        // change + drop in one gesture).
+        const hasDensePayload = position && newPriorityGroup;
+        if (hasDensePayload) {
+            // Apply bucket change first so reorderWorkItemDense sees the task
+            // in its target bucket when it queries.
+            ops.push(updateWorkItemPriorityGroup({ workItemId: taskId, priorityGroup: newPriorityGroup })
+                .then(() => reorderWorkItemDense({
+                    workItemId: taskId,
+                    position,
+                    beforeTaskId: beforeTaskId || null,
+                    afterTaskId: afterTaskId || null,
+                    priorityGroup: newPriorityGroup,
+                })));
+        } else if (position) {
+            // Same-bucket dense reorder — no priorityGroup change. Derive from
+            // the task's current bucket on the server.
+            const currentGroup = this._tasks.find((t) => t.id === taskId)?.priorityGroup;
+            if (currentGroup) {
+                ops.push(reorderWorkItemDense({
+                    workItemId: taskId,
+                    position,
+                    beforeTaskId: beforeTaskId || null,
+                    afterTaskId: afterTaskId || null,
+                    priorityGroup: currentGroup,
+                }));
+            } else {
+                // Defensive fallback: no bucket known, punt to legacy sparse write.
+                if (Number.isFinite(Number(newIndex))) {
+                    ops.push(updateWorkItemSortOrder({ workItemId: taskId, sortOrder: Number(newIndex) }));
+                }
+            }
+        } else {
+            // LEGACY PATH (pre-0.185.35 NG bundle): sparse midpoint write.
+            // Number(undefined) is NaN, NaN || 0 is 0 — so the prior code
+            // silently zeroed sortOrder on every reorder with no newIndex. Only
+            // call the sort-order API when we have a real numeric index.
+            if (newIndex !== undefined && newIndex !== null && Number.isFinite(Number(newIndex))) {
+                ops.push(updateWorkItemSortOrder({ workItemId: taskId, sortOrder: Number(newIndex) }));
+            }
+            if (newParentId !== undefined) {
+                ops.push(updateWorkItemParent({ workItemId: taskId, parentId: newParentId || '' }));
+            }
+            if (newPriorityGroup !== undefined && newPriorityGroup !== null) {
+                ops.push(updateWorkItemPriorityGroup({ workItemId: taskId, priorityGroup: newPriorityGroup }));
+            }
         }
         if (ops.length === 0) {
             // eslint-disable-next-line no-console
