@@ -4860,7 +4860,7 @@ var NimbusGanttApp = (function(exports) {
           const g = state2.groupBy === "epic" ? buildTasks(buildTasksEpic(f)) : buildTasks(f);
           const gi = inst;
           if (typeof gi.setData === "function") {
-            gi.setData(g, []);
+            gi.setData(g, allDependencies2);
             try {
               gi.expandAll();
             } catch (_e2) {
@@ -4887,6 +4887,7 @@ var NimbusGanttApp = (function(exports) {
         }
         injectLegacyNgCss();
         let allTasks2 = options.tasks || [];
+        let allDependencies2 = options.dependencies || [];
         const state2 = { ...INITIAL_STATE };
         const depthMap2 = buildDepthMap(allTasks2);
         const filtered = applyFilter(allTasks2, state2.filter, state2.search);
@@ -4898,7 +4899,7 @@ var NimbusGanttApp = (function(exports) {
         };
         const inst = new eng.NimbusGantt(ganttEl, {
           tasks: gtasks,
-          dependencies: [],
+          dependencies: allDependencies2,
           columns: buildGanttCols(tplConfig.features),
           theme: V3_THEME,
           rowHeight: 32,
@@ -4983,7 +4984,7 @@ var NimbusGanttApp = (function(exports) {
             getBucket: (task) => task.groupId || null
           }));
         }
-        inst.setData(gtasks, []);
+        inst.setData(gtasks, allDependencies2);
         try {
           inst.expandAll();
         } catch (_e2) {
@@ -5030,6 +5031,16 @@ var NimbusGanttApp = (function(exports) {
         return {
           setTasks(tasks) {
             allTasks2 = tasks;
+            _syncToCanvas();
+          },
+          /** 0.185.27 — full replace of tasks AND dependencies. Pass the
+           *  new deps array when the host has a fresh set (e.g. after Apex
+           *  refresh pulls both timeline data and getGanttDependencies in
+           *  parallel). Passing `undefined` leaves the existing deps alone
+           *  — equivalent to `setTasks(tasks)`. */
+          setData(tasks, dependencies) {
+            allTasks2 = tasks;
+            if (dependencies !== void 0) allDependencies2 = dependencies;
             _syncToCanvas();
           },
           /** Called by NimbusGanttAppReact when the React filter/search state changes. */
@@ -5089,6 +5100,7 @@ var NimbusGanttApp = (function(exports) {
         state = { ...state, zoom: options.initialViewport.zoom };
       }
       let allTasks = options.tasks || [];
+      let allDependencies = options.dependencies || [];
       const patchLog = [];
       const _viewportEmitTimer = { t: null };
       function emitViewport() {
@@ -5698,7 +5710,7 @@ var NimbusGanttApp = (function(exports) {
         let lastHoveredTaskId = null;
         ganttInst = new Ctor(ganttEl, {
           tasks: gtasks,
-          dependencies: [],
+          dependencies: allDependencies,
           columns: buildGanttCols(tplConfig.features),
           theme: V3_THEME,
           rowHeight: 32,
@@ -5890,7 +5902,7 @@ var NimbusGanttApp = (function(exports) {
             getBucketProgress: bucketProgressFn
           }));
         }
-        ganttInst.setData(gtasks, []);
+        ganttInst.setData(gtasks, allDependencies);
         try {
           ganttInst.expandAll();
         } catch (_e2) {
@@ -5954,7 +5966,7 @@ var NimbusGanttApp = (function(exports) {
           }
           const gi = ganttInst;
           if (typeof gi.setData === "function") {
-            gi.setData(gtasks, []);
+            gi.setData(gtasks, allDependencies);
             try {
               gi.expandAll();
             } catch (_e2) {
@@ -6131,6 +6143,23 @@ var NimbusGanttApp = (function(exports) {
       return {
         setTasks(tasks) {
           allTasks = tasks;
+          depthMap = buildDepthMap(allTasks);
+          const live = tplConfig.features.liveDataUpdate !== false;
+          if (live && ganttInst && state.viewMode === "gantt") {
+            refreshGantt();
+          } else {
+            rebuildView();
+          }
+        },
+        /** 0.185.27 — full replace of tasks AND dependencies. Pass the
+         *  new deps array when the host has a fresh set (e.g. after Apex
+         *  refresh pulls both `getProFormaTimelineData` + `getGanttDependencies`
+         *  in parallel). Passing `undefined` leaves the existing deps alone —
+         *  equivalent to calling `setTasks(tasks)` alone. Routes through the
+         *  same liveDataUpdate-gated refresh path as setTasks. */
+        setData(tasks, dependencies) {
+          allTasks = tasks;
+          if (dependencies !== void 0) allDependencies = dependencies;
           depthMap = buildDepthMap(allTasks);
           const live = tplConfig.features.liveDataUpdate !== false;
           if (live && ganttInst && state.viewMode === "gantt") {
