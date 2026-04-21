@@ -626,10 +626,11 @@ private class DeliveryGanttControllerTest {
 
     @IsTest
     static void testCreateWorkItemDependencyBlankIdsRejected() {
+        WorkItem__c item = [SELECT Id FROM WorkItem__c LIMIT 1];
         Boolean threw = false;
         Test.startTest();
         try {
-            DeliveryGanttController.createWorkItemDependency('', '001000000000001', 'Blocks');
+            DeliveryGanttController.createWorkItemDependency('', item.Id, 'Blocks');
         } catch (AuraHandledException e) {
             threw = true;
         }
