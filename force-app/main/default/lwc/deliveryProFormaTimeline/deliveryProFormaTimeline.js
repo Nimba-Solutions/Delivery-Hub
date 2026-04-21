@@ -43,6 +43,7 @@ import NIMBUS_GANTT_APP from '@salesforce/resourceUrl/nimbusganttapp';
 import CLOUDNIMBUS_CSS from '@salesforce/resourceUrl/cloudnimbustemplatecss';
 import USER_ID from '@salesforce/user/Id';
 import getProFormaTimelineData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getProFormaTimelineData';
+import getGanttDependencies from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getGanttDependencies';
 import updateWorkItemDates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemDates';
 import updateWorkItemSortOrder from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemSortOrder';
 import updateWorkItemPriorityGroup from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemPriorityGroup';
@@ -93,6 +94,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     _scriptLoaded = false;
     _mounted = false;
     _tasks = [];
+    _dependencies = [];
     _mountHandle = null;
     _refetchTimer = null;
     _viewportWriteTimer = null;
@@ -235,14 +237,35 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
 
     async _loadAndMount() {
         try {
-            const data = await getProFormaTimelineData({ showCompleted: false });
+            // Parallel-fetch tasks + dependencies. Dependencies include
+            // completed-dependent tasks (showCompleted:true) so dangling
+            // arrows don't disappear when the target task is hidden — v0
+            // NG renders them gracefully.
+            const [data, deps] = await Promise.all([
+                getProFormaTimelineData({ showCompleted: false }),
+                getGanttDependencies({ showCompleted: true }),
+            ]);
             this._tasks = data || [];
+            this._dependencies = this._mapDependenciesForNg(deps);
             // Give DOM a tick to render the container
             await new Promise(resolve => setTimeout(resolve, 0));
             this._mount();
         } catch (error) {
             this._showError('Failed to load work items', error);
         }
+    }
+
+    // Apex DTO field is `dependencyType`; NG core expects `type`. Cheapest
+    // fix is client-side map — renaming the Apex field would force a
+    // managed-package upload. Default 'FS' when the DTO is missing it so
+    // old records still render.
+    _mapDependenciesForNg(raw) {
+        return (raw || []).map(d => ({
+            id: d.id,
+            source: d.source,
+            target: d.target,
+            type: d.dependencyType || d.type || 'FS',
+        }));
     }
 
     _mount() {
@@ -263,6 +286,18 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         const mountConfig = {
             mode: this.mode,
             tasks,
+            // NG 0.185.27 — dependencies pipe re-opened. Render arrows
+            // between predecessor/successor bars per WorkItemDependency__c.
+            dependencies: this._dependencies,
+            // 2026-04-21 probe — NG CC found onTaskContextMenu appears to
+            // already be wired in 0.185.27 (IIFEApp.ts:768-781 + :2006-2018).
+            // Log-only to confirm it fires in Locker/LWS context. If this
+            // logs on right-click over a task bar in glen-walk, the full
+            // right-click UX is DH-only (no NG release needed).
+            onTaskContextMenu: (task, pos) => {
+                // eslint-disable-next-line no-console
+                console.log('[DH ctx-probe]', (task && task.id) || task, pos);
+            },
             // Save-path routing is mode-conditional:
             //
             //   Embedded (Delivery_Timeline tab): NG emits legacy onPatch for
