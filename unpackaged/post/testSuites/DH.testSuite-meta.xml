@@ -4,6 +4,8 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryGanttControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliverySlackServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryContentDocLinkTriggerHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryFileBytesResourceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryFileBytesFetcherTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryGhostControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubBoardControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubCalloutServiceTest</testClassName>
