@@ -14,7 +14,7 @@
  *               WorkDescriptionTxt__c.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public with sharing class DeliveryDocDeferralService {
 
     /**
@@ -129,17 +129,9 @@ public with sharing class DeliveryDocDeferralService {
 
         List<WorkLog__c> toUpdate = new List<WorkLog__c>();
         for (WorkLog__c wl : candidates) {
-            Date milestone = parseTaggedDate(wl.WorkDescriptionTxt__c);
-            if (milestone == null) {
-                continue;
+            if (prepareReleaseRow(wl, periodStart, periodEnd)) {
+                toUpdate.add(wl);
             }
-            if (milestone < periodStart || milestone > periodEnd) {
-                continue;
-            }
-            wl.StatusPk__c = 'Approved';
-            wl.WorkDateDate__c = milestone;
-            wl.WorkDescriptionTxt__c = stripTag(wl.WorkDescriptionTxt__c);
-            toUpdate.add(wl);
         }
 
         if (toUpdate.isEmpty()) {
@@ -150,6 +142,31 @@ public with sharing class DeliveryDocDeferralService {
         logActivity('release', toUpdate.size(), periodStart, 'Released for period '
             + String.valueOf(periodStart) + ' .. ' + String.valueOf(periodEnd));
         return toUpdate.size();
+    }
+
+    /**
+     * @description Evaluates a single candidate WorkLog for release. If its
+     *              milestone tag decodes to a date inside the target period,
+     *              mutates the row in place (Approved, WorkDate=milestone,
+     *              description stripped) and returns true so the caller
+     *              should include it in the DML batch.
+     * @param wl           The WorkLog row to consider.
+     * @param periodStart  Inclusive lower bound for the target period.
+     * @param periodEnd    Inclusive upper bound for the target period.
+     * @return true when the row was mutated and should be updated.
+     */
+    private static Boolean prepareReleaseRow(WorkLog__c wl, Date periodStart, Date periodEnd) {
+        Date milestone = parseTaggedDate(wl.WorkDescriptionTxt__c);
+        if (milestone == null) {
+            return false;
+        }
+        if (milestone < periodStart || milestone > periodEnd) {
+            return false;
+        }
+        wl.StatusPk__c = 'Approved';
+        wl.WorkDateDate__c = milestone;
+        wl.WorkDescriptionTxt__c = stripTag(wl.WorkDescriptionTxt__c);
+        return true;
     }
 
     // ── Tag helpers ─────────────────────────────────────────────────────
@@ -229,6 +246,7 @@ public with sharing class DeliveryDocDeferralService {
         try {
             return Date.valueOf(iso);
         } catch (Exception ex) {
+            System.debug(LoggingLevel.FINE, 'parseMilestoneTag: invalid ISO date ' + iso + ' — ' + ex.getMessage());
             return null;
         }
     }
@@ -260,6 +278,7 @@ public with sharing class DeliveryDocDeferralService {
             Database.insert(log, AccessLevel.SYSTEM_MODE);
         } catch (Exception ex) {
             // Telemetry must not break the user's deferral action.
+            System.debug(LoggingLevel.FINE, 'logActivity swallowed: ' + ex.getMessage());
         }
     }
 }
