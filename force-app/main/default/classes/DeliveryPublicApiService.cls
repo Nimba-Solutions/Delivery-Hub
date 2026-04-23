@@ -262,9 +262,27 @@ global without sharing class DeliveryPublicApiService {
 
     private static void postWorkItem(String jsonBody, Id entityId) {
         Map<String, Object> bodyMap = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
+        String title = (String) bodyMap.get('title');
+        String description = (String) bodyMap.get('description');
+
+        // v0.200 defense-in-depth: reject blank-payload creates at the API edge.
+        // Background: the cloudnimbus Slack approval handler at one point
+        // POSTed empty suggestedWorkRequest objects and dh-prod accepted them,
+        // creating 40 blank WorkItem rows. The downstream submitPortalRequest
+        // checks title alone — this check mirrors its contract but surfaces
+        // a clean HTTP 400 (rather than AuraHandledException 400) and makes
+        // the rule explicit at the REST boundary.
+        if (String.isBlank(title) && String.isBlank(description)) {
+            sendError(400,
+                'Work item must include at least a title or description. '
+                + 'Blank payloads are rejected at the ingestor to prevent '
+                + 'automation from creating empty records.');
+            return;
+        }
+
         Map<String, String> data = new Map<String, String>();
-        data.put('title', (String) bodyMap.get('title'));
-        data.put('description', (String) bodyMap.get('description'));
+        data.put('title', title);
+        data.put('description', description);
         data.put('priority', (String) bodyMap.get('priority'));
         data.put('type', (String) bodyMap.get('type'));
         data.put('networkEntityId', entityId);

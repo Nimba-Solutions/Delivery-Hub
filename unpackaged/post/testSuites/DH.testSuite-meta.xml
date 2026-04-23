@@ -23,6 +23,7 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryRequestManagerControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliverySyncEngineTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliverySyncItemIngestorTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliverySyncItemPendingResolverTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliverySyncItemProcessorTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliverySyncRetryControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkItemCommentTriggerTest</testClassName>
