@@ -61,7 +61,6 @@ global inherited sharing class DeliverySyncItemPendingResolver implements Queuea
      *              path which wants to invoke synchronously in tests.
      * @return Number of rows promoted to Synced in this run.
      */
-    @SuppressWarnings('PMD.NcssMethodCount, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     public Integer resolvePending() {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         Integer maxRetries = settings != null && settings.SyncRetryLimitNumber__c != null
@@ -106,34 +105,8 @@ global inherited sharing class DeliverySyncItemPendingResolver implements Queuea
         List<SyncItem__c> toUpdate = new List<SyncItem__c>();
         Integer promoted = 0;
         for (SyncItem__c row : pendingRows) {
-            Integer currentRetries = row.RetryCountNumber__c == null ? 0 : row.RetryCountNumber__c.intValue();
-            Id localParent = resolveParent(row.ParentRefTxt__c);
-
-            if (localParent != null) {
-                // Parent exists now. Replay the payload via the ingestor;
-                // on success flip the Pending row to Synced so it won't be
-                // picked up again.
-                try {
-                    DeliverySyncItemIngestor.replayPendingPayload(row.ObjectTypePk__c, row.PayloadTxt__c);
-                    row.StatusPk__c = 'Synced';
-                    promoted++;
-                } catch (Exception e) {
-                    row.RetryCountNumber__c = currentRetries + 1;
-                    row.ErrorLogTxt__c = e.getMessage();
-                    if (row.RetryCountNumber__c >= maxRetries) {
-                        row.StatusPk__c = 'Failed';
-                    }
-                }
-                toUpdate.add(row);
-                continue;
-            }
-
-            // Parent still missing — bump retry counter, flip to Failed if exhausted.
-            row.RetryCountNumber__c = currentRetries + 1;
-            if (row.RetryCountNumber__c >= maxRetries) {
-                row.StatusPk__c = 'Failed';
-                row.ErrorLogTxt__c = 'Parent WorkItem did not arrive within '
-                    + maxRetries + ' retry attempts. Parent ref: ' + row.ParentRefTxt__c;
+            if (processRow(row, maxRetries)) {
+                promoted++;
             }
             toUpdate.add(row);
         }
@@ -142,6 +115,42 @@ global inherited sharing class DeliverySyncItemPendingResolver implements Queuea
             Database.update(toUpdate, AccessLevel.SYSTEM_MODE);
         }
         return promoted;
+    }
+
+    /**
+     * @description Processes a single Pending row in place: resolves parent,
+     *              replays payload on hit, bumps retry counter on miss, and
+     *              flips to Failed when retries are exhausted.
+     * @param row The Pending SyncItem__c row to mutate.
+     * @param maxRetries Retry ceiling before the row flips to Failed.
+     * @return true when the row was promoted to Synced in this call.
+     */
+    private static Boolean processRow(SyncItem__c row, Integer maxRetries) {
+        Integer currentRetries = row.RetryCountNumber__c == null ? 0 : row.RetryCountNumber__c.intValue();
+        Id localParent = resolveParent(row.ParentRefTxt__c);
+
+        if (localParent != null) {
+            try {
+                DeliverySyncItemIngestor.replayPendingPayload(row.ObjectTypePk__c, row.PayloadTxt__c);
+                row.StatusPk__c = 'Synced';
+                return true;
+            } catch (Exception e) {
+                row.RetryCountNumber__c = currentRetries + 1;
+                row.ErrorLogTxt__c = e.getMessage();
+                if (row.RetryCountNumber__c >= maxRetries) {
+                    row.StatusPk__c = 'Failed';
+                }
+                return false;
+            }
+        }
+
+        row.RetryCountNumber__c = currentRetries + 1;
+        if (row.RetryCountNumber__c >= maxRetries) {
+            row.StatusPk__c = 'Failed';
+            row.ErrorLogTxt__c = 'Parent WorkItem did not arrive within '
+                + maxRetries + ' retry attempts. Parent ref: ' + row.ParentRefTxt__c;
+        }
+        return false;
     }
 
     /**

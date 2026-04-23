@@ -244,6 +244,12 @@ private class DeliverySyncItemPendingResolverTest {
      *              during the scheduler-wiring test above.
      */
     public class EmptySyncMock implements HttpCalloutMock {
+        /**
+         * @description Returns an empty JSON array for any callout so the
+         *              scheduler-wiring test finds no inbound work.
+         * @param req Inbound HTTP request (ignored).
+         * @return HttpResponse with status 200 and body '[]'.
+         */
         public HttpResponse respond(HttpRequest req) {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(200);

@@ -73,6 +73,7 @@ global with sharing class DeliveryDocumentController {
      *              Client picker on the Generate Document form so the invoice
      *              generator is usable when the viewer isn't already scoped to
      *              a client record page.
+     * @return List of {label, value} maps keyed to NetworkEntity__c Id.
      */
     @AuraEnabled(cacheable=true)
     global static List<Map<String, String>> getAvailableClients() {
