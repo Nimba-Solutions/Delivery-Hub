@@ -409,6 +409,48 @@ private class DeliveryDocumentPdfControllerTest {
     }
 
     /**
+     * @description Defense-in-depth: when SnapshotTxt__c is null (observed
+     * 2026-04-23 on DOC-000002 where the frozen snapshot never got written),
+     * the controller should rebuild from live data via DeliveryDocGenerationService
+     * so the PDF renders something useful instead of a blank page.
+     */
+    @isTest
+    static void testRenderWithNullSnapshotFallsBackToLiveRebuild() {
+        System.runAs(testUser) {
+            NetworkEntity__c entity = getEntity();
+
+            Id docId = DeliveryDocumentController.generateDocument(
+                entity.Id, 'Invoice',
+                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
+            );
+
+            // Simulate the observed bug — null out the frozen snapshot on the
+            // doc record before rendering.
+            DeliveryDocument__c doc = [
+                SELECT Id, SnapshotTxt__c, NetworkEntityId__c
+                FROM DeliveryDocument__c WHERE Id = :docId LIMIT 1
+            ];
+            doc.SnapshotTxt__c = null;
+            update doc;
+
+            Test.startTest();
+            Test.setCurrentPage(Page.DeliveryDocumentPdf);
+            ApexPages.currentPage().getParameters().put('id', docId);
+
+            DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
+            Test.stopTest();
+
+            System.assertEquals(true, ctrl.getHasDocument(), 'Should still have loaded the doc');
+            System.assertEquals('PDF Test Corp', ctrl.entityName,
+                'Entity name should populate from the live rebuild when snapshot is null');
+            System.assertEquals(true, ctrl.getHasWorkItems(),
+                'Work items should populate from the live rebuild when snapshot is null');
+            System.assertEquals(true, ctrl.getHasWorkLogs(),
+                'Work logs should populate from the live rebuild when snapshot is null');
+        }
+    }
+
+    /**
      * @description Verify getHasUnpaidInvoices and formattedDueDate with no due date.
      */
     @isTest

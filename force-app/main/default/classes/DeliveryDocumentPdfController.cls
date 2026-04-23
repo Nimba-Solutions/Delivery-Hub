@@ -204,8 +204,8 @@ public without sharing class DeliveryDocumentPdfController {
             return;
         }
 
-        String query = 'SELECT Id, Name, TemplatePk__c, NetworkEntityId__r.Name, '
-            + 'PeriodStartDate__c, PeriodEndDate__c, '
+        String query = 'SELECT Id, Name, TemplatePk__c, NetworkEntityId__c, NetworkEntityId__r.Name, '
+            + 'PeriodStartDate__c, PeriodEndDate__c, CreatedDate, '
             + 'StatusPk__c, TotalHoursNumber__c, TotalCurrency__c, '
             + 'SnapshotTxt__c, AiNarrativeTxt__c, TermsTxt__c, '
             + 'DueDateDate__c, MetadataTxt__c, ViewedDateTime__c '
@@ -253,8 +253,27 @@ public without sharing class DeliveryDocumentPdfController {
             formattedPeriod = formatDate(doc.PeriodStartDate__c) + ' \u2013 ' + formatDate(doc.PeriodEndDate__c);
         }
 
+        // Prefer the frozen snapshot. If it's missing (observed 2026-04-23 on
+        // DOC-000002 where both SnapshotTxt__c and MetadataTxt__c inserted null
+        // for reasons not yet diagnosed), fall back to rebuilding from live data
+        // so the PDF still renders something useful instead of a blank page.
+        // No DB write — snapshot is held in memory for this render only.
+        Map<String, Object> snapshot = null;
         if (String.isNotBlank(doc.SnapshotTxt__c)) {
-            Map<String, Object> snapshot = (Map<String, Object>) JSON.deserializeUntyped(doc.SnapshotTxt__c);
+            snapshot = (Map<String, Object>) JSON.deserializeUntyped(doc.SnapshotTxt__c);
+        } else if (doc.NetworkEntityId__c != null) {
+            try {
+                snapshot = DeliveryDocGenerationService.buildSnapshot(
+                    doc.NetworkEntityId__c, doc.TemplatePk__c,
+                    doc.PeriodStartDate__c, doc.PeriodEndDate__c
+                );
+            } catch (Exception e) {
+                // Rebuild best-effort — swallow and continue so the page still
+                // renders the fields we have directly from the doc record.
+                System.debug(LoggingLevel.WARN, 'Live snapshot rebuild failed: ' + e.getMessage());
+            }
+        }
+        if (snapshot != null) {
             // Format generated-at as a readable date (not raw ISO timestamp)
             String rawGenAt = (String) snapshot.get('generatedAt');
             if (String.isNotBlank(rawGenAt)) {
@@ -264,6 +283,10 @@ public without sharing class DeliveryDocumentPdfController {
                 } catch (Exception e) {
                     generatedAt = rawGenAt;
                 }
+            } else if (doc.CreatedDate != null) {
+                // Live rebuilds won't have a generatedAt key — fall back to the
+                // doc's own CreatedDate so the header doesn't render blank.
+                generatedAt = formatDate(doc.CreatedDate.date());
             }
             parseEntity(snapshot);
             parseWorkItems(snapshot);

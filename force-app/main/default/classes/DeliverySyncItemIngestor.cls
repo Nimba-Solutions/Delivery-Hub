@@ -551,23 +551,37 @@ public without sharing class DeliverySyncItemIngestor {
             // Ensure the system fields are ignored during standard field mapping
             if (key == 'SourceId' || key == 'TargetId' || key == 'GlobalSourceId' || key == 'SenderOrgId') { continue; }
             
-            String searchKey = stripNamespace(key).toLowerCase(); 
+            String searchKey = stripNamespace(key).toLowerCase();
             if (cleanNameIndex.containsKey(searchKey)) {
                 SObjectField field = cleanNameIndex.get(searchKey);
                 Object val = payload.get(key);
-                if (val == null) {
-                    record.put(field, null);
-                    continue;
-                }
-                Schema.DisplayType dtype = field.getDescribe().getType();
-                if (dtype == Schema.DisplayType.DATE) {
-                    record.put(field, Date.valueOf((String)val));
-                } else if (dtype == Schema.DisplayType.DATETIME) {
-                    record.put(field, (DateTime)JSON.deserialize('"' + val + '"', DateTime.class));
-                } else if (dtype == Schema.DisplayType.BASE64) {
-                    record.put(field, EncodingUtil.base64Decode((String)val));
-                } else {
-                    record.put(field, val);
+                Schema.DescribeFieldResult dfr = field.getDescribe();
+                // Schema-inherent skip: formula/calculated fields. `isCalculated()` is
+                // safe across all permission contexts. Do NOT use `isUpdateable()`/
+                // `isCreateable()` — those are user-FLS-dependent and will false-positive
+                // on legit writable fields in non-admin contexts (bit us in PR #681).
+                if (dfr.isCalculated()) { continue; }
+                // Defensively wrap each put: system-maintained fields (CreatedDate,
+                // SystemModstamp, auto-numbers) and any other platform-immutable field
+                // throw SObjectException on put. We swallow per-field so one bad payload
+                // key doesn't strand the whole record. Logged at FINE for forensics.
+                try {
+                    if (val == null) {
+                        record.put(field, null);
+                        continue;
+                    }
+                    Schema.DisplayType dtype = dfr.getType();
+                    if (dtype == Schema.DisplayType.DATE) {
+                        record.put(field, Date.valueOf((String)val));
+                    } else if (dtype == Schema.DisplayType.DATETIME) {
+                        record.put(field, (DateTime)JSON.deserialize('"' + val + '"', DateTime.class));
+                    } else if (dtype == Schema.DisplayType.BASE64) {
+                        record.put(field, EncodingUtil.base64Decode((String)val));
+                    } else {
+                        record.put(field, val);
+                    }
+                } catch (Exception putEx) {
+                    System.debug(LoggingLevel.FINE, 'mapFields skipped ' + key + ': ' + putEx.getMessage());
                 }
             }
         }

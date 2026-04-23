@@ -8,7 +8,14 @@
     <trackTrending>false</trackTrending>
     <type>Picklist</type>
     <valueSet>
-        <restricted>true</restricted>
+        <!-- Intentionally non-restricted: Salesforce unlocked packages do not
+             reliably propagate NEW restricted-picklist values to subscribers on
+             upgrade. Setting restricted=false lets new values (like Pending added
+             in v0.200) be accepted via DML on subscribers that upgrade, even when
+             the describe API hasn't refreshed. Integrity is enforced at the Apex
+             service layer (DeliverySyncEngine / DeliverySyncItemIngestor) where
+             the status transitions are gated. -->
+        <restricted>false</restricted>
         <valueSetDefinition>
             <sorted>false</sorted>
             <value>
