@@ -556,27 +556,33 @@ public without sharing class DeliverySyncItemIngestor {
                 SObjectField field = cleanNameIndex.get(searchKey);
                 Object val = payload.get(key);
                 Schema.DescribeFieldResult dfr = field.getDescribe();
-                // Skip formula/calculated fields only. `isCalculated()` is schema-inherent
-                // — safe across permission contexts. Do NOT guard on `isUpdateable()` or
-                // `isCreateable()` here: those depend on running-user FLS, which differs
-                // between scratch org (admin, all perms) and packaging org / subscriber
-                // (narrower perms). A guard that used those broke upload-beta in PR #681
-                // because the packaging-org test user reported every field as non-writable.
-                // Let DML surface actual FLS errors; they're real and user-context-specific.
+                // Schema-inherent skip: formula/calculated fields. Safe across all
+                // permission contexts. `isUpdateable()`/`isCreateable()` are NOT used
+                // here because they depend on running-user FLS (broke upload-beta in
+                // PR #681: packaging-org user reported legit writable fields as
+                // non-writable, tests failed en masse).
                 if (dfr.isCalculated()) { continue; }
-                if (val == null) {
-                    record.put(field, null);
-                    continue;
-                }
-                Schema.DisplayType dtype = dfr.getType();
-                if (dtype == Schema.DisplayType.DATE) {
-                    record.put(field, Date.valueOf((String)val));
-                } else if (dtype == Schema.DisplayType.DATETIME) {
-                    record.put(field, (DateTime)JSON.deserialize('"' + val + '"', DateTime.class));
-                } else if (dtype == Schema.DisplayType.BASE64) {
-                    record.put(field, EncodingUtil.base64Decode((String)val));
-                } else {
-                    record.put(field, val);
+                // Defensively wrap each put: system-maintained fields (CreatedDate,
+                // SystemModstamp, auto-numbers) and any other platform-immutable field
+                // will throw SObjectException on .put(). We swallow per-field so one
+                // bad payload key doesn't strand the whole record.
+                try {
+                    if (val == null) {
+                        record.put(field, null);
+                        continue;
+                    }
+                    Schema.DisplayType dtype = dfr.getType();
+                    if (dtype == Schema.DisplayType.DATE) {
+                        record.put(field, Date.valueOf((String)val));
+                    } else if (dtype == Schema.DisplayType.DATETIME) {
+                        record.put(field, (DateTime)JSON.deserialize('"' + val + '"', DateTime.class));
+                    } else if (dtype == Schema.DisplayType.BASE64) {
+                        record.put(field, EncodingUtil.base64Decode((String)val));
+                    } else {
+                        record.put(field, val);
+                    }
+                } catch (Exception putEx) {
+                    System.debug(LoggingLevel.FINE, 'mapFields skipped ' + key + ': ' + putEx.getMessage());
                 }
             }
         }
