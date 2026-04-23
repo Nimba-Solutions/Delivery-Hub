@@ -404,6 +404,71 @@ private class DeliverySyncItemIngestorTest {
     }
 
     /**
+     * @description v0.200 defense-in-depth: inbound WorkItem INSERT payloads
+     *              that carry no BriefDescriptionTxt__c and no Name must
+     *              throw SyncException, not create a blank WorkItem row.
+     *              Prevents the "40 blank WorkItem" incident from recurring
+     *              via the sync path even if the original offending client
+     *              were to resurface.
+     */
+    @IsTest
+    static void testInsertBlankWorkItemRejected() {
+        System.runAs(testUser) {
+            Integer beforeCount = [SELECT COUNT() FROM WorkItem__c];
+
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-BLANK-WI-001'
+                // Intentionally no BriefDescriptionTxt__c, no Name — simulates
+                // the cloudnimbus suggestedWorkRequest bug.
+            };
+
+            Boolean threw = false;
+            Test.startTest();
+            try {
+                DeliverySyncItemIngestor.processInboundItem('WorkItem__c', payload);
+            } catch (DeliverySyncEngine.SyncException e) {
+                threw = true;
+                System.assert(e.getMessage().contains('Blank WorkItem create rejected'),
+                    'Exception message should identify the rejection: ' + e.getMessage());
+            }
+            Test.stopTest();
+
+            System.assert(threw, 'Blank WorkItem insert must throw SyncException');
+            Integer afterCount = [SELECT COUNT() FROM WorkItem__c];
+            System.assertEquals(beforeCount, afterCount,
+                'No WorkItem row should have been created');
+        }
+    }
+
+    /**
+     * @description A sparse UPDATE payload (no brief, no name) should NOT
+     *              be rejected — cross-org updates may intentionally send
+     *              only the fields that changed. The defense is insert-only.
+     */
+    @IsTest
+    static void testUpdateWithSparsePayloadStillAllowed() {
+        System.runAs(testUser) {
+            // Existing WorkItem resolves via the WorkRequest bridge for SourceId
+            // REMOTE-123 (seeded in makeData). Send an update that only
+            // changes StageNamePk__c — intentionally omit brief/name.
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-123',
+                'StageNamePk__c' => 'In Development'
+            };
+
+            Test.startTest();
+            Id resultId = DeliverySyncItemIngestor.processInboundItem('WorkItem__c', payload);
+            Test.stopTest();
+
+            System.assertNotEquals(null, resultId, 'Sparse update must succeed');
+            WorkItem__c updated = [SELECT StageNamePk__c, BriefDescriptionTxt__c FROM WorkItem__c WHERE Id = :resultId];
+            System.assertEquals('In Development', updated.StageNamePk__c, 'Stage update should apply');
+            System.assertEquals('Base Work Item', updated.BriefDescriptionTxt__c,
+                'Existing brief must not be clobbered by the sparse update');
+        }
+    }
+
+    /**
      * @description Minimal HttpCalloutMock for the pull-callout path —
      *              tests that exercise the ingestor enqueue a fetcher
      *              Queueable; this mock lets that Queueable fail cleanly

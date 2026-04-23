@@ -66,6 +66,20 @@ global with sharing class DeliveryDocumentController {
         return DeliveryDocQueryService.getDefaultBillingEntityId();
     }
 
+    /**
+     * @description Returns the list of active NetworkEntity__c records that can
+     *              be billed (EntityTypePk__c = 'Client' or 'Both'), formatted
+     *              as {label, value} maps for a lightning-combobox. Drives the
+     *              Client picker on the Generate Document form so the invoice
+     *              generator is usable when the viewer isn't already scoped to
+     *              a client record page.
+     * @return List of {label, value} maps keyed to NetworkEntity__c Id.
+     */
+    @AuraEnabled(cacheable=true)
+    global static List<Map<String, String>> getAvailableClients() {
+        return DeliveryDocQueryService.getAvailableClients();
+    }
+
     // ═══════════════════════════════════════════════════════════
     //  STATUS UPDATES
     // ═══════════════════════════════════════════════════════════

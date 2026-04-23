@@ -91,6 +91,7 @@ Supported object types: `WorkItem__c`, `WorkItemComment__c`, `ContentVersion`
 | Code | Body | Condition |
 |------|------|-----------|
 | 400 | `{"error": "Empty Payload"}` | Request body is empty |
+| 400 | `{"error": "WorkItem insert payload missing both BriefDescriptionTxt__c and Name"}` | v0.200 blank-create guard. Fires only on INSERT payloads (no existing local record resolved via bridge/ledger/id). Sparse UPDATE payloads with a subset of fields remain allowed. |
 | 401 | `{"error": "Invalid API key or entity not connected."}` | X-Api-Key header sent but key not found or entity not Connected; or HMAC signature validation failed |
 | 429 | `{"error": "Rate limit exceeded. Try again later."}` | Sync API rate limit exceeded for this API key (opt-in via `SyncApiRateLimitNumber__c`) |
 | 500 | `{"error": "..."}` | Unexpected server error |
@@ -505,6 +506,25 @@ Failed sync items are retried up to a configurable limit (default: 3):
 - The scheduled poller (`DeliveryHubPoller`) picks up failed items on its next run
 - After reaching the retry limit, items remain in `Failed` status for manual investigation
 - The `deliverySyncRetryPanel` LWC component provides a UI for viewing and retrying failed items
+
+---
+
+## Pending Queue (Child-Before-Parent Race)
+
+v0.200 added a Pending queue to handle the case where an inbound child payload (most commonly a WorkLog) lands before its parent WorkItem's payload. Previously the ingestor would hard-throw and the child row would sit as `Failed` until someone manually requeued it.
+
+**Flow**:
+
+1. Inbound payload arrives. Ingestor resolves the parent (bridge → ledger → direct-id).
+2. If the parent cannot be resolved, the `SyncItem__c` is inserted with `StatusPk__c = 'Pending'` and the parent's remote id stashed in `ParentRefTxt__c`.
+3. `DeliverySyncItemPendingResolver` is enqueued inline for an immediate retry.
+4. `DeliveryHubScheduler.requeuePendingItems()` re-sweeps every Pending row every 15 minutes on the scheduler tick, so the backlog drains automatically the moment the parent shows up.
+5. When the resolver finds the parent, it calls `DeliverySyncItemIngestor.replayPendingPayload` and the row transitions Pending → Synced with the matching local record created/updated.
+6. Rows that can't resolve after `DEFAULT_MAX_RETRIES` (10 attempts) flip to `Failed` with a descriptive `ErrorLogTxt__c` for manual review.
+
+**Monitoring**: Query `SyncItem__c` where `StatusPk__c = 'Pending'` for the live Pending backlog. Volumes should be transient (minutes, not hours); sustained growth indicates the parent WorkItem is never going to arrive (deleted on the source side, routing misconfigured, etc.).
+
+**Backward compatibility**: The `Pending` picklist value and `ParentRefTxt__c` field are added by the package install. Existing Failed rows from pre-v0.200 orgs are unaffected and can still be retried manually via `deliverySyncRetryPanel`.
 
 ---
 

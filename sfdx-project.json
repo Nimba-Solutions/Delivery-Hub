@@ -4,8 +4,8 @@
             "path": "force-app",
             "default": true,
             "package": "Standard-Unlocked",
-            "versionName": "ver 0.98",
-            "versionNumber": "1.0.0.NEXT",
+            "versionName": "ver 0.200",
+            "versionNumber": "0.200.0.NEXT",
             "versionDescription": "Delivery Hub — Salesforce-native work tracking and delivery management"
         },
         {

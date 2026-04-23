@@ -361,7 +361,7 @@ The created work item starts in stage `Backlog` with `StatusPk__c = 'New'` and `
 
 | Code | Condition |
 |------|-----------|
-| 400 | Missing request body or title is blank |
+| 400 | Missing request body, or **both** `title` and `description` are blank (v0.200 blank-create guard — a single non-blank field is enough to pass) |
 
 ---
 
