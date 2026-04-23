@@ -551,15 +551,24 @@ public without sharing class DeliverySyncItemIngestor {
             // Ensure the system fields are ignored during standard field mapping
             if (key == 'SourceId' || key == 'TargetId' || key == 'GlobalSourceId' || key == 'SenderOrgId') { continue; }
             
-            String searchKey = stripNamespace(key).toLowerCase(); 
+            String searchKey = stripNamespace(key).toLowerCase();
             if (cleanNameIndex.containsKey(searchKey)) {
                 SObjectField field = cleanNameIndex.get(searchKey);
                 Object val = payload.get(key);
+                Schema.DescribeFieldResult dfr = field.getDescribe();
+                // Skip fields the receiver can't write — formula, calculated, auto-number,
+                // read-only system fields. Sender serializes the full record; we only
+                // persist the subset that is writable locally. Without this guard, a
+                // payload containing SLAStatusTxt__c (formula) causes DML failure with
+                // "Field X is not editable". Must come before the null branch because
+                // record.put(field, null) on a non-writable field also throws.
+                if (dfr.isCalculated()) { continue; }
+                if (!dfr.isUpdateable() && !dfr.isCreateable()) { continue; }
                 if (val == null) {
                     record.put(field, null);
                     continue;
                 }
-                Schema.DisplayType dtype = field.getDescribe().getType();
+                Schema.DisplayType dtype = dfr.getType();
                 if (dtype == Schema.DisplayType.DATE) {
                     record.put(field, Date.valueOf((String)val));
                 } else if (dtype == Schema.DisplayType.DATETIME) {

@@ -469,6 +469,112 @@ private class DeliverySyncItemIngestorTest {
     }
 
     /**
+     * @description Regression guard for MF-Prod failure mode (2026-04-22):
+     *              17 Inbound SyncItems stuck Failed with
+     *              "Field delivery__SLAStatusTxt__c is not editable" because
+     *              the sender serializes the full record — including the
+     *              formula-calculated SLA status — and the receiver blindly
+     *              called record.put() on every payload key that matched a
+     *              target field. The fix skips fields where isCalculated()
+     *              is true. This test asserts: (a) the insert succeeds even
+     *              with a formula-field key in the payload, and (b) the
+     *              local record's SLA status reflects the local formula
+     *              evaluation — not the sender's serialized value.
+     */
+    @IsTest
+    static void testMapFieldsSkipsCalculatedFormulaFields() {
+        System.runAs(testUser) {
+            // SLATargetDate__c today → formula resolves to "At Risk" (within 2d)
+            // Sender sends a stale / wrong "Breached" value for the formula —
+            // the receiver must ignore it and let its own formula recompute.
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-FORMULA-SKIP-001',
+                'BriefDescriptionTxt__c' => 'Formula skip test',
+                'StageNamePk__c' => 'In Development',
+                'SLATargetDate__c' => String.valueOf(Date.today().addDays(1)),
+                'SLAStatusTxt__c' => 'Breached' // sender's stale formula value
+            };
+
+            Test.startTest();
+            Id resultId = DeliverySyncItemIngestor.processInboundItem('WorkItem__c', payload);
+            Test.stopTest();
+
+            System.assertNotEquals(null, resultId,
+                'Insert must succeed despite payload containing formula field');
+            WorkItem__c wi = [
+                SELECT BriefDescriptionTxt__c, SLAStatusTxt__c, SLATargetDate__c
+                FROM WorkItem__c WHERE Id = :resultId
+            ];
+            System.assertEquals('Formula skip test', wi.BriefDescriptionTxt__c,
+                'Writable field should persist');
+            // Formula should have evaluated locally — never equals the sender's "Breached"
+            // because the local SLATargetDate__c is +1 day (At Risk) and stage is active.
+            System.assertNotEquals('Breached', wi.SLAStatusTxt__c,
+                'Formula field must reflect local evaluation, not the sender payload');
+        }
+    }
+
+    /**
+     * @description System-maintained fields like CreatedDate are not
+     *              createable/updateable by normal users and will throw
+     *              "is not editable" at DML time if blindly put(). The
+     *              guard skips when both isCreateable() and isUpdateable()
+     *              are false.
+     */
+    @IsTest
+    static void testMapFieldsSkipsSystemMaintainedFields() {
+        System.runAs(testUser) {
+            DateTime fabricated = DateTime.newInstance(2000, 1, 1);
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-SYS-FIELD-001',
+                'BriefDescriptionTxt__c' => 'System field skip test',
+                'CreatedDate' => fabricated.format('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'')
+            };
+
+            Test.startTest();
+            Id resultId = DeliverySyncItemIngestor.processInboundItem('WorkItem__c', payload);
+            Test.stopTest();
+
+            System.assertNotEquals(null, resultId,
+                'Insert must succeed despite payload containing system field');
+            WorkItem__c wi = [SELECT CreatedDate, BriefDescriptionTxt__c FROM WorkItem__c WHERE Id = :resultId];
+            System.assertEquals('System field skip test', wi.BriefDescriptionTxt__c);
+            // Local CreatedDate should be ~now, definitely not year 2000
+            System.assert(wi.CreatedDate > fabricated.addYears(5),
+                'CreatedDate must reflect local system time, not the payload value');
+        }
+    }
+
+    /**
+     * @description Regression fence: the guard must not interfere with
+     *              normal writable-field mapping for a well-formed payload.
+     */
+    @IsTest
+    static void testMapFieldsWritesWritableFieldsNormally() {
+        System.runAs(testUser) {
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-WRITABLE-ONLY-001',
+                'BriefDescriptionTxt__c' => 'All writable fields',
+                'PriorityPk__c' => 'High',
+                'StageNamePk__c' => 'In Development'
+            };
+
+            Test.startTest();
+            Id resultId = DeliverySyncItemIngestor.processInboundItem('WorkItem__c', payload);
+            Test.stopTest();
+
+            System.assertNotEquals(null, resultId, 'Insert must succeed');
+            WorkItem__c wi = [
+                SELECT BriefDescriptionTxt__c, PriorityPk__c, StageNamePk__c
+                FROM WorkItem__c WHERE Id = :resultId
+            ];
+            System.assertEquals('All writable fields', wi.BriefDescriptionTxt__c);
+            System.assertEquals('High', wi.PriorityPk__c);
+            System.assertEquals('In Development', wi.StageNamePk__c);
+        }
+    }
+
+    /**
      * @description Minimal HttpCalloutMock for the pull-callout path —
      *              tests that exercise the ingestor enqueue a fetcher
      *              Queueable; this mock lets that Queueable fail cleanly
