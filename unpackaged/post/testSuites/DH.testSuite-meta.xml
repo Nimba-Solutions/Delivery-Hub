@@ -90,4 +90,8 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryGanttRemoteControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocActionServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocActionControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocActionRestApiTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryEscalationContextTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubExceptionTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryNotificationPreferenceServiceTest</testClassName>
 </ApexTestSuite>
