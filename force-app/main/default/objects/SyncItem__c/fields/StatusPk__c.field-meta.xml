@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>StatusPk__c</fullName>
-    <description>The current processing state. Values: Queued, Staged, Pending, Processing, Synced, Failed</description>
-    <inlineHelpText>Queued: Waiting for push. Staged: Waiting for client poll. Pending: Inbound held awaiting parent resolution. Synced: Successfully delivered. Failed: See Error Log.</inlineHelpText>
+    <description>The current processing state. Values: Queued, Staged, Pending, Processing, Synced, Failed. Pending added in v0.200 for WorkLog-before-parent race recovery (see DeliverySyncItemPendingResolver).</description>
+    <inlineHelpText>Queued: Waiting for push. Staged: Waiting for client poll. Pending: Inbound held awaiting parent resolution (v0.200+). Processing: In-flight to receiver. Synced: Successfully delivered. Failed: See Error Log.</inlineHelpText>
     <label>Status</label>
     <required>false</required>
     <trackTrending>false</trackTrending>
