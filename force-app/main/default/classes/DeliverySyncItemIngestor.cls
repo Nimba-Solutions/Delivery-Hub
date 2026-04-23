@@ -556,14 +556,14 @@ public without sharing class DeliverySyncItemIngestor {
                 SObjectField field = cleanNameIndex.get(searchKey);
                 Object val = payload.get(key);
                 Schema.DescribeFieldResult dfr = field.getDescribe();
-                // Skip fields the receiver can't write — formula, calculated, auto-number,
-                // read-only system fields. Sender serializes the full record; we only
-                // persist the subset that is writable locally. Without this guard, a
-                // payload containing SLAStatusTxt__c (formula) causes DML failure with
-                // "Field X is not editable". Must come before the null branch because
-                // record.put(field, null) on a non-writable field also throws.
+                // Skip formula/calculated fields only. `isCalculated()` is schema-inherent
+                // — safe across permission contexts. Do NOT guard on `isUpdateable()` or
+                // `isCreateable()` here: those depend on running-user FLS, which differs
+                // between scratch org (admin, all perms) and packaging org / subscriber
+                // (narrower perms). A guard that used those broke upload-beta in PR #681
+                // because the packaging-org test user reported every field as non-writable.
+                // Let DML surface actual FLS errors; they're real and user-context-specific.
                 if (dfr.isCalculated()) { continue; }
-                if (!dfr.isUpdateable() && !dfr.isCreateable()) { continue; }
                 if (val == null) {
                     record.put(field, null);
                     continue;
