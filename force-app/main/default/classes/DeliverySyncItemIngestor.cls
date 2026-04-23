@@ -100,9 +100,20 @@ public without sharing class DeliverySyncItemIngestor {
         }
 
         SObject recordToUpsert = (localRecordId != null) ? targetType.newSObject(localRecordId) : targetType.newSObject();
-        
-        // For WorkLogs, resolve the parent WorkItem ID from the payload (not TargetId)
-        // and strip cross-org lookup IDs BEFORE mapFields runs (applies to both insert and update)
+
+        // For WorkLogs, resolve the parent WorkItem ID from the payload (not TargetId).
+        // We intentionally do NOT strip cross-org lookup IDs from the caller's
+        // payload here. The Pending-queue path (queuePendingWorkLog) stashes
+        // the raw payload via JSON.serialize(payload) for later replay, and
+        // callers may re-invoke processInboundItem with the same Map instance
+        // (idempotent re-delivery). Mutating the caller's map would:
+        //   (1) cause the second call to lose the parent ref and fall into the
+        //       insert path with a null WorkItemLookup__c, tripping the trigger's
+        //       "A Work Item is required" addError, and
+        //   (2) strip the stashed PayloadTxt__c of the WorkItemLookup__c key so
+        //       DeliverySyncItemPendingResolver.replayPendingPayload cannot
+        //       resolve the parent once it lands.
+        // Strip now happens on a scoped copy just before mapFields runs.
         String parentWorkItemRef = targetId;
         if (objectType.endsWithIgnoreCase('WorkLog__c')) {
             String wiRef = (String) payload.get('WorkItemLookup__c');
@@ -112,11 +123,6 @@ public without sharing class DeliverySyncItemIngestor {
             if (String.isNotBlank(wiRef)) {
                 parentWorkItemRef = wiRef;
             }
-            // Always strip remote lookup IDs — they are invalid cross-org references
-            payload.remove('WorkItemLookup__c');
-            payload.remove('delivery__WorkItemLookup__c');
-            payload.remove('RequestId__c');
-            payload.remove('delivery__RequestId__c');
         }
 
         Id localParentId = null;
@@ -176,7 +182,20 @@ public without sharing class DeliverySyncItemIngestor {
             }
         }
 
-        mapFields(recordToUpsert, payload, targetType);
+        // For WorkLogs: now that the Pending-queue early-return is past, strip
+        // the remote-ref lookup keys on a scoped copy so mapFields doesn't
+        // overwrite the resolved local parent Id with a cross-org string value.
+        // Non-WorkLog paths pass the payload through unchanged.
+        Map<String, Object> fieldPayload = payload;
+        if (objectType.endsWithIgnoreCase('WorkLog__c')) {
+            fieldPayload = new Map<String, Object>(payload);
+            fieldPayload.remove('WorkItemLookup__c');
+            fieldPayload.remove('delivery__WorkItemLookup__c');
+            fieldPayload.remove('RequestId__c');
+            fieldPayload.remove('delivery__RequestId__c');
+        }
+
+        mapFields(recordToUpsert, fieldPayload, targetType);
 
         // ==========================================
         // NEW: AUTO-PARENTING THE UPSTREAM CLIENT
