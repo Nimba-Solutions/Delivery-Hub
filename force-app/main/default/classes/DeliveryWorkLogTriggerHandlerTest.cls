@@ -300,7 +300,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
     // ── Parent-scope alignment tests (align-worklog-parent-sync-scope) ─
 
     @IsTest
-    static void testWorkLogOnDisconnectedParent_DoesNotPushOutbound() {
+    static void testWorkLogOnDisconnectedParentDoesNotPushOutbound() {
         // T-0129 regression: parent WorkItem tagged to a NetworkEntity that
         // looks connected (has an integration endpoint) but whose EntityTypePk__c
         // is NOT 'Client' or 'Both' — so DeliverySyncEngine.captureChanges would
@@ -355,7 +355,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
     }
 
     @IsTest
-    static void testWorkLogOnConnectedParent_PushesOutboundNormally() {
+    static void testWorkLogOnConnectedParentPushesOutboundNormally() {
         // Regression: WorkItem tagged to a fully-connected client (Client/Both
         // entity type with an integration endpoint) should still produce a
         // WorkLog outbound SyncItem, matching pre-fix behaviour.
