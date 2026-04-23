@@ -10,6 +10,7 @@ import { CurrentPageReference } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import generateDocument from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.generateDocument';
+import getAvailableClients from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getAvailableClients';
 import getDefaultBillingEntityId from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDefaultBillingEntityId';
 import getDocumentById from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentById';
 import getDocumentTemplates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getDocumentTemplates';
@@ -64,6 +65,8 @@ export default class DeliveryDocumentViewer extends LightningElement {
     // Generate form state
     @track showGenerateForm = false;
     @track genTemplate = 'Invoice';
+    @track genClientId = '';
+    @track clientOptions = [];
     @track genPeriodStart = '';
     @track genPeriodEnd = '';
     @track isGenerating = false;
@@ -128,6 +131,16 @@ export default class DeliveryDocumentViewer extends LightningElement {
             this.loadDefaultBillingEntity();
         }
         this.loadPendingInvoices();
+        this.loadAvailableClients();
+    }
+
+    async loadAvailableClients() {
+        try {
+            const clients = await getAvailableClients();
+            this.clientOptions = clients || [];
+        } catch (e) {
+            this.clientOptions = [];
+        }
     }
 
     renderedCallback() {
@@ -263,7 +276,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
 
     // Generate form validation
     get isGenerateDisabled() {
-        return !this.genTemplate || !this.genPeriodStart || !this.genPeriodEnd || this.isGenerating;
+        return !this.genTemplate || !this.genClientId || !this.genPeriodStart || !this.genPeriodEnd || this.isGenerating;
     }
 
     get generateButtonLabel() {
@@ -536,6 +549,11 @@ export default class DeliveryDocumentViewer extends LightningElement {
         const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
         this.genPeriodStart = `${y}-${m}-01`;
         this.genPeriodEnd = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
+        // Prefill client from flexipage/record context when available so the
+        // Invoice form is one-click on a NetworkEntity record page.
+        if (!this.genClientId && this.effectiveEntityId) {
+            this.genClientId = this.effectiveEntityId;
+        }
     }
 
     handleCloseGenerateForm() {
@@ -545,6 +563,10 @@ export default class DeliveryDocumentViewer extends LightningElement {
 
     handleGenTemplateChange(event) {
         this.genTemplate = event.detail.value;
+    }
+
+    handleGenClientChange(event) {
+        this.genClientId = event.detail.value;
     }
 
     handleGenPeriodStartChange(event) {
@@ -559,7 +581,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
         this.isGenerating = true;
         try {
             const newDocId = await generateDocument({
-                entityId: this.effectiveEntityId,
+                entityId: this.genClientId,
                 templateType: this.genTemplate,
                 periodStart: this.genPeriodStart,
                 periodEnd: this.genPeriodEnd,
@@ -1074,6 +1096,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
         } else {
             this.genTemplate = 'Invoice';
         }
+        this.genClientId = '';
         this.genPeriodStart = '';
         this.genPeriodEnd = '';
     }

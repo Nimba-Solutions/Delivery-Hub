@@ -222,6 +222,33 @@ public with sharing class DeliveryDocQueryService {
     }
 
     /**
+     * @description Returns active NetworkEntity records eligible to receive a
+     *              document (EntityTypePk__c in Client, Both) as {label, value}
+     *              maps. Powers the Client combobox on the Generate Document
+     *              form in the embedded document viewer. Ordered by Name for a
+     *              stable, user-friendly picker.
+     * @return List of maps with 'label' (entity name) and 'value' (record Id).
+     */
+    public static List<Map<String, String>> getAvailableClients() {
+        List<Map<String, String>> clients = new List<Map<String, String>>();
+        for (NetworkEntity__c ne : [
+            SELECT Id, Name
+            FROM NetworkEntity__c
+            WHERE EntityTypePk__c IN ('Client', 'Both')
+            AND StatusPk__c = 'Active'
+            WITH SYSTEM_MODE
+            ORDER BY Name ASC
+            LIMIT 500
+        ]) {
+            clients.add(new Map<String, String>{
+                'label' => ne.Name,
+                'value' => ne.Id
+            });
+        }
+        return clients;
+    }
+
+    /**
      * @description Calculates the total paid amount for a document by aggregating
      *              all DeliveryTransaction__c AmountCurrency__c values.
      * @param docId The DeliveryDocument__c Id.

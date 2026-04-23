@@ -2,7 +2,7 @@
 
 This guide walks you through installing Delivery Hub, running the setup wizard, creating your first work item, and optionally configuring cross-org sync, document signing, and external API access.
 
-**Current release**: `0.153.0.5` — see the [Changelog](CHANGELOG.md) for the full history.
+**Current release**: `0.200` — see the [Changelog](CHANGELOG.md) for the full history.
 
 ---
 
@@ -272,9 +272,11 @@ The **Document Engine** generates professional documents -- invoices, status rep
 
 1. Open the **Document Viewer** component -- available on the Admin Home page or any Network Entity record page
 2. Click **Generate**
-3. Select a **template** (document type) and the **time period** to cover
+3. Select a **template** (document type), a **client** (required from v0.200), and the **time period** to cover
 4. The engine pulls hours, work items, and activity data to populate the document
 5. Review the generated document and update its status as needed
+
+When the viewer is embedded on a NetworkEntity record page, the Client picker is prefilled with that entity. When opened from the Admin Home page or any other surface, the Client dropdown lists all active `Client` and `Both` NetworkEntity records so the generator works from anywhere.
 
 ### Rate Hierarchy
 

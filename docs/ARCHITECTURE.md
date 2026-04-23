@@ -18,7 +18,7 @@ High-level architecture overview of the Delivery Hub Salesforce managed package.
 | **WorkItemComment\_\_c** | Comments/chat on a work item | WorkItemId\_\_c, BodyTxt\_\_c, AuthorTxt\_\_c, SourcePk\_\_c |
 | **WorkRequest\_\_c** | Bridge linking a WorkItem to a vendor NetworkEntity for downstream sync | WorkItemId\_\_c, DeliveryEntityId\_\_c, RemoteWorkItemIdTxt\_\_c, StatusPk\_\_c |
 | **NetworkEntity\_\_c** | Represents a connected org or external system | EntityTypePk\_\_c (Client/Vendor/Both), IntegrationEndpointUrlTxt\_\_c, ApiKeyTxt\_\_c, ConnectionStatusPk\_\_c, EnableVendorPushDateTime\_\_c, HmacSecretTxt\_\_c, OrgIdTxt\_\_c, DefaultHourlyRateCurrency\_\_c, AddressTxt\_\_c, ContactEmail\_\_c, ContactPhone\_\_c |
-| **SyncItem\_\_c** | Audit ledger for every sync event (inbound and outbound) | DirectionPk\_\_c, StatusPk\_\_c, ObjectTypePk\_\_c, PayloadTxt\_\_c, GlobalSourceIdTxt\_\_c, RemoteExternalIdTxt\_\_c, LocalRecordIdTxt\_\_c |
+| **SyncItem\_\_c** | Audit ledger for every sync event (inbound and outbound). `StatusPk__c` values: Queued, Staged, Synced, Failed, **Pending** (v0.200, child-before-parent race). | DirectionPk\_\_c, StatusPk\_\_c, ObjectTypePk\_\_c, PayloadTxt\_\_c, GlobalSourceIdTxt\_\_c, RemoteExternalIdTxt\_\_c, LocalRecordIdTxt\_\_c, ParentRefTxt\_\_c (v0.200) |
 | **WorkItemDependency\_\_c** | Blocking relationship between two work items | BlockingWorkItemId\_\_c, DependentWorkItemId\_\_c |
 | **WorkLog\_\_c** | Time logging entries | WorkItemId\_\_c, HoursNumber\_\_c, DateDt\_\_c, DescriptionTxt\_\_c |
 | **DeliveryHubSettings\_\_c** | Org-level settings (hierarchy custom setting) | Scheduling, polling, AI config, ReconciliationHourNumber\_\_c, SyncRetryLimitNumber\_\_c, ActivityLogRetentionDaysNumber\_\_c, EscalationCooldownHoursNumber\_\_c |
@@ -102,9 +102,11 @@ The sync engine handles bidirectional data replication between connected Salesfo
 |-------|---------------|
 | **DeliverySyncEngine** | Core engine. Evaluates routing edges (upstream client + downstream vendors), creates outbound SyncItem records, manages echo suppression via blocked origins. |
 | **DeliverySyncItemProcessor** | Queueable worker. Resolves endpoints, makes HTTP callouts, updates statuses, closes bridge loops with response IDs, chains for remaining work. |
-| **DeliverySyncItemIngestor** | Inbound processing. Resolves local records via bridge/ledger lookup, maps fields, auto-parents upstream clients, registers echo suppression origins. |
+| **DeliverySyncItemIngestor** | Inbound processing. Resolves local records via bridge/ledger lookup, maps fields, auto-parents upstream clients, registers echo suppression origins. When a child payload (e.g. a WorkLog) arrives before its parent WorkItem, stashes the payload to the Pending queue instead of throwing. |
+| **DeliverySyncItemPendingResolver** | Queueable resolver (added in v0.200). Sweeps `SyncItem__c` rows with `StatusPk__c = 'Pending'`, re-attempts parent resolution via bridge → ledger → direct-id fallback, and replays successful matches through `DeliverySyncItemIngestor.replayPendingPayload`. Flips to `Failed` after `DEFAULT_MAX_RETRIES` (10) with a descriptive `ErrorLogTxt__c`. |
 | **DeliveryHubSyncService** | REST resource (`@RestResource`). Exposes POST (inbound sync) and GET /changes (pull flow) endpoints. Gateway-level echo suppression via X-Global-Source-Id header. |
 | **DeliveryHubPoller** | Schedulable. Polls connected vendor orgs for staged changes on a 15-minute schedule. |
+| **DeliveryHubScheduler** | Scheduled tick. Drains Pending SyncItems via `requeuePendingItems()` every 15 minutes in addition to its existing reconciliation and poller work, so Pending backlog self-heals without admin intervention. |
 
 ### Push Flow
 
@@ -145,6 +147,10 @@ DeliveryHubPoller (scheduled or manual)
 1. **Gateway-level**: `X-Global-Source-Id` HTTP header checked against existing outbound SyncItems. Suppresses before any processing.
 2. **In-memory origin blocking**: `DeliverySyncEngine.blockedOrigins` Set prevents re-routing to the origin entity within the same transaction.
 3. **Kill-switch**: `DeliverySyncEngine.captureChanges()` compares target entity against the GlobalSourceId. If they match, the record originated there -- do not sync back.
+
+### Pending Queue (Race-Condition Handling)
+
+Added in v0.200. When an inbound child payload (a WorkLog, for example) arrives before its parent WorkItem's payload, the ingestor stops hard-throwing and instead inserts the inbound `SyncItem__c` with `StatusPk__c = 'Pending'`, storing the parent's remote id in `ParentRefTxt__c`. A `DeliverySyncItemPendingResolver` Queueable is then enqueued inline and retries parent resolution via bridge → ledger → direct-id fallback. If the parent still isn't present, the row stays `Pending`. `DeliveryHubScheduler.requeuePendingItems()` sweeps all Pending rows every 15 minutes, so the backlog auto-drains the moment the parent arrives — no admin action required. Rows that can't resolve after `DEFAULT_MAX_RETRIES` (10 attempts) flip to `Failed` with a descriptive `ErrorLogTxt__c`, matching the existing retry-ceiling contract.
 
 ---
 
@@ -476,6 +482,10 @@ DeliveryDocumentController.generateDocument(entityId, templateType, periodStart,
   -> Create DeliveryDocument__c record with snapshot, totals, and public token
   -> Return document Id for immediate rendering or portal sharing
 ```
+
+`entityId` is required and non-null. `deliveryDocumentViewer` resolves it in this order: (1) `recordId` when embedded on a NetworkEntity record page, (2) the user's Client-picker selection on the Generate form (added in v0.200; backed by `DeliveryDocumentController.getAvailableClients()` → active NetworkEntity rows with `EntityTypePk__c IN ('Client','Both')`).
+
+DeliveryDocument__c and its related DeliveryTransaction__c and DocumentAction__c records are **org-local** — they do not participate in cross-org sync. Only WorkItem, WorkItemComment, WorkLog, and ContentVersion replicate through the sync engine.
 
 ### JSON Snapshot Pattern
 

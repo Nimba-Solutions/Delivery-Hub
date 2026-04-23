@@ -43,7 +43,7 @@ Meanwhile your CRM &mdash; the system that already knows every account, contact,
 
 ## Install
 
-**Current version**: `release/0.153.0.5` &mdash; see the [Changelog](docs/CHANGELOG.md) for the full history.
+**Current version**: `release/0.200` &mdash; see the [Changelog](docs/CHANGELOG.md) for the full history.
 
 | Environment | Link |
 |---|---|

@@ -256,11 +256,17 @@ private class DeliveryHubSchedulerTest {
             HttpResponse res = new HttpResponse();
             res.setStatusCode(200);
             
-            // V2 ARCHITECTURE: Must return a JSON Array, simulating a pulled update
+            // V2 ARCHITECTURE: Must return a JSON Array, simulating a pulled update.
+            // BriefDescriptionTxt__c is required by the v0.200 defense-in-depth
+            // blank-WorkItem guard in DeliverySyncItemIngestor.processInboundItem
+            // (rejects inserts with no Name / BriefDescriptionTxt__c to block the
+            // empty-suggestedWorkRequest class of bugs). Without it the ingestor
+            // throws, DeliveryHubPoller's try/catch swallows the exception, and
+            // the vendor's LastInboundSyncDateTime__c never advances.
             String jsonBody = '[' +
                 '{' +
                     '"objectType": "WorkItem__c",' +
-                    '"payload": "{\\"SourceId\\": \\"REMOTE-123\\"}",' +
+                    '"payload": "{\\"SourceId\\": \\"REMOTE-123\\", \\"BriefDescriptionTxt__c\\": \\"Scheduler test item\\"}",' +
                     '"syncItemId": "a0D000000000000EAA",' +
                     '"createdDate": "2026-02-18T12:00:00.000Z"' +
                 '}' +

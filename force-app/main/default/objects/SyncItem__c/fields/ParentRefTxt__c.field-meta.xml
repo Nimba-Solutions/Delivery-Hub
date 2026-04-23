@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ParentRefTxt__c</fullName>
+    <description>Remote identifier of a parent record the Pending row depends on. Populated by DeliverySyncItemIngestor when an inbound payload (e.g., WorkLog) arrives before its parent WorkItem has synced. DeliverySyncItemPendingResolver queries on this field to re-attempt resolution when the parent lands.</description>
+    <inlineHelpText>The remote parent record identifier. Used by the Pending resolver to re-try lookups after the parent arrives.</inlineHelpText>
+    <label>Parent Ref</label>
+    <length>255</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
