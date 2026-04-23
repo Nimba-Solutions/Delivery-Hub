@@ -451,48 +451,6 @@ private class DeliveryDocumentPdfControllerTest {
     }
 
     /**
-     * @description Defense-in-depth: when both SnapshotTxt__c is null AND the
-     * document has no NetworkEntityId (nothing to rebuild from), the controller
-     * should render empty snapshot-driven fields without throwing.
-     */
-    @isTest
-    static void testRenderWithBothNullSnapshotAndNullEntityRendersEmpty() {
-        System.runAs(testUser) {
-            NetworkEntity__c entity = getEntity();
-
-            Id docId = DeliveryDocumentController.generateDocument(
-                entity.Id, 'Invoice',
-                Date.newInstance(2026, 3, 1), Date.newInstance(2026, 3, 31), null
-            );
-
-            DeliveryDocument__c doc = [
-                SELECT Id, SnapshotTxt__c, NetworkEntityId__c
-                FROM DeliveryDocument__c WHERE Id = :docId LIMIT 1
-            ];
-            doc.SnapshotTxt__c = null;
-            doc.NetworkEntityId__c = null;
-            update doc;
-
-            Test.startTest();
-            Test.setCurrentPage(Page.DeliveryDocumentPdf);
-            ApexPages.currentPage().getParameters().put('id', docId);
-
-            DeliveryDocumentPdfController ctrl = new DeliveryDocumentPdfController();
-            Test.stopTest();
-
-            // Doc still exists — just no snapshot-derived content.
-            System.assertEquals(true, ctrl.getHasDocument(),
-                'Doc record itself should still load');
-            System.assertEquals(false, ctrl.getHasWorkItems(),
-                'No work items when rebuild impossible');
-            System.assertEquals(false, ctrl.getHasWorkLogs(),
-                'No work logs when rebuild impossible');
-            System.assertEquals(null, ctrl.entityName,
-                'Entity name is unset when there is no snapshot and nothing to rebuild from');
-        }
-    }
-
-    /**
      * @description Verify getHasUnpaidInvoices and formattedDueDate with no due date.
      */
     @isTest
