@@ -384,6 +384,78 @@ private class DeliveryPublicApiServiceTest {
         }
     }
 
+    /**
+     * @description v0.99 defense-in-depth: blank-payload WorkItem creates
+     *              should be rejected at the REST ingestor with a 400, not
+     *              create a row with a [Portal] null title. Background: the
+     *              cloudnimbus Slack approval handler once POSTed empty
+     *              suggestedWorkRequest objects and dh-prod accepted them,
+     *              creating 40 blank WorkItems before the client-side fix.
+     */
+    @IsTest
+    static void testPostWorkItemBlankPayloadRejected() {
+        System.runAs(testUser) {
+            Map<String, Object> body = new Map<String, Object>{
+                'priority' => 'High',
+                'type' => 'Internal'
+                // Intentionally omit title AND description — must be rejected.
+            };
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/work-items',
+                body
+            );
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Integer beforeCount = [SELECT COUNT() FROM WorkItem__c];
+
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
+
+            System.assertEquals(400, res.statusCode,
+                'Blank payload must be rejected with HTTP 400');
+            assertErrorResponse(res, 'Blank payloads are rejected');
+
+            Integer afterCount = [SELECT COUNT() FROM WorkItem__c];
+            System.assertEquals(beforeCount, afterCount,
+                'No WorkItem should have been created for the blank payload');
+        }
+    }
+
+    /**
+     * @description Same blank-payload scenario, but with empty-string values
+     *              instead of missing keys — e.g., `{"title":"","description":""}`.
+     *              Still must be rejected (String.isBlank covers both).
+     */
+    @IsTest
+    static void testPostWorkItemEmptyStringsRejected() {
+        System.runAs(testUser) {
+            Map<String, Object> body = new Map<String, Object>{
+                'title' => '',
+                'description' => '   ',
+                'priority' => 'High'
+            };
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/work-items',
+                body
+            );
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
+
+            System.assertEquals(400, res.statusCode,
+                'Empty/whitespace title+description must be rejected with HTTP 400');
+        }
+    }
+
     // ==========================================
     // POST COMMENT
     // ==========================================

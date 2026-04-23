@@ -233,6 +233,27 @@ public without sharing class DeliverySyncItemIngestor {
             putSafe(recordToUpsert, 'ConnectionStatusPk__c', 'Pending Approval');
         }
 
+        // v0.99 defense-in-depth: reject blank WorkItem creates. Background —
+        // cloudnimbus's Slack approval handler once POSTed empty
+        // suggestedWorkRequest objects and dh-prod accepted them, creating
+        // 40 blank WorkItems. Only applies on INSERT (recordToUpsert.Id null);
+        // legitimate cross-org updates may arrive with sparse payloads that
+        // intentionally leave name/description unchanged.
+        if (recordToUpsert.Id == null
+                && objectType.endsWithIgnoreCase('WorkItem__c')
+                && !objectType.endsWithIgnoreCase('WorkItemComment__c')) {
+            String incomingBrief = (String) payload.get('BriefDescriptionTxt__c');
+            if (String.isBlank(incomingBrief)) {
+                incomingBrief = (String) payload.get(getNamespacePrefix() + 'BriefDescriptionTxt__c');
+            }
+            String incomingName = (String) payload.get('Name');
+            if (String.isBlank(incomingBrief) && String.isBlank(incomingName)) {
+                throw new DeliverySyncEngine.SyncException(
+                    'Blank WorkItem create rejected at ingestor: payload must '
+                    + 'include BriefDescriptionTxt__c or Name. SourceId: ' + sourceId);
+            }
+        }
+
         if (recordToUpsert.Id != null) {
             Database.update(recordToUpsert, AccessLevel.SYSTEM_MODE);
         } else {
