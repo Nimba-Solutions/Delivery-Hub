@@ -100,9 +100,20 @@ public without sharing class DeliverySyncItemIngestor {
         }
 
         SObject recordToUpsert = (localRecordId != null) ? targetType.newSObject(localRecordId) : targetType.newSObject();
-        
-        // For WorkLogs, resolve the parent WorkItem ID from the payload (not TargetId)
-        // and strip cross-org lookup IDs BEFORE mapFields runs (applies to both insert and update)
+
+        // For WorkLogs, resolve the parent WorkItem ID from the payload (not TargetId).
+        // We intentionally do NOT strip cross-org lookup IDs from the caller's
+        // payload here. The Pending-queue path (queuePendingWorkLog) stashes
+        // the raw payload via JSON.serialize(payload) for later replay, and
+        // callers may re-invoke processInboundItem with the same Map instance
+        // (idempotent re-delivery). Mutating the caller's map would:
+        //   (1) cause the second call to lose the parent ref and fall into the
+        //       insert path with a null WorkItemLookup__c, tripping the trigger's
+        //       "A Work Item is required" addError, and
+        //   (2) strip the stashed PayloadTxt__c of the WorkItemLookup__c key so
+        //       DeliverySyncItemPendingResolver.replayPendingPayload cannot
+        //       resolve the parent once it lands.
+        // Strip now happens on a scoped copy just before mapFields runs.
         String parentWorkItemRef = targetId;
         if (objectType.endsWithIgnoreCase('WorkLog__c')) {
             String wiRef = (String) payload.get('WorkItemLookup__c');
@@ -112,11 +123,6 @@ public without sharing class DeliverySyncItemIngestor {
             if (String.isNotBlank(wiRef)) {
                 parentWorkItemRef = wiRef;
             }
-            // Always strip remote lookup IDs — they are invalid cross-org references
-            payload.remove('WorkItemLookup__c');
-            payload.remove('delivery__WorkItemLookup__c');
-            payload.remove('RequestId__c');
-            payload.remove('delivery__RequestId__c');
         }
 
         Id localParentId = null;
@@ -154,7 +160,14 @@ public without sharing class DeliverySyncItemIngestor {
             }
             if (objectType.endsWithIgnoreCase('WorkLog__c')) {
                 if (localParentId == null) {
-                    throw new DeliverySyncEngine.SyncException('Cannot resolve parent WorkItem for WorkLog. Parent ref: ' + parentWorkItemRef + '. The parent WorkItem may not have synced yet.');
+                    // Parent WorkItem hasn't synced yet. Rather than hard-failing
+                    // (which strands 165+ WorkLogs on nimba currently), stage
+                    // the payload in a Pending SyncItem__c and enqueue the
+                    // resolver. When the parent WorkItem lands via its own
+                    // inbound, requeuePendingItems()/the resolver will flip
+                    // this row to Queued and the processor retries the insert.
+                    // See DeliverySyncItemPendingResolver.
+                    return queuePendingWorkLog(objectType, parentWorkItemRef, payload);
                 }
                 putSafe(recordToUpsert, 'WorkItemLookup__c', localParentId);
                 // Find a local WorkRequest for the Master-Detail parent
@@ -169,7 +182,20 @@ public without sharing class DeliverySyncItemIngestor {
             }
         }
 
-        mapFields(recordToUpsert, payload, targetType);
+        // For WorkLogs: now that the Pending-queue early-return is past, strip
+        // the remote-ref lookup keys on a scoped copy so mapFields doesn't
+        // overwrite the resolved local parent Id with a cross-org string value.
+        // Non-WorkLog paths pass the payload through unchanged.
+        Map<String, Object> fieldPayload = payload;
+        if (objectType.endsWithIgnoreCase('WorkLog__c')) {
+            fieldPayload = new Map<String, Object>(payload);
+            fieldPayload.remove('WorkItemLookup__c');
+            fieldPayload.remove('delivery__WorkItemLookup__c');
+            fieldPayload.remove('RequestId__c');
+            fieldPayload.remove('delivery__RequestId__c');
+        }
+
+        mapFields(recordToUpsert, fieldPayload, targetType);
 
         // ==========================================
         // NEW: AUTO-PARENTING THE UPSTREAM CLIENT
@@ -224,6 +250,27 @@ public without sharing class DeliverySyncItemIngestor {
         // Connection Approval: New inbound NetworkEntity records require admin approval
         if (objectType.endsWithIgnoreCase('NetworkEntity__c') && recordToUpsert.Id == null) {
             putSafe(recordToUpsert, 'ConnectionStatusPk__c', 'Pending Approval');
+        }
+
+        // v0.200 defense-in-depth: reject blank WorkItem creates. Background —
+        // cloudnimbus's Slack approval handler once POSTed empty
+        // suggestedWorkRequest objects and dh-prod accepted them, creating
+        // 40 blank WorkItems. Only applies on INSERT (recordToUpsert.Id null);
+        // legitimate cross-org updates may arrive with sparse payloads that
+        // intentionally leave name/description unchanged.
+        if (recordToUpsert.Id == null
+                && objectType.endsWithIgnoreCase('WorkItem__c')
+                && !objectType.endsWithIgnoreCase('WorkItemComment__c')) {
+            String incomingBrief = (String) payload.get('BriefDescriptionTxt__c');
+            if (String.isBlank(incomingBrief)) {
+                incomingBrief = (String) payload.get(getNamespacePrefix() + 'BriefDescriptionTxt__c');
+            }
+            String incomingName = (String) payload.get('Name');
+            if (String.isBlank(incomingBrief) && String.isBlank(incomingName)) {
+                throw new DeliverySyncEngine.SyncException(
+                    'Blank WorkItem create rejected at ingestor: payload must '
+                    + 'include BriefDescriptionTxt__c or Name. SourceId: ' + sourceId);
+            }
         }
 
         if (recordToUpsert.Id != null) {
@@ -573,6 +620,83 @@ public without sharing class DeliverySyncItemIngestor {
         } catch (Exception e) {
             System.debug(LoggingLevel.FINE, 'Failed to notify pending connection: ' + e.getMessage());
         }
+    }
+
+    /**
+     * @description Inserts an inbound Pending SyncItem__c carrying the raw
+     *              WorkLog payload so it can be re-processed once the parent
+     *              WorkItem lands. Enqueues DeliverySyncItemPendingResolver
+     *              unless we're already at the queueable limit — the scheduled
+     *              tick sweep (DeliveryHubScheduler.requeuePendingItems) is a
+     *              safety net that catches anything we couldn't enqueue inline.
+     *              Idempotent on (parentWorkItemRef, SourceId): duplicate
+     *              re-deliveries reuse the existing Pending row rather than
+     *              forking duplicate resolvers.
+     * @param objectType        The payload object type (e.g., 'WorkLog__c').
+     * @param parentWorkItemRef Remote WorkItem identifier the log is parented to.
+     * @param payload           Full deserialized payload, stashed as JSON for replay.
+     * @return The Pending SyncItem__c Id so the caller can return a non-null Id
+     *         to the sync service (which treats null as failure).
+     */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    private static Id queuePendingWorkLog(String objectType, String parentWorkItemRef, Map<String, Object> payload) {
+        String sourceId = (String) payload.get('SourceId');
+        String globalSourceId = (String) payload.get('GlobalSourceId');
+
+        // Idempotency: if we already hold a Pending row for this (parentRef, sourceId)
+        // pair just return the existing Id. Re-deliveries should not multiply Pending rows.
+        if (String.isNotBlank(sourceId) && String.isNotBlank(parentWorkItemRef)) {
+            List<SyncItem__c> existing = [
+                SELECT Id FROM SyncItem__c
+                WHERE DirectionPk__c = 'Inbound'
+                AND StatusPk__c = 'Pending'
+                AND ObjectTypePk__c = 'WorkLog__c'
+                AND RemoteExternalIdTxt__c = :sourceId
+                AND ParentRefTxt__c = :parentWorkItemRef
+                WITH SYSTEM_MODE
+                LIMIT 1
+            ];
+            if (!existing.isEmpty()) {
+                return existing[0].Id;
+            }
+        }
+
+        SyncItem__c pending = new SyncItem__c(
+            DirectionPk__c = 'Inbound',
+            StatusPk__c = 'Pending',
+            ObjectTypePk__c = stripNamespace(objectType),
+            RemoteExternalIdTxt__c = sourceId,
+            GlobalSourceIdTxt__c = globalSourceId,
+            // ParentRefTxt__c carries the parent WorkItem ref so the resolver
+            // can efficiently re-query by that key without re-parsing the
+            // full payload.
+            ParentRefTxt__c = parentWorkItemRef,
+            PayloadTxt__c = JSON.serialize(payload),
+            RetryCountNumber__c = 0
+        );
+        Database.insert(pending, AccessLevel.SYSTEM_MODE);
+
+        if (Limits.getQueueableJobs() < Limits.getLimitQueueableJobs()) {
+            System.enqueueJob(new DeliverySyncItemPendingResolver(parentWorkItemRef));
+        }
+
+        return pending.Id;
+    }
+
+    /**
+     * @description Re-entry point used by DeliverySyncItemPendingResolver to
+     *              replay a stashed Pending payload once its parent WorkItem
+     *              has appeared locally. Deserializes the stored payload and
+     *              calls processInboundItem again. The caller is responsible
+     *              for sweeping the Pending row to Synced/Failed based on the
+     *              return.
+     * @param objectType Stored object type (e.g., 'WorkLog__c').
+     * @param payloadJson The JSON-serialized original payload.
+     * @return The resolved local record Id.
+     */
+    public static Id replayPendingPayload(String objectType, String payloadJson) {
+        Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(payloadJson);
+        return processInboundItem(objectType, payload);
     }
 
     private static Schema.SObjectType findSObjectType(String apiName) {

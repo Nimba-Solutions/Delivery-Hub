@@ -20,6 +20,7 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
     global void execute(SchedulableContext sc) {
         requeueFailedItems();
         requeueStagedItemsWithEndpoint();
+        requeuePendingItems();
         autoDismissAgedFailedItems();
         processEscalations();
         processRecurringItems();
@@ -30,6 +31,34 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         processScheduledDocumentSends();
         runReconciliation();
         recalcWorkItemETAsIfTopOfHour();
+    }
+
+    /**
+     * @description Sweeps inbound SyncItem__c rows stuck in Pending status
+     *              (stashed by DeliverySyncItemIngestor when a WorkLog's
+     *              parent WorkItem hadn't synced yet) and enqueues the
+     *              resolver to re-attempt resolution. Runs every tick
+     *              alongside requeueFailedItems/requeueStagedItemsWithEndpoint
+     *              so the race-condition backlog self-heals without manual
+     *              intervention. No-ops when zero Pending rows exist.
+     */
+    private static void requeuePendingItems() {
+        try {
+            Integer pendingCount = [
+                SELECT COUNT()
+                FROM SyncItem__c
+                WHERE DirectionPk__c = 'Inbound'
+                AND StatusPk__c = 'Pending'
+                WITH SYSTEM_MODE
+                LIMIT 1
+            ];
+            if (pendingCount > 0) {
+                System.enqueueJob(new DeliverySyncItemPendingResolver());
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.ERROR,
+                '[DeliveryHubScheduler] Pending-item sweep failed: ' + e.getMessage());
+        }
     }
 
     /**

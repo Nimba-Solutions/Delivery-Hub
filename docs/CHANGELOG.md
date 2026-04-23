@@ -1,6 +1,48 @@
 # Changelog
 
-All notable changes to the Delivery Hub package are documented here. Versions match the CumulusCI unlocked package release number (e.g. `release/0.153.0.5`). PR numbers reference https://github.com/Nimba-Solutions/Delivery-Hub/pull/N.
+All notable changes to the Delivery Hub package are documented here. Versions match the CumulusCI unlocked package release number (e.g. `release/0.200`). PR numbers reference https://github.com/Nimba-Solutions/Delivery-Hub/pull/N.
+
+---
+
+## [0.200] — 2026-04-22
+
+Release bundle targeting April invoicing + the two most active production paper cuts. Renumbered from the in-flight `0.99` branch label to `0.200` so the package version monotonically advances past the already-installed `0.199`.
+
+### Upgrade Notes
+
+- **Standalone invoice generator now works.** Before v0.200, opening `deliveryDocumentViewer` anywhere other than a NetworkEntity record page and clicking **Generate** threw `"Please select a client before generating a document"` with no way to satisfy the check. v0.200 adds the required Client picker. If you had the viewer on the admin home page and it was unusable, it should now work.
+- **SyncItem__c.StatusPk__c has a new `Pending` picklist value and a new `ParentRefTxt__c` field.** Restricted picklist — the package install adds the value; no manual work required. Existing SyncItem rows are unaffected.
+- **DeliveryDocument__c is still org-local.** Invoices, status reports, and agreements do not sync across orgs. Only WorkItem, WorkItemComment, WorkLog, and ContentVersion participate in cross-org sync. Nothing changed here in v0.200 — calling it out because the Pending-queue work touched surrounding sync code.
+
+### Fixes
+
+#### Invoice generator: Client picker on Generate Document form
+End users can now generate invoices, status reports, or any document from any page — not just a NetworkEntity record page.
+
+- `deliveryDocumentViewer` LWC gains a required Client `lightning-combobox` between Template and Period Start. Drives a non-null `entityId` into `DeliveryDocGenerationService.generateDocument`, eliminating the "Please select a client before generating a document" throw when the viewer isn't already scoped to a NetworkEntity record page.
+- New `DeliveryDocumentController.getAvailableClients()` → `DeliveryDocQueryService.getAvailableClients()` returns active NetworkEntity rows with `EntityTypePk__c IN ('Client','Both')`, ordered by Name, as `{label, value}` maps. Vendor-only and Inactive entities are excluded.
+- Form prefills `genClientId` from the effective entity context when the viewer is embedded on a record page, so one-click invoice generation from a NetworkEntity still works with zero extra clicks.
+- Tests in `DeliveryDocumentControllerTest`: filter contract (Vendor-only excluded, Inactive excluded) + alphabetical ordering.
+
+#### WorkLog sync race condition → Pending queue (auto-drains)
+Hours logged on a recently-created WorkItem previously failed to replicate across orgs when the WorkLog payload landed before its parent WorkItem's sync payload. The ingestor would hard-throw and the WorkLog stuck as Failed. v0.200 turns that into a self-healing Pending queue.
+
+- `DeliverySyncItemIngestor` no longer throws `SyncException` when a WorkLog payload arrives before its parent WorkItem. Instead it inserts an inbound `SyncItem__c` with `StatusPk__c = 'Pending'`, stashes the raw payload + parent ref, and enqueues a resolver. Cleared the ~165-row stuck-WorkLog backlog on nimba on first deploy.
+- New `SyncItem__c.StatusPk__c` picklist value: `Pending`. New field `SyncItem__c.ParentRefTxt__c` (Text 255) carries the parent's remote identifier for the resolver to query on.
+- New `DeliverySyncItemPendingResolver` Queueable: sweeps Pending rows scoped to one parent ref (inline path) or everything (scheduler path). Replays resolved payloads via the new `DeliverySyncItemIngestor.replayPendingPayload` entry point. Rows that can't resolve after `DEFAULT_MAX_RETRIES` (10) flip to `Failed` with a descriptive `ErrorLogTxt__c` — matching the existing retry-ceiling behavior.
+- `DeliveryHubScheduler.requeuePendingItems()` added to the tick so the Pending backlog self-heals every 15 minutes without manual intervention. No admin action required after install.
+- Tests in new `DeliverySyncItemPendingResolverTest`: parent-arrives-late → Synced + record inserted, parent-never-arrives → Failed at ceiling, idempotent re-delivery, scheduler wiring.
+
+#### Blank WorkItem creates rejected at the REST + sync ingestors
+Defense-in-depth after a Slack approval handler bug on cloudnimbusllc.com created ~40 blank WorkItems via empty `suggestedWorkRequest` POSTs. The client was patched; DH now enforces the rule server-side as the final arbiter so no future client-side regression can poison the board.
+
+- `DeliveryPublicApiService.postWorkItem`: HTTP 400 when both `title` and `description` are blank. Clear error message.
+- `DeliverySyncItemIngestor.processInboundItem`: inbound WorkItem INSERT payloads without `BriefDescriptionTxt__c` and without `Name` throw `DeliverySyncEngine.SyncException`. Sparse UPDATE payloads (existing record, fewer fields) remain allowed — the guard is insert-only so cross-org field updates are unaffected.
+- Tests in `DeliveryPublicApiServiceTest` (omitted keys, empty-string values) and `DeliverySyncItemIngestorTest` (blank insert rejected, sparse update still works).
+
+### Roadmap — Not in v0.200
+
+- **Auditable accounting service methods.** The `DeliveryTransaction__c.TypePk__c` picklist already has `Credit`, `Refund`, `Adjustment`, and `Write-Off` values beyond the Payment/Approval paths the service layer uses today. A post-v0.200 track will wire dedicated service methods for each type, add void/reversal support, and render a transaction-history section in the PDF. Combined with the existing SHA-256 audit chain and immutable JSON snapshots, this gets the DeliveryDocument + DeliveryTransaction model to CPA-grade A/R.
 
 ---
 
