@@ -7,7 +7,10 @@
     <required>false</required>
     <type>Picklist</type>
     <valueSet>
-        <restricted>true</restricted>
+        <!-- Non-restricted: unlocked packages don't reliably propagate new values
+             on subscriber upgrade when restricted=true (SF Known Issue
+             a028c00000qPzYUAA0). Integrity enforced at the service layer. -->
+        <restricted>false</restricted>
         <valueSetDefinition>
             <sorted>false</sorted>
             <value><fullName>Navigation</fullName><default>true</default><label>Navigation</label></value>
