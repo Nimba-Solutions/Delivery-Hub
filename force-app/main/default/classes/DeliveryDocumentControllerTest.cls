@@ -1372,7 +1372,7 @@ private class DeliveryDocumentControllerTest {
         }
     }
 
-    // ── getAvailableClients (v0.99 invoice client picker) ───────────────────
+    // ── getAvailableClients (v0.200 invoice client picker) ───────────────────
 
     @isTest
     static void testGetAvailableClientsReturnsClientsAndBoth() {

@@ -385,7 +385,7 @@ private class DeliveryPublicApiServiceTest {
     }
 
     /**
-     * @description v0.99 defense-in-depth: blank-payload WorkItem creates
+     * @description v0.200 defense-in-depth: blank-payload WorkItem creates
      *              should be rejected at the REST ingestor with a 400, not
      *              create a row with a [Portal] null title. Background: the
      *              cloudnimbus Slack approval handler once POSTed empty

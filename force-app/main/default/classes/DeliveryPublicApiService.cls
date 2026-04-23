@@ -265,7 +265,7 @@ global without sharing class DeliveryPublicApiService {
         String title = (String) bodyMap.get('title');
         String description = (String) bodyMap.get('description');
 
-        // v0.99 defense-in-depth: reject blank-payload creates at the API edge.
+        // v0.200 defense-in-depth: reject blank-payload creates at the API edge.
         // Background: the cloudnimbus Slack approval handler at one point
         // POSTed empty suggestedWorkRequest objects and dh-prod accepted them,
         // creating 40 blank WorkItem rows. The downstream submitPortalRequest

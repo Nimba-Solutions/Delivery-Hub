@@ -233,7 +233,7 @@ public without sharing class DeliverySyncItemIngestor {
             putSafe(recordToUpsert, 'ConnectionStatusPk__c', 'Pending Approval');
         }
 
-        // v0.99 defense-in-depth: reject blank WorkItem creates. Background —
+        // v0.200 defense-in-depth: reject blank WorkItem creates. Background —
         // cloudnimbus's Slack approval handler once POSTed empty
         // suggestedWorkRequest objects and dh-prod accepted them, creating
         // 40 blank WorkItems. Only applies on INSERT (recordToUpsert.Id null);

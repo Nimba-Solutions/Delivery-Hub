@@ -404,7 +404,7 @@ private class DeliverySyncItemIngestorTest {
     }
 
     /**
-     * @description v0.99 defense-in-depth: inbound WorkItem INSERT payloads
+     * @description v0.200 defense-in-depth: inbound WorkItem INSERT payloads
      *              that carry no BriefDescriptionTxt__c and no Name must
      *              throw SyncException, not create a blank WorkItem row.
      *              Prevents the "40 blank WorkItem" incident from recurring
