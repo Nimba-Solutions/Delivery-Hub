@@ -69,7 +69,7 @@
                         </div>
                         <div class="gen-form-body">
                             <div class="slds-grid slds-gutters slds-wrap">
-                                <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-3 slds-p-bottom_small">
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-4 slds-p-bottom_small">
                                     <lightning-combobox
                                         label="Template"
                                         value={genTemplate}
@@ -78,7 +78,17 @@
                                         required
                                     ></lightning-combobox>
                                 </div>
-                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3 slds-p-bottom_small">
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-4 slds-p-bottom_small">
+                                    <lightning-combobox
+                                        label="Client"
+                                        value={genClientId}
+                                        options={clientOptions}
+                                        onchange={handleGenClientChange}
+                                        placeholder="Select a client..."
+                                        required
+                                    ></lightning-combobox>
+                                </div>
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-4 slds-p-bottom_small">
                                     <lightning-input
                                         type="date"
                                         label="Period Start"
@@ -87,7 +97,7 @@
                                         required
                                     ></lightning-input>
                                 </div>
-                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-3 slds-p-bottom_small">
+                                <div class="slds-col slds-size_1-of-2 slds-medium-size_1-of-4 slds-p-bottom_small">
                                     <lightning-input
                                         type="date"
                                         label="Period End"

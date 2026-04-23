@@ -1371,4 +1371,72 @@ private class DeliveryDocumentControllerTest {
             System.assertEquals(null, updated.ScheduledSendDateTime__c, 'Schedule should be cleared after send');
         }
     }
+
+    // ── getAvailableClients (v0.99 invoice client picker) ───────────────────
+
+    @isTest
+    static void testGetAvailableClientsReturnsClientsAndBoth() {
+        System.runAs(testUser) {
+            // Setup includes: 1 Client (Test Client Corp), 1 Vendor (Test Vendor LLC).
+            // Vendor must be excluded; Client must be included.
+            NetworkEntity__c both = new NetworkEntity__c(
+                Name = 'AA Dual Role Corp',
+                EntityTypePk__c = 'Both',
+                StatusPk__c = 'Active'
+            );
+            NetworkEntity__c inactiveClient = new NetworkEntity__c(
+                Name = 'ZZ Inactive Client',
+                EntityTypePk__c = 'Client',
+                StatusPk__c = 'Inactive'
+            );
+            insert new List<NetworkEntity__c>{ both, inactiveClient };
+
+            Test.startTest();
+            List<Map<String, String>> clients = DeliveryDocumentController.getAvailableClients();
+            Test.stopTest();
+
+            System.assertNotEquals(null, clients, 'Should return a non-null list');
+            System.assert(!clients.isEmpty(), 'Should include at least the Client and Both entities');
+
+            Set<String> returnedLabels = new Set<String>();
+            Set<String> returnedValues = new Set<String>();
+            for (Map<String, String> entry : clients) {
+                System.assert(entry.containsKey('label'), 'Each entry must expose a label key');
+                System.assert(entry.containsKey('value'), 'Each entry must expose a value key');
+                returnedLabels.add(entry.get('label'));
+                returnedValues.add(entry.get('value'));
+            }
+
+            System.assert(returnedLabels.contains('Test Client Corp'), 'Active Client entity must appear');
+            System.assert(returnedLabels.contains('AA Dual Role Corp'), 'Both entity must appear');
+            System.assert(!returnedLabels.contains('Test Vendor LLC'), 'Vendor-only entity must be excluded');
+            System.assert(!returnedLabels.contains('ZZ Inactive Client'), 'Inactive entity must be excluded');
+        }
+    }
+
+    @isTest
+    static void testGetAvailableClientsSortedByName() {
+        System.runAs(testUser) {
+            insert new NetworkEntity__c(
+                Name = 'AAA First Alphabetical',
+                EntityTypePk__c = 'Client',
+                StatusPk__c = 'Active'
+            );
+            insert new NetworkEntity__c(
+                Name = 'ZZZ Last Alphabetical',
+                EntityTypePk__c = 'Client',
+                StatusPk__c = 'Active'
+            );
+
+            Test.startTest();
+            List<Map<String, String>> clients = DeliveryDocumentController.getAvailableClients();
+            Test.stopTest();
+
+            System.assert(clients.size() >= 3, 'Should return at least 3 client entities');
+            System.assertEquals('AAA First Alphabetical', clients[0].get('label'),
+                'Results should be ordered alphabetically by Name');
+            System.assertEquals('ZZZ Last Alphabetical', clients[clients.size() - 1].get('label'),
+                'Last entry should be the Z entity');
+        }
+    }
 }
