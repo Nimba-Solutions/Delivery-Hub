@@ -52,3 +52,30 @@ $RECYCLE.BIN/
 .project
 .settings.claude/worktrees/
 .claude/worktrees/
+.claude/scheduled_tasks.lock
+
+# One-off describe / audit / dump artifacts (ad-hoc CLI output, not project data)
+# Keep these at repo root so scripts can write them, but don't let them pollute git.
+wi-*.json
+wl-*.json
+wr-*.json
+ne-*.json
+dd-*.json
+mfp-*.json
+mfprod-*.json
+mf-*.csv
+snap.json
+tmp-*.json
+*-describe.json
+*-clean.json
+
+# Ad-hoc audit / gap reports written at repo root
+MORNING_GAPS_REPORT.md
+/AUDIT_*.md
+/GAPS_*.md
+/REPORT_*.md
+
+# Temp dump directories from CLI tooling
+/mfp-dump/
+/scripts/mfp-check/
+/scripts/scratch-verify/
