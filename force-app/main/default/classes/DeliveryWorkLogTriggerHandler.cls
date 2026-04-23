@@ -203,11 +203,22 @@ public with sharing class DeliveryWorkLogTriggerHandler {
             return;
         }
 
+        // Align WorkLog outbound scope to the upstream-client edge defined in
+        // DeliverySyncEngine.captureChanges. A WorkLog is eligible for outbound
+        // sync if and only if its parent WorkItem would itself push upstream —
+        // i.e. the parent's ClientNetworkEntityLookup__c has EntityTypePk__c
+        // IN ('Client','Both') AND a populated IntegrationEndpointUrlTxt__c.
+        // Without the EntityTypePk__c + endpoint guard, WorkLogs were shipped
+        // to orgs that never received the parent WorkItem (T-0129: 8.5h of
+        // time landed on dh-prod as orphaned inbound SyncItems with no local
+        // parent to resolve against — permanently unbillable until manual
+        // hand-firing of the parent outbound).
         Map<Id, WorkItem__c> clientWorkItems = new Map<Id, WorkItem__c>([
             SELECT Id, ClientNetworkEntityLookup__c
             FROM WorkItem__c
             WHERE Id IN :workItemIds
             AND ClientNetworkEntityLookup__c != null
+            AND ClientNetworkEntityLookup__r.EntityTypePk__c IN ('Client', 'Both')
             AND ClientNetworkEntityLookup__r.IntegrationEndpointUrlTxt__c != null
             WITH SYSTEM_MODE
         ]);
