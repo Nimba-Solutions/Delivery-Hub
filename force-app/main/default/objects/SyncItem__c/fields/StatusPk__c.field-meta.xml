@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>StatusPk__c</fullName>
-    <description>The current processing state. Values: Queued, Staged, Processing, Synced, Failed</description>
-    <inlineHelpText>Queued: Waiting for push. Staged: Waiting for client poll. Synced: Successfully delivered. Failed: See Error Log.</inlineHelpText>
+    <description>The current processing state. Values: Queued, Staged, Pending, Processing, Synced, Failed</description>
+    <inlineHelpText>Queued: Waiting for push. Staged: Waiting for client poll. Pending: Inbound held awaiting parent resolution. Synced: Successfully delivered. Failed: See Error Log.</inlineHelpText>
     <label>Status</label>
     <required>false</required>
     <trackTrending>false</trackTrending>
@@ -20,6 +20,11 @@
                 <fullName>Staged</fullName>
                 <default>false</default>
                 <label>Staged</label>
+            </value>
+            <value>
+                <fullName>Pending</fullName>
+                <default>false</default>
+                <label>Pending</label>
             </value>
             <value>
                 <fullName>Processing</fullName>

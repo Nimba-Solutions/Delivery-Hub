@@ -154,7 +154,14 @@ public without sharing class DeliverySyncItemIngestor {
             }
             if (objectType.endsWithIgnoreCase('WorkLog__c')) {
                 if (localParentId == null) {
-                    throw new DeliverySyncEngine.SyncException('Cannot resolve parent WorkItem for WorkLog. Parent ref: ' + parentWorkItemRef + '. The parent WorkItem may not have synced yet.');
+                    // Parent WorkItem hasn't synced yet. Rather than hard-failing
+                    // (which strands 165+ WorkLogs on nimba currently), stage
+                    // the payload in a Pending SyncItem__c and enqueue the
+                    // resolver. When the parent WorkItem lands via its own
+                    // inbound, requeuePendingItems()/the resolver will flip
+                    // this row to Queued and the processor retries the insert.
+                    // See DeliverySyncItemPendingResolver.
+                    return queuePendingWorkLog(objectType, parentWorkItemRef, payload);
                 }
                 putSafe(recordToUpsert, 'WorkItemLookup__c', localParentId);
                 // Find a local WorkRequest for the Master-Detail parent
@@ -573,6 +580,83 @@ public without sharing class DeliverySyncItemIngestor {
         } catch (Exception e) {
             System.debug(LoggingLevel.FINE, 'Failed to notify pending connection: ' + e.getMessage());
         }
+    }
+
+    /**
+     * @description Inserts an inbound Pending SyncItem__c carrying the raw
+     *              WorkLog payload so it can be re-processed once the parent
+     *              WorkItem lands. Enqueues DeliverySyncItemPendingResolver
+     *              unless we're already at the queueable limit — the scheduled
+     *              tick sweep (DeliveryHubScheduler.requeuePendingItems) is a
+     *              safety net that catches anything we couldn't enqueue inline.
+     *              Idempotent on (parentWorkItemRef, SourceId): duplicate
+     *              re-deliveries reuse the existing Pending row rather than
+     *              forking duplicate resolvers.
+     * @param objectType        The payload object type (e.g., 'WorkLog__c').
+     * @param parentWorkItemRef Remote WorkItem identifier the log is parented to.
+     * @param payload           Full deserialized payload, stashed as JSON for replay.
+     * @return The Pending SyncItem__c Id so the caller can return a non-null Id
+     *         to the sync service (which treats null as failure).
+     */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    private static Id queuePendingWorkLog(String objectType, String parentWorkItemRef, Map<String, Object> payload) {
+        String sourceId = (String) payload.get('SourceId');
+        String globalSourceId = (String) payload.get('GlobalSourceId');
+
+        // Idempotency: if we already hold a Pending row for this (parentRef, sourceId)
+        // pair just return the existing Id. Re-deliveries should not multiply Pending rows.
+        if (String.isNotBlank(sourceId) && String.isNotBlank(parentWorkItemRef)) {
+            List<SyncItem__c> existing = [
+                SELECT Id FROM SyncItem__c
+                WHERE DirectionPk__c = 'Inbound'
+                AND StatusPk__c = 'Pending'
+                AND ObjectTypePk__c = 'WorkLog__c'
+                AND RemoteExternalIdTxt__c = :sourceId
+                AND ParentRefTxt__c = :parentWorkItemRef
+                WITH SYSTEM_MODE
+                LIMIT 1
+            ];
+            if (!existing.isEmpty()) {
+                return existing[0].Id;
+            }
+        }
+
+        SyncItem__c pending = new SyncItem__c(
+            DirectionPk__c = 'Inbound',
+            StatusPk__c = 'Pending',
+            ObjectTypePk__c = stripNamespace(objectType),
+            RemoteExternalIdTxt__c = sourceId,
+            GlobalSourceIdTxt__c = globalSourceId,
+            // ParentRefTxt__c carries the parent WorkItem ref so the resolver
+            // can efficiently re-query by that key without re-parsing the
+            // full payload.
+            ParentRefTxt__c = parentWorkItemRef,
+            PayloadTxt__c = JSON.serialize(payload),
+            RetryCountNumber__c = 0
+        );
+        Database.insert(pending, AccessLevel.SYSTEM_MODE);
+
+        if (Limits.getQueueableJobs() < Limits.getLimitQueueableJobs()) {
+            System.enqueueJob(new DeliverySyncItemPendingResolver(parentWorkItemRef));
+        }
+
+        return pending.Id;
+    }
+
+    /**
+     * @description Re-entry point used by DeliverySyncItemPendingResolver to
+     *              replay a stashed Pending payload once its parent WorkItem
+     *              has appeared locally. Deserializes the stored payload and
+     *              calls processInboundItem again. The caller is responsible
+     *              for sweeping the Pending row to Synced/Failed based on the
+     *              return.
+     * @param objectType Stored object type (e.g., 'WorkLog__c').
+     * @param payloadJson The JSON-serialized original payload.
+     * @return The resolved local record Id.
+     */
+    public static Id replayPendingPayload(String objectType, String payloadJson) {
+        Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(payloadJson);
+        return processInboundItem(objectType, payload);
     }
 
     private static Schema.SObjectType findSObjectType(String apiName) {
