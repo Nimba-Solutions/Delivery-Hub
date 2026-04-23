@@ -297,6 +297,102 @@ private class DeliveryWorkLogTriggerHandlerTest {
         }
     }
 
+    // ── Parent-scope alignment tests (align-worklog-parent-sync-scope) ─
+
+    @IsTest
+    static void testWorkLogOnDisconnectedParent_DoesNotPushOutbound() {
+        // T-0129 regression: parent WorkItem tagged to a NetworkEntity that
+        // looks connected (has an integration endpoint) but whose EntityTypePk__c
+        // is NOT 'Client' or 'Both' — so DeliverySyncEngine.captureChanges would
+        // NOT push the parent upstream. Before this fix, the WorkLog trigger
+        // used a more permissive filter (endpoint-only, no EntityType check) and
+        // pushed WorkLogs that landed on the downstream org with no resolvable
+        // parent — the 8.5h phantom ledger problem.
+        System.runAs(testUser) {
+            NetworkEntity__c vendorTypedClient = new NetworkEntity__c(
+                Name = 'Mobilization Funding Prod (T-0129)',
+                EntityTypePk__c = 'Vendor', // NOT Client/Both → parent WorkItem would not push upstream
+                StatusPk__c = 'Active',
+                IntegrationEndpointUrlTxt__c = 'https://mf-prod.example.com'
+            );
+            insert vendorTypedClient;
+
+            WorkItem__c disconnectedWorkItem = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Disconnected Parent',
+                StageNamePk__c = 'In Development',
+                ClientNetworkEntityLookup__c = vendorTypedClient.Id
+            );
+            insert disconnectedWorkItem;
+
+            // Master-detail requires a WorkRequest parent for the WorkLog.
+            WorkRequest__c req = new WorkRequest__c(
+                WorkItemId__c = disconnectedWorkItem.Id,
+                DeliveryEntityLookup__c = vendorTypedClient.Id,
+                QuotedHoursNumber__c = 5,
+                HourlyRateCurrency__c = 100,
+                StatusPk__c = 'Accepted'
+            );
+            insert req;
+
+            Test.startTest();
+            insert new WorkLog__c(
+                RequestId__c          = req.Id,
+                WorkItemLookup__c     = disconnectedWorkItem.Id,
+                HoursLoggedNumber__c  = 4.5,
+                WorkDateDate__c       = Date.today(),
+                WorkDescriptionTxt__c = 'Time against disconnected parent'
+            );
+            Test.stopTest();
+
+            List<SyncItem__c> items = [
+                SELECT Id FROM SyncItem__c
+                WHERE WorkItemLookup__c = :disconnectedWorkItem.Id
+                AND ObjectTypePk__c = 'WorkLog__c'
+            ];
+            System.assertEquals(0, items.size(),
+                'WorkLog for a WorkItem whose client entity is not Client/Both must not create an outbound SyncItem');
+        }
+    }
+
+    @IsTest
+    static void testWorkLogOnConnectedParent_PushesOutboundNormally() {
+        // Regression: WorkItem tagged to a fully-connected client (Client/Both
+        // entity type with an integration endpoint) should still produce a
+        // WorkLog outbound SyncItem, matching pre-fix behaviour.
+        System.runAs(testUser) {
+            WorkItem__c workItem = [
+                SELECT Id FROM WorkItem__c
+                WHERE BriefDescriptionTxt__c = 'Client Work Item'
+                LIMIT 1
+            ];
+            WorkRequest__c request = [
+                SELECT Id FROM WorkRequest__c
+                WHERE WorkItemId__c = :workItem.Id
+                LIMIT 1
+            ];
+
+            Test.startTest();
+            insert new WorkLog__c(
+                RequestId__c          = request.Id,
+                WorkItemLookup__c     = workItem.Id,
+                HoursLoggedNumber__c  = 4.0,
+                WorkDateDate__c       = Date.today(),
+                WorkDescriptionTxt__c = 'Time against connected parent'
+            );
+            Test.stopTest();
+
+            List<SyncItem__c> items = [
+                SELECT DirectionPk__c, StatusPk__c FROM SyncItem__c
+                WHERE WorkItemLookup__c = :workItem.Id
+                AND ObjectTypePk__c = 'WorkLog__c'
+            ];
+            System.assertEquals(1, items.size(),
+                'WorkLog for a connected client WorkItem should still create one outbound SyncItem');
+            System.assertEquals('Outbound', items[0].DirectionPk__c, 'Expected Outbound direction');
+            System.assertEquals('Queued', items[0].StatusPk__c, 'Expected Queued status for fresh outbound item');
+        }
+    }
+
     @IsTest
     static void testBulkApproval() {
         System.runAs(testUser) {
