@@ -1,0 +1,105 @@
+<template>
+    <lightning-card title="Defer Hours to a Future Milestone" icon-name="utility:date_input">
+        <div slot="actions">
+            <lightning-button-group>
+                <lightning-button
+                    label="Defer Selected to Milestone Date"
+                    variant="brand"
+                    disabled={isDeferDisabled}
+                    onclick={handleOpenDeferModal}
+                ></lightning-button>
+                <lightning-button
+                    label="Release Deferred to this Period"
+                    variant="neutral"
+                    onclick={handleRelease}
+                ></lightning-button>
+            </lightning-button-group>
+        </div>
+
+        <template if:true={isLoading}>
+            <lightning-spinner alternative-text="Loading work logs"></lightning-spinner>
+        </template>
+
+        <template if:true={hasError}>
+            <p class="slds-p-around_small slds-text-color_error">{errorMessage}</p>
+        </template>
+
+        <template if:false={hasRows}>
+            <p class="slds-p-around_small slds-text-color_weak">
+                No work logs in this preview period for the selected entity.
+            </p>
+        </template>
+
+        <template if:true={hasRows}>
+            <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                <thead>
+                    <tr class="slds-line-height_reset">
+                        <th scope="col" class="slds-text-title_caps" style="width:2.5rem;"></th>
+                        <th scope="col" class="slds-text-title_caps">Date</th>
+                        <th scope="col" class="slds-text-title_caps">Hours</th>
+                        <th scope="col" class="slds-text-title_caps">Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template for:each={rows} for:item="row">
+                        <tr key={row.id} class="slds-hint-parent">
+                            <td>
+                                <lightning-input
+                                    type="checkbox"
+                                    variant="label-hidden"
+                                    data-id={row.id}
+                                    checked={row.selected}
+                                    onchange={handleRowSelect}
+                                ></lightning-input>
+                            </td>
+                            <td>{row.workDate}</td>
+                            <td>{row.hours}</td>
+                            <td>{row.description}</td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </template>
+
+        <template if:true={isModalOpen}>
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <h2 class="slds-modal__title slds-hyphenate">
+                            Defer {selectedCount} Work Log(s)
+                        </h2>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium">
+                        <lightning-input
+                            type="date"
+                            label="Milestone Date"
+                            value={modalMilestoneDate}
+                            onchange={handleMilestoneChange}
+                            required
+                        ></lightning-input>
+                        <lightning-textarea
+                            label="Reason"
+                            value={modalReason}
+                            onchange={handleReasonChange}
+                            placeholder="e.g. QuickBooks integration, awaiting acceptance"
+                        ></lightning-textarea>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning-button
+                            label="Cancel"
+                            onclick={handleCancelModal}
+                        ></lightning-button>
+                        <lightning-button
+                            label="Confirm Defer"
+                            variant="brand"
+                            disabled={isConfirmDisabled}
+                            onclick={handleConfirmDefer}
+                            class="slds-m-left_x-small"
+                        ></lightning-button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+    </lightning-card>
+</template>

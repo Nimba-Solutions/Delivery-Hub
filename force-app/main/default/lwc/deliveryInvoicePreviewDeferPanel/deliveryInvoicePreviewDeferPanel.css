@@ -1,0 +1,4 @@
+/* Inherits SLDS — modal/backdrop classes provide the styling. */
+:host {
+    display: block;
+}
