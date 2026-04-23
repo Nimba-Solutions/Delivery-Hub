@@ -28,7 +28,7 @@ private class DeliveryEscalationContextTest {
         Map<Id, String> chatterTargets = new Map<Id, String>{ wi.Id => 'chat' };
         Map<String, String> slackNotifications = new Map<String, String>{ 'WI-1' => 'slack' };
         List<ActivityLog__c> logEntries = new List<ActivityLog__c>{
-            new ActivityLog__c(DescriptionTxt__c = 'test-log')
+            new ActivityLog__c(ContextDataTxt__c = 'test-log')
         };
 
         DeliveryEscalationContext ctx = new DeliveryEscalationContext(

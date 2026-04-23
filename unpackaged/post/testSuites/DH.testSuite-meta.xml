@@ -93,5 +93,5 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocActionRestApiTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryEscalationContextTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubExceptionTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryNotificationPreferenceServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryNotifPrefServiceTest</testClassName>
 </ApexTestSuite>

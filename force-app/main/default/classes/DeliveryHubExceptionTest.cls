@@ -55,11 +55,11 @@ private class DeliveryHubExceptionTest {
         try {
             try {
                 Integer.valueOf('not-a-number');
-            } catch (Exception inner) {
-                throw new DeliveryHubException('wrapped: ' + inner.getMessage());
+            } catch (Exception innerEx) {
+                throw new DeliveryHubException('wrapped: ' + innerEx.getMessage());
             }
-        } catch (DeliveryHubException outer) {
-            System.assert(outer.getMessage().startsWith('wrapped:'), 'Wrapper message should carry the wrapped context');
+        } catch (DeliveryHubException outerEx) {
+            System.assert(outerEx.getMessage().startsWith('wrapped:'), 'Wrapper message should carry the wrapped context');
         }
     }
 }
