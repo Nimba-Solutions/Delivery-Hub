@@ -4,6 +4,33 @@ All notable changes to the Delivery Hub package are documented here. Versions ma
 
 ---
 
+## [0.99] — 2026-04-22
+
+Release bundle targeting April invoicing + the two most active production paper cuts.
+
+### Fixes
+
+#### Invoice generator: Client picker on Generate Document form
+- `deliveryDocumentViewer` LWC gains a required Client `lightning-combobox` between Template and Period Start. Drives a non-null `entityId` into `DeliveryDocGenerationService.generateDocument`, eliminating the "Please select a client before generating a document." throw when the viewer isn't already scoped to a NetworkEntity record page.
+- New `DeliveryDocumentController.getAvailableClients()` → `DeliveryDocQueryService.getAvailableClients()` returns active NetworkEntity rows with `EntityTypePk__c IN ('Client','Both')`, ordered by Name, as `{label, value}` maps.
+- Form prefills `genClientId` from the effective entity context when the viewer is embedded on a record page, so one-click invoice generation still works from a NetworkEntity.
+- Tests in `DeliveryDocumentControllerTest`: filter contract (Vendor-only excluded, Inactive excluded) + alphabetical ordering.
+
+#### WorkLog sync race condition: Pending queue replaces hard-throw
+- `DeliverySyncItemIngestor` no longer throws `SyncException` when a WorkLog payload arrives before its parent WorkItem. Instead it inserts an inbound `SyncItem__c` with `StatusPk__c = 'Pending'`, stashes the raw payload + parent ref, and enqueues a resolver. This cleared the ~165-row stuck-WorkLog backlog on nimba.
+- New `SyncItem__c.StatusPk__c` picklist value: `Pending`. New field `SyncItem__c.ParentRefTxt__c` (Text 255) carries the parent's remote identifier for the resolver to query on.
+- New `DeliverySyncItemPendingResolver` Queueable: sweeps Pending rows scoped to one parent ref (inline path) or everything (scheduler path). Replays resolved payloads via the new `DeliverySyncItemIngestor.replayPendingPayload` entry point. Rows that can't resolve after `DEFAULT_MAX_RETRIES` (10) flip to `Failed` with a descriptive `ErrorLogTxt__c`.
+- `DeliveryHubScheduler.requeuePendingItems()` added to the tick so the backlog self-heals every 15 minutes without manual intervention.
+- Tests in new `DeliverySyncItemPendingResolverTest`: parent-arrives-late → Synced + record inserted, parent-never-arrives → Failed at ceiling, idempotent re-delivery, scheduler wiring.
+
+#### Blank WorkItem creates rejected at the REST + sync ingestors
+- Defense-in-depth after the cloudnimbus Slack approval handler incident (40 blank WorkItems created via empty `suggestedWorkRequest` POSTs). The client was patched; DH now enforces the rule server-side as the final arbiter.
+- `DeliveryPublicApiService.postWorkItem`: HTTP 400 when both `title` and `description` are blank. Clear error message.
+- `DeliverySyncItemIngestor.processInboundItem`: inbound WorkItem INSERT payloads without `BriefDescriptionTxt__c` and without `Name` throw `DeliverySyncEngine.SyncException`. Sparse UPDATE payloads (existing record, fewer fields) remain allowed — the guard is insert-only.
+- Tests in `DeliveryPublicApiServiceTest` (omitted keys, empty-string values) and `DeliverySyncItemIngestorTest` (blank insert rejected, sparse update still works).
+
+---
+
 ## [0.153.0] — 2026-04-07
 
 ### Security & Quality
