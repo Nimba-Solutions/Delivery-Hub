@@ -14,7 +14,7 @@
              a028c00000qPzYUAA0). restricted=false kept temporarily from Phase 1
              band-aid (PR #682); Phase 3 will flip back to restricted=true once a
              real package-upgrade cycle has verified GVS propagation end-to-end. -->
-        <restricted>false</restricted>
+        <restricted>true</restricted>
         <valueSetName>DeliverySyncItemStatus</valueSetName>
     </valueSet>
 </CustomField>

@@ -14,7 +14,7 @@
              temporarily from Phase 1 band-aid (PR #683); Phase 3 will flip back to
              restricted=true once a real package-upgrade cycle has verified GVS
              propagation. -->
-        <restricted>false</restricted>
+        <restricted>true</restricted>
         <valueSetName>DeliveryActivityActionType</valueSetName>
     </valueSet>
 </CustomField>
