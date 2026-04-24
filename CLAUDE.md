@@ -15,7 +15,7 @@
 - Existing inline-defined picklists stay `<restricted>false</restricted>`. Data integrity on those is enforced at the Apex service / trigger layer (see `DeliveryPicklistIntegrityService`), not via the field's restricted flag. This survives bulk-data-loader imports and subscriber customization.
 
 ## Org Aliases
-- `MF-Prod` — glen.bradford@nimbasolutions.com.mf123 (MF production)
+- `MF-Prod` — <your-prod-org-username>@<domain>.com
 - `nimba` — Nimba sandbox (where invoices are cut)
 - `dh-prod` — separate dev hub org (NOT Nimba)
 - Always use `delivery__` namespace prefix when running anonymous Apex on subscriber orgs.

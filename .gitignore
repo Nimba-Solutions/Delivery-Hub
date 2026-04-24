@@ -79,3 +79,12 @@ MORNING_GAPS_REPORT.md
 /mfp-dump/
 /scripts/mfp-check/
 /scripts/scratch-verify/
+
+# MF-Prod data dumps (must never be committed)
+mfp*.json
+mfprod*.json
+*-describe.json
+*-clean.json
+mf-active-workitems.csv
+MORNING_*.md
+mfp-dump/
