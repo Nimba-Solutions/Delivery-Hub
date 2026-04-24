@@ -36,6 +36,66 @@ jobs:
       sfdx-version: "7.209.6"
       debug: true
 
+  # Post-install smoke test for the freshly-uploaded 04t.
+  # Catches two silent failure modes the feature-test job cannot see because
+  # feature-test deploys source directly (bypasses the 04t path):
+  #   1. CCI content-hash reuses a stale 04t — upload-beta prints "new version"
+  #      but the package actually points at an older build missing shipped
+  #      source changes (cost us ~4 hours on 2026-04-22).
+  #   2. Restricted-picklist propagation quirk — new picklist values don't
+  #      merge to subscriber orgs on upgrade. We use restricted=false to dodge
+  #      it at DML time, but describe-time mismatches still indicate a stale 04t.
+  # Runs in parallel with install-beta (not gated on it) so it delivers signal
+  # even when install-beta's known DeliveryHubSite flake fails.
+  smoke-test-beta-picklists:
+    name: "Smoke Test Beta 04t: Picklist Propagation"
+    needs: upload-beta
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set Up CumulusCI
+        uses: nimba-actions/setup-cumulus@main
+        with:
+          cumulusci-version: "3.90.1"
+          sfdx-version: "7.209.6"
+
+      - name: Authorize Dev Hub
+        uses: nimba-actions/authorize-org@main
+        with:
+          auth-url: ${{ secrets.DEV_HUB_AUTH_URL }}
+          org-name: dev-hub
+          dev-hub: true
+
+      - name: Install Latest Beta (ci_beta flow) on Fresh Scratch
+        env:
+          CUMULUSCI_SERVICE_github: ${{ secrets.CUMULUSCI_TOKEN }}
+        run: |
+          cci flow run ci_beta --org beta
+
+      - name: Resolve Scratch Org Username
+        id: scratch
+        run: |
+          SCRATCH_USERNAME=$(cci org info beta --json | python -c "import json,sys; print(json.load(sys.stdin)['username'])")
+          echo "username=$SCRATCH_USERNAME" >> "$GITHUB_OUTPUT"
+          echo "Resolved scratch username: $SCRATCH_USERNAME"
+
+      - name: Smoke Test — Picklist Values Present on Subscriber Describe
+        run: |
+          python scripts/ci/smoke_picklist_propagation.py \
+            --target-org "${{ steps.scratch.outputs.username }}"
+
+      - name: Delete Scratch Org
+        if: always()
+        run: |
+          cci org scratch_delete beta || true
+
 permissions:
   actions: write
   attestations: write
