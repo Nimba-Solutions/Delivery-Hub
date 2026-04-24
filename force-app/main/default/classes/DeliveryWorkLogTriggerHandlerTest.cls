@@ -310,7 +310,7 @@ private class DeliveryWorkLogTriggerHandlerTest {
         // parent — the 8.5h phantom ledger problem.
         System.runAs(testUser) {
             NetworkEntity__c vendorTypedClient = new NetworkEntity__c(
-                Name = 'Mobilization Funding Prod (T-0129)',
+                Name = 'Acme Corp Prod (T-0001)',
                 EntityTypePk__c = 'Vendor', // NOT Client/Both → parent WorkItem would not push upstream
                 StatusPk__c = 'Active',
                 IntegrationEndpointUrlTxt__c = 'https://mf-prod.example.com'
