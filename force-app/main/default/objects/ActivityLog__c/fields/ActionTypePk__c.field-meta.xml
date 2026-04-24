@@ -7,22 +7,14 @@
     <required>false</required>
     <type>Picklist</type>
     <valueSet>
-        <!-- Non-restricted: unlocked packages don't reliably propagate new values
-             on subscriber upgrade when restricted=true (SF Known Issue
-             a028c00000qPzYUAA0). Integrity enforced at the service layer. -->
+        <!-- Phase 2 GVS migration: values live in
+             globalValueSets/DeliveryActivityActionType.globalValueSet-meta.xml so
+             new tracked action types propagate reliably on unlocked-package
+             upgrade (SF Known Issue a028c00000qPzYUAA0). restricted=false kept
+             temporarily from Phase 1 band-aid (PR #683); Phase 3 will flip back to
+             restricted=true once a real package-upgrade cycle has verified GVS
+             propagation. -->
         <restricted>false</restricted>
-        <valueSetDefinition>
-            <sorted>false</sorted>
-            <value><fullName>Navigation</fullName><default>true</default><label>Navigation</label></value>
-            <value><fullName>Button_Click</fullName><default>false</default><label>Button Click</label></value>
-            <value><fullName>Feature_Use</fullName><default>false</default><label>Feature Use</label></value>
-            <value><fullName>Stage_Change</fullName><default>false</default><label>Stage Change</label></value>
-            <value><fullName>Search</fullName><default>false</default><label>Search</label></value>
-            <value><fullName>Error</fullName><default>false</default><label>Error</label></value>
-            <value><fullName>Field_Change</fullName><default>false</default><label>Field Change</label></value>
-            <value><fullName>Document_Action</fullName><default>false</default><label>Document Action</label></value>
-            <value><fullName>Portal_Hours_Logged</fullName><default>false</default><label>Portal Hours Logged</label></value>
-            <value><fullName>API_Request</fullName><default>false</default><label>API Request</label></value>
-        </valueSetDefinition>
+        <valueSetName>DeliveryActivityActionType</valueSetName>
     </valueSet>
 </CustomField>

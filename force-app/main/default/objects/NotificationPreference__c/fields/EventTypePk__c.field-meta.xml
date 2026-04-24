@@ -7,17 +7,14 @@
     <required>false</required>
     <type>Picklist</type>
     <valueSet>
-        <!-- Non-restricted: unlocked packages don't reliably propagate new values
-             on subscriber upgrade when restricted=true (SF Known Issue
-             a028c00000qPzYUAA0). Integrity enforced at the service layer. -->
+        <!-- Phase 2 GVS migration: values live in
+             globalValueSets/DeliveryNotificationEventType.globalValueSet-meta.xml
+             so new notification event types propagate reliably on unlocked-package
+             upgrade (SF Known Issue a028c00000qPzYUAA0). restricted=false kept
+             temporarily from Phase 1 band-aid; Phase 3 will flip back to
+             restricted=true once a real package-upgrade cycle has verified GVS
+             propagation. -->
         <restricted>false</restricted>
-        <valueSetDefinition>
-            <sorted>false</sorted>
-            <value><fullName>Stage_Change</fullName><default>true</default><label>Stage Change</label></value>
-            <value><fullName>Escalation</fullName><default>false</default><label>Escalation</label></value>
-            <value><fullName>Document_Action</fullName><default>false</default><label>Document Action</label></value>
-            <value><fullName>Comment</fullName><default>false</default><label>Comment</label></value>
-            <value><fullName>Assignment</fullName><default>false</default><label>Assignment</label></value>
-        </valueSetDefinition>
+        <valueSetName>DeliveryNotificationEventType</valueSetName>
     </valueSet>
 </CustomField>

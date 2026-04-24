@@ -8,46 +8,13 @@
     <trackTrending>false</trackTrending>
     <type>Picklist</type>
     <valueSet>
-        <!-- Intentionally non-restricted: Salesforce unlocked packages do not
-             reliably propagate NEW restricted-picklist values to subscribers on
-             upgrade. Setting restricted=false lets new values (like Pending added
-             in v0.200) be accepted via DML on subscribers that upgrade, even when
-             the describe API hasn't refreshed. Integrity is enforced at the Apex
-             service layer (DeliverySyncEngine / DeliverySyncItemIngestor) where
-             the status transitions are gated. -->
+        <!-- Phase 2 GVS migration: values live in
+             globalValueSets/DeliverySyncItemStatus.globalValueSet-meta.xml so new
+             values propagate reliably on unlocked-package upgrade (SF Known Issue
+             a028c00000qPzYUAA0). restricted=false kept temporarily from Phase 1
+             band-aid (PR #682); Phase 3 will flip back to restricted=true once a
+             real package-upgrade cycle has verified GVS propagation end-to-end. -->
         <restricted>false</restricted>
-        <valueSetDefinition>
-            <sorted>false</sorted>
-            <value>
-                <fullName>Queued</fullName>
-                <default>false</default>
-                <label>Queued</label>
-            </value>
-            <value>
-                <fullName>Staged</fullName>
-                <default>false</default>
-                <label>Staged</label>
-            </value>
-            <value>
-                <fullName>Pending</fullName>
-                <default>false</default>
-                <label>Pending</label>
-            </value>
-            <value>
-                <fullName>Processing</fullName>
-                <default>false</default>
-                <label>Processing</label>
-            </value>
-            <value>
-                <fullName>Synced</fullName>
-                <default>false</default>
-                <label>Synced</label>
-            </value>
-            <value>
-                <fullName>Failed</fullName>
-                <default>false</default>
-                <label>Failed</label>
-            </value>
-        </valueSetDefinition>
+        <valueSetName>DeliverySyncItemStatus</valueSetName>
     </valueSet>
 </CustomField>
