@@ -8,7 +8,7 @@
  *               See DeliveryPicklistIntegrityService.
  * @author       Cloud Nimbus LLC
  */
-public with sharing class DeliveryNotificationPreferenceTriggerHandler {
+public with sharing class DeliveryNotifPrefTriggerHandler {
 
     /**
      * @description Before insert/update picklist allowlist enforcement.

@@ -6,5 +6,5 @@
  * @author       Cloud Nimbus LLC
  */
 trigger DeliveryNotificationPreferenceTrigger on NotificationPreference__c (before insert, before update) { //NOPMD - AvoidLogicInTrigger: single-line delegation only
-    DeliveryNotificationPreferenceTriggerHandler.onBeforeInsertOrUpdate(Trigger.new);
+    DeliveryNotifPrefTriggerHandler.onBeforeInsertOrUpdate(Trigger.new);
 }
