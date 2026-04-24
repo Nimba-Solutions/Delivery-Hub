@@ -11,6 +11,8 @@
 - LWC boolean `@api` props cannot default to `true` (LWC1503) — use inverted prop name.
 - When making Apex classes `global`, ALL inner classes used as return/param types must also be `global`.
 - Use DateTime stamps, not Booleans, for feature toggles (`EnableXDateTime__c` pattern).
+- **Picklist fields must use `GlobalValueSet` references from day one (`<valueSetName>`), never inline `<valueSetDefinition>`.** Unlocked packages do not reliably propagate new values added to restricted inline picklists on subscriber upgrades (SF Known Issue `a028c00000qPzYUAA0`), and SF blocks retrofitting GVS onto an existing inline-defined field ("Cannot change which global value set this picklist uses"). GVS from day one is the only durable path.
+- Existing inline-defined picklists stay `<restricted>false</restricted>`. Data integrity on those is enforced at the Apex service / trigger layer (see `DeliveryPicklistIntegrityService`), not via the field's restricted flag. This survives bulk-data-loader imports and subscriber customization.
 
 ## Org Aliases
 - `MF-Prod` — glen.bradford@nimbasolutions.com.mf123 (MF production)
@@ -29,7 +31,7 @@
 ## Data Integrity
 - NEVER fabricate realistic financial data, statistics, or quotes. Use obviously placeholder values and flag them.
 - NEVER run DML against production orgs unless explicitly asked. Always sandbox first.
-- SyncItem StatusPk__c is restricted picklist — must delete records, not update to non-existent values.
+- SyncItem StatusPk__c is NOT restricted (legacy inline-defined field, unrestricted since 2026-04-23). Allowed values enforced via trigger at `DeliveryPicklistIntegrityService`. Never insert records with unknown picklist values — they will pass SF restriction but fail the trigger.
 
 ## Workflow Discipline
 - Do NOT jump ahead or start building before the user confirms the approach.
