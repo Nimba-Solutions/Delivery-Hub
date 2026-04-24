@@ -8,47 +8,13 @@
     <trackTrending>false</trackTrending>
     <type>Picklist</type>
     <valueSet>
-        <!-- Non-restricted: unlocked packages don't reliably propagate new values
-             on subscriber upgrade when restricted=true (SF Known Issue
-             a028c00000qPzYUAA0). Integrity enforced at the service layer. -->
-        <restricted>false</restricted>
-        <valueSetDefinition>
-            <sorted>false</sorted>
-            <value>
-                <fullName>WorkItemComment__c</fullName>
-                <default>false</default>
-                <label>WorkItemComment__c</label>
-            </value>
-            <value>
-                <fullName>ContentVersion</fullName>
-                <default>false</default>
-                <label>ContentVersion</label>
-            </value>
-            <value>
-                <fullName>WorkItem__c</fullName>
-                <default>false</default>
-                <label>WorkItem__c</label>
-            </value>
-            <value>
-                <fullName>NetworkEntity__c</fullName>
-                <default>false</default>
-                <label>NetworkEntity__c</label>
-            </value>
-            <value>
-                <fullName>WorkLog__c</fullName>
-                <default>false</default>
-                <label>WorkLog__c</label>
-            </value>
-            <value>
-                <fullName>UsageAnalytics</fullName>
-                <default>false</default>
-                <label>UsageAnalytics</label>
-            </value>
-            <value>
-                <fullName>BountyClaim__c</fullName>
-                <default>false</default>
-                <label>BountyClaim__c</label>
-            </value>
-        </valueSetDefinition>
+        <!-- Phase 2 GVS migration: values live in
+             globalValueSets/DeliverySyncItemObjectType.globalValueSet-meta.xml so
+             new synced object types propagate reliably on unlocked-package upgrade
+             (SF Known Issue a028c00000qPzYUAA0). restricted=false kept temporarily
+             from Phase 1 band-aid; Phase 3 will flip back to restricted=true once
+             a real package-upgrade cycle has verified GVS propagation. -->
+        <restricted>true</restricted>
+        <valueSetName>DeliverySyncItemObjectType</valueSetName>
     </valueSet>
 </CustomField>
