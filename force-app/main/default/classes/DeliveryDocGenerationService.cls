@@ -113,6 +113,25 @@ public with sharing class DeliveryDocGenerationService {
 
         Database.insert(doc, AccessLevel.SYSTEM_MODE);
 
+        // Defensive: confirm SnapshotTxt__c actually persisted. We've seen it
+        // silently null-strip on insert (likely FLS even with SYSTEM_MODE in
+        // some user contexts) — better to fail loudly here than ship a doc
+        // that quietly corrupts the supersede chain. PR #680 added a read-time
+        // live-rebuild as defense-in-depth; this is the write-time guard.
+        DeliveryDocument__c persisted = [
+            SELECT SnapshotTxt__c
+            FROM DeliveryDocument__c
+            WHERE Id = :doc.Id
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (String.isBlank(persisted.SnapshotTxt__c)) {
+            throw new AuraHandledException(
+                'Document generated but snapshot did not persist (likely FLS write-strip). ' +
+                'Generation aborted to prevent corruption. Contact Admin to verify SnapshotTxt__c FLS for the running user.'
+            );
+        }
+
         // Create signature slots for templates that require signing.
         // No-op for templates without DocumentTemplateSlot__mdt records configured.
         DeliveryDocActionService.createSlotsForTemplate(doc.Id, templateType, snapshot);
