@@ -132,20 +132,37 @@ public with sharing class IntegrationResponseMapper {
                     Integer idx = Integer.valueOf(
                         segment.substring(bracket + 1, segment.length() - 1)
                     );
-                    if (current instanceof Map<String, Object>) {
-                        current = ((Map<String, Object>) current).get(key);
+                    Map<String, Object> mapVal = asMap(current);
+                    if (mapVal != null) {
+                        current = mapVal.get(key);
                     }
-                    if (current instanceof List<Object>) {
-                        List<Object> arr = (List<Object>) current;
-                        current = (idx < arr.size()) ? arr[idx] : null;
+                    List<Object> listVal = asList(current);
+                    if (listVal != null) {
+                        current = (idx < listVal.size()) ? listVal[idx] : null;
                     }
-                } else if (current instanceof Map<String, Object>) {
-                    current = ((Map<String, Object>) current).get(segment);
                 } else {
-                    return null;
+                    Map<String, Object> mapVal = asMap(current);
+                    if (mapVal == null) { return null; }
+                    current = mapVal.get(segment);
                 }
             }
             return current == null ? null : String.valueOf(current);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static Map<String, Object> asMap(Object o) {
+        try {
+            return (Map<String, Object>) o;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static List<Object> asList(Object o) {
+        try {
+            return (List<Object>) o;
         } catch (Exception e) {
             return null;
         }
