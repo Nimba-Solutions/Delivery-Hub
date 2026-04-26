@@ -13,8 +13,15 @@ private class DeliveryHubPollerTest {
 
     // Helper to get the Org's namespace prefix
     private static String getNamespace() {
+        // Backwards-fix 4/26: when running INSIDE the delivery package's own
+        // dev_namespaced scratch (cumulusci package upload), Organization.
+        // NamespacePrefix returns 'delivery' but Apex resolves the package's
+        // own fields WITHOUT prefix. Outside (subscriber org), fields need
+        // the 'delivery__' prefix. Previous logic was inverted — returned
+        // 'delivery__' inside the package's own namespace, breaking JSON
+        // deserialize of CMT records during package upload tests.
         String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
-        return String.isBlank(ns) ? '' : ns + '__';
+        return ns == 'delivery' ? '' : 'delivery__';
     }
 
     @TestSetup
