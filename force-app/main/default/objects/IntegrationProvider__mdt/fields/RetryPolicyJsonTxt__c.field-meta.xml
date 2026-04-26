@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RetryPolicyJsonTxt__c</fullName>
+    <description>JSON-serialized retry policy. Schema: {maxRetries:int, baseDelaySec:int, maxDelaySec:int, jitterFraction:float}. Default when blank: {maxRetries:3, baseDelaySec:60, maxDelaySec:3600, jitterFraction:0.2}. Pattern: AWS exponential-backoff-with-full-jitter (https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/).</description>
+    <externalId>false</externalId>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <inlineHelpText>JSON: {maxRetries, baseDelaySec, maxDelaySec, jitterFraction}. Blank = framework default.</inlineHelpText>
+    <label>Retry Policy JSON</label>
+    <length>1024</length>
+    <required>false</required>
+    <type>LongTextArea</type>
+    <visibleLines>4</visibleLines>
+</CustomField>

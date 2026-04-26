@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Platform Event for Integration Framework. Published by IntegrationWebhookReceiver after HMAC validation; subscribed by an Apex trigger that dispatches to provider.acceptWebhook() asynchronously. Decouples webhook ingress from processing — gives free at-least-once delivery + 72h replay window. Per Agent 2 SF research: PE delivery is at-least-once (dispatcher must idempotency-check); PE replay is 72h max so IntegrationItem__c remains the system of record for durability.</description>
+    <eventType>HighVolume</eventType>
+    <label>Integration Event</label>
+    <pluralLabel>Integration Events</pluralLabel>
+    <publishBehavior>PublishAfterCommit</publishBehavior>
+</CustomObject>

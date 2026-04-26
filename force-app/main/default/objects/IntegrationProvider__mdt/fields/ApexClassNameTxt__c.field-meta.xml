@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ApexClassNameTxt__c</fullName>
+    <description>Fully-qualified Apex class implementing IIntegrationSink and/or IIntegrationSource. Subscriber-namespace classes work — dispatcher uses Type.forName(namespace, className). Required.</description>
+    <externalId>false</externalId>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <inlineHelpText>Apex class name implementing IIntegrationSink or IIntegrationSource. Include namespace if cross-namespace.</inlineHelpText>
+    <label>Apex Class Name</label>
+    <length>120</length>
+    <required>true</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
