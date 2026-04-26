@@ -11,28 +11,22 @@
 @SuppressWarnings('PMD.AvoidGlobalModifier')
 global class IntegrationSinkResult {
     /** @description Remote system's identifier for the record (idempotency key). */
-    @AuraEnabled @SuppressWarnings('PMD.AvoidGlobalModifier')
-    global String remoteId { get; set; }
+    @AuraEnabled global String remoteId { get; set; }
     /** @description Per-call status: Sent | PartialSuccess | RetryableFailure | TerminalFailure. */
-    @AuraEnabled @SuppressWarnings('PMD.AvoidGlobalModifier')
-    global String statusCode { get; set; }
+    @AuraEnabled global String statusCode { get; set; }
     /** @description Short human-readable status (one line, surfaces in admin UI). */
-    @AuraEnabled @SuppressWarnings('PMD.AvoidGlobalModifier')
-    global String statusMessage { get; set; }
+    @AuraEnabled global String statusMessage { get; set; }
     /** @description Truncated response body (max 4000 chars) for diagnostics. */
-    @AuraEnabled @SuppressWarnings('PMD.AvoidGlobalModifier')
-    global String responseBodySnippet { get; set; }
+    @AuraEnabled global String responseBodySnippet { get; set; }
     /** @description When set, dispatcher schedules retry at this time instead of
      *  the default exponential backoff. Honors provider-specified Retry-After. */
-    @AuraEnabled @SuppressWarnings('PMD.AvoidGlobalModifier')
-    global Datetime retryAfter { get; set; }
+    @AuraEnabled global Datetime retryAfter { get; set; }
 
     /**
      * @description Constructs a successful result. Convenience for the common path.
      * @param remoteId Remote system's identifier.
      * @return Configured IntegrationSinkResult with statusCode='Sent'.
      */
-    @SuppressWarnings('PMD.AvoidGlobalModifier')
     global static IntegrationSinkResult success(String remoteId) {
         IntegrationSinkResult r = new IntegrationSinkResult();
         r.remoteId = remoteId;
@@ -49,7 +43,6 @@ global class IntegrationSinkResult {
      * @param body Optional response body for diagnostics (truncated).
      * @return Configured IntegrationSinkResult with statusCode='RetryableFailure'.
      */
-    @SuppressWarnings('PMD.AvoidGlobalModifier')
     global static IntegrationSinkResult retryable(String message, String body) {
         IntegrationSinkResult r = new IntegrationSinkResult();
         r.statusCode = 'RetryableFailure';
@@ -67,7 +60,6 @@ global class IntegrationSinkResult {
      * @param body Optional response body for diagnostics.
      * @return Configured IntegrationSinkResult with statusCode='TerminalFailure'.
      */
-    @SuppressWarnings('PMD.AvoidGlobalModifier')
     global static IntegrationSinkResult terminal(String message, String body) {
         IntegrationSinkResult r = new IntegrationSinkResult();
         r.statusCode = 'TerminalFailure';

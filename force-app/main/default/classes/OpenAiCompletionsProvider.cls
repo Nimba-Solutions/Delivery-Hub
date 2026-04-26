@@ -55,7 +55,6 @@ public with sharing class OpenAiCompletionsProvider implements IIntegrationSink 
      * @return IntegrationSinkResult — Sent on 200, RetryableFailure on 5xx
      *         or network error, TerminalFailure on 4xx or missing config.
      */
-    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     public IntegrationSinkResult send(Map<String, Object> payload, IntegrationProvider__mdt providerConfig) {
         if (payload == null || !payload.containsKey('prompt')
             || String.isBlank((String) payload.get('prompt'))) {
@@ -122,7 +121,6 @@ public with sharing class OpenAiCompletionsProvider implements IIntegrationSink 
      * @param providerConfig Resolved provider config.
      * @return true when the connection is usable.
      */
-    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     public Boolean validateConnection(IntegrationProvider__mdt providerConfig) {
         if (String.isBlank(providerConfig.NamedCredentialDevNameTxt__c)) {
             return false;

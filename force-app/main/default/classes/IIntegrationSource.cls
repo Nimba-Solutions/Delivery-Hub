@@ -37,7 +37,6 @@ global interface IIntegrationSource {
      * @return IntegrationPullResult — list of records + new cursor + sourceId
      *         pairs for idempotency.
      */
-    @SuppressWarnings('PMD.AvoidGlobalModifier')
     IntegrationPullResult fetch(String cursor, IntegrationProvider__mdt providerConfig);
 
     /**
@@ -57,6 +56,5 @@ global interface IIntegrationSource {
      * @return IntegrationWebhookResult — list of records + acknowledgment HTTP
      *         status to return to the calling system.
      */
-    @SuppressWarnings('PMD.AvoidGlobalModifier')
     IntegrationWebhookResult acceptWebhook(Map<String, String> headers, String body, IntegrationProvider__mdt providerConfig);
 }
