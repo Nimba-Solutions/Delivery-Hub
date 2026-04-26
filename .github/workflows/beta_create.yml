@@ -74,8 +74,12 @@ jobs:
           dev-hub: true
 
       - name: Install Latest Beta (ci_beta flow) on Fresh Scratch
+        # CCI requires the github service as a JSON blob (username + token + email),
+        # not a bare token. Mirror the env-block from nimba-actions/run-flow so this
+        # job authenticates the same way `install-beta` does. `github.token` is the
+        # auto-generated GITHUB_TOKEN — always available, no extra secret config.
         env:
-          CUMULUSCI_SERVICE_github: ${{ secrets.CUMULUSCI_TOKEN }}
+          CUMULUSCI_SERVICE_github: '{"username": "${{ github.actor }}", "token": "${{ secrets.CUMULUSCI_TOKEN || github.token }}", "email": "cci@github.actions" }'
         run: |
           cci flow run ci_beta --org beta
 

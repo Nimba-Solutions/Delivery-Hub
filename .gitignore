@@ -79,3 +79,16 @@ MORNING_GAPS_REPORT.md
 /mfp-dump/
 /scripts/mfp-check/
 /scripts/scratch-verify/
+
+# MF-Prod data dumps (must never be committed)
+mfp*.json
+mfprod*.json
+*-describe.json
+*-clean.json
+mf-active-workitems.csv
+MORNING_*.md
+mfp-dump/
+
+# Dated planning / session docs (belong in private notes, not the public repo)
+docs/*_2026-*.md
+docs/*_2027-*.md

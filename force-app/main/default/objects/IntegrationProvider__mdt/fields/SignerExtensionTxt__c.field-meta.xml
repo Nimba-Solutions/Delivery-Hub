@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SignerExtensionTxt__c</fullName>
+    <description>Optional Apex class name implementing IIntegrationTemplateExtension. Invoked AFTER body+headers are rendered, BEFORE the HTTP call — typically to add a signature header (Stripe HMAC, AWS SigV4, etc.). Class must be in the running namespace or referenced as namespace.ClassName.</description>
+    <inlineHelpText>Apex class implementing IIntegrationTemplateExtension. e.g. for HMAC signing.</inlineHelpText>
+    <label>Signer Extension Class</label>
+    <length>120</length>
+    <type>Text</type>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

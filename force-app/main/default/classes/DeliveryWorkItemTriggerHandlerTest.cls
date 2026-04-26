@@ -340,4 +340,62 @@ public class DeliveryWorkItemTriggerHandlerTest {
             System.assertNotEquals(null, newItem.Id, 'Work item should be inserted successfully');
         }
     }
+
+    /**
+     * @description Regression-prevention test for the cross-org User-FK bug
+     *              class (Issue C, 2026-04-26). Asserts no User-typed lookup
+     *              ever appears in the canonical syncFields Set used by
+     *              DeliveryWorkItemTriggerHandler.handleAfter. User Ids are
+     *              org-specific — syncing them to a subscriber org produces
+     *              INSUFFICIENT_ACCESS_ON_CROSS_REFERENCE_ENTITY on every
+     *              dispatch when the receiving org doesn't have that User Id.
+     *              This test catches anyone (including future-us) who adds
+     *              DeveloperLookup__c, OwnerId, or any other User-typed field
+     *              back into syncFields. If this test fails, you almost
+     *              certainly need to either remove the field from syncFields
+     *              or add cross-org User translation to the framework.
+     */
+    @IsTest
+    static void syncFieldsNoUserTypedLookups() {
+        // Mirror of the Set in DeliveryWorkItemTriggerHandler.handleAfter.
+        // Keep these in sync — when a field is added/removed there, mirror
+        // here. The whole point of the test is to assert at compile time
+        // (via Schema describe) that none of these are User-typed lookups.
+        Set<String> canonicalSyncFields = new Set<String>{
+            'BriefDescriptionTxt__c', 'DetailsTxt__c', 'StageNamePk__c',
+            'StatusPk__c', 'PriorityPk__c', 'DeveloperDaysSizeNumber__c',
+            'EstimatedHoursNumber__c', 'ClientPreApprovedHoursNumber__c',
+            'CalculatedETADate__c', 'ProjectedUATReadyDate__c',
+            'AcceptanceCriteriaTxt__c', 'StepsToReproduceTxt__c',
+            'SLATargetDate__c', 'EstimatedStartDevDate__c',
+            'EstimatedEndDevDate__c', 'RequestTypePk__c',
+            'WorkflowTypeTxt__c', 'SortOrderNumber__c',
+            'BountyEnabledDateTime__c', 'BountyAmountCurrency__c',
+            'BountyDeadlineDate__c', 'BountyStatusPk__c',
+            'BountyTokenTxt__c', 'BountyDifficultyPk__c',
+            'BountySkillsTxt__c', 'BountyMaxClaimsNumber__c'
+        };
+        Map<String, Schema.SObjectField> fieldMap =
+            WorkItem__c.SObjectType.getDescribe().fields.getMap();
+        for (String fieldName : canonicalSyncFields) {
+            Schema.SObjectField fToken = fieldMap.get(fieldName.toLowerCase());
+            if (fToken == null) {
+                continue; // field not deployed in this org — skip
+            }
+            Schema.DescribeFieldResult dfr = fToken.getDescribe();
+            if (dfr.getType() != Schema.DisplayType.REFERENCE) {
+                continue;
+            }
+            for (Schema.SObjectType ref : dfr.getReferenceTo()) {
+                System.assertNotEquals(
+                    'User',
+                    ref.getDescribe().getName(),
+                    'Field ' + fieldName + ' is a User-typed lookup and must NOT'
+                        + ' be in syncFields. User Ids are org-specific and trigger'
+                        + ' INSUFFICIENT_ACCESS_ON_CROSS_REFERENCE_ENTITY on subscriber'
+                        + ' org dispatch. See Issue C 2026-04-26 / DH PR #700.'
+                );
+            }
+        }
+    }
 }

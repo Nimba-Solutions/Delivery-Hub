@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SuccessParseExprTxt__c</fullName>
+    <description>Optional dotted-path expression to extract a value from the success response body into IntegrationDispatcherResult.remoteId or responseBody. Example: $.id pulls top-level id field; $.choices[0].message.content reads OpenAI shape.</description>
+    <inlineHelpText>$.id or $.choices[0].message.content style paths. Blank = no extraction.</inlineHelpText>
+    <label>Success Parse Expression</label>
+    <length>255</length>
+    <type>Text</type>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

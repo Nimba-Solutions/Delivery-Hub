@@ -23,6 +23,7 @@
             <value><fullName>Document_Action</fullName><default>false</default><label>Document Action</label></value>
             <value><fullName>Portal_Hours_Logged</fullName><default>false</default><label>Portal Hours Logged</label></value>
             <value><fullName>API_Request</fullName><default>false</default><label>API Request</label></value>
+            <value><fullName>WorkLog_Deferral</fullName><default>false</default><label>WorkLog Deferral</label></value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>
