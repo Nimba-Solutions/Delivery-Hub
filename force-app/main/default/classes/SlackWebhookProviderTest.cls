@@ -54,7 +54,7 @@ private class SlackWebhookProviderTest {
      * @description Happy path: 200 response → Sent.
      */
     @IsTest
-    static void send_success_returnsSent() {
+    static void sendSuccessReturnsSent() {
         SlackMock mock = new SlackMock();
         mock.statusCode = 200;
         mock.responseBody = 'ok';
@@ -73,7 +73,7 @@ private class SlackWebhookProviderTest {
      *              Don't retry; the payload is the problem.
      */
     @IsTest
-    static void send_400_returnsTerminal() {
+    static void send400ReturnsTerminal() {
         SlackMock mock = new SlackMock();
         mock.statusCode = 400;
         mock.responseBody = 'invalid_payload';
@@ -92,7 +92,7 @@ private class SlackWebhookProviderTest {
      * @description 503 from Slack (outage) → retryable. Backoff handles it.
      */
     @IsTest
-    static void send_503_returnsRetryable() {
+    static void send503ReturnsRetryable() {
         SlackMock mock = new SlackMock();
         mock.statusCode = 503;
         mock.responseBody = 'slack outage';
@@ -111,7 +111,7 @@ private class SlackWebhookProviderTest {
      *              Don't waste an outbound call on a known-bad payload.
      */
     @IsTest
-    static void send_missingText_returnsTerminal_noCallout() {
+    static void sendMissingTextReturnsTerminalNoCallout() {
         // No mock set — would throw if a callout were attempted.
         SlackWebhookProvider p = new SlackWebhookProvider();
         IntegrationSinkResult r = p.send(new Map<String, Object>{ 'wrong' => 'key' }, testConfig());
@@ -124,7 +124,7 @@ private class SlackWebhookProviderTest {
      * @description Missing Named Credential → terminal, NO callout.
      */
     @IsTest
-    static void send_missingNamedCredential_returnsTerminal_noCallout() {
+    static void sendMissingNamedCredentialReturnsTerminalNoCallout() {
         IntegrationProvider__mdt cfg = testConfig();
         cfg.NamedCredentialDevNameTxt__c = null;
 
@@ -139,7 +139,7 @@ private class SlackWebhookProviderTest {
      * @description CalloutException (network unreachable) → retryable.
      */
     @IsTest
-    static void send_calloutException_returnsRetryable() {
+    static void sendCalloutExceptionReturnsRetryable() {
         SlackMock mock = new SlackMock();
         mock.throwException = true;
         Test.setMock(HttpCalloutMock.class, mock);
@@ -156,7 +156,7 @@ private class SlackWebhookProviderTest {
      * @description validateConnection: 200 from Slack → live.
      */
     @IsTest
-    static void validateConnection_200_returnsTrue() {
+    static void validateConnection200ReturnsTrue() {
         SlackMock mock = new SlackMock();
         mock.statusCode = 200;
         Test.setMock(HttpCalloutMock.class, mock);
@@ -173,7 +173,7 @@ private class SlackWebhookProviderTest {
      *              body but the URL routed). Counts as healthy.
      */
     @IsTest
-    static void validateConnection_400_returnsTrue() {
+    static void validateConnection400ReturnsTrue() {
         SlackMock mock = new SlackMock();
         mock.statusCode = 400;
         Test.setMock(HttpCalloutMock.class, mock);
@@ -189,7 +189,7 @@ private class SlackWebhookProviderTest {
      * @description validateConnection: 404 → URL is dead.
      */
     @IsTest
-    static void validateConnection_404_returnsFalse() {
+    static void validateConnection404ReturnsFalse() {
         SlackMock mock = new SlackMock();
         mock.statusCode = 404;
         Test.setMock(HttpCalloutMock.class, mock);
@@ -205,7 +205,7 @@ private class SlackWebhookProviderTest {
      * @description validateConnection with no NC → false, no callout.
      */
     @IsTest
-    static void validateConnection_missingNC_returnsFalse_noCallout() {
+    static void validateConnectionMissingNCReturnsFalseNoCallout() {
         IntegrationProvider__mdt cfg = testConfig();
         cfg.NamedCredentialDevNameTxt__c = null;
 

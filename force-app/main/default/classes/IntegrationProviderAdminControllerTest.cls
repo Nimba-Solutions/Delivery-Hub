@@ -15,7 +15,7 @@
 private class IntegrationProviderAdminControllerTest {
 
     @IsTest
-    static void listProviders_returnsNonNullList() {
+    static void listProvidersReturnsNonNullList() {
         Test.startTest();
         List<IntegrationProviderAdminController.ProviderRow> rows =
             IntegrationProviderAdminController.listProviders();
@@ -24,7 +24,7 @@ private class IntegrationProviderAdminControllerTest {
     }
 
     @IsTest
-    static void probeProvider_unknownDevName_throwsAuraHandled() {
+    static void probeProviderUnknownDevNameThrowsAuraHandled() {
         Boolean threw = false;
         Test.startTest();
         try {

@@ -28,41 +28,41 @@ private class IntegrationWebhookReceiverTest {
     }
 
     @IsTest
-    static void extractProviderKey_simple() {
+    static void extractProviderKeySimple() {
         String key = IntegrationWebhookReceiver.extractProviderKey(
             '/services/apexrest/integration/v1/webhook/Slack_Webhook');
         System.assertEquals('Slack_Webhook', key);
     }
 
     @IsTest
-    static void extractProviderKey_trailingSlash() {
+    static void extractProviderKeyTrailingSlash() {
         String key = IntegrationWebhookReceiver.extractProviderKey(
             '/services/apexrest/integration/v1/webhook/Active_Collab/');
         System.assertEquals('Active_Collab', key);
     }
 
     @IsTest
-    static void extractProviderKey_withQueryString() {
+    static void extractProviderKeyWithQueryString() {
         String key = IntegrationWebhookReceiver.extractProviderKey(
             '/services/apexrest/integration/v1/webhook/MyProvider?source=test');
         System.assertEquals('MyProvider', key);
     }
 
     @IsTest
-    static void extractProviderKey_missingMarker_returnsNull() {
+    static void extractProviderKeyMissingMarkerReturnsNull() {
         String key = IntegrationWebhookReceiver.extractProviderKey(
             '/services/apexrest/integration/v1/something-else/X');
         System.assertEquals(null, key);
     }
 
     @IsTest
-    static void extractProviderKey_blank_returnsNull() {
+    static void extractProviderKeyBlankReturnsNull() {
         System.assertEquals(null, IntegrationWebhookReceiver.extractProviderKey(null));
         System.assertEquals(null, IntegrationWebhookReceiver.extractProviderKey(''));
     }
 
     @IsTest
-    static void collectHeaders_lowerCasesKeys() {
+    static void collectHeadersLowerCasesKeys() {
         RestRequest req = buildRequest('/x', 'body', new Map<String, String>{
             'X-Signature' => 'abc',
             'Content-Type' => 'application/json'
@@ -73,34 +73,34 @@ private class IntegrationWebhookReceiverTest {
     }
 
     @IsTest
-    static void validateTimestamp_freshTimestamp_returnsTrue() {
+    static void validateTimestampFreshTimestampReturnsTrue() {
         Long now = Datetime.now().getTime() / 1000;
         Map<String, String> h = new Map<String, String>{ 'x-timestamp' => String.valueOf(now) };
         System.assertEquals(true, IntegrationWebhookReceiver.validateTimestamp(h));
     }
 
     @IsTest
-    static void validateTimestamp_staleTimestamp_returnsFalse() {
+    static void validateTimestampStaleTimestampReturnsFalse() {
         Long staleSec = (Datetime.now().getTime() / 1000) - 1000; // 16+ min ago
         Map<String, String> h = new Map<String, String>{ 'x-timestamp' => String.valueOf(staleSec) };
         System.assertEquals(false, IntegrationWebhookReceiver.validateTimestamp(h));
     }
 
     @IsTest
-    static void validateTimestamp_missingHeader_returnsTrue_stub() {
+    static void validateTimestampMissingHeaderReturnsTrueStub() {
         // Stub policy during bring-up: tolerate missing timestamp.
         System.assertEquals(true,
             IntegrationWebhookReceiver.validateTimestamp(new Map<String, String>()));
     }
 
     @IsTest
-    static void validateTimestamp_invalidFormat_returnsFalse() {
+    static void validateTimestampInvalidFormatReturnsFalse() {
         Map<String, String> h = new Map<String, String>{ 'x-timestamp' => 'not-a-number' };
         System.assertEquals(false, IntegrationWebhookReceiver.validateTimestamp(h));
     }
 
     @IsTest
-    static void doPost_missingProviderKey_returns400() {
+    static void doPostMissingProviderKeyReturns400() {
         RestContext.request = buildRequest(
             '/services/apexrest/integration/v1/webhook/', '{}', null);
         RestContext.response = new RestResponse();
@@ -111,7 +111,7 @@ private class IntegrationWebhookReceiverTest {
     }
 
     @IsTest
-    static void doPost_unknownProvider_returns404() {
+    static void doPostUnknownProviderReturns404() {
         RestContext.request = buildRequest(
             '/services/apexrest/integration/v1/webhook/NonexistentProvider_99999',
             '{}', null);
@@ -123,7 +123,7 @@ private class IntegrationWebhookReceiverTest {
     }
 
     @IsTest
-    static void writeResponse_setsCodeAndBody() {
+    static void writeResponseSetsCodeAndBody() {
         RestResponse res = new RestResponse();
         IntegrationWebhookReceiver.writeResponse(res, 418, '{"teapot":true}');
         System.assertEquals(418, res.statusCode);
@@ -131,7 +131,7 @@ private class IntegrationWebhookReceiverTest {
     }
 
     @IsTest
-    static void validateSignature_stubReturnsTrue() {
+    static void validateSignatureStubReturnsTrue() {
         // Stub state: validateSignature returns true unconditionally during
         // bring-up. When secret-resolution lands in Phase 4 follow-up, this
         // test gets replaced with positive + negative HMAC cases.

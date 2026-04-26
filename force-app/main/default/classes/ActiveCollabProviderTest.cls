@@ -32,7 +32,7 @@ private class ActiveCollabProviderTest {
     }
 
     @IsTest
-    static void send_withoutNC_returnsTerminal() {
+    static void sendWithoutNCReturnsTerminal() {
         ActiveCollabProvider p = new ActiveCollabProvider();
         IntegrationSinkResult r = p.send(new Map<String, Object>{ 'hours' => 1 }, configWithoutNC());
         System.assertEquals('TerminalFailure', r.statusCode);
@@ -40,14 +40,14 @@ private class ActiveCollabProviderTest {
     }
 
     @IsTest
-    static void send_nullPayload_returnsTerminal() {
+    static void sendNullPayloadReturnsTerminal() {
         ActiveCollabProvider p = new ActiveCollabProvider();
         IntegrationSinkResult r = p.send(null, configWithoutNC());
         System.assertEquals('TerminalFailure', r.statusCode);
     }
 
     @IsTest
-    static void send_scaffoldStub_returnsTerminalWithExplanation() {
+    static void sendScaffoldStubReturnsTerminalWithExplanation() {
         ActiveCollabProvider p = new ActiveCollabProvider();
         IntegrationSinkResult r = p.send(
             new Map<String, Object>{ 'hours' => 2 }, configWithNC());
@@ -57,14 +57,14 @@ private class ActiveCollabProviderTest {
     }
 
     @IsTest
-    static void fetch_withoutNC_returnsRetryable() {
+    static void fetchWithoutNCReturnsRetryable() {
         ActiveCollabProvider p = new ActiveCollabProvider();
         IntegrationPullResult r = p.fetch(null, configWithoutNC());
         System.assertEquals('RetryableFailure', r.statusCode);
     }
 
     @IsTest
-    static void fetch_withNC_returnsNoNewData() {
+    static void fetchWithNCReturnsNoNewData() {
         ActiveCollabProvider p = new ActiveCollabProvider();
         IntegrationPullResult r = p.fetch(null, configWithNC());
         System.assertEquals('NoNewData', r.statusCode);
@@ -72,7 +72,7 @@ private class ActiveCollabProviderTest {
     }
 
     @IsTest
-    static void acceptWebhook_returnsAcknowledged() {
+    static void acceptWebhookReturnsAcknowledged() {
         ActiveCollabProvider p = new ActiveCollabProvider();
         IntegrationWebhookResult r = p.acceptWebhook(
             new Map<String, String>(),
@@ -83,7 +83,7 @@ private class ActiveCollabProviderTest {
     }
 
     @IsTest
-    static void validateConnection_alwaysFalseInScaffold() {
+    static void validateConnectionAlwaysFalseInScaffold() {
         ActiveCollabProvider p = new ActiveCollabProvider();
         System.assertEquals(false, p.validateConnection(configWithNC()));
         System.assertEquals(false, p.validateConnection(configWithoutNC()));

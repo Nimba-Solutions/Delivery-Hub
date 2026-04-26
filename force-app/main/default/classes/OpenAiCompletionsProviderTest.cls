@@ -44,7 +44,7 @@ private class OpenAiCompletionsProviderTest {
     }
 
     @IsTest
-    static void send_success_returnsSent_withContent() {
+    static void sendSuccessReturnsSentWithContent() {
         OpenAiMock mock = new OpenAiMock();
         mock.statusCode = 200;
         mock.responseBody = successBody();
@@ -61,7 +61,7 @@ private class OpenAiCompletionsProviderTest {
     }
 
     @IsTest
-    static void send_400_returnsTerminal() {
+    static void send400ReturnsTerminal() {
         OpenAiMock mock = new OpenAiMock();
         mock.statusCode = 400;
         mock.responseBody = '{"error":{"message":"bad model"}}';
@@ -77,7 +77,7 @@ private class OpenAiCompletionsProviderTest {
     }
 
     @IsTest
-    static void send_503_returnsRetryable() {
+    static void send503ReturnsRetryable() {
         OpenAiMock mock = new OpenAiMock();
         mock.statusCode = 503;
         Test.setMock(HttpCalloutMock.class, mock);
@@ -92,7 +92,7 @@ private class OpenAiCompletionsProviderTest {
     }
 
     @IsTest
-    static void send_missingPrompt_returnsTerminal_noCallout() {
+    static void sendMissingPromptReturnsTerminalNoCallout() {
         OpenAiCompletionsProvider p = new OpenAiCompletionsProvider();
         IntegrationSinkResult r = p.send(
             new Map<String, Object>{ 'model' => 'gpt-3.5-turbo' }, testConfig());
@@ -102,7 +102,7 @@ private class OpenAiCompletionsProviderTest {
     }
 
     @IsTest
-    static void send_missingNamedCredential_returnsTerminal() {
+    static void sendMissingNamedCredentialReturnsTerminal() {
         IntegrationProvider__mdt cfg = testConfig();
         cfg.NamedCredentialDevNameTxt__c = null;
 
@@ -113,7 +113,7 @@ private class OpenAiCompletionsProviderTest {
     }
 
     @IsTest
-    static void send_calloutException_returnsRetryable() {
+    static void sendCalloutExceptionReturnsRetryable() {
         OpenAiMock mock = new OpenAiMock();
         mock.throwException = true;
         Test.setMock(HttpCalloutMock.class, mock);
@@ -128,7 +128,7 @@ private class OpenAiCompletionsProviderTest {
     }
 
     @IsTest
-    static void send_emptyChoices_returnsRetryable() {
+    static void sendEmptyChoicesReturnsRetryable() {
         OpenAiMock mock = new OpenAiMock();
         mock.statusCode = 200;
         mock.responseBody = '{"choices":[]}';
@@ -144,7 +144,7 @@ private class OpenAiCompletionsProviderTest {
     }
 
     @IsTest
-    static void send_malformedBody_returnsRetryable() {
+    static void sendMalformedBodyReturnsRetryable() {
         OpenAiMock mock = new OpenAiMock();
         mock.statusCode = 200;
         mock.responseBody = 'not-json';
@@ -160,7 +160,7 @@ private class OpenAiCompletionsProviderTest {
     }
 
     @IsTest
-    static void send_acceptsAllOptionalParams() {
+    static void sendAcceptsAllOptionalParams() {
         OpenAiMock mock = new OpenAiMock();
         mock.statusCode = 200;
         mock.responseBody = successBody();
@@ -180,7 +180,7 @@ private class OpenAiCompletionsProviderTest {
     }
 
     @IsTest
-    static void validateConnection_200_returnsTrue() {
+    static void validateConnection200ReturnsTrue() {
         OpenAiMock mock = new OpenAiMock();
         mock.statusCode = 200;
         Test.setMock(HttpCalloutMock.class, mock);
@@ -193,7 +193,7 @@ private class OpenAiCompletionsProviderTest {
     }
 
     @IsTest
-    static void validateConnection_401_returnsTrue() {
+    static void validateConnection401ReturnsTrue() {
         // 401 = bad creds but endpoint live. Counts as healthy connection.
         OpenAiMock mock = new OpenAiMock();
         mock.statusCode = 401;
@@ -207,7 +207,7 @@ private class OpenAiCompletionsProviderTest {
     }
 
     @IsTest
-    static void validateConnection_500_returnsFalse() {
+    static void validateConnection500ReturnsFalse() {
         OpenAiMock mock = new OpenAiMock();
         mock.statusCode = 500;
         Test.setMock(HttpCalloutMock.class, mock);
@@ -220,7 +220,7 @@ private class OpenAiCompletionsProviderTest {
     }
 
     @IsTest
-    static void validateConnection_missingNC_returnsFalse_noCallout() {
+    static void validateConnectionMissingNCReturnsFalseNoCallout() {
         IntegrationProvider__mdt cfg = testConfig();
         cfg.NamedCredentialDevNameTxt__c = null;
 

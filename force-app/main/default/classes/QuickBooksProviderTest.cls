@@ -29,7 +29,7 @@ private class QuickBooksProviderTest {
     }
 
     @IsTest
-    static void send_missingOperation_returnsTerminal() {
+    static void sendMissingOperationReturnsTerminal() {
         QuickBooksProvider p = new QuickBooksProvider();
         IntegrationSinkResult r = p.send(
             new Map<String, Object>{ 'amount' => 100 }, configWithNC());
@@ -38,14 +38,14 @@ private class QuickBooksProviderTest {
     }
 
     @IsTest
-    static void send_nullPayload_returnsTerminal() {
+    static void sendNullPayloadReturnsTerminal() {
         QuickBooksProvider p = new QuickBooksProvider();
         IntegrationSinkResult r = p.send(null, configWithNC());
         System.assertEquals('TerminalFailure', r.statusCode);
     }
 
     @IsTest
-    static void send_missingNC_returnsTerminal_withOAuthHint() {
+    static void sendMissingNCReturnsTerminalWithOAuthHint() {
         QuickBooksProvider p = new QuickBooksProvider();
         IntegrationSinkResult r = p.send(
             new Map<String, Object>{ 'operation' => 'CreateJournalEntry' },
@@ -57,7 +57,7 @@ private class QuickBooksProviderTest {
     }
 
     @IsTest
-    static void send_scaffoldStub_returnsTerminalWithMigrationHint() {
+    static void sendScaffoldStubReturnsTerminalWithMigrationHint() {
         QuickBooksProvider p = new QuickBooksProvider();
         IntegrationSinkResult r = p.send(
             new Map<String, Object>{ 'operation' => 'CreateInvoice' },
@@ -71,7 +71,7 @@ private class QuickBooksProviderTest {
     }
 
     @IsTest
-    static void validateConnection_alwaysFalseInScaffold() {
+    static void validateConnectionAlwaysFalseInScaffold() {
         QuickBooksProvider p = new QuickBooksProvider();
         System.assertEquals(false, p.validateConnection(configWithNC()));
         System.assertEquals(false, p.validateConnection(configWithoutNC()));

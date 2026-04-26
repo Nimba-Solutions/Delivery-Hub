@@ -356,7 +356,7 @@ public class DeliveryWorkItemTriggerHandlerTest {
      *              or add cross-org User translation to the framework.
      */
     @IsTest
-    static void syncFields_noUserTypedLookups() {
+    static void syncFieldsNoUserTypedLookups() {
         // Mirror of the Set in DeliveryWorkItemTriggerHandler.handleAfter.
         // Keep these in sync — when a field is added/removed there, mirror
         // here. The whole point of the test is to assert at compile time

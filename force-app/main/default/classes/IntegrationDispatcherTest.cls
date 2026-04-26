@@ -54,7 +54,7 @@ private class IntegrationDispatcherTest {
      *              IntegrationDispatcherException instead of a NullPointerException.
      */
     @IsTest
-    static void resolveProvider_unknownDevName_throws() {
+    static void resolveProviderUnknownDevNameThrows() {
         Boolean threw = false;
         try {
             IntegrationDispatcher.resolveProvider('NonexistentProvider__9999');
@@ -70,7 +70,7 @@ private class IntegrationDispatcherTest {
      *              assertEnabled, even if the rest of the config looks valid.
      */
     @IsTest
-    static void assertEnabled_nullDateTime_throws() {
+    static void assertEnabledNullDateTimeThrows() {
         IntegrationProvider__mdt cfg = new IntegrationProvider__mdt();
         cfg.DeveloperName = 'TestDisabled';
         cfg.EnabledDateTime__c = null;
@@ -88,7 +88,7 @@ private class IntegrationDispatcherTest {
      *              source/sink role correctly and prevents miscalls.
      */
     @IsTest
-    static void assertSinkRole_sourceOnly_throws() {
+    static void assertSinkRoleSourceOnlyThrows() {
         IntegrationProvider__mdt cfg = new IntegrationProvider__mdt();
         cfg.DeveloperName = 'TestSourceOnly';
         cfg.TypePk__c = 'Source';
@@ -106,7 +106,7 @@ private class IntegrationDispatcherTest {
      * @description Bidirectional provider accepted for sink dispatch.
      */
     @IsTest
-    static void assertSinkRole_bidirectional_passes() {
+    static void assertSinkRoleBidirectionalPasses() {
         IntegrationProvider__mdt cfg = new IntegrationProvider__mdt();
         cfg.TypePk__c = 'Bidirectional';
         // No exception expected
@@ -118,7 +118,7 @@ private class IntegrationDispatcherTest {
      * @description Sink role accepted for sink dispatch.
      */
     @IsTest
-    static void assertSinkRole_sink_passes() {
+    static void assertSinkRoleSinkPasses() {
         IntegrationProvider__mdt cfg = new IntegrationProvider__mdt();
         cfg.TypePk__c = 'Sink';
         IntegrationDispatcher.assertSinkRole(cfg);
@@ -131,7 +131,7 @@ private class IntegrationDispatcherTest {
      *              defined in this test class and accessible.
      */
     @IsTest
-    static void instantiateSink_validClass_returnsInstance() {
+    static void instantiateSinkValidClassReturnsInstance() {
         IntegrationProvider__mdt cfg = new IntegrationProvider__mdt();
         cfg.DeveloperName = 'MockProvider';
         cfg.ApexClassNameTxt__c = 'IntegrationDispatcherTest.MockSink';
@@ -145,7 +145,7 @@ private class IntegrationDispatcherTest {
      *              a clean exception.
      */
     @IsTest
-    static void instantiateSink_wrongInterface_throws() {
+    static void instantiateSinkWrongInterfaceThrows() {
         IntegrationProvider__mdt cfg = new IntegrationProvider__mdt();
         cfg.DeveloperName = 'WrongInterface';
         cfg.ApexClassNameTxt__c = 'IntegrationDispatcherTest';  // not a sink
@@ -163,7 +163,7 @@ private class IntegrationDispatcherTest {
      * @description Unknown class name rejected with clean exception.
      */
     @IsTest
-    static void instantiateSink_unknownClass_throws() {
+    static void instantiateSinkUnknownClassThrows() {
         IntegrationProvider__mdt cfg = new IntegrationProvider__mdt();
         cfg.DeveloperName = 'UnknownClass';
         cfg.ApexClassNameTxt__c = 'NonexistentClass_9999';
