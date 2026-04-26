@@ -46,15 +46,15 @@ public with sharing class IntegrationTemplateEngine {
         Map<String, Object> safePayload = payload == null ? new Map<String, Object>() : payload;
         Pattern p = Pattern.compile('\\{\\{([^{}]+)\\}\\}');
         Matcher m = p.matcher(template);
-        StringBuilder out = new StringBuilder();
+        List<String> parts = new List<String>();
         Integer cursor = 0;
         while (m.find()) {
-            out.append(template.substring(cursor, m.start()));
-            out.append(resolveExpression(m.group(1).trim(), safePayload));
+            parts.add(template.substring(cursor, m.start()));
+            parts.add(resolveExpression(m.group(1).trim(), safePayload));
             cursor = m.end();
         }
-        out.append(template.substring(cursor));
-        return out.toString();
+        parts.add(template.substring(cursor));
+        return String.join(parts, '');
     }
 
     /**
