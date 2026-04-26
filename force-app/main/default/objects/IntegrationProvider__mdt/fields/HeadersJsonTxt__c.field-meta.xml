@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>HeadersJsonTxt__c</fullName>
+    <description>JSON object of HTTP headers sent on every request. Defaults are merged in framework: Content-Type=application/json on JSON bodies, Accept=application/json. Override by setting them here. Example: {"X-API-Version":"2024-01-01"}.</description>
+    <inlineHelpText>JSON header map. Defaults: Content-Type+Accept JSON.</inlineHelpText>
+    <label>Headers JSON</label>
+    <length>4000</length>
+    <type>LongTextArea</type>
+    <visibleLines>4</visibleLines>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

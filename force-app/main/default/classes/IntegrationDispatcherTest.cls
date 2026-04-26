@@ -1,180 +1,183 @@
 /**
  * @name         Delivery Hub · Integration Framework
  * @license      BSL 1.1 — See LICENSE.md
- * @description Tests for IntegrationDispatcher. Covers:
- *              - Provider resolution by DeveloperName
- *              - Disabled-provider rejection
- *              - Wrong-role rejection
- *              - Class-instantiation failures
- *              - Successful sink dispatch with mocked callout
- *              - Retryable error wrapping
- *
- *              Provider resolution is mocked at the SOQL layer via TestDataMother
- *              pattern — we cannot insert IntegrationProvider__mdt records in
- *              tests (CMT records are deploy-time only). Instead we test the
- *              public methods that accept provider Apex types directly, plus
- *              one integration-style test using a real CMT seed record.
- *
+ * @description Tests for IntegrationDispatcher · resolution, validation,
+ *              request building, header merge, extension resolution.
+ *              CMT records cannot be inserted in tests; tests focus on the
+ *              public API + private helpers via @TestVisible.
  * @author       Cloud Nimbus LLC
- * @since        2026-04-26
  */
-@IsTest
 @SuppressWarnings('PMD.ApexDoc')
+@IsTest
 private class IntegrationDispatcherTest {
 
-    /**
-     * @description Mock IIntegrationSink that records what was sent and returns
-     *              a configured result. Captured payload exposed for assertions.
-     */
-    public class MockSink implements IIntegrationSink {
-        public Map<String, Object> lastPayload;
-        public IntegrationProvider__mdt lastConfig;
-        public IntegrationSinkResult resultToReturn;
-        public Boolean throwInstead = false;
-
-        public IntegrationSinkResult send(Map<String, Object> payload, IntegrationProvider__mdt cfg) {
-            this.lastPayload = payload;
-            this.lastConfig = cfg;
-            if (this.throwInstead) {
-                throw new TestException('mock sink threw');
-            }
-            return this.resultToReturn != null
-                ? this.resultToReturn
-                : IntegrationSinkResult.success('mock-remote-id');
-        }
-
-        public Boolean validateConnection(IntegrationProvider__mdt cfg) {
-            return true;
+    public class StubExtension implements IIntegrationTemplateExtension {
+        public Boolean called = false;
+        public void applyTo(HttpRequest req, Map<String, Object> payload, IntegrationProvider__mdt cfg) {
+            this.called = true;
+            req.setHeader('X-Stub-Applied', 'true');
         }
     }
 
-    public class TestException extends Exception {}
+    private static IntegrationProvider__mdt baseCfg() {
+        IntegrationProvider__mdt cfg = new IntegrationProvider__mdt();
+        cfg.DeveloperName = 'Test_Provider';
+        cfg.NamedCredentialDevNameTxt__c = 'Test_NC';
+        cfg.HttpMethodPk__c = 'POST';
+        cfg.EndpointPathTxt__c = '/v1/items';
+        cfg.RequestBodyTemplateTxt__c = '{"text":"{{message}}"}';
+        cfg.HeadersJsonTxt__c = null;
+        cfg.ResponseRulesJsonTxt__c = null;
+        cfg.SuccessParseExprTxt__c = null;
+        cfg.SignerExtensionTxt__c = null;
+        cfg.EnabledDateTime__c = Datetime.now();
+        return cfg;
+    }
 
-    /**
-     * @description Verifies that a missing CMT record produces a clean
-     *              IntegrationDispatcherException instead of a NullPointerException.
-     */
     @IsTest
-    static void resolveProviderUnknownDevNameThrows() {
+    static void sendBlankNameReturnsTerminal() {
+        IntegrationDispatcherResult r = IntegrationDispatcher.send('', new Map<String, Object>());
+        System.assertEquals('TerminalFailure', r.statusCode);
+    }
+
+    @IsTest
+    static void sendUnknownProviderReturnsTerminal() {
+        IntegrationDispatcherResult r = IntegrationDispatcher.send(
+            'Nonexistent_Provider_99999', new Map<String, Object>());
+        System.assertEquals('TerminalFailure', r.statusCode);
+        System.assert(r.statusMessage.contains('No IntegrationProvider__mdt found'));
+    }
+
+    @IsTest
+    static void buildRequestRendersTemplateAndPath() {
+        IntegrationProvider__mdt cfg = baseCfg();
+        cfg.EndpointPathTxt__c = '/v1/projects/{{projectId}}/items';
+        HttpRequest req = IntegrationDispatcher.buildRequest(
+            cfg, new Map<String, Object>{
+                'projectId' => 'p99',
+                'message' => 'hi'
+            });
+        System.assertEquals('callout:Test_NC/v1/projects/p99/items', req.getEndpoint());
+        System.assertEquals('POST', req.getMethod());
+        System.assertEquals('{"text":"hi"}', req.getBody());
+    }
+
+    @IsTest
+    static void buildRequestMissingNCThrows() {
+        IntegrationProvider__mdt cfg = baseCfg();
+        cfg.NamedCredentialDevNameTxt__c = null;
         Boolean threw = false;
         try {
-            IntegrationDispatcher.resolveProvider('NonexistentProvider__9999');
+            IntegrationDispatcher.buildRequest(cfg, new Map<String, Object>());
         } catch (IntegrationDispatcher.IntegrationDispatcherException e) {
             threw = true;
-            System.assert(e.getMessage().contains('NonexistentProvider'), 'message should mention name');
         }
-        System.assertEquals(true, threw, 'expected IntegrationDispatcherException');
+        System.assertEquals(true, threw);
     }
 
-    /**
-     * @description Disabled provider (EnabledDateTime__c null) is rejected by
-     *              assertEnabled, even if the rest of the config looks valid.
-     */
     @IsTest
-    static void assertEnabledNullDateTimeThrows() {
-        IntegrationProvider__mdt cfg = new IntegrationProvider__mdt();
-        cfg.DeveloperName = 'TestDisabled';
-        cfg.EnabledDateTime__c = null;
+    static void buildRequestUsesPostWhenMethodBlank() {
+        IntegrationProvider__mdt cfg = baseCfg();
+        cfg.HttpMethodPk__c = null;
+        HttpRequest req = IntegrationDispatcher.buildRequest(cfg, new Map<String, Object>());
+        System.assertEquals('POST', req.getMethod());
+    }
+
+    @IsTest
+    static void buildRequestSkipsBodyWhenTemplateBlank() {
+        IntegrationProvider__mdt cfg = baseCfg();
+        cfg.RequestBodyTemplateTxt__c = null;
+        HttpRequest req = IntegrationDispatcher.buildRequest(cfg, new Map<String, Object>());
+        System.assertEquals(null, req.getBody());
+    }
+
+    @IsTest
+    static void applyHeadersMergesCustomHeaders() {
+        IntegrationProvider__mdt cfg = baseCfg();
+        cfg.HeadersJsonTxt__c = '{"X-Api-Version":"2024-01","X-Client":"DH"}';
+        HttpRequest req = new HttpRequest();
+        IntegrationDispatcher.applyHeaders(req, cfg);
+        System.assertEquals('application/json', req.getHeader('Content-Type'));
+        System.assertEquals('application/json', req.getHeader('Accept'));
+        System.assertEquals('2024-01', req.getHeader('X-Api-Version'));
+        System.assertEquals('DH', req.getHeader('X-Client'));
+    }
+
+    @IsTest
+    static void applyHeadersIgnoresMalformedJson() {
+        IntegrationProvider__mdt cfg = baseCfg();
+        cfg.HeadersJsonTxt__c = 'this is not json';
+        HttpRequest req = new HttpRequest();
+        IntegrationDispatcher.applyHeaders(req, cfg);
+        // Defaults still applied
+        System.assertEquals('application/json', req.getHeader('Content-Type'));
+    }
+
+    @IsTest
+    static void applyHeadersOverridesContentType() {
+        IntegrationProvider__mdt cfg = baseCfg();
+        cfg.HeadersJsonTxt__c = '{"Content-Type":"text/plain"}';
+        HttpRequest req = new HttpRequest();
+        IntegrationDispatcher.applyHeaders(req, cfg);
+        System.assertEquals('text/plain', req.getHeader('Content-Type'));
+    }
+
+    @IsTest
+    static void applyExtensionResolvesAndCallsClass() {
+        IntegrationProvider__mdt cfg = baseCfg();
+        cfg.SignerExtensionTxt__c = 'IntegrationDispatcherTest.StubExtension';
+        HttpRequest req = new HttpRequest();
+        IntegrationDispatcher.applyExtension(cfg, req, new Map<String, Object>());
+        System.assertEquals('true', req.getHeader('X-Stub-Applied'),
+            'extension should have run and set its marker header');
+    }
+
+    @IsTest
+    static void applyExtensionUnknownClassThrows() {
+        IntegrationProvider__mdt cfg = baseCfg();
+        cfg.SignerExtensionTxt__c = 'NonexistentClass_99999';
+        HttpRequest req = new HttpRequest();
         Boolean threw = false;
         try {
-            IntegrationDispatcher.assertEnabled(cfg);
+            IntegrationDispatcher.applyExtension(cfg, req, new Map<String, Object>());
         } catch (IntegrationDispatcher.IntegrationDispatcherException e) {
             threw = true;
         }
-        System.assertEquals(true, threw, 'disabled provider should reject');
+        System.assertEquals(true, threw);
     }
 
-    /**
-     * @description Source-only provider rejected for sink dispatch — splits the
-     *              source/sink role correctly and prevents miscalls.
-     */
     @IsTest
-    static void assertSinkRoleSourceOnlyThrows() {
-        IntegrationProvider__mdt cfg = new IntegrationProvider__mdt();
-        cfg.DeveloperName = 'TestSourceOnly';
-        cfg.TypePk__c = 'Source';
+    static void applyExtensionWrongInterfaceThrows() {
+        IntegrationProvider__mdt cfg = baseCfg();
+        // Reference a class that doesn't implement the interface
+        cfg.SignerExtensionTxt__c = 'IntegrationDispatcherTest';
+        HttpRequest req = new HttpRequest();
         Boolean threw = false;
         try {
-            IntegrationDispatcher.assertSinkRole(cfg);
+            IntegrationDispatcher.applyExtension(cfg, req, new Map<String, Object>());
         } catch (IntegrationDispatcher.IntegrationDispatcherException e) {
             threw = true;
-            System.assert(e.getMessage().contains('Source'), 'message should mention actual role');
         }
-        System.assertEquals(true, threw, 'source-role should reject sink dispatch');
+        System.assertEquals(true, threw);
     }
 
-    /**
-     * @description Bidirectional provider accepted for sink dispatch.
-     */
     @IsTest
-    static void assertSinkRoleBidirectionalPasses() {
-        IntegrationProvider__mdt cfg = new IntegrationProvider__mdt();
-        cfg.TypePk__c = 'Bidirectional';
-        // No exception expected
-        IntegrationDispatcher.assertSinkRole(cfg);
-        System.assert(true, 'bidirectional accepted as sink');
+    static void applyExtensionBlankIsNoop() {
+        IntegrationProvider__mdt cfg = baseCfg();
+        cfg.SignerExtensionTxt__c = null;
+        HttpRequest req = new HttpRequest();
+        IntegrationDispatcher.applyExtension(cfg, req, new Map<String, Object>());
+        System.assertEquals(null, req.getHeader('X-Stub-Applied'));
     }
 
-    /**
-     * @description Sink role accepted for sink dispatch.
-     */
     @IsTest
-    static void assertSinkRoleSinkPasses() {
-        IntegrationProvider__mdt cfg = new IntegrationProvider__mdt();
-        cfg.TypePk__c = 'Sink';
-        IntegrationDispatcher.assertSinkRole(cfg);
-        System.assert(true, 'sink role accepted');
-    }
-
-    /**
-     * @description instantiateSink resolves a real Apex class implementing
-     *              IIntegrationSink. Uses MockSink as the target since it's
-     *              defined in this test class and accessible.
-     */
-    @IsTest
-    static void instantiateSinkValidClassReturnsInstance() {
-        IntegrationProvider__mdt cfg = new IntegrationProvider__mdt();
-        cfg.DeveloperName = 'MockProvider';
-        cfg.ApexClassNameTxt__c = 'IntegrationDispatcherTest.MockSink';
-        IIntegrationSink sink = IntegrationDispatcher.instantiateSink(cfg);
-        System.assertNotEquals(null, sink, 'sink should be resolved');
-        System.assert(sink instanceof MockSink, 'should be MockSink instance');
-    }
-
-    /**
-     * @description Class that doesn't implement IIntegrationSink rejected with
-     *              a clean exception.
-     */
-    @IsTest
-    static void instantiateSinkWrongInterfaceThrows() {
-        IntegrationProvider__mdt cfg = new IntegrationProvider__mdt();
-        cfg.DeveloperName = 'WrongInterface';
-        cfg.ApexClassNameTxt__c = 'IntegrationDispatcherTest';  // not a sink
+    static void resolveProviderUnknownThrows() {
         Boolean threw = false;
         try {
-            IntegrationDispatcher.instantiateSink(cfg);
+            IntegrationDispatcher.resolveProvider('Definitely_Missing_99999');
         } catch (IntegrationDispatcher.IntegrationDispatcherException e) {
             threw = true;
-            System.assert(e.getMessage().contains('IIntegrationSink'), 'should mention interface');
         }
-        System.assertEquals(true, threw, 'wrong-interface should reject');
-    }
-
-    /**
-     * @description Unknown class name rejected with clean exception.
-     */
-    @IsTest
-    static void instantiateSinkUnknownClassThrows() {
-        IntegrationProvider__mdt cfg = new IntegrationProvider__mdt();
-        cfg.DeveloperName = 'UnknownClass';
-        cfg.ApexClassNameTxt__c = 'NonexistentClass_9999';
-        Boolean threw = false;
-        try {
-            IntegrationDispatcher.instantiateSink(cfg);
-        } catch (IntegrationDispatcher.IntegrationDispatcherException e) {
-            threw = true;
-            System.assert(e.getMessage().contains('NonexistentClass'), 'should mention class name');
-        }
-        System.assertEquals(true, threw, 'unknown class should reject');
+        System.assertEquals(true, threw);
     }
 }

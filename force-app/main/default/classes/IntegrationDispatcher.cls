@@ -1,90 +1,123 @@
 /**
  * @name         Delivery Hub · Integration Framework
  * @license      BSL 1.1 — See LICENSE.md
- * @description Dispatches outbound payloads to the right IIntegrationSink based
- *              on declarative IntegrationProvider__mdt config. Handles:
- *                - Provider resolution by DeveloperName
- *                - Apex class instantiation via Type.forName (namespace-aware)
- *                - Enabled-flag check (skips silently if provider disabled)
- *                - Single-call dispatch (callers wrap in their own retry/queue)
+ * @description Generic, declarative integration dispatcher. The single entry
+ *              point for outbound HTTP calls driven by IntegrationProvider__mdt
+ *              metadata. NO per-system Apex code in DH — subscribers configure
+ *              providers via metadata records pointing at Named Credentials.
  *
- *              EXPLICITLY OUT OF SCOPE for this spike:
- *                - Retry policy execution (will live in IntegrationItem__c
- *                  processor · separate class · separate PR)
- *                - Inbound source pulling (cron + Source provider type)
- *                - Webhook receiver (Apex REST resource · separate PR)
- *                - Field mapping (delegated to provider implementation today;
- *                  IntegrationFieldMap__c custom object arrives in next PR)
- *                - Platform Event seam (IntegrationEvent__e arrives Phase 4)
+ *              Pipeline:
+ *                1. Resolve IntegrationProvider__mdt by DeveloperName.
+ *                2. Validate enabled flag.
+ *                3. Render endpoint path + request body via IntegrationTemplateEngine
+ *                   (mustache-style {{var}} substitution against the payload Map).
+ *                4. Build the HttpRequest (method, headers, NC reference).
+ *                5. Optionally invoke a IIntegrationTemplateExtension implementation
+ *                   (Stripe HMAC, AWS SigV4, gzip, etc.) to mutate the request.
+ *                6. Send.
+ *                7. Map the response via IntegrationResponseMapper using the
+ *                   provider's status-code rules and parse expression.
+ *                8. Return IntegrationDispatcherResult.
  *
- *              This is the spike. It proves the registry+dispatch pattern works
- *              against a real refactor (DeliverySlackProvider). Subsequent PRs
- *              add retry, source-side, webhooks, mapping, and PE.
+ *              Subscribers call: IntegrationDispatcher.send(devName, payload).
+ *              They never write per-system Apex unless they need an extension
+ *              that doesn't exist yet (then they implement
+ *              IIntegrationTemplateExtension and reference it via metadata).
+ *
+ *              Edge cases that warrant a custom extension:
+ *                - Request signing (HMAC, SigV4)
+ *                - OAuth2 dynamic refresh
+ *                - Multipart upload
+ *                - Body gzip / encoding transforms
+ *
+ *              Edge cases handled in metadata alone:
+ *                - URL templating
+ *                - Body templating with variable defaults
+ *                - Header customization
+ *                - Status-code rule mapping
+ *                - Response field extraction (dotted-path)
+ *
+ *              Observability: System.debug logs every dispatch with the
+ *              rendered endpoint, body length, and result. Subscribers
+ *              can layer their own logging (DH ActivityLog__c, Slack,
+ *              etc.) by wrapping send() in their own service.
  *
  * @author       Cloud Nimbus LLC
  * @since        2026-04-26
  */
 public with sharing class IntegrationDispatcher {
 
-    /** @description Throws when a provider lookup fails — dispatcher's only checked exception. */
+    /** @description Thrown when provider lookup or config is unusable. */
     public class IntegrationDispatcherException extends Exception {}
 
     /**
-     * @description Sends a payload to the named provider. Provider must be
-     *              configured as Type=Sink or Bidirectional with Enabled set.
-     * @param providerDeveloperName DeveloperName of an IntegrationProvider__mdt record.
-     * @param payload Provider-shaped payload map.
-     * @return IntegrationSinkResult from the provider implementation.
+     * @description Resolve the provider, render the request, send it, return
+     *              the mapped result. Captures all exceptions and surfaces
+     *              them as RetryableFailure rather than throwing.
+     * @param providerDeveloperName DeveloperName of an IntegrationProvider__mdt row.
+     * @param payload Payload Map. Substituted into request body / endpoint path templates.
+     * @return IntegrationDispatcherResult describing the outcome.
      */
-    public static IntegrationSinkResult dispatchSink(String providerDeveloperName, Map<String, Object> payload) {
+    public static IntegrationDispatcherResult send(String providerDeveloperName, Map<String, Object> payload) {
         if (String.isBlank(providerDeveloperName)) {
-            throw new IntegrationDispatcherException('providerDeveloperName is required');
+            return IntegrationDispatcherResult.terminal(
+                'providerDeveloperName is required', null, null);
         }
-        IntegrationProvider__mdt config = resolveProvider(providerDeveloperName);
-        assertEnabled(config);
-        assertSinkRole(config);
-        IIntegrationSink sink = instantiateSink(config);
+        Map<String, Object> safePayload = payload == null ? new Map<String, Object>() : payload;
+        IntegrationProvider__mdt config;
         try {
-            return sink.send(payload, config);
+            config = resolveProvider(providerDeveloperName);
+        } catch (IntegrationDispatcherException e) {
+            return IntegrationDispatcherResult.terminal(e.getMessage(), null, null);
+        }
+        if (config.EnabledDateTime__c == null) {
+            return IntegrationDispatcherResult.terminal(
+                'Provider ' + providerDeveloperName + ' is disabled (EnabledDateTime__c is null)',
+                null, null);
+        }
+        try {
+            HttpRequest req = buildRequest(config, safePayload);
+            applyExtension(config, req, safePayload);
+            HttpResponse res = new Http().send(req);
+            IntegrationDispatcherResult result = IntegrationResponseMapper.map(
+                res.getStatusCode(), res.getBody(), config);
+            logDispatch(config, req, result);
+            return result;
+        } catch (CalloutException e) {
+            return IntegrationDispatcherResult.retryable(
+                'Callout exception: ' + e.getMessage(), null, null);
         } catch (Exception e) {
-            // Provider impl threw without producing a structured result — treat
-            // as retryable; processor can decide. Don't swallow — surface to caller.
-            return IntegrationSinkResult.retryable(
-                e.getTypeName() + ': ' + e.getMessage(),
-                String.valueOf(e.getStackTraceString()).left(4000)
-            );
+            return IntegrationDispatcherResult.terminal(
+                e.getTypeName() + ': ' + e.getMessage(), null, null);
         }
     }
 
     /**
-     * @description Health-check probe. Used by scheduled "Connection Health"
-     *              jobs to detect silent-token-expiry on OAuth integrations.
+     * @description Health-check probe — sends an empty-payload GET to the
+     *              configured endpoint and reports whether the response was
+     *              "Sent" per the provider's rules. Useful for the admin UI.
      * @param providerDeveloperName DeveloperName of the provider to probe.
-     * @return Result of the provider's validateConnection() call.
+     * @return true when the dispatcher's outcome is "Sent" or 4xx (live but rejected).
      */
-    public static Boolean probeConnection(String providerDeveloperName) {
-        IntegrationProvider__mdt config = resolveProvider(providerDeveloperName);
-        if (config.EnabledDateTime__c == null) {
-            return false;
-        }
-        IIntegrationSink sink;
-        try {
-            sink = instantiateSink(config);
-        } catch (Exception e) {
-            return false;
-        }
-        try {
-            return sink.validateConnection(config);
-        } catch (Exception e) {
-            return false;
-        }
+    public static Boolean probe(String providerDeveloperName) {
+        IntegrationDispatcherResult r = send(providerDeveloperName, new Map<String, Object>());
+        if (r.statusCode == 'Sent') { return true; }
+        Integer code = r.httpStatusCode == null ? 0 : r.httpStatusCode;
+        return code >= 200 && code < 500;
     }
 
+    /**
+     * @description Look up the IntegrationProvider__mdt by DeveloperName.
+     * @param developerName CMT DeveloperName.
+     * @return Resolved provider config.
+     */
     @TestVisible
     private static IntegrationProvider__mdt resolveProvider(String developerName) {
         List<IntegrationProvider__mdt> hits = [
-            SELECT Id, DeveloperName, ApexClassNameTxt__c, NamedCredentialDevNameTxt__c,
-                   EndpointPathTxt__c, TypePk__c, EnabledDateTime__c, RetryPolicyJsonTxt__c
+            SELECT Id, DeveloperName, NamedCredentialDevNameTxt__c, EndpointPathTxt__c,
+                   HttpMethodPk__c, RequestBodyTemplateTxt__c, HeadersJsonTxt__c,
+                   ResponseRulesJsonTxt__c, SuccessParseExprTxt__c,
+                   SignerExtensionTxt__c, EnabledDateTime__c
             FROM IntegrationProvider__mdt
             WHERE DeveloperName = :developerName
             WITH SYSTEM_MODE
@@ -92,59 +125,116 @@ public with sharing class IntegrationDispatcher {
         ];
         if (hits.isEmpty()) {
             throw new IntegrationDispatcherException(
-                'No IntegrationProvider__mdt record found for DeveloperName: ' + developerName
-            );
+                'No IntegrationProvider__mdt found for DeveloperName: ' + developerName);
         }
         return hits[0];
     }
 
+    /**
+     * @description Build the HttpRequest from provider config + rendered templates.
+     * @param config Provider config.
+     * @param payload Dispatch payload.
+     * @return Configured HttpRequest ready for extension hook + send.
+     */
     @TestVisible
-    private static void assertEnabled(IntegrationProvider__mdt config) {
-        if (config.EnabledDateTime__c == null) {
+    private static HttpRequest buildRequest(IntegrationProvider__mdt config, Map<String, Object> payload) {
+        if (String.isBlank(config.NamedCredentialDevNameTxt__c)) {
             throw new IntegrationDispatcherException(
-                'Provider ' + config.DeveloperName + ' is disabled (EnabledDateTime__c is null). Set the field to enable.'
-            );
+                'Provider ' + config.DeveloperName + ' has no Named Credential configured');
+        }
+        String renderedPath = IntegrationTemplateEngine.render(
+            config.EndpointPathTxt__c == null ? '' : config.EndpointPathTxt__c,
+            payload);
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint('callout:' + config.NamedCredentialDevNameTxt__c + renderedPath);
+        req.setMethod(String.isBlank(config.HttpMethodPk__c) ? 'POST' : config.HttpMethodPk__c);
+        applyHeaders(req, config);
+        if (String.isNotBlank(config.RequestBodyTemplateTxt__c)) {
+            String body = IntegrationTemplateEngine.render(config.RequestBodyTemplateTxt__c, payload);
+            req.setBody(body);
+        }
+        req.setTimeout(30000);
+        return req;
+    }
+
+    /**
+     * @description Merge default JSON headers with the provider's HeadersJsonTxt__c overrides.
+     * @param req HttpRequest to mutate.
+     * @param config Provider config.
+     */
+    @TestVisible
+    private static void applyHeaders(HttpRequest req, IntegrationProvider__mdt config) {
+        req.setHeader('Content-Type', 'application/json');
+        req.setHeader('Accept', 'application/json');
+        if (String.isBlank(config.HeadersJsonTxt__c)) {
+            return;
+        }
+        try {
+            Map<String, Object> headers = (Map<String, Object>) JSON.deserializeUntyped(
+                config.HeadersJsonTxt__c);
+            for (String name : headers.keySet()) {
+                req.setHeader(name, String.valueOf(headers.get(name)));
+            }
+        } catch (Exception e) {
+            // Bad JSON in headers is a config error, but don't fail the
+            // dispatch — log and proceed with defaults. Admin UI surfaces
+            // the rendered request including header set for debugging.
+            System.debug(LoggingLevel.WARN,
+                '[IntegrationDispatcher] Bad HeadersJsonTxt__c on '
+                + config.DeveloperName + ': ' + e.getMessage());
         }
     }
 
+    /**
+     * @description Optionally invoke the configured IIntegrationTemplateExtension
+     *              to mutate the request before send (signing, encoding, etc.).
+     * @param config Provider config.
+     * @param req HttpRequest to potentially mutate.
+     * @param payload Original dispatch payload (passed for extension context).
+     */
     @TestVisible
-    private static void assertSinkRole(IntegrationProvider__mdt config) {
-        if (config.TypePk__c != 'Sink' && config.TypePk__c != 'Bidirectional') {
-            throw new IntegrationDispatcherException(
-                'Provider ' + config.DeveloperName + ' is configured as ' + config.TypePk__c
-                + ' — dispatchSink requires Sink or Bidirectional.'
-            );
+    private static void applyExtension(IntegrationProvider__mdt config, HttpRequest req, Map<String, Object> payload) {
+        if (String.isBlank(config.SignerExtensionTxt__c)) {
+            return;
         }
-    }
-
-    @TestVisible
-    private static IIntegrationSink instantiateSink(IntegrationProvider__mdt config) {
-        if (String.isBlank(config.ApexClassNameTxt__c)) {
-            throw new IntegrationDispatcherException(
-                'Provider ' + config.DeveloperName + ' has no ApexClassNameTxt__c.'
-            );
-        }
-        // Namespace-aware Type.forName per Salesforce platform docs:
-        // when ApexClassNameTxt__c contains a dot, we split namespace and class.
-        // Otherwise use the local namespace context.
         Type t;
-        if (config.ApexClassNameTxt__c.contains('.')) {
-            List<String> parts = config.ApexClassNameTxt__c.split('\\.');
+        if (config.SignerExtensionTxt__c.contains('.')) {
+            List<String> parts = config.SignerExtensionTxt__c.split('\\.');
             t = Type.forName(parts[0], parts[1]);
         } else {
-            t = Type.forName(config.ApexClassNameTxt__c);
+            t = Type.forName(config.SignerExtensionTxt__c);
         }
         if (t == null) {
             throw new IntegrationDispatcherException(
-                'Cannot resolve Apex class: ' + config.ApexClassNameTxt__c
-            );
+                'Cannot resolve SignerExtensionTxt__c class: ' + config.SignerExtensionTxt__c);
         }
         Object instance = t.newInstance();
-        if (!(instance instanceof IIntegrationSink)) {
+        if (!(instance instanceof IIntegrationTemplateExtension)) {
             throw new IntegrationDispatcherException(
-                'Class ' + config.ApexClassNameTxt__c + ' does not implement IIntegrationSink.'
-            );
+                'Class ' + config.SignerExtensionTxt__c
+                + ' does not implement IIntegrationTemplateExtension');
         }
-        return (IIntegrationSink) instance;
+        ((IIntegrationTemplateExtension) instance).applyTo(req, payload, config);
+    }
+
+    /**
+     * @description System.debug observability for every dispatch. Subscribers
+     *              who want richer logging wrap send() in their own service.
+     * @param config Provider config that drove this dispatch.
+     * @param req The HttpRequest that was sent.
+     * @param result The mapped result.
+     */
+    @TestVisible
+    private static void logDispatch(IntegrationProvider__mdt config, HttpRequest req, IntegrationDispatcherResult result) {
+        String endpoint = req.getEndpoint();
+        Integer bodyLen = req.getBody() == null ? 0 : req.getBody().length();
+        System.debug(LoggingLevel.INFO,
+            '[IntegrationDispatcher] provider=' + config.DeveloperName
+            + ' method=' + req.getMethod()
+            + ' endpoint=' + endpoint
+            + ' bodyBytes=' + bodyLen
+            + ' result=' + result.statusCode
+            + ' http=' + result.httpStatusCode
+            + ' msg=' + result.statusMessage);
     }
 }

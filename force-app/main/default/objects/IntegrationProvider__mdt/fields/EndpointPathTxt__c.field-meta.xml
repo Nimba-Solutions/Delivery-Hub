@@ -1,13 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>EndpointPathTxt__c</fullName>
-    <description>Path portion of the endpoint (e.g. /v3/objects/contacts). Combined with the Named Credential's host. Allows path templating (e.g. /v1/tasks/{id}) which the provider resolves at send time. NOT the full URL — that lives on the Named Credential.</description>
-    <externalId>false</externalId>
-    <fieldManageability>SubscriberControlled</fieldManageability>
-    <inlineHelpText>Path only (e.g. /v3/contacts). Do NOT include the host — that's on the Named Credential.</inlineHelpText>
+    <description>Path appended to the Named Credential host. Supports mustache template syntax for path variables: /v1/projects/{{projectId}}/items rendered against the dispatch payload.</description>
+    <inlineHelpText>Path only (e.g. /v1/contacts). Supports {{var}} substitution from payload.</inlineHelpText>
     <label>Endpoint Path</label>
     <length>255</length>
-    <required>false</required>
     <type>Text</type>
-    <unique>false</unique>
+    <fieldManageability>SubscriberControlled</fieldManageability>
 </CustomField>

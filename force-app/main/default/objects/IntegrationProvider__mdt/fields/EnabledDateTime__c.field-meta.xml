@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>EnabledDateTime__c</fullName>
-    <description>Feature flag with audit trail. Null = provider disabled (dispatcher silently skips). Set = enabled at this DateTime. Pattern matches DeliveryHubSettings__c.EnableXxxDateTime__c convention used elsewhere in the package.</description>
-    <externalId>false</externalId>
-    <fieldManageability>SubscriberControlled</fieldManageability>
-    <inlineHelpText>Set DateTime to enable. Leave blank to disable.</inlineHelpText>
+    <description>Feature flag with audit. Null = disabled (dispatcher rejects). Set DateTime = enabled-since (audit trail). Matches the EnableXxxDateTime__c convention used elsewhere in DeliveryHubSettings__c.</description>
+    <inlineHelpText>Set DateTime to enable. Blank to disable.</inlineHelpText>
     <label>Enabled DateTime</label>
-    <required>false</required>
     <type>DateTime</type>
+    <fieldManageability>SubscriberControlled</fieldManageability>
 </CustomField>

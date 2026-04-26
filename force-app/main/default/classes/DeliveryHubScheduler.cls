@@ -132,6 +132,16 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
             if (Datetime.now().minute() != 0) {
                 return;
             }
+            // Subscriber opt-in via DeliveryHubSettings__c.EnableETAAutoRecalcDateTime__c.
+            // Null = subscriber manages WorkItem dates manually (e.g. preserves
+            // true historical Start dates for auditing) — the ETA engine would
+            // overwrite those with engine-computed scheduling values, so we
+            // short-circuit when the flag isn't set. Subscribers who want the
+            // engine to drive their dates set the field to a DateTime to opt in.
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
+            if (settings == null || settings.EnableETAAutoRecalcDateTime__c == null) {
+                return;
+            }
             System.enqueueJob(new DeliveryWorkItemETAService.RecalculateAllETAsQueueable());
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR,

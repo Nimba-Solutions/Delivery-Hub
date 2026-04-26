@@ -95,11 +95,7 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryEscalationContextTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubExceptionTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryNotifPrefServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%IntegrationTemplateEngineTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%IntegrationResponseMapperTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%IntegrationDispatcherTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%SlackWebhookProviderTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%OpenAiCompletionsProviderTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%ActiveCollabProviderTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%QuickBooksProviderTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%IntegrationWebhookReceiverTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%IntegrationProviderAdminControllerTest</testClassName>
 </ApexTestSuite>
