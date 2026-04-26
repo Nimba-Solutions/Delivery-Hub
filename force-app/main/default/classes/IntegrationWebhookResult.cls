@@ -18,11 +18,14 @@
 global class IntegrationWebhookResult {
     /** @description Records derived from this webhook body. Empty list valid
      *  when the webhook is just an event ping (e.g. Slack url_verification). */
-    @AuraEnabled global List<Map<String, Object>> records { get; set; }
+    @AuraEnabled @SuppressWarnings('PMD.AvoidGlobalModifier')
+    global List<Map<String, Object>> records { get; set; }
     /** @description HTTP status code to return to the caller. Default 200. */
-    @AuraEnabled global Integer responseStatusCode { get; set; }
+    @AuraEnabled @SuppressWarnings('PMD.AvoidGlobalModifier')
+    global Integer responseStatusCode { get; set; }
     /** @description Optional response body string (e.g. challenge response). */
-    @AuraEnabled global String responseBody { get; set; }
+    @AuraEnabled @SuppressWarnings('PMD.AvoidGlobalModifier')
+    global String responseBody { get; set; }
 
     /**
      * @description Constructs a 200-ack result with the parsed records.
@@ -30,6 +33,7 @@ global class IntegrationWebhookResult {
      * @param records Records derived from the webhook body.
      * @return Configured IntegrationWebhookResult.
      */
+    @SuppressWarnings('PMD.AvoidGlobalModifier')
     global static IntegrationWebhookResult acknowledged(List<Map<String, Object>> records) {
         IntegrationWebhookResult r = new IntegrationWebhookResult();
         r.records = records == null ? new List<Map<String, Object>>() : records;
@@ -44,6 +48,7 @@ global class IntegrationWebhookResult {
      * @param challenge Token to echo back.
      * @return Configured IntegrationWebhookResult with no records, 200 OK.
      */
+    @SuppressWarnings('PMD.AvoidGlobalModifier')
     global static IntegrationWebhookResult challenge(String challenge) {
         IntegrationWebhookResult r = new IntegrationWebhookResult();
         r.records = new List<Map<String, Object>>();
@@ -61,6 +66,7 @@ global class IntegrationWebhookResult {
      * @param message Body to return for diagnostics.
      * @return Configured IntegrationWebhookResult.
      */
+    @SuppressWarnings('PMD.AvoidGlobalModifier')
     global static IntegrationWebhookResult reject(Integer statusCode, String message) {
         IntegrationWebhookResult r = new IntegrationWebhookResult();
         r.records = new List<Map<String, Object>>();

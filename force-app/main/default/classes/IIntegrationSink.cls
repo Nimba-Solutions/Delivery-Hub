@@ -38,6 +38,7 @@ global interface IIntegrationSink {
      * @return IntegrationSinkResult — capture remote ID, status, response body
      *         summary. Used to update the IntegrationItem__c on success.
      */
+    @SuppressWarnings('PMD.AvoidGlobalModifier')
     IntegrationSinkResult send(Map<String, Object> payload, IntegrationProvider__mdt providerConfig);
 
     /**
@@ -50,5 +51,6 @@ global interface IIntegrationSink {
      * @return true when the connection is usable. False = surface in admin UI;
      *         the dispatcher will mark inflight items as Pending until restored.
      */
+    @SuppressWarnings('PMD.AvoidGlobalModifier')
     Boolean validateConnection(IntegrationProvider__mdt providerConfig);
 }
