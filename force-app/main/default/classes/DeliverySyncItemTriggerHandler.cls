@@ -1,27 +1,23 @@
 /**
  * @name         Delivery Hub
- * @license      BSL 1.1 — See LICENSE.md
- * @description  Trigger handler for SyncItem__c. Enforces picklist allowlist integrity
- *               on StatusPk__c and ObjectTypePk__c. Those fields are backed by GVS but
- *               cannot be flipped to restricted=true due to the SF retrofit block on
- *               existing inline-defined picklist fields — so bulk data loaders could
- *               otherwise insert garbage values that break downstream sync processors.
- *               See DeliveryPicklistIntegrityService for the underlying mechanism.
+ * @license      BSL 1.1 - See LICENSE.md
+ * @description  Trigger handler for SyncItem__c. The 4/26 GVS picklist-allowlist
+ *               enforcement was removed because the GVS data wasn't reliably seeded
+ *               across orgs and beta_create failed on empty-describe paths.
+ *               Handler is a no-op for now; kept as the trigger callback target
+ *               so the trigger declaration stays stable.
  * @author       Cloud Nimbus LLC
  */
 public with sharing class DeliverySyncItemTriggerHandler {
 
     /**
-     * @description Before insert/update picklist allowlist enforcement.
+     * @description Before insert/update hook. No-op after GVS deprecation.
      * @param records The new/updated SyncItem__c records from Trigger.new.
      */
     public static void onBeforeInsertOrUpdate(List<SyncItem__c> records) {
-        if (records == null || records.isEmpty()) {
+        // intentionally empty - picklist-allowlist enforcement deprecated 4/26
+        if (records == null) {
             return;
-        }
-        for (SyncItem__c rec : records) {
-            DeliveryPicklistIntegrityService.validate(rec, 'StatusPk__c', 'DeliverySyncItemStatus');
-            DeliveryPicklistIntegrityService.validate(rec, 'ObjectTypePk__c', 'DeliverySyncItemObjectType');
         }
     }
 }
