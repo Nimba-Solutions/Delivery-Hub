@@ -47,9 +47,6 @@
  */
 public with sharing class IntegrationDispatcher {
 
-    /** @description Thrown when provider lookup or config is unusable. */
-    public class IntegrationDispatcherException extends Exception {}
-
     /**
      * @description Resolve the provider, render the request, send it, return
      *              the mapped result. Captures all exceptions and surfaces
