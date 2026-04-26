@@ -57,7 +57,16 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             'DeveloperDaysSizeNumber__c',
             'EstimatedHoursNumber__c',
             'ClientPreApprovedHoursNumber__c',
-            'DeveloperLookup__c',
+            // DeveloperLookup__c intentionally NOT synced — User Ids are
+            // org-specific and cannot translate cross-org. Including it
+            // produced INSUFFICIENT_ACCESS_ON_CROSS_REFERENCE_ENTITY errors
+            // on every dispatch when subscriber orgs received a User Id
+            // that doesn't exist in their User table (verified in MF-Prod
+            // 2026-04-26 13:16 UTC: 20 SyncItems retry-exhausted with that
+            // exact error class). Future replacement: cross-org-safe text
+            // attribution via the Integration Framework (DH PR #700).
+            // Regression-prevention test in DeliveryWorkItemTriggerHandlerTest
+            // asserts no User-typed lookup ever lives in this Set.
             'CalculatedETADate__c',
             'ProjectedUATReadyDate__c',
             'AcceptanceCriteriaTxt__c',

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RequestBodyTemplateTxt__c</fullName>
+    <description>Mustache-style template rendered against the dispatch payload Map. Supports {{key}}, {{nested.key}}, and {{key|default:value}}. Empty for GET/DELETE requests.</description>
+    <inlineHelpText>{{key}} / {{nested.key}} / {{key|default:fallback}}. Blank for GET.</inlineHelpText>
+    <label>Request Body Template</label>
+    <length>32000</length>
+    <type>LongTextArea</type>
+    <visibleLines>8</visibleLines>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

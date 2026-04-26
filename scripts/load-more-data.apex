@@ -6,12 +6,12 @@
 //      --target-org test-bcqaurrchjr9@example.com
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── Step 1: Find the "Mobilization Funding" NetworkEntity __c ────────────────
+// ── Step 1: Find the "Acme Corp" NetworkEntity __c ────────────────
 List<NetworkEntity__c> entities = [
-    SELECT Id FROM NetworkEntity__c WHERE Name = 'Mobilization Funding' LIMIT 1
+    SELECT Id FROM NetworkEntity__c WHERE Name = 'Acme Corp' LIMIT 1
 ];
 if (entities.isEmpty()) {
-    System.debug('ERROR: NetworkEntity "Mobilization Funding" not found. Aborting.');
+    System.debug('ERROR: NetworkEntity "Acme Corp" not found. Aborting.');
     return;
 }
 Id entityId = entities[0].Id;

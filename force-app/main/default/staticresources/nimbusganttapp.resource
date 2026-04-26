@@ -2664,9 +2664,9 @@ var NimbusGanttApp = (function(exports) {
     { category: "done", label: "Done", color: "#cbd5e1" }
   ];
   const CLOUD_NIMBUS_POOL = [
-    { name: "Glen", role: "Principal Engineer", hoursPerMonth: 80, active: true },
-    { name: "Mahi", role: "SFDC Dev", hoursPerMonth: 50, active: true },
-    { name: "Antima", role: "SFDC Dev (PT)", hoursPerMonth: 40, active: true }
+    { name: "Dev 4", role: "Principal Engineer", hoursPerMonth: 80, active: true },
+    { name: "Dev 1", role: "SFDC Dev", hoursPerMonth: 50, active: true },
+    { name: "Dev 3", role: "SFDC Dev (PT)", hoursPerMonth: 40, active: true }
   ];
   const CLS_TITLEBAR = "nga-titlebar bg-white border-b border-slate-200 px-3 py-1.5 flex flex-col gap-1.5 min-w-0 overflow-x-hidden";
   const CLS_TITLEBAR_ROW = "flex items-center gap-2 flex-wrap min-w-0";
