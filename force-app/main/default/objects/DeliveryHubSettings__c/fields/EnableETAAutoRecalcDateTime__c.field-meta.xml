@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableETAAutoRecalcDateTime__c</fullName>
+    <description>Hourly ETA-recalculation feature flag. Null = hourly auto-recalc disabled (DeliveryHubScheduler.recalcWorkItemETAsIfTopOfHour() short-circuits). Set DateTime = enabled-since (audit trail · matches existing EnableXxxDateTime__c convention). Subscribers who manage WorkItem dates manually (e.g. preserving true historical Start dates) should leave this null. Default is null on org-defaults — auto-recalc is opt-in.</description>
+    <externalId>false</externalId>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <inlineHelpText>Set DateTime to enable hourly ETA auto-recalc. Blank = subscriber manages dates manually.</inlineHelpText>
+    <label>Enable ETA Auto-Recalc DateTime</label>
+    <required>false</required>
+    <type>DateTime</type>
+</CustomField>
