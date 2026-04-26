@@ -95,4 +95,7 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryEscalationContextTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubExceptionTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryNotifPrefServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%IntegrationTemplateEngineTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%IntegrationResponseMapperTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%IntegrationDispatcherTest</testClassName>
 </ApexTestSuite>

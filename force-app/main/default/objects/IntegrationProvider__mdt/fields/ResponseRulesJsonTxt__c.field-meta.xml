@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ResponseRulesJsonTxt__c</fullName>
+    <description>JSON map of status-code-pattern to dispatcher result. Patterns: exact ("200"), range ("4xx"), default ("default"). Values: "Sent" | "RetryableFailure" | "TerminalFailure". Example: {"2xx":"Sent","429":"RetryableFailure","4xx":"TerminalFailure","5xx":"RetryableFailure","default":"RetryableFailure"}.</description>
+    <inlineHelpText>{"2xx":"Sent","4xx":"TerminalFailure","5xx":"RetryableFailure","default":"RetryableFailure"}</inlineHelpText>
+    <label>Response Status Rules JSON</label>
+    <length>2000</length>
+    <type>LongTextArea</type>
+    <visibleLines>4</visibleLines>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+</CustomField>

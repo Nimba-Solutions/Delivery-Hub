@@ -200,7 +200,7 @@ private class DeliveryWebhookNotifierTest {
             List<DeliveryDocEvent__e> events = new List<DeliveryDocEvent__e>{
                 new DeliveryDocEvent__e(
                     DocumentIdTxt__c = 'a0D000000000001AAA',
-                    EntityNameTxt__c = 'Mobilization Funding',
+                    EntityNameTxt__c = 'Acme Corp',
                     StatusTxt__c     = 'Generated',
                     TemplateTxt__c   = 'Invoice'
                 )
