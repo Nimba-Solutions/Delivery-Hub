@@ -49,11 +49,7 @@ public with sharing class IntegrationResponseMapper {
      *                      SuccessParseExprTxt__c.
      * @return Configured IntegrationDispatcherResult.
      */
-    public static IntegrationDispatcherResult map(
-        Integer httpStatus,
-        String body,
-        IntegrationProvider__mdt providerConfig
-    ) {
+    public static IntegrationDispatcherResult map(Integer httpStatus, String body, IntegrationProvider__mdt providerConfig) {
         Map<String, String> rules = parseRules(providerConfig.ResponseRulesJsonTxt__c);
         String outcome = matchRule(httpStatus, rules);
         IntegrationDispatcherResult r;
