@@ -41,7 +41,6 @@ public with sharing class SlackWebhookProvider implements IIntegrationSink {
      * @return IntegrationSinkResult with statusCode in
      *         {Sent, RetryableFailure, TerminalFailure}.
      */
-    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     public IntegrationSinkResult send(Map<String, Object> payload, IntegrationProvider__mdt providerConfig) {
         if (payload == null || !payload.containsKey('text') || String.isBlank((String) payload.get('text'))) {
             return IntegrationSinkResult.terminal('Payload missing required key: text', null);
@@ -87,7 +86,6 @@ public with sharing class SlackWebhookProvider implements IIntegrationSink {
      *                       Named Credential reference. No-op if blank.
      * @return true when the webhook URL is live and reachable, false otherwise.
      */
-    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     public Boolean validateConnection(IntegrationProvider__mdt providerConfig) {
         if (String.isBlank(providerConfig.NamedCredentialDevNameTxt__c)) {
             return false;

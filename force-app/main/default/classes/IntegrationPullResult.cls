@@ -19,19 +19,15 @@
 global class IntegrationPullResult {
     /** @description Records pulled this fetch — each is a provider-shaped
      *  map. Empty list = no new records since cursor (still a success). */
-    @AuraEnabled @SuppressWarnings('PMD.AvoidGlobalModifier')
-    global List<Map<String, Object>> records { get; set; }
+    @AuraEnabled global List<Map<String, Object>> records { get; set; }
     /** @description Updated cursor token for the next fetch (null = use
      *  provider default). Persisted on IntegrationProvider__mdt or a
      *  per-provider state record (TBD Phase 4). */
-    @AuraEnabled @SuppressWarnings('PMD.AvoidGlobalModifier')
-    global String nextCursor { get; set; }
+    @AuraEnabled global String nextCursor { get; set; }
     /** @description Optional ack message (e.g. "fetched 12 records"). */
-    @AuraEnabled @SuppressWarnings('PMD.AvoidGlobalModifier')
-    global String statusMessage { get; set; }
+    @AuraEnabled global String statusMessage { get; set; }
     /** @description Per-call status: Fetched | NoNewData | RetryableFailure | TerminalFailure. */
-    @AuraEnabled @SuppressWarnings('PMD.AvoidGlobalModifier')
-    global String statusCode { get; set; }
+    @AuraEnabled global String statusCode { get; set; }
 
     /**
      * @description Constructs a successful fetch result.
@@ -39,7 +35,6 @@ global class IntegrationPullResult {
      * @param nextCursor New cursor token to persist.
      * @return Configured IntegrationPullResult with statusCode='Fetched'.
      */
-    @SuppressWarnings('PMD.AvoidGlobalModifier')
     global static IntegrationPullResult fetched(List<Map<String, Object>> records, String nextCursor) {
         IntegrationPullResult r = new IntegrationPullResult();
         r.records = records == null ? new List<Map<String, Object>>() : records;
@@ -52,7 +47,6 @@ global class IntegrationPullResult {
      * @description Constructs a no-new-data result. Cursor unchanged.
      * @return Configured IntegrationPullResult with statusCode='NoNewData'.
      */
-    @SuppressWarnings('PMD.AvoidGlobalModifier')
     global static IntegrationPullResult noNewData() {
         IntegrationPullResult r = new IntegrationPullResult();
         r.records = new List<Map<String, Object>>();
@@ -65,7 +59,6 @@ global class IntegrationPullResult {
      * @param message Short error description.
      * @return Configured IntegrationPullResult with statusCode='RetryableFailure'.
      */
-    @SuppressWarnings('PMD.AvoidGlobalModifier')
     global static IntegrationPullResult retryable(String message) {
         IntegrationPullResult r = new IntegrationPullResult();
         r.records = new List<Map<String, Object>>();
