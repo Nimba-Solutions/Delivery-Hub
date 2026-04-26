@@ -27,6 +27,10 @@
  * @author       Cloud Nimbus LLC
  * @since        2026-04-26
  */
+// HTTP-handler classes have legitimate branching (status-code mapping,
+// error categorization) — suppressing cyclomatic complexity rules below
+// per platform pattern (other DH callout classes use the same approach).
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public with sharing class SlackWebhookProvider implements IIntegrationSink {
 
     /**

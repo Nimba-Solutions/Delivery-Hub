@@ -33,6 +33,10 @@
  * @author       Cloud Nimbus LLC
  * @since        2026-04-26
  */
+// HTTP-handler with status-code mapping + optional payload params has
+// legitimate branching — suppressing cyclomatic rules per the same
+// pattern other DH callout classes use.
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
 public with sharing class OpenAiCompletionsProvider implements IIntegrationSink {
 
     private static final Integer DEFAULT_MAX_TOKENS = 600;

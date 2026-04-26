@@ -10,6 +10,7 @@
  * @since        2026-04-26
  */
 @IsTest
+@SuppressWarnings('PMD.ApexDoc')
 private class OpenAiCompletionsProviderTest {
 
     public class OpenAiMock implements HttpCalloutMock {

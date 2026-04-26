@@ -17,6 +17,10 @@
  * @author       Cloud Nimbus LLC
  * @since        2026-04-26
  */
+// global modifier is required: subscriber-namespace Apex classes implement this
+// interface and need cross-namespace visibility (per Salesforce managed-package
+// platform docs). Public doesn't satisfy that constraint.
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global interface IIntegrationSink {
 
     /**

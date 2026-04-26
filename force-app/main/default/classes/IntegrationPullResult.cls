@@ -13,6 +13,9 @@
  * @author       Cloud Nimbus LLC
  * @since        2026-04-26
  */
+// global is required: subscriber-namespace IIntegrationSource implementations
+// return this DTO across namespace boundaries.
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global class IntegrationPullResult {
     /** @description Records pulled this fetch — each is a provider-shaped
      *  map. Empty list = no new records since cursor (still a success). */

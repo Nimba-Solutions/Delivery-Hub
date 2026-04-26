@@ -6,6 +6,9 @@
  *              IntegrationItem__c row with remote ID, status, and error context.
  * @author       Cloud Nimbus LLC
  */
+// global is required: subscriber-namespace IIntegrationSink implementations
+// return / consume this DTO across namespace boundaries.
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global class IntegrationSinkResult {
     /** @description Remote system's identifier for the record (idempotency key). */
     @AuraEnabled global String remoteId { get; set; }

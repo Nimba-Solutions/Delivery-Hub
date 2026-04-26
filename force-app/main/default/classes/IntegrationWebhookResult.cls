@@ -12,6 +12,9 @@
  * @author       Cloud Nimbus LLC
  * @since        2026-04-26
  */
+// global is required: subscriber-namespace IIntegrationSource implementations
+// return this DTO across namespace boundaries.
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global class IntegrationWebhookResult {
     /** @description Records derived from this webhook body. Empty list valid
      *  when the webhook is just an event ping (e.g. Slack url_verification). */

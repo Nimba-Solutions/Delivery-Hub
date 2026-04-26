@@ -18,6 +18,9 @@
  * @author       Cloud Nimbus LLC
  * @since        2026-04-26
  */
+// global modifier is required: subscriber-namespace classes implement this
+// interface and need cross-namespace visibility (managed-package consumers).
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global interface IIntegrationSource {
 
     /**

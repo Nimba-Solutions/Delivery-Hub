@@ -12,6 +12,7 @@
  * @since        2026-04-26
  */
 @IsTest
+@SuppressWarnings('PMD.ApexDoc')
 private class IntegrationWebhookReceiverTest {
 
     private static RestRequest buildRequest(String uri, String body, Map<String, String> headers) {

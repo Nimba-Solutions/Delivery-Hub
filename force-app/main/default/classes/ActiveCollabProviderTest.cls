@@ -13,6 +13,7 @@
  * @since        2026-04-26
  */
 @IsTest
+@SuppressWarnings('PMD.ApexDoc')
 private class ActiveCollabProviderTest {
 
     private static IntegrationProvider__mdt configWithoutNC() {
