@@ -194,12 +194,13 @@ public with sharing class IntegrationDispatcher {
         if (String.isBlank(config.SignerExtensionTxt__c)) {
             return;
         }
-        Type t;
-        if (config.SignerExtensionTxt__c.contains('.')) {
+        // Try 1-arg first — handles both inner classes ('OuterClass.InnerClass')
+        // and same-namespace classes. Fall back to 2-arg only when 1-arg fails,
+        // for cross-namespace ('namespace.ClassName') subscriber-Apex providers.
+        Type t = Type.forName(config.SignerExtensionTxt__c);
+        if (t == null && config.SignerExtensionTxt__c.contains('.')) {
             List<String> parts = config.SignerExtensionTxt__c.split('\\.');
             t = Type.forName(parts[0], parts[1]);
-        } else {
-            t = Type.forName(config.SignerExtensionTxt__c);
         }
         if (t == null) {
             throw new IntegrationDispatcherException(

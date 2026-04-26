@@ -88,7 +88,10 @@ private class IntegrationDispatcherTest {
         IntegrationProvider__mdt cfg = baseCfg();
         cfg.RequestBodyTemplateTxt__c = null;
         HttpRequest req = IntegrationDispatcher.buildRequest(cfg, new Map<String, Object>());
-        System.assertEquals(null, req.getBody());
+        // HttpRequest.getBody() returns '' when body never set (Apex platform behavior).
+        // Either null or blank is acceptable — we just want NO meaningful body.
+        System.assert(String.isBlank(req.getBody()),
+            'expected blank/null body when template missing, got: ' + req.getBody());
     }
 
     @IsTest
