@@ -4,22 +4,6 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
     <description>PMD Rules Index</description>
-    <rule ref="category/apex/default.xml">
-        <!--
-          Integration Framework files use `global` modifier intentionally.
-          Subscriber-namespace Apex classes implement the public interfaces
-          (IIntegrationSink, IIntegrationSource) and consume the result DTOs
-          (IntegrationSinkResult, IntegrationPullResult, IntegrationWebhookResult)
-          across namespace boundaries. `public` doesn't satisfy that constraint
-          per Salesforce managed-package platform docs. Apex doesn't allow
-          @SuppressWarnings on interface methods, so file-level exclusion here
-          is the only path. See DH PR #700 / /mf/integration-framework-0426.
-        -->
-        <exclude-pattern>.*/IIntegrationSink\.cls</exclude-pattern>
-        <exclude-pattern>.*/IIntegrationSource\.cls</exclude-pattern>
-        <exclude-pattern>.*/IntegrationSinkResult\.cls</exclude-pattern>
-        <exclude-pattern>.*/IntegrationPullResult\.cls</exclude-pattern>
-        <exclude-pattern>.*/IntegrationWebhookResult\.cls</exclude-pattern>
-    </rule>
+    <rule ref="category/apex/default.xml" />
     <rule ref="category/xml/default.xml" />
 </ruleset>
