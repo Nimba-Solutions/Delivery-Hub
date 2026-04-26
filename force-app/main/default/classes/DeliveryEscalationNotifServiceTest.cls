@@ -409,15 +409,12 @@ private class DeliveryEscalationNotifServiceTest {
     // -- Helpers ---------------------------------------------------------------
 
     private static String getNamespace() {
-        // Backwards-fix 4/26: when running INSIDE the delivery package's own
-        // dev_namespaced scratch (cumulusci package upload), Organization.
-        // NamespacePrefix returns 'delivery' but Apex resolves the package's
-        // own fields WITHOUT prefix. Outside (subscriber org), fields need
-        // the 'delivery__' prefix. Previous logic was inverted — returned
-        // 'delivery__' inside the package's own namespace, breaking JSON
-        // deserialize of CMT records during package upload tests.
+        // CMT fields owned by the delivery package have actual API name
+        // 'delivery__FieldName__c' regardless of caller context. JSON.deserialize
+        // requires exact field API names. Always use the prefix when we're
+        // not in a non-namespaced dev scratch (where field exists without prefix).
         String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
-        return ns == 'delivery' ? '' : 'delivery__';
+        return String.isBlank(ns) ? 'delivery__' : '';
     }
 
     @SuppressWarnings('PMD.ExcessiveParameterList')
