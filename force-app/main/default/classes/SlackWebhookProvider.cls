@@ -83,6 +83,9 @@ public with sharing class SlackWebhookProvider implements IIntegrationSink {
      *              Slack returns 400 "no_text" on empty body — that's a valid
      *              signal the URL is live and accepting our credential. 404 or
      *              connection refused indicates the webhook URL is dead.
+     * @param providerConfig Resolved IntegrationProvider__mdt — provides the
+     *                       Named Credential reference. No-op if blank.
+     * @return true when the webhook URL is live and reachable, false otherwise.
      */
     @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     public Boolean validateConnection(IntegrationProvider__mdt providerConfig) {
