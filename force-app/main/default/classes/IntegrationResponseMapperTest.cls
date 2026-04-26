@@ -21,7 +21,7 @@ private class IntegrationResponseMapperTest {
     static void exactCodeRuleWins() {
         IntegrationProvider__mdt cfg = cfgWith(
             '{"200":"Sent","2xx":"RetryableFailure"}', null);
-        IntegrationDispatcherResult r = IntegrationResponseMapper.map(200, '{}', cfg);
+        IntegrationDispatcherResult r = IntegrationResponseMapper.mapResponse(200, '{}', cfg);
         System.assertEquals('Sent', r.statusCode);
     }
 
@@ -29,7 +29,7 @@ private class IntegrationResponseMapperTest {
     static void rangeMatchesWhenNoExact() {
         IntegrationProvider__mdt cfg = cfgWith(
             '{"4xx":"TerminalFailure"}', null);
-        IntegrationDispatcherResult r = IntegrationResponseMapper.map(404, '', cfg);
+        IntegrationDispatcherResult r = IntegrationResponseMapper.mapResponse(404, '', cfg);
         System.assertEquals('TerminalFailure', r.statusCode);
     }
 
@@ -37,7 +37,7 @@ private class IntegrationResponseMapperTest {
     static void defaultRuleMatchesWhenNothingElse() {
         IntegrationProvider__mdt cfg = cfgWith(
             '{"200":"Sent","default":"RetryableFailure"}', null);
-        IntegrationDispatcherResult r = IntegrationResponseMapper.map(503, '', cfg);
+        IntegrationDispatcherResult r = IntegrationResponseMapper.mapResponse(503, '', cfg);
         System.assertEquals('RetryableFailure', r.statusCode);
     }
 
@@ -45,24 +45,24 @@ private class IntegrationResponseMapperTest {
     static void blankRulesUsesBuiltinDefaults() {
         IntegrationProvider__mdt cfg = cfgWith(null, null);
         System.assertEquals('Sent',
-            IntegrationResponseMapper.map(200, '', cfg).statusCode);
+            IntegrationResponseMapper.mapResponse(200, '', cfg).statusCode);
         System.assertEquals('TerminalFailure',
-            IntegrationResponseMapper.map(400, '', cfg).statusCode);
+            IntegrationResponseMapper.mapResponse(400, '', cfg).statusCode);
         System.assertEquals('RetryableFailure',
-            IntegrationResponseMapper.map(500, '', cfg).statusCode);
+            IntegrationResponseMapper.mapResponse(500, '', cfg).statusCode);
     }
 
     @IsTest
     static void malformedRulesFallsBackToDefaults() {
         IntegrationProvider__mdt cfg = cfgWith('not-json', null);
-        IntegrationDispatcherResult r = IntegrationResponseMapper.map(200, '', cfg);
+        IntegrationDispatcherResult r = IntegrationResponseMapper.mapResponse(200, '', cfg);
         System.assertEquals('Sent', r.statusCode);
     }
 
     @IsTest
     static void parseExprExtractsTopLevel() {
         IntegrationProvider__mdt cfg = cfgWith(null, '$.id');
-        IntegrationDispatcherResult r = IntegrationResponseMapper.map(
+        IntegrationDispatcherResult r = IntegrationResponseMapper.mapResponse(
             200, '{"id":"abc-123"}', cfg);
         System.assertEquals('Sent', r.statusCode);
         System.assertEquals('abc-123', r.responseValue);
@@ -71,7 +71,7 @@ private class IntegrationResponseMapperTest {
     @IsTest
     static void parseExprExtractsNested() {
         IntegrationProvider__mdt cfg = cfgWith(null, '$.user.email');
-        IntegrationDispatcherResult r = IntegrationResponseMapper.map(
+        IntegrationDispatcherResult r = IntegrationResponseMapper.mapResponse(
             200, '{"user":{"email":"a@b.com"}}', cfg);
         System.assertEquals('a@b.com', r.responseValue);
     }
@@ -79,7 +79,7 @@ private class IntegrationResponseMapperTest {
     @IsTest
     static void parseExprExtractsArrayIndex() {
         IntegrationProvider__mdt cfg = cfgWith(null, '$.choices[0].message.content');
-        IntegrationDispatcherResult r = IntegrationResponseMapper.map(200,
+        IntegrationDispatcherResult r = IntegrationResponseMapper.mapResponse(200,
             '{"choices":[{"message":{"role":"assistant","content":"hi"}}]}', cfg);
         System.assertEquals('hi', r.responseValue);
     }
@@ -87,7 +87,7 @@ private class IntegrationResponseMapperTest {
     @IsTest
     static void parseExprMissingPathReturnsNull() {
         IntegrationProvider__mdt cfg = cfgWith(null, '$.absent.path');
-        IntegrationDispatcherResult r = IntegrationResponseMapper.map(
+        IntegrationDispatcherResult r = IntegrationResponseMapper.mapResponse(
             200, '{"id":"x"}', cfg);
         System.assertEquals('Sent', r.statusCode);
         System.assertEquals(null, r.responseValue);
@@ -96,7 +96,7 @@ private class IntegrationResponseMapperTest {
     @IsTest
     static void parseExprOnFailureIsSkipped() {
         IntegrationProvider__mdt cfg = cfgWith(null, '$.id');
-        IntegrationDispatcherResult r = IntegrationResponseMapper.map(
+        IntegrationDispatcherResult r = IntegrationResponseMapper.mapResponse(
             500, '{"id":"x"}', cfg);
         System.assertEquals('RetryableFailure', r.statusCode);
         System.assertEquals(null, r.responseValue);
@@ -105,7 +105,7 @@ private class IntegrationResponseMapperTest {
     @IsTest
     static void retryableMessageReferencesHttpCode() {
         IntegrationProvider__mdt cfg = cfgWith(null, null);
-        IntegrationDispatcherResult r = IntegrationResponseMapper.map(503, '', cfg);
+        IntegrationDispatcherResult r = IntegrationResponseMapper.mapResponse(503, '', cfg);
         System.assertEquals(503, r.httpStatusCode);
         System.assert(r.statusMessage.contains('503'));
     }
@@ -113,7 +113,7 @@ private class IntegrationResponseMapperTest {
     @IsTest
     static void terminalMessageReferencesHttpCode() {
         IntegrationProvider__mdt cfg = cfgWith(null, null);
-        IntegrationDispatcherResult r = IntegrationResponseMapper.map(401, '', cfg);
+        IntegrationDispatcherResult r = IntegrationResponseMapper.mapResponse(401, '', cfg);
         System.assertEquals(401, r.httpStatusCode);
         System.assert(r.statusMessage.contains('401'));
     }
