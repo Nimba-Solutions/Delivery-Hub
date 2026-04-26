@@ -69,7 +69,7 @@ private class IntegrationDispatcherTest {
         Boolean threw = false;
         try {
             IntegrationDispatcher.buildRequest(cfg, new Map<String, Object>());
-        } catch (IntegrationDispatcher.IntegrationDispatcherException e) {
+        } catch (IntegrationDispatcherException e) {
             threw = true;
         }
         System.assertEquals(true, threw);
@@ -140,7 +140,7 @@ private class IntegrationDispatcherTest {
         Boolean threw = false;
         try {
             IntegrationDispatcher.applyExtension(cfg, req, new Map<String, Object>());
-        } catch (IntegrationDispatcher.IntegrationDispatcherException e) {
+        } catch (IntegrationDispatcherException e) {
             threw = true;
         }
         System.assertEquals(true, threw);
@@ -155,7 +155,7 @@ private class IntegrationDispatcherTest {
         Boolean threw = false;
         try {
             IntegrationDispatcher.applyExtension(cfg, req, new Map<String, Object>());
-        } catch (IntegrationDispatcher.IntegrationDispatcherException e) {
+        } catch (IntegrationDispatcherException e) {
             threw = true;
         }
         System.assertEquals(true, threw);
@@ -175,7 +175,7 @@ private class IntegrationDispatcherTest {
         Boolean threw = false;
         try {
             IntegrationDispatcher.resolveProvider('Definitely_Missing_99999');
-        } catch (IntegrationDispatcher.IntegrationDispatcherException e) {
+        } catch (IntegrationDispatcherException e) {
             threw = true;
         }
         System.assertEquals(true, threw);
