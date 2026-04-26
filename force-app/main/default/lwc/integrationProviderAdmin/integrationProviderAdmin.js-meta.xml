@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <isExposed>true</isExposed>
+    <description>Read-only listing of registered IntegrationProvider__mdt records with a per-row connection-probe action. Phase 6 scaffold of the Integration Framework — full admin UI (CRUD, secret management, payload preview) deferred to follow-on engagement per /mf/integration-framework-0426 risk R5.</description>
+    <masterLabel>Integration Provider Admin</masterLabel>
+    <targets>
+        <target>lightning__AppPage</target>
+        <target>lightning__HomePage</target>
+        <target>lightning__Tab</target>
+    </targets>
+</LightningComponentBundle>
