@@ -76,7 +76,7 @@ public with sharing class IntegrationDispatcher {
             HttpRequest req = buildRequest(config, safePayload);
             applyExtension(config, req, safePayload);
             HttpResponse res = new Http().send(req);
-            IntegrationDispatcherResult result = IntegrationResponseMapper.map(
+            IntegrationDispatcherResult result = IntegrationResponseMapper.mapResponse(
                 res.getStatusCode(), res.getBody(), config);
             logDispatch(config, req, result);
             return result;

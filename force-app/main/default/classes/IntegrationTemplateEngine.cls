@@ -102,10 +102,16 @@ public with sharing class IntegrationTemplateEngine {
         List<String> parts = path.split('\\.');
         Object current = root;
         for (String part : parts) {
-            if (!(current instanceof Map<String, Object>)) {
+            Map<String, Object> mapVal;
+            try {
+                mapVal = (Map<String, Object>) current;
+            } catch (Exception e) {
                 return null;
             }
-            current = ((Map<String, Object>) current).get(part);
+            if (mapVal == null) {
+                return null;
+            }
+            current = mapVal.get(part);
             if (current == null) {
                 return null;
             }
