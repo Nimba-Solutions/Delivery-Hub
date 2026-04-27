@@ -558,6 +558,9 @@ public without sharing class DeliverySyncItemIngestor {
      * @description Cast a string to an Id and confirm it points at a local
      *              WorkItem__c record. Returns null on any cast/describe failure
      *              (silent — callers fall through to other resolution strategies).
+     * @param candidate String that may or may not be a local 15/18-char WorkItem__c Id.
+     * @return Validated WorkItem__c Id, or null if the cast fails or the
+     *         resulting record points at a different SObject type.
      */
     private static Id tryAsLocalWorkItemId(String candidate) {
         if (String.isBlank(candidate)) {
