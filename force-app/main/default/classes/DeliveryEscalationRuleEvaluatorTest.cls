@@ -508,16 +508,8 @@ private class DeliveryEscalationRuleEvaluatorTest {
     // -- Helpers ---------------------------------------------------------------
 
     private static String getNamespace() {
-        // CMT fields owned by the delivery package have actual API name
-        // 'delivery__FieldName__c'. Tests run in two contexts:
-        //   1. dev_namespaced scratch (Organization.NamespacePrefix='delivery'):
-        //      source-deployed code, fields exist as plain X__c at API level
-        //      because namespace IS the package's own — no prefix needed.
-        //   2. ci_beta scratch (Organization.NamespacePrefix=''):
-        //      package installed as subscriber, fields are delivery__X__c —
-        //      prefix required for JSON.deserialize key match.
         String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
-        return String.isBlank(ns) ? 'delivery__' : '';
+        return String.isBlank(ns) ? '' : ns + '__';
     }
 
     @SuppressWarnings('PMD.ExcessiveParameterList')
