@@ -79,6 +79,11 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             'SLATargetDate__c',
             'EstimatedStartDevDate__c',
             'EstimatedEndDevDate__c',
+            // ActivatedDateTime__c filters Delivery Timeline visibility. The
+            // receiver-side auto-set in handleBeforeInsert is now gated on
+            // inboundSyncContext so the source value is the source of truth;
+            // include it here so explicit activations propagate cross-org.
+            'ActivatedDateTime__c',
             'RequestTypePk__c',
             'WorkflowTypeTxt__c',
             'SortOrderNumber__c',
@@ -293,8 +298,12 @@ public without sharing class DeliveryWorkItemTriggerHandler {
      */
     public static void handleBeforeInsert(List<WorkItem__c> newWorkItems) {
         Datetime now = Datetime.now();
+        // When the inbound-sync ingestor is performing the insert, the source
+        // org owns ActivatedDateTime__c — skip receiver-side auto-population so
+        // the source's value (often null for non-active items) is preserved.
+        Boolean skipAutoActivate = DeliveryTriggerControl.inboundSyncContext;
         for (WorkItem__c workItem : newWorkItems) {
-            if (workItem.ActivatedDateTime__c == null) {
+            if (!skipAutoActivate && workItem.ActivatedDateTime__c == null) {
                 workItem.ActivatedDateTime__c = now;
             }
             if (workItem.StageEnteredDateTime__c == null) {
