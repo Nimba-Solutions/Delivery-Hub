@@ -232,14 +232,7 @@ public without sharing class DeliverySyncItemIngestor {
                 }
                 // Fallback: maybe parentRef is already a valid local Id (echo path).
                 if (localParent == null) {
-                    try {
-                        Id castId = (Id) parentRef;
-                        if (castId.getSobjectType().getDescribe().getName().endsWithIgnoreCase('WorkItem__c')) {
-                            localParent = castId;
-                        }
-                    } catch (Exception e) {
-                        System.debug(LoggingLevel.FINE, 'Parent ref local-Id fallback failed: ' + e.getMessage());
-                    }
+                    localParent = tryAsLocalWorkItemId(parentRef);
                 }
                 if (localParent != null) {
                     putSafe(recordToUpsert, 'ParentWorkItemLookup__c', localParent);
@@ -559,6 +552,24 @@ public without sharing class DeliverySyncItemIngestor {
             System.debug(LoggingLevel.FINE, 'TargetId not a local WorkItem Id: ' + e.getMessage());
         }
         return null;
+    }
+
+    /**
+     * @description Cast a string to an Id and confirm it points at a local
+     *              WorkItem__c record. Returns null on any cast/describe failure
+     *              (silent — callers fall through to other resolution strategies).
+     */
+    private static Id tryAsLocalWorkItemId(String candidate) {
+        if (String.isBlank(candidate)) {
+            return null;
+        }
+        try {
+            Id castId = (Id) candidate;
+            return castId.getSobjectType().getDescribe().getName().endsWithIgnoreCase('WorkItem__c') ? castId : null;
+        } catch (Exception e) {
+            System.debug(LoggingLevel.FINE, 'Candidate is not a local WorkItem Id: ' + e.getMessage());
+            return null;
+        }
     }
 
     // Helper to grab both the Work Item ID and the Request ID
