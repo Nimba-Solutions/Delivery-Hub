@@ -273,25 +273,34 @@ public without sharing class DeliverySyncItemIngestor {
             }
         }
 
-        if (recordToUpsert.Id != null) {
-            Database.update(recordToUpsert, AccessLevel.SYSTEM_MODE);
-        } else {
-            Database.insert(recordToUpsert, AccessLevel.SYSTEM_MODE);
+        // Tell trigger handlers that the source org owns auto-populated fields
+        // (e.g. WorkItem__c.ActivatedDateTime__c) so receiver-side defaults
+        // don't overwrite the source value during ingest.
+        Boolean priorInboundFlag = DeliveryTriggerControl.inboundSyncContext;
+        DeliveryTriggerControl.inboundSyncContext = true;
+        try {
+            if (recordToUpsert.Id != null) {
+                Database.update(recordToUpsert, AccessLevel.SYSTEM_MODE);
+            } else {
+                Database.insert(recordToUpsert, AccessLevel.SYSTEM_MODE);
 
-            // Notify admins of pending connection requests
-            if (objectType.endsWithIgnoreCase('NetworkEntity__c')) {
-                notifyPendingConnection(recordToUpsert);
-            }
+                // Notify admins of pending connection requests
+                if (objectType.endsWithIgnoreCase('NetworkEntity__c')) {
+                    notifyPendingConnection(recordToUpsert);
+                }
 
-            // Pass the localRequestId and globalSourceId down to link the Sync Item
-            createLedgerEntry(objectType, sourceId, recordToUpsert.Id, localRequestId, globalSourceId);
-            
-            if (objectType.equalsIgnoreCase('ContentVersion') && localParentId != null) {
-                Id contentDocId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :recordToUpsert.Id LIMIT 1].ContentDocumentId;
-                Database.insert(new ContentDocumentLink(
-                    ContentDocumentId = contentDocId, LinkedEntityId = localParentId, ShareType = 'V', Visibility = 'AllUsers'
-                ), AccessLevel.SYSTEM_MODE);
+                // Pass the localRequestId and globalSourceId down to link the Sync Item
+                createLedgerEntry(objectType, sourceId, recordToUpsert.Id, localRequestId, globalSourceId);
+
+                if (objectType.equalsIgnoreCase('ContentVersion') && localParentId != null) {
+                    Id contentDocId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :recordToUpsert.Id LIMIT 1].ContentDocumentId;
+                    Database.insert(new ContentDocumentLink(
+                        ContentDocumentId = contentDocId, LinkedEntityId = localParentId, ShareType = 'V', Visibility = 'AllUsers'
+                    ), AccessLevel.SYSTEM_MODE);
+                }
             }
+        } finally {
+            DeliveryTriggerControl.inboundSyncContext = priorInboundFlag;
         }
 
         // ==========================================
