@@ -154,6 +154,50 @@ public class DeliveryWorkItemTriggerHandlerTest {
     }
 
     @IsTest
+    static void testInboundSyncContextSkipsAutoActivate() {
+        // Regression guard: when inboundSyncContext = true (set by the
+        // sync ingestor), handleBeforeInsert must NOT auto-set
+        // ActivatedDateTime__c. Without this gate, every record sync'd
+        // into a subscriber org gets auto-activated, corrupting the
+        // Delivery Timeline view.
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryTriggerControl.inboundSyncContext = true;
+            WorkItem__c inboundItem = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Inbound sync ingest — should not auto-activate',
+                StageNamePk__c = 'Backlog'
+            );
+            insert inboundItem;
+            DeliveryTriggerControl.inboundSyncContext = false;
+            Test.stopTest();
+
+            WorkItem__c after = [SELECT ActivatedDateTime__c FROM WorkItem__c WHERE Id = :inboundItem.Id];
+            System.assertEquals(null, after.ActivatedDateTime__c,
+                'ActivatedDateTime__c must remain null when inboundSyncContext is true');
+        }
+    }
+
+    @IsTest
+    static void testNormalInsertStillAutoActivates() {
+        // Companion to testInboundSyncContextSkipsAutoActivate — when
+        // inboundSyncContext is false (the default user-driven path),
+        // handleBeforeInsert still auto-sets ActivatedDateTime__c.
+        System.runAs(testUser) {
+            Test.startTest();
+            WorkItem__c userItem = new WorkItem__c(
+                BriefDescriptionTxt__c = 'User-driven insert — should auto-activate',
+                StageNamePk__c = 'Backlog'
+            );
+            insert userItem;
+            Test.stopTest();
+
+            WorkItem__c after = [SELECT ActivatedDateTime__c FROM WorkItem__c WHERE Id = :userItem.Id];
+            System.assertNotEquals(null, after.ActivatedDateTime__c,
+                'ActivatedDateTime__c must be auto-set when inboundSyncContext is false');
+        }
+    }
+
+    @IsTest
     static void testTriggerDisabledFlagSkipsAllLogic() {
         System.runAs(testUser) {
             // When triggerDisabled = true, the trigger returns immediately
