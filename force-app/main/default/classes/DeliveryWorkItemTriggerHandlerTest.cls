@@ -154,6 +154,35 @@ public class DeliveryWorkItemTriggerHandlerTest {
     }
 
     @IsTest
+    static void testPriorityGroupChangeQueuesSync() {
+        // Regression guard: PriorityGroupPk__c drives gantt grouping
+        // (NOW / NEXT / PROPOSED). Without the field in syncFields, subscriber
+        // orgs receive the record with a null group and the timeline collapses.
+        System.runAs(testUser) {
+            WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
+            NetworkEntity__c v = [SELECT Id FROM NetworkEntity__c LIMIT 1];
+            insert new WorkRequest__c(WorkItemId__c = t.Id, DeliveryEntityLookup__c = v.Id, StatusPk__c = 'Active', RemoteWorkItemIdTxt__c = 'R-PG');
+            delete [SELECT Id FROM SyncItem__c];
+
+            Test.startTest();
+            t.PriorityGroupPk__c = 'top-priority';
+            update t;
+            Test.stopTest();
+
+            List<SyncItem__c> items = [SELECT Id, PayloadTxt__c FROM SyncItem__c WHERE WorkItemLookup__c = :t.Id];
+            System.assert(items.size() >= 1, 'PriorityGroupPk__c change should queue a sync item');
+            Boolean payloadCarriesField = false;
+            for (SyncItem__c si : items) {
+                if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('PriorityGroupPk__c')) {
+                    payloadCarriesField = true;
+                    break;
+                }
+            }
+            System.assert(payloadCarriesField, 'Outbound payload must carry PriorityGroupPk__c');
+        }
+    }
+
+    @IsTest
     static void testInboundSyncContextSkipsAutoActivate() {
         // Regression guard: when inboundSyncContext = true (set by the
         // sync ingestor), handleBeforeInsert must NOT auto-set
