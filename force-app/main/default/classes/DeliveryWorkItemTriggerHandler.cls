@@ -54,6 +54,11 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             'StageNamePk__c',
             'StatusPk__c',
             'PriorityPk__c',
+            // PriorityGroupPk__c drives gantt grouping (NOW / NEXT / PROPOSED).
+            // Without this in syncFields the field stays null on subscriber orgs
+            // and the timeline groups collapse to a single default bucket — even
+            // though the source has top-priority/active/etc populated correctly.
+            'PriorityGroupPk__c',
             'DeveloperDaysSizeNumber__c',
             'EstimatedHoursNumber__c',
             'ClientPreApprovedHoursNumber__c',
