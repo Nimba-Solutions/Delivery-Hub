@@ -417,8 +417,7 @@ private class DeliveryEscalationNotifServiceTest {
         //   2. ci_beta scratch (Organization.NamespacePrefix=''):
         //      package installed as subscriber, fields are delivery__X__c —
         //      prefix required for JSON.deserialize key match.
-        String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
-        return String.isBlank(ns) ? 'delivery__' : '';
+        return 'delivery__';
     }
 
     @SuppressWarnings('PMD.ExcessiveParameterList')
