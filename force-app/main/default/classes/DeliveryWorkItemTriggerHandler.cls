@@ -59,6 +59,12 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             // and the timeline groups collapse to a single default bucket — even
             // though the source has top-priority/active/etc populated correctly.
             'PriorityGroupPk__c',
+            // ParentWorkItemLookup__c is a cross-org self-FK. The OUTBOUND payload
+            // carries the sender-org WorkItem Id; the inbound ingestor translates
+            // it to the local Id via the SyncItem ledger. Without this in syncFields,
+            // children arrive flat on subscriber orgs and gantt nesting breaks
+            // (parent rollup bar shows but children don't fold under it).
+            'ParentWorkItemLookup__c',
             'DeveloperDaysSizeNumber__c',
             'EstimatedHoursNumber__c',
             'ClientPreApprovedHoursNumber__c',
