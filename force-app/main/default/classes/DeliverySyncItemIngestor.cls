@@ -195,6 +195,62 @@ public without sharing class DeliverySyncItemIngestor {
             fieldPayload.remove('delivery__RequestId__c');
         }
 
+        // Cross-org parent FK translation for WorkItem__c: the payload's
+        // ParentWorkItemLookup__c is the sender-org Id and won't resolve locally.
+        // Use the SyncItem ledger to find the local twin; if not found yet
+        // (parent hasn't synced), leave unset — child arrives flat and re-syncs
+        // when source touches the field again. Children typically follow parents
+        // in dispatch order, so the not-found case is rare.
+        if (objectType.endsWithIgnoreCase('WorkItem__c') && !objectType.endsWithIgnoreCase('WorkItemComment__c')) {
+            Object parentRefRaw = payload.get('ParentWorkItemLookup__c');
+            if (parentRefRaw == null) {
+                parentRefRaw = payload.get('delivery__ParentWorkItemLookup__c');
+            }
+            String parentRef = parentRefRaw == null ? null : String.valueOf(parentRefRaw);
+            if (String.isNotBlank(parentRef)) {
+                // WorkItem and WorkLog branches are mutually exclusive on objectType,
+                // so fieldPayload still aliases payload here — clone to avoid mutating
+                // the caller's map and to strip the cross-org Id before mapFields runs
+                // (otherwise mapFields would attempt to write a stranger-org Id into
+                // the Lookup field and fail with INVALID_CROSS_REFERENCE_KEY).
+                fieldPayload = new Map<String, Object>(payload);
+                fieldPayload.remove('ParentWorkItemLookup__c');
+                fieldPayload.remove('delivery__ParentWorkItemLookup__c');
+
+                Id localParent = null;
+                List<SyncItem__c> parentLedger = [
+                    SELECT LocalRecordIdTxt__c FROM SyncItem__c
+                    WHERE RemoteExternalIdTxt__c = :parentRef
+                      AND ObjectTypePk__c = 'WorkItem__c'
+                    WITH SYSTEM_MODE
+                    LIMIT 1
+                ];
+                if (!parentLedger.isEmpty() && String.isNotBlank((String) parentLedger[0].LocalRecordIdTxt__c)) {
+                    try { localParent = (Id) parentLedger[0].LocalRecordIdTxt__c; } catch (Exception e) {
+                        System.debug(LoggingLevel.FINE, 'Parent ledger Id cast failed: ' + e.getMessage());
+                    }
+                }
+                // Fallback: maybe parentRef is already a valid local Id (echo path).
+                if (localParent == null) {
+                    try {
+                        Id castId = (Id) parentRef;
+                        if (castId.getSobjectType().getDescribe().getName().endsWithIgnoreCase('WorkItem__c')) {
+                            localParent = castId;
+                        }
+                    } catch (Exception e) {
+                        System.debug(LoggingLevel.FINE, 'Parent ref local-Id fallback failed: ' + e.getMessage());
+                    }
+                }
+                if (localParent != null) {
+                    putSafe(recordToUpsert, 'ParentWorkItemLookup__c', localParent);
+                }
+                // If localParent is null, we deliberately leave the field unset.
+                // Children typically arrive after parents in dispatcher order; the
+                // rare out-of-order case heals when the source touches the field
+                // and re-emits the payload (eventual consistency).
+            }
+        }
+
         mapFields(recordToUpsert, fieldPayload, targetType);
 
         // ==========================================

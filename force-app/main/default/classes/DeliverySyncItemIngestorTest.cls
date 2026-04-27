@@ -66,6 +66,51 @@ private class DeliverySyncItemIngestorTest {
     }
 
     @IsTest
+    static void testProcessInboundWorkItemTranslatesParentFk() {
+        // Regression guard: when an inbound WorkItem payload carries a
+        // ParentWorkItemLookup__c with a sender-org Id, the ingestor must
+        // translate it to the local twin via the SyncItem ledger before write.
+        // Without this, gantt nesting breaks on subscriber orgs (children
+        // arrive flat because the cross-org parent Id can't resolve locally).
+        System.runAs(testUser) {
+            // The TestSetup ledger entry maps RemoteExternalIdTxt__c =
+            // 'REMOTE-CLIENT-WORKITEM-1' → LocalRecordIdTxt__c = base WorkItem Id.
+            WorkItem__c localParent = [SELECT Id FROM WorkItem__c LIMIT 1];
+
+            // Insert a separate WorkItem that the inbound payload will update.
+            // Use the existing ledger row so processInboundItem treats it as an UPDATE.
+            // (We re-target the ledger to a NEW child so the existing one stays for other tests.)
+            WorkItem__c child = new WorkItem__c(BriefDescriptionTxt__c = 'Pre-existing child');
+            insert child;
+            insert new SyncItem__c(
+                DirectionPk__c = 'Inbound',
+                StatusPk__c = 'Synced',
+                ObjectTypePk__c = 'WorkItem__c',
+                RemoteExternalIdTxt__c = 'REMOTE-CHILD-001',
+                LocalRecordIdTxt__c = child.Id,
+                WorkItemLookup__c = child.Id
+            );
+
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-CHILD-001',
+                'BriefDescriptionTxt__c' => 'Child arrived via inbound sync',
+                // Cross-org parent Id — must NOT be written verbatim
+                'ParentWorkItemLookup__c' => 'REMOTE-CLIENT-WORKITEM-1'
+            };
+
+            Test.startTest();
+            DeliverySyncItemIngestor.processInboundItem('WorkItem__c', payload);
+            Test.stopTest();
+
+            WorkItem__c after = [SELECT ParentWorkItemLookup__c, BriefDescriptionTxt__c FROM WorkItem__c WHERE Id = :child.Id];
+            System.assertEquals(localParent.Id, after.ParentWorkItemLookup__c,
+                'Ingestor must translate the cross-org parent Id to the local twin via the SyncItem ledger');
+            System.assertEquals('Child arrived via inbound sync', after.BriefDescriptionTxt__c,
+                'Other fields must still flow through mapFields after parent translation');
+        }
+    }
+
+    @IsTest
     static void testProcessInboundCommentInsertDownstreamEdge() {
         System.runAs(testUser) {
             Map<String, Object> payload = new Map<String, Object>{
