@@ -99,4 +99,8 @@
     <testClassName>%%%NAMESPACE_DOT%%%IntegrationTemplateEngineTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%IntegrationResponseMapperTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%IntegrationDispatcherTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWebhookReceiverApiTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWebhookEventRouterTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WebhookSignatureVerifierTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryStripePaymentHandlerTest</testClassName>
 </ApexTestSuite>

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Stripe Webhook</label>
+    <protected>false</protected>
+    <values>
+        <field>DirectionTxt__c</field>
+        <value xsi:type="xsd:string">Inbound</value>
+    </values>
+    <values>
+        <field>SignatureHeaderTxt__c</field>
+        <value xsi:type="xsd:string">Stripe-Signature</value>
+    </values>
+    <values>
+        <field>SignatureAlgorithmTxt__c</field>
+        <value xsi:type="xsd:string">HmacSha256</value>
+    </values>
+    <values>
+        <field>SignatureSecretTxt__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>EventTypeFieldPathTxt__c</field>
+        <value xsi:type="xsd:string">type</value>
+    </values>
+    <values>
+        <field>RoutingRulesJsonTxt__c</field>
+        <value xsi:type="xsd:string">{
+  "charge.succeeded": "DeliveryStripePaymentHandler",
+  "payment_intent.succeeded": "DeliveryStripePaymentHandler"
+}</value>
+    </values>
+    <values>
+        <field>EnabledDateTime__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>HttpMethodPk__c</field>
+        <value xsi:type="xsd:string">POST</value>
+    </values>
+    <values>
+        <field>NamedCredentialDevNameTxt__c</field>
+        <value xsi:type="xsd:string">UNUSED_FOR_INBOUND_PROVIDERS</value>
+    </values>
+    <values>
+        <field>EndpointPathTxt__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>HeadersJsonTxt__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>RequestBodyTemplateTxt__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>ResponseRulesJsonTxt__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>SuccessParseExprTxt__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>SignerExtensionTxt__c</field>
+        <value xsi:nil="true"/>
+    </values>
+</CustomMetadata>
