@@ -31,7 +31,7 @@ public with sharing class WebhookSignatureVerifier {
             ? 'None'
             : provider.SignatureAlgorithmTxt__c;
         if (algorithm.equalsIgnoreCase('None')) {
-            return Outcome.pass();
+            return passOutcome();
         }
         Outcome configCheck = validateConfig(provider, req);
         if (!configCheck.passed) {
@@ -39,29 +39,51 @@ public with sharing class WebhookSignatureVerifier {
         }
         String algoName = mapAlgorithm(algorithm);
         if (algoName == null) {
-            return Outcome.fail('Unknown algorithm: ' + algorithm);
+            return failOutcome('Unknown algorithm: ' + algorithm);
         }
         String expectedHex = computeHex(algoName, body, provider.SignatureSecretTxt__c);
         String headerValue = req.headers.get(provider.SignatureHeaderTxt__c);
         return matches(headerValue, expectedHex)
-            ? Outcome.pass()
-            : Outcome.fail('Computed signature did not match header value');
+            ? passOutcome()
+            : failOutcome('Computed signature did not match header value');
+    }
+
+    /**
+     * @description Convenience constructor for a passing verification.
+     * @return Outcome with passed=true.
+     */
+    public static Outcome passOutcome() {
+        Outcome o = new Outcome();
+        o.passed = true;
+        return o;
+    }
+
+    /**
+     * @description Convenience constructor for a failing verification.
+     * @param reason Short failure description surfaced to the caller.
+     * @return Outcome with passed=false.
+     */
+    public static Outcome failOutcome(String reason) {
+        Outcome o = new Outcome();
+        o.passed = false;
+        o.reason = reason;
+        return o;
     }
 
     private static Outcome validateConfig(IntegrationProvider__mdt provider, RestRequest req) {
         if (String.isBlank(provider.SignatureHeaderTxt__c)) {
-            return Outcome.fail('SignatureHeaderTxt__c not configured');
+            return failOutcome('SignatureHeaderTxt__c not configured');
         }
         String headerValue = req.headers == null
             ? null
             : req.headers.get(provider.SignatureHeaderTxt__c);
         if (String.isBlank(headerValue)) {
-            return Outcome.fail('Missing header ' + provider.SignatureHeaderTxt__c);
+            return failOutcome('Missing header ' + provider.SignatureHeaderTxt__c);
         }
         if (String.isBlank(provider.SignatureSecretTxt__c)) {
-            return Outcome.fail('SignatureSecretTxt__c not configured');
+            return failOutcome('SignatureSecretTxt__c not configured');
         }
-        return Outcome.pass();
+        return passOutcome();
     }
 
     private static String computeHex(String algoName, String body, String secret) {
@@ -124,32 +146,12 @@ public with sharing class WebhookSignatureVerifier {
 
     /**
      * @description Pass/fail outcome with an explanation surfaced in the
-     *              receiver's response body for failures.
+     *              receiver's response body for failures. Constructed via
+     *              the outer-class passOutcome() / failOutcome() factories
+     *              because Apex disallows static methods on inner classes.
      */
     public class Outcome {
         public Boolean passed;
         public String reason;
-
-        /**
-         * @description Convenience constructor for a passing verification.
-         * @return Outcome with passed=true.
-         */
-        public static Outcome pass() {
-            Outcome o = new Outcome();
-            o.passed = true;
-            return o;
-        }
-
-        /**
-         * @description Convenience constructor for a failing verification.
-         * @param reason Short failure description surfaced to the caller.
-         * @return Outcome with passed=false.
-         */
-        public static Outcome fail(String reason) {
-            Outcome o = new Outcome();
-            o.passed = false;
-            o.reason = reason;
-            return o;
-        }
     }
 }

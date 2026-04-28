@@ -39,7 +39,7 @@
     </values>
     <values>
         <field>NamedCredentialDevNameTxt__c</field>
-        <value xsi:nil="true"/>
+        <value xsi:type="xsd:string">UNUSED_FOR_INBOUND_PROVIDERS</value>
     </values>
     <values>
         <field>EndpointPathTxt__c</field>
