@@ -295,11 +295,12 @@ private class DeliveryExternalNotificationServiceTest {
     static void testBuildSLABreachHtmlNullDate() {
         System.runAs(testUser) {
             WorkItem__c wi = new WorkItem__c(
-                Name = 'WI-9999',
                 BriefDescriptionTxt__c = 'No SLA date item',
                 StageNamePk__c = 'In Development'
             );
-            // Note: not inserting — just using for HTML generation
+            // Note: not inserting — just using for HTML generation.
+            // WorkItem__c.Name is an auto-number; assigning it is blocked at
+            // package upload time even though it would silently work in tests.
 
             Test.startTest();
             String html = DeliveryExternalNotificationService.buildSLABreachHtml(wi);

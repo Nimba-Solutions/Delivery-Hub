@@ -13,6 +13,7 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubDashboardControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubFilesControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubInstallHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryUserTriggerHandlerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubPollerControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubPollerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubSchedulerTest</testClassName>
