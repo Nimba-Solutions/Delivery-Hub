@@ -103,4 +103,6 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryWebhookEventRouterTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%WebhookSignatureVerifierTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryStripePaymentHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubHealthServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubRepairServiceTest</testClassName>
 </ApexTestSuite>
