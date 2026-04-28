@@ -79,6 +79,12 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryHubHealthDashboard</componentName>
+                <identifier>c_deliveryHubHealthDashboard</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentInstanceProperties>
                     <name>displayMode</name>
                     <value>Card</value>
