@@ -364,12 +364,13 @@ public with sharing class DeliveryDocQueryService {
         // at least one slot. An empty slot list on a non-signing template stays false.
         Boolean signingComplete = signingRequired && !actions.isEmpty() && allCompleted;
 
-        // TODO: wire to DeliveryAuditChainService.validateChain — current implementation
-        // only validates the global ActivityLog__c chain (validateChain(Integer batchSize))
-        // and does not yet expose a per-document verification entry point. Returning
-        // false/null until that helper exists keeps the portal contract stable.
-        Boolean hashChainVerified = false;
-        Datetime hashChainVerifiedAt = null;
+        // Per-document hash-chain validation lives in DeliveryAuditChainService.
+        // Returns passed=false when the document has no log entries yet, so the
+        // portal contract still tells the truth on brand-new docs.
+        Map<String, Object> chainOutcome = DeliveryAuditChainService
+            .validateChainForRecord(documentId);
+        Boolean hashChainVerified = (Boolean) chainOutcome.get('passed');
+        Datetime hashChainVerifiedAt = (Datetime) chainOutcome.get('verifiedAt');
 
         return new Map<String, Object>{
             'signingRequired'     => signingRequired,

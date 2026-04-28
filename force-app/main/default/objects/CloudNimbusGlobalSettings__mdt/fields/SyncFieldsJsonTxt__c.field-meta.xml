@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SyncFieldsJsonTxt__c</fullName>
+    <description>JSON map of object API names to the field list each object syncs cross-org. Read by DeliverySyncReconciler at run time so adding a new sync field is a metadata edit rather than a code change. Empty/blank value falls back to the hardcoded defaults in DeliverySyncReconciler.WORK_ITEM_SYNC_FIELDS.</description>
+    <inlineHelpText>JSON map of {"WorkItem__c": ["Field1__c", "Field2__c", ...], "WorkItemComment__c": [...]}.</inlineHelpText>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Sync Fields JSON</label>
+    <length>32768</length>
+    <type>LongTextArea</type>
+    <visibleLines>10</visibleLines>
+</CustomField>

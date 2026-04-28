@@ -18,8 +18,8 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
     /** @description Maximum SyncItems to insert per execution to stay within governor limits. */
     private static final Integer BATCH_LIMIT = 200;
 
-    /** @description The full set of WorkItem fields that the reconciler syncs downstream. */
-    private static final Set<String> WORK_ITEM_SYNC_FIELDS = new Set<String>{
+    /** @description Default WorkItem sync fields used when CloudNimbusGlobalSettings__mdt.SyncFieldsJsonTxt__c is unset. */
+    private static final Set<String> DEFAULT_WORK_ITEM_SYNC_FIELDS = new Set<String>{
         'BriefDescriptionTxt__c', 'DetailsTxt__c', 'StageNamePk__c', 'StatusPk__c',
         'PriorityPk__c', 'DeveloperDaysSizeNumber__c', 'EstimatedHoursNumber__c',
         'ClientPreApprovedHoursNumber__c', 'DeveloperLookup__c', 'CalculatedETADate__c',
@@ -27,6 +27,53 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
         'ClientIntentionPk__c', 'RequestTypePk__c', 'TagsTxt__c', 'WorkflowTypeTxt__c',
         'EpicTxt__c', 'SLATargetDate__c', 'ActivatedDateTime__c', 'SortOrderNumber__c'
     };
+
+    /** @description Cached resolved sync fields for the current transaction. */
+    private static Set<String> cachedWorkItemSyncFields;
+
+    /**
+     * @description Resolve the WorkItem sync field list, preferring the
+     *              CloudNimbusGlobalSettings__mdt JSON config (so admins can
+     *              add new sync fields without an Apex change) and falling
+     *              back to the hardcoded defaults when the config is blank
+     *              or malformed.
+     * @return Active set of WorkItem fields the reconciler should sync.
+     */
+    @TestVisible
+    private static Set<String> getWorkItemSyncFields() {
+        if (cachedWorkItemSyncFields != null) {
+            return cachedWorkItemSyncFields;
+        }
+        cachedWorkItemSyncFields = DEFAULT_WORK_ITEM_SYNC_FIELDS;
+        CloudNimbusGlobalSettings__mdt cfg = CloudNimbusGlobalSettings__mdt.getInstance('Default');
+        if (cfg == null || String.isBlank(cfg.SyncFieldsJsonTxt__c)) {
+            return cachedWorkItemSyncFields;
+        }
+        try {
+            Object parsed = JSON.deserializeUntyped(cfg.SyncFieldsJsonTxt__c);
+            if (!(parsed instanceof Map<String, Object>)) {
+                return cachedWorkItemSyncFields;
+            }
+            Object workItemNode = ((Map<String, Object>) parsed).get('WorkItem__c');
+            if (!(workItemNode instanceof List<Object>)) {
+                return cachedWorkItemSyncFields;
+            }
+            Set<String> fields = new Set<String>();
+            for (Object f : (List<Object>) workItemNode) {
+                if (f != null) {
+                    fields.add(String.valueOf(f));
+                }
+            }
+            if (!fields.isEmpty()) {
+                cachedWorkItemSyncFields = fields;
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliverySyncReconciler] Bad SyncFieldsJsonTxt__c — falling back to defaults: '
+                + e.getMessage());
+        }
+        return cachedWorkItemSyncFields;
+    }
 
     /**
      * @description Constructs a new reconciler starting from the first entity.
@@ -257,7 +304,7 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
 
         // Map all syncable fields
         Map<String, Object> populatedFields = wi.getPopulatedFieldsAsMap();
-        for (String field : WORK_ITEM_SYNC_FIELDS) {
+        for (String field : getWorkItemSyncFields()) {
             if (populatedFields.containsKey(field)) {
                 payload.put(field, populatedFields.get(field));
             }
