@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SignatureHeaderTxt__c</fullName>
+    <description>HTTP header carrying the request signature on inbound webhook calls (e.g. Stripe-Signature, X-Hub-Signature-256). Verified by DeliveryWebhookReceiverApi against SignatureSecretTxt__c using SignatureAlgorithmTxt__c.</description>
+    <inlineHelpText>HTTP header name that carries the inbound webhook signature.</inlineHelpText>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Signature Header</label>
+    <length>80</length>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
