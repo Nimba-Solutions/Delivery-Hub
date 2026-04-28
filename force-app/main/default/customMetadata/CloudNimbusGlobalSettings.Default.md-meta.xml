@@ -10,4 +10,12 @@
         <field>EnabledDateTime__c</field>
         <value xsi:type="xsd:dateTime">2020-01-01T00:00:00.000Z</value>
     </values>
+    <values>
+        <field>MothershipEntityNameTxt__c</field>
+        <value xsi:type="xsd:string">Cloud Nimbus LLC</value>
+    </values>
+    <values>
+        <field>SyncFieldsJsonTxt__c</field>
+        <value xsi:nil="true"/>
+    </values>
 </CustomMetadata>
