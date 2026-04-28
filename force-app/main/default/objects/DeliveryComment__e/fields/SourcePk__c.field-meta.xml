@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>SourcePk__c</fullName>
-    <description>Origin of the underlying comment — Client (locally created) or Mothership (synced inbound from another org).</description>
-    <inlineHelpText>Comment origin.</inlineHelpText>
-    <label>Source</label>
-    <length>40</length>
-    <type>Text</type>
-</CustomField>

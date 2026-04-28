@@ -11,7 +11,8 @@ import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { subscribe, unsubscribe, onError } from 'lightning/empApi';
 
-const COMMENT_CHANNEL = '/event/%%%NAMESPACE_DOT%%%DeliveryComment__e';
+const CHANGE_CHANNEL = '/event/%%%NAMESPACE_DOT%%%DeliveryWorkItemChange__e';
+const COMMENT_CHANGE_TYPES = new Set(['comment_insert', 'comment_update']);
 // Fallback poll cadence — only used if the empApi subscription drops silently.
 // Sub-second updates come from the platform-event channel above.
 const FALLBACK_POLL_MS = 300000; // 5 minutes
@@ -38,16 +39,19 @@ export default class DeliveryWorkItemChat extends LightningElement {
     // --- LIFECYCLE HOOKS ---
 
     connectedCallback() {
-        // Real-time updates: subscribe to DeliveryComment__e and only refresh
-        // when the event's WorkItemIdTxt__c matches this chat's recordId.
-        // The 30s polling we used to do is replaced by sub-second platform-event
+        // Real-time updates: subscribe to DeliveryWorkItemChange__e and only
+        // refresh when (a) the event's ChangeType is a comment_* event AND
+        // (b) the WorkItemIdTxt__c matches this chat's recordId. The 30s
+        // polling we used to do is replaced by sub-second platform-event
         // notifications + a 5-min safety-net poll if the subscription drops.
-        subscribe(COMMENT_CHANNEL, -1, (message) => {
+        subscribe(CHANGE_CHANNEL, -1, (message) => {
             const payload = message && message.data && message.data.payload;
-            if (!payload) { return; }
+            if (!payload || !this.recordId) { return; }
+            const changeType = payload.ChangeTypeTxt__c
+                || payload[`${this._nsPrefix()}ChangeTypeTxt__c`];
+            if (!COMMENT_CHANGE_TYPES.has(changeType)) { return; }
             const eventWorkItemId = payload.WorkItemIdTxt__c
                 || payload[`${this._nsPrefix()}WorkItemIdTxt__c`];
-            if (!this.recordId) { return; }
             if (eventWorkItemId && this._idsMatch(eventWorkItemId, this.recordId)) {
                 if (this.wiredResult) {
                     refreshApex(this.wiredResult);

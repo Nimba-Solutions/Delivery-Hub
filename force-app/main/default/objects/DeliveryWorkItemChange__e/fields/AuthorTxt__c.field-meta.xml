@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>AuthorTxt__c</fullName>
-    <description>Display name of the comment author for optimistic LWC rendering before refreshApex completes.</description>
+    <description>Display name of the comment author. Populated only when ChangeTypeTxt__c is comment_insert or comment_update.</description>
     <inlineHelpText>Display name of the comment author.</inlineHelpText>
     <label>Author</label>
     <length>255</length>

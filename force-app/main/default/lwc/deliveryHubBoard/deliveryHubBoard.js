@@ -240,7 +240,19 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     }
 
     subscribeToWorkItemChanges() {
-        subscribe(WORK_ITEM_CHANGE_CHANNEL, -1, () => {
+        subscribe(WORK_ITEM_CHANGE_CHANNEL, -1, (message) => {
+            // The DeliveryWorkItemChange__e channel now carries comment_*
+            // events as well as stage_change events. The board only cares
+            // about stage transitions; ignoring chat noise prevents a
+            // refresh storm whenever someone types in a record-page chat.
+            const payload = message && message.data && message.data.payload;
+            if (payload) {
+                const changeType = payload.ChangeTypeTxt__c
+                    || payload['delivery__ChangeTypeTxt__c'];
+                if (changeType && changeType !== 'stage_change') {
+                    return;
+                }
+            }
             refreshApex(this.workItemsWire);
         }).then(response => {
             this._empSubscription = response;
