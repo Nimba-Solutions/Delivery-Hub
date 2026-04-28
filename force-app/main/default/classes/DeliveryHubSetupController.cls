@@ -55,10 +55,11 @@ global without sharing class DeliveryHubSetupController {
         status.isMothership = String.isNotBlank(status.requiredRemoteSite) &&
                               status.requiredRemoteSite.contains(orgPrefix);
 
+        String mothershipNamePattern = mothershipNamePrefix() + '%';
         List<NetworkEntity__c> entities = [
             SELECT Id, Name, StatusPk__c, IntegrationEndpointUrlTxt__c, OrgIdTxt__c
             FROM NetworkEntity__c
-            WHERE Name LIKE 'Cloud Nimbus LLC%'
+            WHERE Name LIKE :mothershipNamePattern
             LIMIT 1
         ];
 
@@ -72,6 +73,23 @@ global without sharing class DeliveryHubSetupController {
     }
 
     /**
+     * @description Resolves the mothership NetworkEntity name from
+     *              CloudNimbusGlobalSettings__mdt.Default.MothershipEntityNameTxt__c,
+     *              falling back to the legacy literal "Cloud Nimbus LLC" when the
+     *              metadata field is unset (preserves behaviour for orgs upgrading
+     *              from before the field existed).
+     * @return The configured mothership entity name.
+     */
+    @TestVisible
+    private static String mothershipNamePrefix() {
+        CloudNimbusGlobalSettings__mdt cfg = CloudNimbusGlobalSettings__mdt.getInstance('Default');
+        if (cfg != null && String.isNotBlank(cfg.MothershipEntityNameTxt__c)) {
+            return cfg.MothershipEntityNameTxt__c;
+        }
+        return 'Cloud Nimbus LLC';
+    }
+
+    /**
      * @description Creates or updates the local Cloud Nimbus LLC NetworkEntity__c record
      * with the endpoint URL from CloudNimbusGlobalSettings__mdt and sets it to Active.
      * @return NetworkEntity__c the upserted mothership entity record
@@ -79,16 +97,18 @@ global without sharing class DeliveryHubSetupController {
     @AuraEnabled
     @SuppressWarnings('PMD.ApexCRUDViolation')
     global static NetworkEntity__c prepareLocalEntity() {
+        String mothershipName = mothershipNamePrefix();
+        String mothershipPattern = mothershipName + '%';
         List<NetworkEntity__c> existingEntities = [
-            SELECT Id, Name FROM NetworkEntity__c 
-            WHERE Name LIKE 'Cloud Nimbus LLC%' 
+            SELECT Id, Name FROM NetworkEntity__c
+            WHERE Name LIKE :mothershipPattern
             LIMIT 1
         ];
 
         NetworkEntity__c mothership = !existingEntities.isEmpty() ? existingEntities[0] : new NetworkEntity__c();
-        
+
         if (mothership.Id == null) {
-            mothership.Name = 'Cloud Nimbus LLC';
+            mothership.Name = mothershipName;
             mothership.EntityTypePk__c = 'Vendor';
         }
         
