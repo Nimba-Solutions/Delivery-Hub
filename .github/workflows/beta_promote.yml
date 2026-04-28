@@ -6,6 +6,11 @@ name: Beta - Promote (Unlocked)
 
 on:
   workflow_dispatch:
+    inputs:
+      version_id:
+        description: 'Optional 04t Package Version Id to promote. Leave blank to auto-resolve to latest beta. Use this when the auto-resolver picks the wrong version (e.g. picks an already-promoted beta after a partial-failure run).'
+        required: false
+        type: string
 
 jobs:
   upload-prod:
@@ -15,6 +20,7 @@ jobs:
       dev-hub-auth-url: ${{ secrets.DEV_HUB_AUTH_URL }}
     with:
       cumulusci-version: "3.78.0"
+      beta-version: ${{ inputs.version_id }}
 
 permissions:
   actions: write
