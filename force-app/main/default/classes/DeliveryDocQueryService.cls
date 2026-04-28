@@ -367,8 +367,7 @@ public with sharing class DeliveryDocQueryService {
         // Per-document hash-chain validation lives in DeliveryAuditChainService.
         // Returns passed=false when the document has no log entries yet, so the
         // portal contract still tells the truth on brand-new docs.
-        Map<String, Object> chainOutcome = DeliveryAuditChainService
-            .validateChainForRecord(documentId);
+        Map<String, Object> chainOutcome = DeliveryAuditChainService.validateChainForRecord(documentId);
         Boolean hashChainVerified = (Boolean) chainOutcome.get('passed');
         Datetime hashChainVerifiedAt = (Datetime) chainOutcome.get('verifiedAt');
 
