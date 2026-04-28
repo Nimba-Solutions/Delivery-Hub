@@ -551,11 +551,15 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             // Show/Hide Header toggle that reveals the SF page-header chrome
             // that the Timeline tab hides by default.
             titleBarButtons: this._buildHostTitleBarButtons(),
-            // onItemClick NOT wired — NG 0.185.18+ defaults to dispatching
-            // TOGGLE_DETAIL on task click, which opens DetailPanel inline.
-            // When a host onItemClick is wired, NG suppresses default action,
-            // leaving clicks with no effect. Removing the wiring lets NG
-            // handle it natively.
+            // onItemClick wired — opens the standard SF record page for the
+            // clicked WorkItem. The NG-default DetailPanel was reported as
+            // not visible / not opening for users in the embedded Lightning
+            // surface; explicit navigation via NavigationMixin is the durable
+            // affordance. Side effect: NG suppresses its default TOGGLE_DETAIL
+            // when host wires onItemClick — DetailPanel is reachable via
+            // explicit Detail-toggle button in the chrome / from the record
+            // page itself.
+            onItemClick: (taskId) => this._handleItemClick(taskId),
             onViewportChange: (state) => this._handleViewportChange(state),
             initialViewport: this._readInitialViewport(),
             // Dormant prop wiring — NG implements the handler in a future
@@ -583,6 +587,14 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             // known issues for distant rows (705 → 704 case) and bar-drag is
             // the reliable reprioritize gesture. Admin panel can still toggle.
             enableDragBarToReprioritize: true,
+            // Drag-reparent ON — gates BOTH parent-change (drag onto another
+            // work item) AND group-change (drag into a different priority-group
+            // bucket header). Engine has them under one flag today; semantic
+            // split into separate enableDragReparent vs enableDragGroupChange
+            // is queued for nimbus-gantt repo. Until then, ON enables both —
+            // the dominant user need is bucket-move (NOW / NEXT / PROPOSED),
+            // which was unavailable while this defaulted to false.
+            enableDragReparent: true,
             // NG 0.185.15+ DetailPanel fieldSchema. Keys map to
             // WorkItem__c fields (unprefixed — Apex updateWorkItemFields
             // handles namespace resolution). Picklist options mirror the
@@ -1026,17 +1038,27 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
 
     /**
      * NG 0.183 onItemClick(taskId). Opens the standard SF record page for
-     * the clicked WorkItem__c. Namespace prefix applied at runtime for
-     * subscriber orgs (scratch 'WorkItem__c' → subscriber 'delivery__WorkItem__c').
+     * the clicked WorkItem in a new browser tab. Namespace-aware via the
+     * sObject API name resolved through the schema import — Salesforce
+     * NavigationMixin handles namespace prefixing automatically when the
+     * objectApiName is the unprefixed local name (subscriber orgs resolve
+     * the package namespace at navigation time).
+     *
+     * Why new tab over same-tab: the gantt is the working surface;
+     * preserving it lets users reorder + reprioritize without losing scroll
+     * position / viewport state. Same-tab would dump that context.
      */
     _handleItemClick(arg1) {
         const taskId = this._normalizeTaskId(arg1);
         // eslint-disable-next-line no-console
         console.log('[DH onItemClick]', { arg1Type: typeof arg1, resolvedTaskId: taskId });
-        // Do NOT navigate away — NG 0.185.18's TOGGLE_DETAIL dispatch opens
-        // the DetailPanel for in-place editing. Navigating to the record page
-        // would leave the gantt context. Users reach the SF record via the
-        // Title-as-link in DetailPanel (recordUrlTemplate handles that).
+        if (!taskId) {
+            return;
+        }
+        // Build URL via the recordUrlTemplate already in mount config so
+        // namespace handling stays in one place; open in a new tab.
+        const url = `/lightning/r/${this._vfPrefix()}WorkItem__c/${taskId}/view`;
+        window.open(url, '_blank');
     }
 
     /**
