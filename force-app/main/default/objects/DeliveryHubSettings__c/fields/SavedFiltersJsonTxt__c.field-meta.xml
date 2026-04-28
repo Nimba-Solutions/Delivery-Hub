@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SavedFiltersJsonTxt__c</fullName>
+    <description>JSON array of the user's saved board filters. Replaces the per-record DeliverySavedFilter__c custom object — same data, same per-user privacy via the Hierarchy custom setting's SetupOwnerId. Each element shape: { id, label, filterJson, defaultSet, workflowType }. Maintained by DeliverySavedFilterController.</description>
+    <inlineHelpText>Per-user JSON array of saved board filters.</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Saved Filters JSON</label>
+    <length>32768</length>
+    <type>LongTextArea</type>
+    <visibleLines>10</visibleLines>
+</CustomField>

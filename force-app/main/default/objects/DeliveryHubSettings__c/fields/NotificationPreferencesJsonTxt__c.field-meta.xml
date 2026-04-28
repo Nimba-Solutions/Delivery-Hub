@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>NotificationPreferencesJsonTxt__c</fullName>
+    <description>JSON map of the user's notification preferences keyed by channel and event type. Replaces the per-record NotificationPreference__c custom object — same data, same per-user privacy via the Hierarchy custom setting's SetupOwnerId. Shape: { "Email": { "Stage_Change": { "enabled": true, "digestFrequency": "Immediate" }, ... }, "Slack": { ... } }. Maintained by DeliveryNotificationPreferenceService.</description>
+    <inlineHelpText>Per-user JSON map of notification preferences.</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Notification Preferences JSON</label>
+    <length>32768</length>
+    <type>LongTextArea</type>
+    <visibleLines>10</visibleLines>
+</CustomField>

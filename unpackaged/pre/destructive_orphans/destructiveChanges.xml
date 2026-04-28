@@ -95,6 +95,8 @@
     <types>
         <members>DeliveryTeam__mdt</members>
         <members>ApprovalStep__mdt</members>
+        <members>DeliverySavedFilter__c</members>
+        <members>NotificationPreference__c</members>
         <name>CustomObject</name>
     </types>
     <types>
@@ -102,7 +104,12 @@
         <members>DeliveryTeamPermissionServiceTest</members>
         <members>DeliveryApprovalChainService</members>
         <members>DeliveryApprovalChainServiceTest</members>
+        <members>DeliveryNotifPrefTriggerHandler</members>
         <name>ApexClass</name>
+    </types>
+    <types>
+        <members>DeliveryNotificationPreferenceTrigger</members>
+        <name>ApexTrigger</name>
     </types>
     <version>62.0</version>
 </Package>

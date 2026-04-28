@@ -1,233 +1,191 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @description Test class for DeliverySavedFilterController. Covers CRUD operations,
- *              default-toggle behaviour, and error paths.
+ * @description  Test class for DeliverySavedFilterController. Covers the
+ *               JSON-backed CRUD operations against
+ *               DeliveryHubSettings__c.SavedFiltersJsonTxt__c after the
+ *               cap-recovery rewrite away from the per-record
+ *               DeliverySavedFilter__c custom object.
  * @author Cloud Nimbus LLC
  */
-@isTest
+@SuppressWarnings('PMD.ApexDoc')
+@IsTest
 public class DeliverySavedFilterControllerTest {
 
-    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+    private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId() LIMIT 1];
 
     private static final String WORKFLOW = 'Software_Delivery';
+    private static final String OTHER_WORKFLOW = 'Cashflow_2_0';
     private static final String SAMPLE_JSON = '{"persona":"Client","overallFilter":"all"}';
 
-    @isTest
+    @IsTest
     static void testGetSavedFiltersEmpty() {
         System.runAs(testUser) {
             Test.startTest();
-            List<DeliverySavedFilter__c> results = DeliverySavedFilterController.getSavedFilters(WORKFLOW);
+            List<DeliverySavedFilterController.FilterRow> results =
+                DeliverySavedFilterController.getSavedFilters(WORKFLOW);
             Test.stopTest();
-
-            System.assertEquals(0, results.size(), 'Should return empty list when no filters exist');
+            System.assertEquals(0, results.size(),
+                'A user with no saved filters should get back an empty list');
         }
     }
 
-    @isTest
-    static void testGetSavedFiltersDefaultWorkflowType() {
-        System.runAs(testUser) {
-            insert new DeliverySavedFilter__c(
-                LabelTxt__c = 'Test',
-                FilterJsonTxt__c = SAMPLE_JSON,
-                WorkflowTypeTxt__c = 'Software_Delivery'
-            );
-
-            Test.startTest();
-            List<DeliverySavedFilter__c> results = DeliverySavedFilterController.getSavedFilters(null);
-            Test.stopTest();
-
-            System.assertEquals(1, results.size(), 'Null workflow should default to Software_Delivery');
-        }
-    }
-
-    @isTest
-    static void testGetSavedFiltersReturnOwnedOnly() {
-        System.runAs(testUser) {
-            insert new DeliverySavedFilter__c(
-                LabelTxt__c = 'My Filter',
-                FilterJsonTxt__c = SAMPLE_JSON,
-                WorkflowTypeTxt__c = WORKFLOW
-            );
-
-            Test.startTest();
-            List<DeliverySavedFilter__c> results = DeliverySavedFilterController.getSavedFilters(WORKFLOW);
-            Test.stopTest();
-
-            System.assertEquals(1, results.size());
-            System.assertEquals('My Filter', results[0].LabelTxt__c);
-        }
-    }
-
-    @isTest
-    static void testSaveBoardFilterCreate() {
+    @IsTest
+    static void testSaveBoardFilterCreatesNewWithSyntheticId() {
         System.runAs(testUser) {
             Test.startTest();
-            DeliverySavedFilter__c created = DeliverySavedFilterController.saveBoardFilter(
-                null, 'New Filter', SAMPLE_JSON, false, WORKFLOW
-            );
+            DeliverySavedFilterController.FilterRow saved =
+                DeliverySavedFilterController.saveBoardFilter(
+                    null, 'My Filter', SAMPLE_JSON, false, WORKFLOW);
             Test.stopTest();
-
-            System.assertNotEquals(null, created.Id, 'Should return a created record with an Id');
-            System.assertEquals('New Filter', created.LabelTxt__c);
+            System.assertNotEquals(null, saved.id, 'New filter should get a synthetic id');
+            System.assertEquals('My Filter', saved.label);
+            System.assertEquals(SAMPLE_JSON, saved.filterJson);
+            System.assertEquals(false, saved.defaultSet);
+            System.assertEquals(WORKFLOW, saved.workflowType);
         }
     }
 
-    @isTest
-    static void testSaveBoardFilterCreateWithDefault() {
+    @IsTest
+    static void testSaveBoardFilterUpdatesExisting() {
         System.runAs(testUser) {
-            Test.startTest();
-            DeliverySavedFilter__c first = DeliverySavedFilterController.saveBoardFilter(
-                null, 'First Default', SAMPLE_JSON, true, WORKFLOW
-            );
-            Test.stopTest();
-
-            DeliverySavedFilter__c reQueried = [
-                SELECT DefaultSetDateTime__c FROM DeliverySavedFilter__c WHERE Id = :first.Id
-            ];
-            System.assertNotEquals(null, reQueried.DefaultSetDateTime__c, 'Should be marked as default');
-        }
-    }
-
-    @isTest
-    static void testSaveBoardFilterUpdate() {
-        System.runAs(testUser) {
-            DeliverySavedFilter__c existing = new DeliverySavedFilter__c(
-                LabelTxt__c = 'Old Name',
-                FilterJsonTxt__c = SAMPLE_JSON,
-                WorkflowTypeTxt__c = WORKFLOW
-            );
-            insert existing;
-
-            String updatedJson = '{"persona":"Developer","overallFilter":"indev"}';
+            DeliverySavedFilterController.FilterRow first =
+                DeliverySavedFilterController.saveBoardFilter(
+                    null, 'Original', SAMPLE_JSON, false, WORKFLOW);
 
             Test.startTest();
-            DeliverySavedFilter__c updated = DeliverySavedFilterController.saveBoardFilter(
-                existing.Id, 'Renamed', updatedJson, false, WORKFLOW
-            );
+            DeliverySavedFilterController.FilterRow updated =
+                DeliverySavedFilterController.saveBoardFilter(
+                    first.id, 'Renamed', SAMPLE_JSON, true, WORKFLOW);
             Test.stopTest();
 
-            DeliverySavedFilter__c reQueried = [
-                SELECT LabelTxt__c, FilterJsonTxt__c FROM DeliverySavedFilter__c WHERE Id = :updated.Id
-            ];
-            System.assertEquals('Renamed', reQueried.LabelTxt__c);
-            System.assertEquals(updatedJson, reQueried.FilterJsonTxt__c);
+            System.assertEquals(first.id, updated.id, 'Update should keep the same id');
+            System.assertEquals('Renamed', updated.label);
+            System.assertEquals(true, updated.defaultSet);
         }
     }
 
-    @isTest
-    static void testSaveBoardFilterDefaultClearsPrevious() {
+    @IsTest
+    static void testSaveBoardFilterDefaultClearsOthersInSameWorkflow() {
         System.runAs(testUser) {
-            DeliverySavedFilter__c first = new DeliverySavedFilter__c(
-                LabelTxt__c = 'First',
-                FilterJsonTxt__c = SAMPLE_JSON,
-                DefaultSetDateTime__c = Datetime.now(),
-                WorkflowTypeTxt__c = WORKFLOW
-            );
-            insert first;
-
+            DeliverySavedFilterController.saveBoardFilter(
+                null, 'A', SAMPLE_JSON, true, WORKFLOW);
             Test.startTest();
             DeliverySavedFilterController.saveBoardFilter(
-                null, 'Second Default', SAMPLE_JSON, true, WORKFLOW
-            );
+                null, 'B', SAMPLE_JSON, true, WORKFLOW);
             Test.stopTest();
 
-            DeliverySavedFilter__c firstReQueried = [
-                SELECT DefaultSetDateTime__c FROM DeliverySavedFilter__c WHERE Id = :first.Id
-            ];
-            System.assertEquals(null, firstReQueried.DefaultSetDateTime__c, 'Previous default should be cleared');
-        }
-    }
-
-    @isTest
-    static void testSaveBoardFilterBlankLabel() {
-        System.runAs(testUser) {
-            try {
-                Test.startTest();
-                DeliverySavedFilterController.saveBoardFilter(null, '', SAMPLE_JSON, false, WORKFLOW);
-                Test.stopTest();
-                System.assert(false, 'Expected AuraHandledException');
-            } catch (AuraHandledException e) {
-                System.assert(e.getMessage() != null);
+            List<DeliverySavedFilterController.FilterRow> all =
+                DeliverySavedFilterController.getSavedFilters(WORKFLOW);
+            Integer defaultCount = 0;
+            for (DeliverySavedFilterController.FilterRow r : all) {
+                if (r.defaultSet == true) { defaultCount++; }
             }
+            System.assertEquals(1, defaultCount,
+                'Setting a new default should un-default any other default in the same workflow');
         }
     }
 
-    @isTest
-    static void testSaveBoardFilterBlankJson() {
+    @IsTest
+    static void testSaveBoardFilterDefaultDoesNotAffectOtherWorkflow() {
         System.runAs(testUser) {
+            DeliverySavedFilterController.saveBoardFilter(
+                null, 'SD-Default', SAMPLE_JSON, true, WORKFLOW);
+            Test.startTest();
+            DeliverySavedFilterController.saveBoardFilter(
+                null, 'CF-Default', SAMPLE_JSON, true, OTHER_WORKFLOW);
+            Test.stopTest();
+
+            List<DeliverySavedFilterController.FilterRow> sd =
+                DeliverySavedFilterController.getSavedFilters(WORKFLOW);
+            System.assertEquals(true, sd[0].defaultSet,
+                'Other-workflow defaults should be untouched');
+        }
+    }
+
+    @IsTest
+    static void testSaveBoardFilterRequiresLabel() {
+        System.runAs(testUser) {
+            Boolean threw = false;
             try {
-                Test.startTest();
-                DeliverySavedFilterController.saveBoardFilter(null, 'Name', '', false, WORKFLOW);
-                Test.stopTest();
-                System.assert(false, 'Expected AuraHandledException');
+                DeliverySavedFilterController.saveBoardFilter(
+                    null, null, SAMPLE_JSON, false, WORKFLOW);
             } catch (AuraHandledException e) {
-                System.assert(e.getMessage() != null);
+                threw = true;
             }
+            System.assertEquals(true, threw, 'Blank label should throw');
         }
     }
 
-    @isTest
-    static void testSaveBoardFilterNullWorkflowDefaults() {
+    @IsTest
+    static void testSaveBoardFilterRequiresJson() {
         System.runAs(testUser) {
-            Test.startTest();
-            DeliverySavedFilter__c created = DeliverySavedFilterController.saveBoardFilter(
-                null, 'Null WF', SAMPLE_JSON, false, null
-            );
-            Test.stopTest();
-
-            DeliverySavedFilter__c reQueried = [
-                SELECT WorkflowTypeTxt__c FROM DeliverySavedFilter__c WHERE Id = :created.Id
-            ];
-            System.assertEquals('Software_Delivery', reQueried.WorkflowTypeTxt__c);
-        }
-    }
-
-    @isTest
-    static void testDeleteSavedFilter() {
-        System.runAs(testUser) {
-            DeliverySavedFilter__c sf = new DeliverySavedFilter__c(
-                LabelTxt__c = 'Doomed',
-                FilterJsonTxt__c = SAMPLE_JSON,
-                WorkflowTypeTxt__c = WORKFLOW
-            );
-            insert sf;
-
-            Test.startTest();
-            DeliverySavedFilterController.deleteSavedFilter(sf.Id);
-            Test.stopTest();
-
-            Integer count = [SELECT COUNT() FROM DeliverySavedFilter__c WHERE Id = :sf.Id];
-            System.assertEquals(0, count, 'Filter should be deleted');
-        }
-    }
-
-    @isTest
-    static void testDeleteSavedFilterNullId() {
-        System.runAs(testUser) {
+            Boolean threw = false;
             try {
-                Test.startTest();
+                DeliverySavedFilterController.saveBoardFilter(
+                    null, 'L', null, false, WORKFLOW);
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
+            System.assertEquals(true, threw, 'Blank filterJson should throw');
+        }
+    }
+
+    @IsTest
+    static void testDeleteSavedFilterRemoves() {
+        System.runAs(testUser) {
+            DeliverySavedFilterController.FilterRow saved =
+                DeliverySavedFilterController.saveBoardFilter(
+                    null, 'Doomed', SAMPLE_JSON, false, WORKFLOW);
+
+            Test.startTest();
+            DeliverySavedFilterController.deleteSavedFilter(saved.id);
+            Test.stopTest();
+
+            List<DeliverySavedFilterController.FilterRow> remaining =
+                DeliverySavedFilterController.getSavedFilters(WORKFLOW);
+            System.assertEquals(0, remaining.size(),
+                'Filter should be gone after delete');
+        }
+    }
+
+    @IsTest
+    static void testDeleteSavedFilterRequiresId() {
+        System.runAs(testUser) {
+            Boolean threw = false;
+            try {
                 DeliverySavedFilterController.deleteSavedFilter(null);
-                Test.stopTest();
-                System.assert(false, 'Expected AuraHandledException');
             } catch (AuraHandledException e) {
-                System.assert(e.getMessage() != null);
+                threw = true;
             }
+            System.assertEquals(true, threw);
         }
     }
 
-    @isTest
-    static void testDeleteSavedFilterNotFound() {
+    @IsTest
+    static void testDeleteUnknownFilterThrows() {
         System.runAs(testUser) {
-            Id fakeId = DeliverySavedFilter__c.SObjectType.getDescribe().getKeyPrefix() + '000000000001';
+            Boolean threw = false;
             try {
-                Test.startTest();
-                DeliverySavedFilterController.deleteSavedFilter(fakeId);
-                Test.stopTest();
-                System.assert(false, 'Expected AuraHandledException');
+                DeliverySavedFilterController.deleteSavedFilter('sf_doesnotexist');
             } catch (AuraHandledException e) {
-                System.assert(e.getMessage() != null);
+                threw = true;
             }
+            System.assertEquals(true, threw);
+        }
+    }
+
+    @IsTest
+    static void testGetSavedFiltersWorkflowDefault() {
+        System.runAs(testUser) {
+            DeliverySavedFilterController.saveBoardFilter(
+                null, 'X', SAMPLE_JSON, false, null);
+            Test.startTest();
+            List<DeliverySavedFilterController.FilterRow> results =
+                DeliverySavedFilterController.getSavedFilters(null);
+            Test.stopTest();
+            System.assertEquals(1, results.size(),
+                'Blank workflow defaults to Software_Delivery and should match');
         }
     }
 }
