@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
-    <label>Approval Step</label>
-    <description>Defines a step in a multi-step approval chain for a given workflow type. Each record represents one approval gate with its mode (Sequential, Parallel, Any), timeout, and timeout action.</description>
-    <pluralLabel>Approval Steps</pluralLabel>
-    <visibility>Public</visibility>
-</CustomObject>
