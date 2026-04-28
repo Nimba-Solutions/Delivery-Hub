@@ -10,12 +10,19 @@ import { LightningElement, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from 'lightning/uiRecordApi';
+import { subscribe, unsubscribe, onError } from 'lightning/empApi';
 import getActivityFeed from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryActivityFeedController.getActivityFeed';
 import getConversations from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryActivityFeedController.getConversations';
 import getPendingApprovals from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryActivityFeedController.getPendingApprovals';
 import approveWorkLogs from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryActivityFeedController.approveWorkLogs';
 import rejectWorkLogs from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryActivityFeedController.rejectWorkLogs';
 import postCommentFromFeed from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryActivityFeedController.postCommentFromFeed';
+
+const COMMENT_CHANNEL = '/event/%%%NAMESPACE_DOT%%%DeliveryComment__e';
+const STAGE_CHANGE_CHANNEL = '/event/%%%NAMESPACE_DOT%%%DeliveryWorkItemChange__e';
+// Fallback poll cadence — used only as a safety net if both empApi
+// subscriptions silently disconnect. Real-time updates come from the events.
+const FALLBACK_POLL_MS = 300000; // 5 minutes
 
 const TAB_OPTIONS = [
     { label: 'All Activity', value: 'all', icon: 'utility:list' },
@@ -52,18 +59,50 @@ export default class DeliveryActivityFeed extends NavigationMixin(LightningEleme
     _wiredConversations;
     _wiredApprovals;
     _pollingInterval;
+    _commentSubscription;
+    _stageSubscription;
 
     // ── Lifecycle ──────────────────────────────────────────────────────
 
     connectedCallback() {
+        // Real-time updates: subscribe to both DeliveryComment__e (new chats)
+        // and DeliveryWorkItemChange__e (stage transitions). Each event triggers
+        // a refresh of the currently active tab. The 30s polling we used to do
+        // is replaced by sub-second event push + a 5-min safety-net poll.
+        subscribe(COMMENT_CHANNEL, -1, () => {
+            if (document.visibilityState === 'visible') {
+                this.refreshCurrentTab();
+            }
+        }).then(response => {
+            this._commentSubscription = response;
+        });
+        subscribe(STAGE_CHANGE_CHANNEL, -1, () => {
+            if (document.visibilityState === 'visible') {
+                this.refreshCurrentTab();
+            }
+        }).then(response => {
+            this._stageSubscription = response;
+        });
+        onError(error => {
+            console.warn('[DeliveryActivityFeed] EMP API error:', JSON.stringify(error));
+        });
+
         this._pollingInterval = setInterval(() => {
             if (document.visibilityState === 'visible') {
                 this.refreshCurrentTab();
             }
-        }, 30000);
+        }, FALLBACK_POLL_MS);
     }
 
     disconnectedCallback() {
+        if (this._commentSubscription) {
+            unsubscribe(this._commentSubscription, () => {});
+            this._commentSubscription = null;
+        }
+        if (this._stageSubscription) {
+            unsubscribe(this._stageSubscription, () => {});
+            this._stageSubscription = null;
+        }
         if (this._pollingInterval) {
             clearInterval(this._pollingInterval);
         }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EventTypeTxt__c</fullName>
+    <description>insert | update — distinguishes new comment from edited body so subscribers can choose between append and replace semantics.</description>
+    <inlineHelpText>insert or update.</inlineHelpText>
+    <label>Event Type</label>
+    <length>20</length>
+    <type>Text</type>
+</CustomField>
