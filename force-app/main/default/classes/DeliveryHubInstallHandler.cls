@@ -2,8 +2,10 @@
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
  * @description Runs automatically when the Delivery Hub package is installed or upgraded.
- *              Initialises org-level default settings so administrators do not need to
- *              trigger the setup wizard before the package is functional.
+ *              Initialises org-level default settings, schedules the four sync cron jobs,
+ *              kicks an initial reconciliation pass, and backfills auto-assigned
+ *              PermissionSets to existing active users — so administrators do not need
+ *              to trigger the setup wizard before the package is functional.
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation,PMD.AvoidGlobalModifier')
@@ -15,6 +17,9 @@ global class DeliveryHubInstallHandler implements InstallHandler {
      */
     global void onInstall(InstallContext context) {
         initializeDefaultSettings();
+        scheduleSyncJobs();
+        backfillUserPermissionSets();
+        enqueueInitialReconciliation();
     }
 
     private static void initializeDefaultSettings() {
@@ -34,8 +39,61 @@ global class DeliveryHubInstallHandler implements InstallHandler {
             EnableEmailNotificationsDateTime__c         = now,
             EnableActivityLoggingDateTime__c            = now,
             EnableBoardMetricsDateTime__c               = now,
+            FailedSyncAutoDismissDaysNumber__c          = 14,
             StagesToAutoShareWithDevTeamTxt__c = 'All'
         );
         insert settings;
+    }
+
+    /**
+     * @description Schedules the four standard 15-min sync cron jobs so a fresh
+     *              tenant is fully operational without admin intervention.
+     *              scheduleAll() is idempotent — it aborts existing matching
+     *              jobs before re-scheduling, so re-running on upgrade is safe.
+     *              Wrapped in try/catch because failures here must never block
+     *              the install (the setup wizard remains as the manual fallback).
+     */
+    private static void scheduleSyncJobs() {
+        try {
+            DeliveryHubScheduler.scheduleAll();
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryHubInstallHandler] scheduleAll failed during install: '
+                + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Backfills PermissionSetAssignments for every active internal
+     *              user against the current UserAutoAssignConfig__mdt rules.
+     *              Catches subscriber tenants whose existing users were created
+     *              before the User trigger was deployed. Idempotent.
+     */
+    private static void backfillUserPermissionSets() {
+        try {
+            DeliveryUserTriggerHandler.assignAllActiveUsers();
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryHubInstallHandler] PermissionSet backfill failed: '
+                + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Kicks one reconciliation pass on install so any in-flight
+     *              sync drift on the tenant gets healed without waiting for
+     *              the next scheduled 6 AM run.
+     */
+    private static void enqueueInitialReconciliation() {
+        if (Test.isRunningTest()) {
+            return; // Reconciler enqueues a Queueable that fires real callouts in some scratch orgs.
+        }
+        try {
+            DeliveryHubScheduler.reconcileNow();
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryHubInstallHandler] Initial reconciliation enqueue failed: '
+                + e.getMessage());
+        }
     }
 }

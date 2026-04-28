@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ProfileNameFilterTxt__c</fullName>
+    <description>Optional comma-separated Profile Names; the rule only applies to Users whose Profile Name matches one of the listed values. Leave blank to apply to all active internal Users.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Profile Name Filter</label>
+    <length>255</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

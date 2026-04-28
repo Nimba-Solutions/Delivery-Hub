@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>User Auto Assign Config</label>
+    <description>Configures automatic PermissionSet assignment for new and existing active Users. Each row maps a target PermissionSet to an optional Profile filter; DeliveryUserTriggerHandler applies the rules on User insert/update and DeliveryHubInstallHandler backfills existing users on upgrade.</description>
+    <pluralLabel>User Auto Assign Configs</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>
