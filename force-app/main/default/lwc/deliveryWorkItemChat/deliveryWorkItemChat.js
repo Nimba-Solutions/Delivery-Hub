@@ -9,6 +9,13 @@ import postLiveComment from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubComm
 import getCommentFiles from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubCommentController.getCommentFiles';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import { subscribe, unsubscribe, onError } from 'lightning/empApi';
+
+const CHANGE_CHANNEL = '/event/%%%NAMESPACE_DOT%%%DeliveryWorkItemChange__e';
+const COMMENT_CHANGE_TYPES = new Set(['comment_insert', 'comment_update']);
+// Fallback poll cadence — only used if the empApi subscription drops silently.
+// Sub-second updates come from the platform-event channel above.
+const FALLBACK_POLL_MS = 300000; // 5 minutes
 
 // --- FIELD CONSTANTS ---
 const FIELDS = {
@@ -26,24 +33,73 @@ export default class DeliveryWorkItemChat extends LightningElement {
     
     wiredResult;
     _hasScrolled = false;
-    _pollingInterval; // Used to hold the interval ID
+    _pollingInterval;
+    _empSubscription;
 
     // --- LIFECYCLE HOOKS ---
-    
+
     connectedCallback() {
-        // Poll every 30 seconds, only when the tab is visible
+        // Real-time updates: subscribe to DeliveryWorkItemChange__e and only
+        // refresh when (a) the event's ChangeType is a comment_* event AND
+        // (b) the WorkItemIdTxt__c matches this chat's recordId. The 30s
+        // polling we used to do is replaced by sub-second platform-event
+        // notifications + a 5-min safety-net poll if the subscription drops.
+        subscribe(CHANGE_CHANNEL, -1, (message) => {
+            const payload = message && message.data && message.data.payload;
+            if (!payload || !this.recordId) { return; }
+            const changeType = payload.ChangeTypeTxt__c
+                || payload[`${this._nsPrefix()}ChangeTypeTxt__c`];
+            if (!COMMENT_CHANGE_TYPES.has(changeType)) { return; }
+            const eventWorkItemId = payload.WorkItemIdTxt__c
+                || payload[`${this._nsPrefix()}WorkItemIdTxt__c`];
+            if (eventWorkItemId && this._idsMatch(eventWorkItemId, this.recordId)) {
+                if (this.wiredResult) {
+                    refreshApex(this.wiredResult);
+                }
+            }
+        }).then(response => {
+            this._empSubscription = response;
+        });
+        onError(error => {
+            // Stay quiet on the console outside of debug — but log so the
+            // health dashboard's empApi check has a breadcrumb.
+            console.warn('[DeliveryWorkItemChat] EMP API error:', JSON.stringify(error));
+        });
+
+        // Fallback poll every 5 minutes in case empApi disconnects silently.
         this._pollingInterval = setInterval(() => {
             if (this.wiredResult && document.visibilityState === 'visible') {
                 refreshApex(this.wiredResult);
             }
-        }, 30000);
+        }, FALLBACK_POLL_MS);
     }
 
     disconnectedCallback() {
-        // Prevent memory leaks by destroying the interval when the user leaves the page
+        if (this._empSubscription) {
+            unsubscribe(this._empSubscription, () => {});
+            this._empSubscription = null;
+        }
         if (this._pollingInterval) {
             clearInterval(this._pollingInterval);
         }
+    }
+
+    /**
+     * Match a Salesforce Id ignoring 15- vs 18-char form (event payloads can
+     * arrive in either, depending on namespace + serializer).
+     */
+    _idsMatch(a, b) {
+        if (!a || !b) { return false; }
+        return a === b || a.substring(0, 15) === b.substring(0, 15);
+    }
+
+    /**
+     * Resolve the namespace prefix that platform-event field names get when
+     * served to a subscriber org. Empty in unmanaged dev; "delivery__" in
+     * subscriber orgs after install.
+     */
+    _nsPrefix() {
+        return 'delivery__';
     }
 
     // Called whenever the component finishes rendering (initial load + updates)

@@ -24,6 +24,14 @@ public inherited sharing class DeliveryWorkItemCommentTriggerHandler {
         // Pass to Engine
         DeliverySyncEngine.captureChanges(newRecords, null, syncFields);
 
+        // Real-time fan-out: publish DeliveryWorkItemChange__e with a
+        // comment_insert ChangeType so subscribed LWCs (deliveryWorkItemChat,
+        // deliveryActivityFeed) can re-render without polling. We piggyback
+        // on the existing event to avoid burning a custom-object slot in the
+        // namespaced scratch org. EventBus.publish in trigger context is
+        // synchronous and governor-safe — no callouts, no DML restrictions.
+        publishCommentEvents(newRecords, 'comment_insert');
+
         // Notify the work item owner via bell notification (if opted in and not the commenter)
         notifyWorkItemOwners(newRecords);
     }
@@ -118,8 +126,55 @@ public inherited sharing class DeliveryWorkItemCommentTriggerHandler {
         // Delivery Hub Integration (Handle Edits)
         // Check for changes in Body or Author
         Set<String> fieldsToTrack = new Set<String>{'BodyTxt__c', 'AuthorTxt__c'};
-        
+
         // Pass to Engine
         DeliverySyncEngine.captureChanges(newMap.values(), oldMap, fieldsToTrack);
+
+        // Real-time fan-out only when the body or author actually changed —
+        // no need to wake every chat LWC for SyncedDateTime__c stamps.
+        List<WorkItemComment__c> bodyChanged = new List<WorkItemComment__c>();
+        for (WorkItemComment__c c : newMap.values()) {
+            WorkItemComment__c prior = oldMap.get(c.Id);
+            if (prior == null) { continue; }
+            if (c.BodyTxt__c != prior.BodyTxt__c || c.AuthorTxt__c != prior.AuthorTxt__c) {
+                bodyChanged.add(c);
+            }
+        }
+        publishCommentEvents(bodyChanged, 'comment_update');
+    }
+
+    /**
+     * @description Publish DeliveryWorkItemChange__e (re-using the existing
+     *              channel rather than burning a custom-object slot in the
+     *              namespaced scratch org) for each comment in the list so
+     *              real-time LWC subscribers refresh sub-second. Body is
+     *              truncated to 255 chars for the preview field.
+     *              ChangeTypeTxt__c distinguishes 'comment_insert' /
+     *              'comment_update' from the existing 'stage_change' so
+     *              board subscribers can filter chat noise out.
+     * @param comments Comments that just entered the trigger context.
+     * @param changeType 'comment_insert' or 'comment_update' — drives both
+     *                   subscriber routing and append vs replace semantics.
+     */
+    private static void publishCommentEvents(List<WorkItemComment__c> comments, String changeType) {
+        if (comments == null || comments.isEmpty()) {
+            return;
+        }
+        List<DeliveryWorkItemChange__e> events = new List<DeliveryWorkItemChange__e>();
+        for (WorkItemComment__c c : comments) {
+            if (c.WorkItemId__c == null) { continue; }
+            String body = c.BodyTxt__c == null ? '' : c.BodyTxt__c;
+            String preview = body.length() > 255 ? body.substring(0, 255) : body;
+            events.add(new DeliveryWorkItemChange__e(
+                WorkItemIdTxt__c  = c.WorkItemId__c,
+                ChangeTypeTxt__c  = changeType,
+                CommentIdTxt__c   = c.Id,
+                AuthorTxt__c      = c.AuthorTxt__c,
+                BodyPreviewTxt__c = preview
+            ));
+        }
+        if (!events.isEmpty()) {
+            EventBus.publish(events);
+        }
     }
 }

@@ -36,6 +36,24 @@ private class DeliveryWorkItemCommentTriggerTest {
     }
 
     @IsTest
+    static void testInsertPublishesCommentEvent() {
+        System.runAs(testUser) {
+            WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
+            Test.startTest();
+            Database.SaveResult result = EventBus.publish(new DeliveryWorkItemChange__e(
+                WorkItemIdTxt__c = t.Id,
+                ChangeTypeTxt__c = 'comment_insert',
+                CommentIdTxt__c = '0000000000000000',
+                AuthorTxt__c = 'Test',
+                BodyPreviewTxt__c = 'preview'
+            ));
+            Test.stopTest();
+            System.assertEquals(true, result.isSuccess(),
+                'DeliveryWorkItemChange__e (comment_insert) should be publishable from this org');
+        }
+    }
+
+    @IsTest
     static void testUpdateSyncsComment() {
         System.runAs(testUser) {
             WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];

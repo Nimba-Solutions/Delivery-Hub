@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>BodyPreviewTxt__c</fullName>
+    <description>First 255 characters of the comment body. Populated only when ChangeTypeTxt__c is comment_insert or comment_update.</description>
+    <inlineHelpText>First 255 characters of the comment body.</inlineHelpText>
+    <label>Body Preview</label>
+    <length>255</length>
+    <type>Text</type>
+</CustomField>
