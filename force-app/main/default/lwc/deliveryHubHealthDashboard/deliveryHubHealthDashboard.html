@@ -1,0 +1,53 @@
+<template>
+    <lightning-card title="Delivery Hub Health" icon-name="utility:health">
+        <lightning-button
+            slot="actions"
+            label="Refresh"
+            icon-name="utility:refresh"
+            onclick={handleRefresh}
+            disabled={loading}>
+        </lightning-button>
+
+        <div class="slds-p-horizontal_medium">
+            <template lwc:if={loading}>
+                <lightning-spinner alternative-text="Running checks" size="small"></lightning-spinner>
+            </template>
+
+            <template lwc:if={hasChecks}>
+                <template for:each={checks} for:item="check">
+                    <div key={check.checkKey} class={check.cardClass}>
+                        <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                            <div class="slds-col">
+                                <lightning-icon
+                                    icon-name={check.iconName}
+                                    variant={check.iconVariant}
+                                    size="small"
+                                    class="slds-m-right_x-small">
+                                </lightning-icon>
+                                <strong>{check.label}</strong>
+                                <div class="slds-text-body_small slds-m-top_xx-small">{check.detail}</div>
+                            </div>
+                            <template lwc:if={check.canRepair}>
+                                <div class="slds-col slds-no-flex">
+                                    <lightning-button
+                                        label="Repair"
+                                        variant="brand"
+                                        data-repair-key={check.repairKey}
+                                        onclick={handleRepair}
+                                        disabled={check.repairing}>
+                                    </lightning-button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </template>
+
+            <template lwc:if={lastRunIso}>
+                <div class="slds-text-body_small slds-text-color_weak slds-m-top_small">
+                    Last run: {lastRunIso}
+                </div>
+            </template>
+        </div>
+    </lightning-card>
+</template>
