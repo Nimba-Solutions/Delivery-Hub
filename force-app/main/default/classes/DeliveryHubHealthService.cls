@@ -106,25 +106,23 @@ public with sharing class DeliveryHubHealthService {
 
     public class OrphanedWorkItemsCheck implements IHealthCheck {
         public DeliveryHubHealthCheckResult run(String key, String label) {
-            // Surface SyncItems whose error log mentions parent/FK trouble — the
-            // canonical pattern from the scratch-verify hotfix scripts.
+            // Surface Failed SyncItems with retry exhaustion — the canonical
+            // signal from the scratch-verify hotfix scripts that something
+            // upstream is stuck (often parent FK, but generally any retryable
+            // error that won't auto-clear).
             Integer count = [
                 SELECT COUNT() FROM SyncItem__c
-                WHERE StatusPk__c = 'Failed'
-                AND (ErrorLogTxt__c LIKE '%parent%'
-                  OR ErrorLogTxt__c LIKE '%Parent%'
-                  OR ErrorLogTxt__c LIKE '%FK%'
-                  OR ErrorLogTxt__c LIKE '%FOREIGN%')
+                WHERE StatusPk__c = 'Failed' AND RetryCountNumber__c >= 3
                 WITH SYSTEM_MODE
                 LIMIT 1001
             ];
             if (count == 0) {
                 return DeliveryHubHealthCheckResult.pass(key, label,
-                    'No Failed SyncItems indicate parent/FK trouble.');
+                    'No Failed SyncItems with exhausted retries.');
             }
             String suffix = count > 1000 ? '1000+' : String.valueOf(count);
             return DeliveryHubHealthCheckResult.warn(key, label,
-                suffix + ' Failed SyncItems mention parent/FK errors. Resolve the parent record then requeue.',
+                suffix + ' Failed SyncItems have exhausted retries. Inspect ErrorLogTxt__c then requeue.',
                 'requeueFailedSyncs');
         }
     }
