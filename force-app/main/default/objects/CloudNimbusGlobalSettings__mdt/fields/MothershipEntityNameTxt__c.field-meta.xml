@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>MothershipEntityNameTxt__c</fullName>
+    <description>NetworkEntity__c.Name used to identify the mothership/vendor entity in subscriber orgs. Defaults to "Cloud Nimbus LLC" for the original Delivery Hub deployment; subscribers running their own packaged distribution can override this in their custom-metadata Default row.</description>
+    <inlineHelpText>Display name of the upstream vendor NetworkEntity row.</inlineHelpText>
+    <externalId>false</externalId>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <label>Mothership Entity Name</label>
+    <length>120</length>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
