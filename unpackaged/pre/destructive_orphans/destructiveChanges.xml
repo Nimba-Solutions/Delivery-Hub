@@ -92,5 +92,17 @@
         <members>deliverytimeline</members>
         <name>StaticResource</name>
     </types>
+    <types>
+        <members>DeliveryTeam__mdt</members>
+        <members>ApprovalStep__mdt</members>
+        <name>CustomObject</name>
+    </types>
+    <types>
+        <members>DeliveryTeamPermissionService</members>
+        <members>DeliveryTeamPermissionServiceTest</members>
+        <members>DeliveryApprovalChainService</members>
+        <members>DeliveryApprovalChainServiceTest</members>
+        <name>ApexClass</name>
+    </types>
     <version>62.0</version>
 </Package>
