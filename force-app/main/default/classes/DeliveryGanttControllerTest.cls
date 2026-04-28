@@ -51,6 +51,103 @@ private class DeliveryGanttControllerTest {
         update completed;
     }
 
+    // ── Row decorators (sanitizer + buildRecentlyDoneStyle) ──────────
+
+    @IsTest
+    static void testSanitizeStripsUnknownEnumValues() {
+        Map<String, Object> raw = new Map<String, Object>{
+            'borderStyle' => 'sparkly',          // not in allowlist → stripped
+            'fillStyle'   => 'rainbow',          // not in allowlist → stripped
+            'borderColor' => '#abcdef'           // pass-through string
+        };
+        Map<String, Object> clean = DeliveryGanttController.sanitizeGanttTaskStyle(raw);
+        System.assertEquals(false, clean.containsKey('borderStyle'),
+            'Unknown borderStyle should be stripped');
+        System.assertEquals(false, clean.containsKey('fillStyle'),
+            'Unknown fillStyle should be stripped');
+        System.assertEquals('#abcdef', clean.get('borderColor'),
+            'borderColor should pass through');
+    }
+
+    @IsTest
+    static void testSanitizeClampsBorderWidth() {
+        Map<String, Object> low = DeliveryGanttController.sanitizeGanttTaskStyle(
+            new Map<String, Object>{ 'borderWidth' => 0 });
+        Map<String, Object> mid = DeliveryGanttController.sanitizeGanttTaskStyle(
+            new Map<String, Object>{ 'borderWidth' => 2 });
+        Map<String, Object> high = DeliveryGanttController.sanitizeGanttTaskStyle(
+            new Map<String, Object>{ 'borderWidth' => 99 });
+        System.assertEquals(1, (Integer) low.get('borderWidth'));
+        System.assertEquals(2, (Integer) mid.get('borderWidth'));
+        System.assertEquals(3, (Integer) high.get('borderWidth'));
+    }
+
+    @IsTest
+    static void testSanitizeClampsFillOpacity() {
+        Map<String, Object> below = DeliveryGanttController.sanitizeGanttTaskStyle(
+            new Map<String, Object>{ 'fillOpacity' => -1 });
+        Map<String, Object> mid = DeliveryGanttController.sanitizeGanttTaskStyle(
+            new Map<String, Object>{ 'fillOpacity' => 0.5 });
+        Map<String, Object> above = DeliveryGanttController.sanitizeGanttTaskStyle(
+            new Map<String, Object>{ 'fillOpacity' => 5 });
+        System.assertEquals(0, (Decimal) below.get('fillOpacity'));
+        System.assertEquals(0.5, (Decimal) mid.get('fillOpacity'));
+        System.assertEquals(1, (Decimal) above.get('fillOpacity'));
+    }
+
+    @IsTest
+    static void testSanitizeBadgeRequiresText() {
+        Map<String, Object> withoutText = DeliveryGanttController.sanitizeGanttTaskStyle(
+            new Map<String, Object>{
+                'badge' => new Map<String, Object>{ 'placement' => 'end' }
+            }
+        );
+        System.assertEquals(null, withoutText,
+            'A badge with no text should be dropped entirely');
+
+        Map<String, Object> withText = DeliveryGanttController.sanitizeGanttTaskStyle(
+            new Map<String, Object>{
+                'badge' => new Map<String, Object>{
+                    'text'      => '✓',
+                    'placement' => 'end'
+                }
+            }
+        );
+        Map<String, Object> badge = (Map<String, Object>) withText.get('badge');
+        System.assertEquals('✓', badge.get('text'));
+        System.assertEquals('end', badge.get('placement'));
+    }
+
+    @IsTest
+    static void testSanitizeNullAndEmptyReturnNull() {
+        System.assertEquals(null,
+            DeliveryGanttController.sanitizeGanttTaskStyle(null));
+        System.assertEquals(null,
+            DeliveryGanttController.sanitizeGanttTaskStyle(new Map<String, Object>()));
+    }
+
+    @IsTest
+    static void testBuildRecentlyDoneStyleDecoratesTerminalRecentItems() {
+        WorkItem__c item = [SELECT Id, StageNamePk__c, LastModifiedDate
+                            FROM WorkItem__c
+                            WHERE BriefDescriptionTxt__c = 'Completed item' LIMIT 1];
+        Map<String, Object> style = DeliveryGanttController.buildRecentlyDoneStyle(item, true);
+        System.assertNotEquals(null, style,
+            'A terminal item modified within the window should get a style block');
+        System.assertEquals('dashed', style.get('borderStyle'));
+        System.assertEquals('muted', style.get('fillStyle'));
+        Map<String, Object> badge = (Map<String, Object>) style.get('badge');
+        System.assertEquals('✓', badge.get('text'));
+    }
+
+    @IsTest
+    static void testBuildRecentlyDoneStyleSkipsNonTerminal() {
+        WorkItem__c item = [SELECT Id, LastModifiedDate FROM WorkItem__c LIMIT 1];
+        Map<String, Object> style = DeliveryGanttController.buildRecentlyDoneStyle(item, false);
+        System.assertEquals(null, style,
+            'A non-terminal item must not be decorated as recently-done');
+    }
+
     // ── Legacy getWorkItemsForGantt ──────────────────────────────────
 
     @IsTest
