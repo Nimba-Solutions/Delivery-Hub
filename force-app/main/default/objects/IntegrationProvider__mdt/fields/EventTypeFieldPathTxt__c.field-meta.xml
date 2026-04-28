@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EventTypeFieldPathTxt__c</fullName>
+    <description>Dotted JSON path to the event type field in the inbound webhook payload (e.g. "type" for Stripe, "event" for many providers). DeliveryWebhookEventRouter uses this to look up the matching handler in RoutingRulesJsonTxt__c.</description>
+    <inlineHelpText>Dotted JSON path to the event-type field in the payload.</inlineHelpText>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Event Type Field Path</label>
+    <length>120</length>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
