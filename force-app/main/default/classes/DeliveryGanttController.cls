@@ -70,6 +70,15 @@ public with sharing class DeliveryGanttController {
         @AuraEnabled public Boolean isInactive { get; set; }
         /** @description True when endDate was synthesized (no real EstimatedEnd / UAT / ETA date existed) */
         @AuraEnabled public Boolean hasFallbackEndDate { get; set; }
+        /**
+         * @description Optional per-row visual decorators consumed by
+         *              nimbus-gantt &gt;= 0.185.36. Shape matches GanttRowDecorators
+         *              (borderStyle, borderWidth, borderColor, fillStyle,
+         *              fillOpacity, badge, styleNote). Sanitized at the adapter
+         *              boundary via sanitizeGanttTaskStyle so the renderer
+         *              never sees unknown enum values or out-of-range numbers.
+         */
+        @AuraEnabled public Map<String, Object> style { get; set; }
     }
 
     /**
@@ -237,7 +246,125 @@ public with sharing class DeliveryGanttController {
         }
         task.endDate = String.valueOf(endDt);
 
+        task.style = buildRecentlyDoneStyle(item, isTerminal);
+
         return task;
+    }
+
+    /**
+     * @description Decorate terminal items modified in the last
+     *              RECENTLY_DONE_WINDOW_DAYS so stakeholders can scan
+     *              "what just shipped" without those bars looking
+     *              identical to in-flight work. Sub-spec from the
+     *              nimbus-gantt 0.185.36 dispatch.
+     * @param item The WorkItem__c being mapped.
+     * @param isTerminal Pre-computed terminal flag from the caller.
+     * @return Sanitized style map, or null when the row should not be decorated.
+     */
+    @TestVisible
+    private static Map<String, Object> buildRecentlyDoneStyle(WorkItem__c item, Boolean isTerminal) {
+        if (!isTerminal || item.LastModifiedDate == null) {
+            return null;
+        }
+        Datetime cutoff = Datetime.now().addDays(-RECENTLY_DONE_WINDOW_DAYS);
+        if (item.LastModifiedDate < cutoff) {
+            return null;
+        }
+        return sanitizeGanttTaskStyle(new Map<String, Object>{
+            'borderStyle' => 'dashed',
+            'borderWidth' => 2,
+            'fillStyle'   => 'muted',
+            'badge'       => new Map<String, Object>{
+                'text'      => '✓',
+                'placement' => 'end'
+            },
+            'styleNote'   => 'Recently completed (within last '
+                + RECENTLY_DONE_WINDOW_DAYS + ' days)'
+        });
+    }
+
+    /**
+     * @description Normalise a GanttRowDecorators-shaped map at the adapter
+     *              boundary. nimbus-gantt's renderer is enum-strict and will
+     *              not degrade malformed input gracefully — same pattern as
+     *              dependency.type sanitization. Strips unknown enum values,
+     *              clamps borderWidth to 1|2|3, clamps fillOpacity to [0,1],
+     *              and recursively sanitizes the badge sub-object.
+     * @param raw The map handed in by the caller (may contain extra keys
+     *            and unvalidated values).
+     * @return A sanitized map safe to ship to nimbus-gantt, or null when
+     *         every key was rejected.
+     */
+    @TestVisible
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+    private static Map<String, Object> sanitizeGanttTaskStyle(Map<String, Object> raw) {
+        if (raw == null || raw.isEmpty()) {
+            return null;
+        }
+        Map<String, Object> clean = new Map<String, Object>();
+        copyEnum(raw, clean, 'borderStyle', ALLOWED_BORDER_STYLES);
+        copyClampedBorderWidth(raw, clean);
+        copyNonBlankString(raw, clean, 'borderColor');
+        copyEnum(raw, clean, 'fillStyle', ALLOWED_FILL_STYLES);
+        copyClampedFillOpacity(raw, clean);
+        copyNonBlankString(raw, clean, 'styleNote');
+        copyBadge(raw, clean);
+        return clean.isEmpty() ? null : clean;
+    }
+
+    private static void copyEnum(Map<String, Object> src, Map<String, Object> dst,
+        String key, Set<String> allowed) {
+        if (!src.containsKey(key) || src.get(key) == null) { return; }
+        String value = String.valueOf(src.get(key));
+        if (allowed.contains(value)) {
+            dst.put(key, value);
+        }
+    }
+
+    private static void copyNonBlankString(Map<String, Object> src, Map<String, Object> dst, String key) {
+        if (!src.containsKey(key) || src.get(key) == null) { return; }
+        String value = String.valueOf(src.get(key)).trim();
+        if (String.isNotBlank(value)) {
+            dst.put(key, value);
+        }
+    }
+
+    private static void copyClampedBorderWidth(Map<String, Object> src, Map<String, Object> dst) {
+        if (!src.containsKey('borderWidth') || src.get('borderWidth') == null) { return; }
+        Integer raw;
+        try {
+            raw = Integer.valueOf(String.valueOf(src.get('borderWidth')));
+        } catch (Exception e) {
+            return;
+        }
+        Integer clamped = raw <= 1 ? 1 : (raw >= 3 ? 3 : 2);
+        dst.put('borderWidth', clamped);
+    }
+
+    private static void copyClampedFillOpacity(Map<String, Object> src, Map<String, Object> dst) {
+        if (!src.containsKey('fillOpacity') || src.get('fillOpacity') == null) { return; }
+        Decimal raw;
+        try {
+            raw = Decimal.valueOf(String.valueOf(src.get('fillOpacity')));
+        } catch (Exception e) {
+            return;
+        }
+        Decimal clamped = raw < 0 ? 0 : (raw > 1 ? 1 : raw);
+        dst.put('fillOpacity', clamped);
+    }
+
+    private static void copyBadge(Map<String, Object> src, Map<String, Object> dst) {
+        if (!src.containsKey('badge') || !(src.get('badge') instanceof Map<String, Object>)) {
+            return;
+        }
+        Map<String, Object> rawBadge = (Map<String, Object>) src.get('badge');
+        Map<String, Object> cleanBadge = new Map<String, Object>();
+        copyNonBlankString(rawBadge, cleanBadge, 'text');
+        copyEnum(rawBadge, cleanBadge, 'placement', ALLOWED_BADGE_PLACEMENTS);
+        copyNonBlankString(rawBadge, cleanBadge, 'color');
+        if (!cleanBadge.isEmpty() && cleanBadge.containsKey('text')) {
+            dst.put('badge', cleanBadge);
+        }
     }
 
     /**
@@ -249,6 +376,24 @@ public with sharing class DeliveryGanttController {
      */
     private static final Set<String> TERMINAL_STAGES = new Set<String>{
         'Done', 'Deployed to Prod', 'Cancelled', 'Closed', 'Rejected'
+    };
+
+    /** @description Days back from today that count as "recently done" for the style decorator. */
+    private static final Integer RECENTLY_DONE_WINDOW_DAYS = 7;
+
+    /** @description Allowed values for GanttRowDecorators.borderStyle. */
+    private static final Set<String> ALLOWED_BORDER_STYLES = new Set<String>{
+        'solid', 'dashed', 'dotted', 'double', 'none'
+    };
+
+    /** @description Allowed values for GanttRowDecorators.fillStyle. */
+    private static final Set<String> ALLOWED_FILL_STYLES = new Set<String>{
+        'solid', 'shaded', 'hatched', 'gradient', 'muted'
+    };
+
+    /** @description Allowed values for GanttRowDecorators.badge.placement. */
+    private static final Set<String> ALLOWED_BADGE_PLACEMENTS = new Set<String>{
+        'start', 'end'
     };
 
     /**
