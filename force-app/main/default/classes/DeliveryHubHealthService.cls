@@ -138,9 +138,10 @@ public with sharing class DeliveryHubHealthService {
                     'No UserAutoAssignConfig__mdt rules enabled — new users will not get DH access automatically.',
                     null);
             }
-            return DeliveryHubHealthCheckResult
-                .pass(key, label, rules + ' auto-assign rule(s) enabled. Run the repair to backfill existing users.')
-                .withRepair('backfillPermSets');
+            DeliveryHubHealthCheckResult result = DeliveryHubHealthCheckResult.pass(
+                key, label,
+                rules + ' auto-assign rule(s) enabled. Run the repair to backfill existing users.');
+            return result.withRepair('backfillPermSets');
         }
     }
 
