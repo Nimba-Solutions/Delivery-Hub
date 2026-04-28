@@ -14,6 +14,31 @@ private class DeliveryUserTriggerHandlerTest {
         return [SELECT Id, Name FROM Profile WHERE Name = 'Standard User' LIMIT 1];
     }
 
+    private static User runAsCurrent() {
+        return [SELECT Id FROM User WHERE Id = :UserInfo.getUserId() LIMIT 1];
+    }
+
+    /**
+     * @description Construct a User SObject with read-only fields (UserType,
+     *              IsActive) populated via JSON deserialization. Required
+     *              because Apex blocks direct constructor writes to those
+     *              fields in subscriber-namespace deployment contexts.
+     * @param isActive Sets User.IsActive on the mocked record.
+     * @param userType Sets User.UserType (e.g. 'Standard', 'Guest').
+     * @param profileId Optional User.ProfileId; pass null to omit.
+     * @return In-memory User suitable for pure-logic assertions only.
+     */
+    private static User mockUser(Boolean isActive, String userType, Id profileId) {
+        Map<String, Object> payload = new Map<String, Object>{
+            'IsActive' => isActive,
+            'UserType' => userType
+        };
+        if (profileId != null) {
+            payload.put('ProfileId', profileId);
+        }
+        return (User) JSON.deserialize(JSON.serialize(payload), User.class);
+    }
+
     private static User buildTestUser(Profile p, String suffix) {
         String alias = 'dha' + suffix;
         return new User(
@@ -36,9 +61,9 @@ private class DeliveryUserTriggerHandlerTest {
 
     @IsTest
     static void testFilterEligibleSkipsInactiveAndGuests() {
-        User active = new User(IsActive = true, UserType = 'Standard');
-        User inactive = new User(IsActive = false, UserType = 'Standard');
-        User guest = new User(IsActive = true, UserType = 'Guest');
+        User active = mockUser(true, 'Standard', null);
+        User inactive = mockUser(false, 'Standard', null);
+        User guest = mockUser(true, 'Guest', null);
         List<User> filtered = DeliveryUserTriggerHandler.filterEligible(
             new List<User>{ active, inactive, guest }
         );
@@ -49,8 +74,8 @@ private class DeliveryUserTriggerHandlerTest {
     @IsTest
     static void testBecameEligibleDetectsReactivation() {
         Id profileId = getStandardProfile().Id;
-        User prior = new User(IsActive = false, UserType = 'Standard', ProfileId = profileId);
-        User current = new User(IsActive = true, UserType = 'Standard', ProfileId = profileId);
+        User prior = mockUser(false, 'Standard', profileId);
+        User current = mockUser(true, 'Standard', profileId);
         System.assertEquals(true,
             DeliveryUserTriggerHandler.becameEligible(current, prior),
             'A user that flips inactive to active should be detected as newly eligible');
@@ -59,8 +84,8 @@ private class DeliveryUserTriggerHandlerTest {
     @IsTest
     static void testBecameEligibleIgnoresStillEligible() {
         Id profileId = getStandardProfile().Id;
-        User prior = new User(IsActive = true, UserType = 'Standard', ProfileId = profileId);
-        User current = new User(IsActive = true, UserType = 'Standard', ProfileId = profileId);
+        User prior = mockUser(true, 'Standard', profileId);
+        User current = mockUser(true, 'Standard', profileId);
         System.assertEquals(false,
             DeliveryUserTriggerHandler.becameEligible(current, prior),
             'A user already eligible with no profile change should not be re-flagged');
@@ -85,7 +110,7 @@ private class DeliveryUserTriggerHandlerTest {
 
     @IsTest
     static void testAssignAllActiveUsersDoesNotThrow() {
-        System.runAs([SELECT Id FROM User WHERE Id = :UserInfo.getUserId()]) {
+        System.runAs(runAsCurrent()) {
             Test.startTest();
             DeliveryUserTriggerHandler.assignAllActiveUsers();
             Test.stopTest();
