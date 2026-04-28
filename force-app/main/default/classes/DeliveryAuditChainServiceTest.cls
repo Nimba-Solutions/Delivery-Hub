@@ -233,6 +233,51 @@ private class DeliveryAuditChainServiceTest {
     }
 
     @IsTest
+    static void testValidateChainForRecordReturnsFalseWhenNoLogs() {
+        Test.startTest();
+        Map<String, Object> result = DeliveryAuditChainService.validateChainForRecord(
+            UserInfo.getUserId());
+        Test.stopTest();
+        System.assertEquals(false, (Boolean) result.get('passed'),
+            'A record with no audit log entries should not claim verification');
+        System.assertEquals(0, (Integer) result.get('totalChecked'));
+    }
+
+    @IsTest
+    static void testValidateChainForRecordHandlesNullId() {
+        Test.startTest();
+        Map<String, Object> result = DeliveryAuditChainService.validateChainForRecord(null);
+        Test.stopTest();
+        System.assertEquals(false, (Boolean) result.get('passed'));
+    }
+
+    @IsTest
+    static void testValidateChainForRecordReturnsCount() {
+        Id docId = UserInfo.getUserId();
+        List<ActivityLog__c> logs = new List<ActivityLog__c>();
+        for (Integer i = 0; i < 2; i++) {
+            logs.add(new ActivityLog__c(
+                ActionTypePk__c = 'Navigation',
+                ComponentNameTxt__c = 'doc',
+                UserIdTxt__c = UserInfo.getUserId(),
+                RecordIdTxt__c = String.valueOf(docId),
+                ContextDataTxt__c = '{"index":' + i + '}'
+            ));
+        }
+        insert logs;
+
+        Test.startTest();
+        Map<String, Object> result = DeliveryAuditChainService.validateChainForRecord(docId);
+        Test.stopTest();
+
+        System.assertEquals(2, (Integer) result.get('totalChecked'),
+            'Should walk both audit log entries for the record');
+        // Whether passed=true depends on Datetime.now()/CreatedDate alignment, same caveat
+        // as the existing validateChain test. We just assert the structure here.
+        System.assertNotEquals(null, result.get('broken'));
+    }
+
+    @IsTest
     static void testCleanupJobSkipsLegalHoldRecords() {
         // Insert a legal-hold record and backdate it
         ActivityLog__c heldLog = new ActivityLog__c(

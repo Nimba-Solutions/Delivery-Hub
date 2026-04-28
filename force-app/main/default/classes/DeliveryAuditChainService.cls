@@ -91,6 +91,81 @@ public without sharing class DeliveryAuditChainService {
     }
 
     /**
+     * @description Per-document hash chain integrity check. Walks every
+     *              ActivityLog__c record whose RecordIdTxt__c matches the
+     *              given Salesforce Id, in CreatedDate order, and verifies
+     *              that each row's HashChainTxt__c agrees with what we'd
+     *              recompute given the previous row's hash. Returns
+     *              passed=true ONLY when every row reconciles AND at least
+     *              one row exists. A document with zero audit log entries
+     *              returns passed=false so the portal does not falsely
+     *              claim verification.
+     * @param recordId The Salesforce Id of the parent record (typically
+     *                 a DeliveryDocument__c) to validate the chain for.
+     * @return Map with keys: passed (Boolean), totalChecked (Integer),
+     *         broken (Integer), verifiedAt (Datetime).
+     */
+    public static Map<String, Object> validateChainForRecord(Id recordId) {
+        Map<String, Object> result = new Map<String, Object>{
+            'passed' => false,
+            'totalChecked' => 0,
+            'broken' => 0,
+            'verifiedAt' => null
+        };
+        if (recordId == null) {
+            return result;
+        }
+        String idString = String.valueOf(recordId);
+        List<ActivityLog__c> records = [
+            SELECT Id, HashChainTxt__c, ActionTypePk__c, CreatedDate, ContextDataTxt__c
+            FROM ActivityLog__c
+            WHERE RecordIdTxt__c = :idString
+            AND HashChainTxt__c != null
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate ASC
+            LIMIT 1000
+        ];
+        if (records.isEmpty()) {
+            return result;
+        }
+        Integer broken = countBrokenLinks(records);
+        result.put('totalChecked', records.size());
+        result.put('broken', broken);
+        result.put('passed', broken == 0);
+        if (broken == 0) {
+            result.put('verifiedAt', Datetime.now());
+        }
+        return result;
+    }
+
+    private static Integer countBrokenLinks(List<ActivityLog__c> records) {
+        Integer broken = 0;
+        String previousHash = lookupPreviousHash(records[0]);
+        for (ActivityLog__c rec : records) {
+            String expected = DeliveryCryptoService.computeChainHash(
+                previousHash, rec.Id, rec.ActionTypePk__c,
+                rec.CreatedDate, rec.ContextDataTxt__c
+            );
+            if (expected != rec.HashChainTxt__c) {
+                broken++;
+            }
+            previousHash = rec.HashChainTxt__c;
+        }
+        return broken;
+    }
+
+    private static String lookupPreviousHash(ActivityLog__c firstRecord) {
+        List<ActivityLog__c> prior = [
+            SELECT HashChainTxt__c FROM ActivityLog__c
+            WHERE CreatedDate < :firstRecord.CreatedDate
+            AND HashChainTxt__c != null
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate DESC LIMIT 1
+        ];
+        return prior.isEmpty() ? null : prior[0].HashChainTxt__c;
+    }
+
+    /**
      * @description Export compliance data for a date range.
      *              Returns all ActivityLog__c records within the specified period.
      * @param fromDate Start date (inclusive)
