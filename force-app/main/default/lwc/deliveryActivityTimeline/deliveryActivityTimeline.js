@@ -9,6 +9,12 @@
 import { LightningElement, api, wire, track } from 'lwc';
 import getTimelineEvents from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryActivityTimelineController.getTimelineEvents';
 import { refreshApex } from '@salesforce/apex';
+import { subscribe, unsubscribe, onError } from 'lightning/empApi';
+
+// Live updates — refresh on any DeliveryWorkItemChange__e for THIS record.
+// Filter to events whose WorkItemIdTxt__c matches the @api recordId so the
+// timeline doesn't refresh storm when other records on the org are edited.
+const PE_CHANNEL = '/event/%%%NAMESPACE_DOT%%%DeliveryWorkItemChange__e';
 
 const FILTER_OPTIONS = [
     { label: 'All', value: 'all', icon: 'utility:list' },
@@ -37,6 +43,42 @@ export default class DeliveryActivityTimeline extends LightningElement {
     error;
 
     _wiredResult;
+    _empSubscription;
+
+    // ── Lifecycle ───────────────────────────────────────────────────────
+
+    connectedCallback() {
+        if (!this.recordId) return;
+        onError((err) => {
+            console.warn('[DeliveryActivityTimeline] empApi error:', JSON.stringify(err));
+        });
+        subscribe(PE_CHANNEL, -1, (message) => {
+            const payload = message && message.data && message.data.payload;
+            if (!payload) return;
+            const ns = this._peNs();
+            const eventWiId = payload.WorkItemIdTxt__c || payload[`${ns}WorkItemIdTxt__c`];
+            // Only refresh when the change is for this record.
+            if (!eventWiId) return;
+            if (eventWiId.substring(0, 15) !== this.recordId.substring(0, 15)) return;
+            if (this._wiredResult) {
+                refreshApex(this._wiredResult);
+            }
+        }).then((sub) => { this._empSubscription = sub; });
+    }
+
+    disconnectedCallback() {
+        if (this._empSubscription) {
+            try { unsubscribe(this._empSubscription, () => {}); } catch (e) { /* best-effort */ }
+            this._empSubscription = null;
+        }
+    }
+
+    _peNs() {
+        if (this.__peNs !== undefined) return this.__peNs;
+        const m = PE_CHANNEL.match(/\/event\/(.*?)DeliveryWorkItemChange__e/);
+        this.__peNs = (m && m[1]) ? m[1] : '';
+        return this.__peNs;
+    }
 
     // ── Wire ────────────────────────────────────────────────────────────
 
