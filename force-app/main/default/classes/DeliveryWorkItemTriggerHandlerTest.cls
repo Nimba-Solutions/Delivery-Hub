@@ -546,7 +546,11 @@ public class DeliveryWorkItemTriggerHandlerTest {
             update t;
             Test.stopTest();
 
-            // Smoke: no error. The publisher's size <= 1 guard skips empty patches.
+            // Verify the non-gantt field landed (smoke: trigger didn't blow up
+            // when toggle is on but no gantt-relevant fields changed).
+            WorkItem__c reloaded = [SELECT Id, StepsToReproduceTxt__c FROM WorkItem__c WHERE Id = :t.Id];
+            System.assertEquals('Repro steps not on gantt', reloaded.StepsToReproduceTxt__c,
+                'Non-gantt field update should persist; trigger should not have raised when no gantt-relevant change occurred');
         }
     }
 }
