@@ -505,7 +505,7 @@ public class DeliveryWorkItemTriggerHandlerTest {
     @IsTest
     static void testLiveGanttEventsToggleOnFiresOnGanttField() {
         System.runAs(testUser) {
-            DeliveryHubSettings__c s = DeliveryHubSettings__c.getInstance();
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
             s.EnableLiveGanttEventsDateTime__c = Datetime.now();
             update s;
 
@@ -535,7 +535,7 @@ public class DeliveryWorkItemTriggerHandlerTest {
     @IsTest
     static void testLiveGanttEventsNoChangeSkipped() {
         System.runAs(testUser) {
-            DeliveryHubSettings__c s = DeliveryHubSettings__c.getInstance();
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
             s.EnableLiveGanttEventsDateTime__c = Datetime.now();
             update s;
 
