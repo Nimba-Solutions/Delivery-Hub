@@ -504,6 +504,9 @@ global with sharing class DeliveryActivityFeedController {
             'detail' => ''
         };
         if (String.isBlank(contextDataJson)) {
+            // No JSON to parse \u2014 surface a fallback detail so the row doesn't
+            // render with just a bare label. Diagnosable from the feed itself.
+            info.put('detail', '(no change context recorded)');
             return info;
         }
         try {
@@ -514,7 +517,12 @@ global with sharing class DeliveryActivityFeedController {
                 parseFieldChange(ctx, info);
             }
         } catch (JSONException ex) {
-            System.debug(LoggingLevel.FINE, 'Activity Feed: Could not parse context: ' + ex.getMessage());
+            // Don't swallow silently \u2014 surface for the health dashboard /
+            // anyone tailing debug logs, and fall back to a non-empty detail
+            // so the user-facing row still carries SOME signal.
+            System.debug(LoggingLevel.WARN,
+                'Activity Feed: malformed context JSON for ' + actionType + ': ' + ex.getMessage());
+            info.put('detail', '(change context unparseable)');
         }
         return info;
     }
@@ -525,21 +533,36 @@ global with sharing class DeliveryActivityFeedController {
         if (String.isNotBlank(newStage)) {
             info.put('title', 'Stage changed to ' + newStage);
         }
-        if (String.isNotBlank(oldStage) && String.isNotBlank(newStage)) {
-            info.put('detail', oldStage + ' \u2192 ' + newStage);
-        }
+        // Always render a from\u2192to detail even when one side is blank \u2014 empty
+        // sides become '(none)' so users see WHAT changed instead of a bare
+        // "Stage changed" with no context. Initial-stage assignments where
+        // oldStage was never set now read as "(none) \u2192 Backlog".
+        info.put(
+            'detail',
+            displayValue(oldStage) + ' \u2192 ' + displayValue(newStage)
+        );
     }
 
     private static void parseFieldChange(Map<String, Object> ctx, Map<String, String> info) {
         String fieldLabel = (String) ctx.get('fieldLabel');
-        String oldValue = String.valueOf(ctx.get('oldValue'));
-        String newValue = String.valueOf(ctx.get('newValue'));
+        // ctx.get returns Apex null when the key is missing OR when the JSON
+        // value is null. String.valueOf(null) would return the literal "null"
+        // string \u2014 defended against here so we render "(empty)" not "null".
+        String oldValue = ctx.get('oldValue') == null ? null : String.valueOf(ctx.get('oldValue'));
+        String newValue = ctx.get('newValue') == null ? null : String.valueOf(ctx.get('newValue'));
         if (String.isNotBlank(fieldLabel)) {
             info.put('title', fieldLabel + ' changed');
         }
-        if (oldValue != null && newValue != null) {
-            info.put('detail', oldValue + ' \u2192 ' + newValue);
-        }
+        info.put('detail', displayValue(oldValue) + ' \u2192 ' + displayValue(newValue));
+    }
+
+    /**
+     * Render a value for the activity-feed detail line. Null / blank become
+     * '(empty)' so users see signal instead of a bare arrow or the literal
+     * Apex String.valueOf(null) output of "null".
+     */
+    private static String displayValue(String v) {
+        return String.isBlank(v) ? '(empty)' : v;
     }
 
     // ── Shared Helpers ─────────────────────────────────────────────────

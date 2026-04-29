@@ -9,7 +9,14 @@
 import { LightningElement, api, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
+import { subscribe, unsubscribe, onError } from 'lightning/empApi';
 import getBoardMetrics from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryMetricsService.getBoardMetrics';
+
+// Live updates — same channel + filter pattern as deliveryHubBoard.
+// Refresh on stage transitions + new task_upsert events; ignore comment_*
+// to avoid refresh storms when chat is active.
+const PE_CHANNEL = '/event/%%%NAMESPACE_DOT%%%DeliveryWorkItemChange__e';
+const REFRESH_CHANGE_TYPES = new Set(['stage_change', 'task_upsert']);
 
 // Phase color mapping for stacked bar segments
 const PHASE_COLORS = {
@@ -38,6 +45,7 @@ export default class DeliveryBoardMetrics extends NavigationMixin(LightningEleme
     @track error = null;
 
     _wiredResult;
+    _empSubscription;
 
     @wire(getBoardMetrics)
     wiredMetrics(result) {
@@ -52,6 +60,36 @@ export default class DeliveryBoardMetrics extends NavigationMixin(LightningEleme
             this.error = error;
             this.isLoading = false;
         }
+    }
+
+    connectedCallback() {
+        onError((err) => {
+            console.warn('[DeliveryBoardMetrics] empApi error:', JSON.stringify(err));
+        });
+        subscribe(PE_CHANNEL, -1, (message) => {
+            const payload = message && message.data && message.data.payload;
+            if (!payload) return;
+            const ns = this._peNs();
+            const changeType = payload.ChangeTypeTxt__c || payload[`${ns}ChangeTypeTxt__c`];
+            if (!REFRESH_CHANGE_TYPES.has(changeType)) return;
+            if (this._wiredResult) {
+                refreshApex(this._wiredResult);
+            }
+        }).then((sub) => { this._empSubscription = sub; });
+    }
+
+    disconnectedCallback() {
+        if (this._empSubscription) {
+            try { unsubscribe(this._empSubscription, () => {}); } catch (e) { /* best-effort */ }
+            this._empSubscription = null;
+        }
+    }
+
+    _peNs() {
+        if (this.__peNs !== undefined) return this.__peNs;
+        const m = PE_CHANNEL.match(/\/event\/(.*?)DeliveryWorkItemChange__e/);
+        this.__peNs = (m && m[1]) ? m[1] : '';
+        return this.__peNs;
     }
 
     // ── Mode getters ──
