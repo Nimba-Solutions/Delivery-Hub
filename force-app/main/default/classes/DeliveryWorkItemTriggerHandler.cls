@@ -34,7 +34,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             handleNetworkEntitySync(newRows);
             autoSetSLATargets(newRows);
             DeliveryFieldTrackingService.trackCreates(newRows);
-            publishLiveGanttEvents(newRows, null, true);
+            publishLiveGanttEvents(newRows, null);
         }
 
         // 2. STAGE CHANGE EVENTS (real-time board refresh via Platform Events)
@@ -43,7 +43,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         //    + SLA pause/resume when stage enters/exits configured stages
         if (isUpdate) {
             publishStageChangeEvents(newRows, oldMap);
-            publishLiveGanttEvents(newRows, oldMap, false);
+            publishLiveGanttEvents(newRows, oldMap);
             logStageChanges(newRows, oldMap);
             DeliveryFieldTrackingService.trackChanges(newRows, oldMap);
             handleSLAPauseResume(newRows, oldMap);
@@ -239,15 +239,13 @@ public without sharing class DeliveryWorkItemTriggerHandler {
      *
      *              Gated by DeliveryHubSettings__c.EnableLiveGanttEventsDateTime__c
      *              so admins can switch the new ChangeType on independently of the
-     *              existing stage_change traffic.
+     *              existing stage_change traffic. Insert context: pass null oldMap.
      * @param newRows List of WorkItem__c records (post-trigger state)
-     * @param oldMap  Map of pre-trigger records keyed by Id (null on insert)
-     * @param isInsert True for after-insert context, false for after-update
+     * @param oldMap  Map of pre-trigger records keyed by Id; null on insert
      */
     private static void publishLiveGanttEvents(
         List<WorkItem__c> newRows,
-        Map<Id, WorkItem__c> oldMap,
-        Boolean isInsert
+        Map<Id, WorkItem__c> oldMap
     ) {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
         if (settings == null || settings.Id == null || settings.EnableLiveGanttEventsDateTime__c == null) {
@@ -255,7 +253,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         }
         List<DeliveryWorkItemChange__e> events = new List<DeliveryWorkItemChange__e>();
         for (WorkItem__c t : newRows) {
-            WorkItem__c old = isInsert ? null : (oldMap != null ? oldMap.get(t.Id) : null);
+            WorkItem__c old = (oldMap != null) ? oldMap.get(t.Id) : null;
             if (!hasGanttRelevantChange(t, old)) {
                 continue;
             }

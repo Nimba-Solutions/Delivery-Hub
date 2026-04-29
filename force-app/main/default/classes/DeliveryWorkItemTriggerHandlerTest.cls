@@ -473,8 +473,8 @@ public class DeliveryWorkItemTriggerHandlerTest {
     }
 
     /**
-     * Toggle off → no live-gantt Platform Event publish path is exercised.
-     * Smoke test only; Platform Events are fire-and-forget in Apex test context.
+     * @description Toggle off → no live-gantt Platform Event publish path is exercised.
+     *              Smoke test only; Platform Events are fire-and-forget in Apex test context.
      */
     @IsTest
     static void testLiveGanttEventsToggleOff() {
@@ -498,9 +498,9 @@ public class DeliveryWorkItemTriggerHandlerTest {
     }
 
     /**
-     * Toggle on → publishLiveGanttEvents path runs without error on insert + update
-     * for gantt-relevant field changes. Platform Events are fire-and-forget in test
-     * context, so this is a smoke test confirming no exception under the new path.
+     * @description Toggle on → publishLiveGanttEvents path runs without error on insert + update
+     *              for gantt-relevant field changes. Platform Events are fire-and-forget in test
+     *              context, so this is a smoke test confirming no exception under the new path.
      */
     @IsTest
     static void testLiveGanttEventsToggleOnFiresOnGanttField() {
@@ -529,8 +529,8 @@ public class DeliveryWorkItemTriggerHandlerTest {
     }
 
     /**
-     * Update with no gantt-relevant field changes → publisher skips the row
-     * (patch with only Id is filtered out, no event published, no governor cost).
+     * @description Update with no gantt-relevant field changes → publisher skips the row
+     *              (no event published, no governor cost).
      */
     @IsTest
     static void testLiveGanttEventsNoChangeSkipped() {
