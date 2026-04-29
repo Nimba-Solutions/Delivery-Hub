@@ -964,6 +964,24 @@ public with sharing class DeliveryGanttController {
          *  drag-to-reorder in the timeline. Lower values appear first. Null when
          *  the item has never been reordered; LWC maps null → 0. */
         @AuraEnabled public Decimal sortOrder { get; set; }
+        /** @description Schedule progress 0..1 — fraction of (endDate - startDate) elapsed
+         *  by today. Null when dates are missing or the bar is in the future / past
+         *  entirely. Pairs with `progress` (hours-based) so the gantt can render two
+         *  overlay shades on each bar: where the work IS vs where the schedule SAYS
+         *  it should be. Same shape as cloudnimbusllc.com v12 visual language. */
+        @AuraEnabled public Decimal scheduleProgress { get; set; }
+        /** @description Schedule-vs-output variance signal — one of:
+         *  'done' (terminal stage), 'ahead' (output > schedule by >10pp),
+         *  'behind' (output < schedule by >10pp), 'at-risk' (>95% of schedule
+         *  elapsed but <100% complete), 'on-track' (within ±10pp). Used for
+         *  bar color / overlay tinting in the gantt. Null when no data. */
+        @AuraEnabled public String variance { get; set; }
+        /** @description ISO YYYY-MM-DD actual completion date — populated for items
+         *  whose stage is terminal (Done / Deployed to Prod / Cancelled) using
+         *  LastModifiedDate as the proxy for "stage entered terminal". Null for
+         *  in-flight items. Lets the gantt render a "shipped early/late" marker
+         *  comparing actualEndDate vs endDate for Done items. */
+        @AuraEnabled public String actualEndDate { get; set; }
     }
 
     /** Stages where work is actively moving forward (bucket = active or top-priority) */
@@ -1136,7 +1154,75 @@ public with sharing class DeliveryGanttController {
         }
         row.endDate = String.valueOf(endDt);
 
+        // Schedule progress + variance — pairs with `progress` (hours-based) so
+        // the gantt can render two overlay shades on each bar (output progress
+        // vs schedule progress) and tint by variance signal. Mirrors the v12
+        // visual language we want to bring to DH.
+        row.scheduleProgress = computeScheduleProgress(startDt, endDt);
+        row.variance = computeVariance(row.progress, row.scheduleProgress, isTerminal);
+        row.actualEndDate = isTerminal && item.LastModifiedDate != null
+            ? String.valueOf(item.LastModifiedDate.date())
+            : null;
+
         return row;
+    }
+
+    /**
+     * @description Fraction of (endDt - startDt) elapsed by today, clamped 0..1.
+     *              Returns null when the interval is degenerate (same day or
+     *              missing dates) so the renderer can fall back to bar-only.
+     * @param startDt Bar start date.
+     * @param endDt Bar end date.
+     * @return Decimal in [0,1], or null when undefined.
+     */
+    private static Decimal computeScheduleProgress(Date startDt, Date endDt) {
+        if (startDt == null || endDt == null || endDt <= startDt) {
+            return null;
+        }
+        Date today = Date.today();
+        if (today <= startDt) {
+            return 0;
+        }
+        if (today >= endDt) {
+            return 1;
+        }
+        Integer total = startDt.daysBetween(endDt);
+        if (total <= 0) {
+            return null;
+        }
+        Integer elapsed = startDt.daysBetween(today);
+        return Decimal.valueOf(elapsed).divide(Decimal.valueOf(total), 4);
+    }
+
+    /**
+     * @description Compute the variance signal for the gantt bar tint.
+     *              'done' for terminal stages, 'at-risk' when schedule is
+     *              nearly out but output is not, 'ahead' / 'behind' / 'on-track'
+     *              based on the gap between hours-progress and schedule-progress.
+     * @param hoursProgress Output progress 0..1 from logged/estimated hours.
+     * @param schedProgress Time progress 0..1 from elapsed/total bar duration.
+     * @param isTerminal True when the WorkItem stage is terminal.
+     * @return Variance label or null when inputs insufficient.
+     */
+    private static String computeVariance(Decimal hoursProgress, Decimal schedProgress, Boolean isTerminal) {
+        if (isTerminal) {
+            return 'done';
+        }
+        if (hoursProgress == null || schedProgress == null) {
+            return null;
+        }
+        // Out-of-time but not complete → at-risk (schedule consumed >95%, output <100%).
+        if (schedProgress > 0.95 && hoursProgress < 1) {
+            return 'at-risk';
+        }
+        Decimal delta = hoursProgress - schedProgress;
+        if (delta > 0.10) {
+            return 'ahead';
+        }
+        if (delta < -0.10) {
+            return 'behind';
+        }
+        return 'on-track';
     }
 
     /**

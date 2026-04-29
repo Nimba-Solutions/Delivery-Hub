@@ -654,6 +654,88 @@ private class DeliveryGanttControllerTest {
         }
     }
 
+    /**
+     * @description scheduleProgress + variance shape — bar with start in past
+     *              and end in future should produce a 0..1 schedule progress
+     *              and an 'on-track' / 'ahead' / 'behind' variance label per
+     *              the relationship to hours-progress.
+     */
+    @IsTest
+    static void testProFormaScheduleProgressAndVarianceFields() {
+        System.runAs(testUser) {
+            // Set the login item to have a 30-day window starting 15 days ago
+            // (so today is exactly the midpoint = scheduleProgress 0.5).
+            WorkItem__c loginItem = [
+                SELECT Id, EstimatedStartDevDate__c, EstimatedEndDevDate__c,
+                       EstimatedHoursNumber__c, TotalLoggedHoursSum__c
+                FROM WorkItem__c
+                WHERE BriefDescriptionTxt__c = 'Build login page'
+                LIMIT 1
+            ];
+            loginItem.EstimatedStartDevDate__c = Date.today().addDays(-15);
+            loginItem.EstimatedEndDevDate__c   = Date.today().addDays(15);
+            update loginItem;
+
+            Test.startTest();
+            List<DeliveryGanttController.ProFormaTimelineRow> rows =
+                DeliveryGanttController.getProFormaTimelineData(false);
+            Test.stopTest();
+
+            DeliveryGanttController.ProFormaTimelineRow loginRow = null;
+            for (DeliveryGanttController.ProFormaTimelineRow r : rows) {
+                if (r.title == 'Build login page') { loginRow = r; break; }
+            }
+            System.assertNotEquals(null, loginRow, 'Login row should still be present');
+            System.assertNotEquals(null, loginRow.scheduleProgress,
+                'scheduleProgress should be computed for a real date interval');
+            // Today is mid-window, so scheduleProgress should be ~0.5
+            System.assert(loginRow.scheduleProgress >= 0.4 && loginRow.scheduleProgress <= 0.6,
+                'Mid-window bar should yield scheduleProgress ~0.5, got ' + loginRow.scheduleProgress);
+            System.assertNotEquals(null, loginRow.variance,
+                'variance label should be set when both progresses are computable');
+            // Active (non-terminal) row → variance is one of ahead/on-track/behind/at-risk
+            Set<String> validVariance = new Set<String>{ 'ahead', 'on-track', 'behind', 'at-risk' };
+            System.assert(validVariance.contains(loginRow.variance),
+                'variance for in-flight item should be one of ' + validVariance + '; got: ' + loginRow.variance);
+        }
+    }
+
+    /**
+     * @description Terminal-stage rows always render variance='done' with
+     *              actualEndDate populated from LastModifiedDate. Lets the
+     *              gantt show 'shipped early/late' markers on completed bars.
+     */
+    @IsTest
+    static void testProFormaVarianceDoneAndActualEndDateForTerminal() {
+        System.runAs(testUser) {
+            // Create a terminal-stage row in setup data + query it back.
+            WorkItem__c done = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Already-shipped item',
+                StageNamePk__c = 'Done',
+                EstimatedStartDevDate__c = Date.today().addDays(-10),
+                EstimatedEndDevDate__c   = Date.today().addDays(-3),
+                EstimatedHoursNumber__c = 8,
+                ActivatedDateTime__c = Datetime.now()
+            );
+            insert done;
+
+            Test.startTest();
+            List<DeliveryGanttController.ProFormaTimelineRow> rows =
+                DeliveryGanttController.getProFormaTimelineData(true);
+            Test.stopTest();
+
+            DeliveryGanttController.ProFormaTimelineRow doneRow = null;
+            for (DeliveryGanttController.ProFormaTimelineRow r : rows) {
+                if (r.title == 'Already-shipped item') { doneRow = r; break; }
+            }
+            System.assertNotEquals(null, doneRow, 'Terminal row should appear when showCompleted=true');
+            System.assertEquals('done', doneRow.variance,
+                'Terminal-stage rows should always carry variance=done');
+            System.assertNotEquals(null, doneRow.actualEndDate,
+                'actualEndDate should be populated for terminal rows (LastModifiedDate proxy)');
+        }
+    }
+
     @IsTest
     static void testGetProFormaTimelineDataExplicitOverride() {
         // If PriorityGroupPk__c is set on the record, the DTO should use it
