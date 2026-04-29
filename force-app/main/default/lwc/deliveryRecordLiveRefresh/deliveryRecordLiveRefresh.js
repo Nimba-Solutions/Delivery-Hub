@@ -56,33 +56,18 @@ export default class DeliveryRecordLiveRefresh extends LightningElement {
 
     _handle(message) {
         const payload = message && message.data && message.data.payload;
-        if (!payload) return;
+        if (!payload) {
+            return;
+        }
         const ns = this._nsPrefix();
         const changeType = payload.ChangeTypeTxt__c || payload[`${ns}ChangeTypeTxt__c`];
-        if (!REFRESH_CHANGE_TYPES.has(changeType)) return;
+        if (!REFRESH_CHANGE_TYPES.has(changeType)) {
+            return;
+        }
         const eventWorkItemId = payload.WorkItemIdTxt__c || payload[`${ns}WorkItemIdTxt__c`];
         if (eventWorkItemId && this._idsMatch(eventWorkItemId, this.recordId)) {
             getRecordNotifyChange([{ recordId: this.recordId }]);
         }
-        // For task_upsert: WorkItemIdTxt__c may be empty when the trigger
-        // bundles multiple rows under one event. In that case, scan
-        // TaskPatchesJson__c for our recordId.
-        if (!eventWorkItemId && changeType === 'task_upsert') {
-            const patchesRaw = payload.TaskPatchesJson__c || payload[`${ns}TaskPatchesJson__c`];
-            if (patchesRaw && this._patchesContainRecordId(patchesRaw)) {
-                getRecordNotifyChange([{ recordId: this.recordId }]);
-            }
-        }
-    }
-
-    _patchesContainRecordId(patchesRaw) {
-        try {
-            const patches = JSON.parse(patchesRaw);
-            for (const p of patches) {
-                if (p && p.Id && this._idsMatch(p.Id, this.recordId)) return true;
-            }
-        } catch (e) { /* malformed */ }
-        return false;
     }
 
     /** 15-char IDs from PE payload may compare against 18-char @api recordId. */

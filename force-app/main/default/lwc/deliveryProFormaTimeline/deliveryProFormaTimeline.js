@@ -63,15 +63,13 @@ const EMBEDDED_TAB_API_NAME = 'Delivery_Timeline';
 // UX. Always target Full_Bleed for the enter-fullscreen gesture.
 const FULLSCREEN_TAB_API_NAME = 'Delivery_Gantt_Full_Bleed';
 
-// Live remote-events channel — DeliveryWorkItemChange__e Platform Event.
-// Trigger publishes task_upsert events on after-insert/update; this LWC
-// translates and pumps them into handle.pushRemoteEvent so the gantt's
-// per-row reducer applies them without a full re-fetch + re-layout.
-// Existing values stage_change / comment_* are filtered out at the LWC
-// adapter (chat LWC owns those).
-const REMOTE_EVENT_CHANNEL = '/event/%%%NAMESPACE_DOT%%%DeliveryWorkItemChange__e';
-const TASK_UPSERT_CHANGE_TYPE = 'task_upsert';
-const TASK_DELETE_CHANGE_TYPE = 'task_delete';
+// Live updates channel — DeliveryWorkItemChange__e Platform Event.
+// On `task_upsert` events the gantt schedules a debounced refetch via the
+// existing `_scheduleRefetch` path (mirrors the chat LWC's refreshApex pattern;
+// no separate per-row engine push). `stage_change`/`comment_*` values are
+// owned by other LWCs and ignored here.
+const PE_CHANNEL = '/event/%%%NAMESPACE_DOT%%%DeliveryWorkItemChange__e';
+const PE_TASK_UPSERT = 'task_upsert';
 
 export default class DeliveryProFormaTimeline extends NavigationMixin(LightningElement) {
 
@@ -815,10 +813,11 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             } catch (e) { /* dispatchEvent unavailable */ }
             this._mounted = true;
             this._installCnEditBridge();
-            // Wire live remote-events channel so other clients' writes flow
-            // into this gantt without a manual refresh. Safe to no-op if NG
-            // bundle predates 0.185.37 (handle.pushRemoteEvent missing).
-            this._subscribeToRemoteEvents();
+            // Subscribe to DeliveryWorkItemChange__e — on `task_upsert` events
+            // (other clients' writes), schedule a debounced refetch through
+            // the existing _scheduleRefetch path. Mirrors the refreshApex
+            // pattern in deliveryWorkItemChat.js.
+            this._subscribeToWorkItemChanges();
         } catch (error) {
             // eslint-disable-next-line no-console
             console.error('[DeliveryTimeline] mount() threw — Locker Service container issue or bundle error:', error);
@@ -826,126 +825,37 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         }
     }
 
-    /**
-     * Subscribe to DeliveryWorkItemChange__e and pump task_upsert events into
-     * handle.pushRemoteEvent. Self-echoes (events whose ClientNonceTxt__c
-     * matches our per-mount nonce) are dropped before the engine sees them.
-     * NG 0.185.37 introduces pushRemoteEvent; if absent (older bundle) we
-     * silently no-op rather than break the gantt.
-     */
-    _subscribeToRemoteEvents() {
-        if (!this._mountHandle || typeof this._mountHandle.pushRemoteEvent !== 'function') {
-            return;
-        }
-        // Per-mount UUID — used by the trigger-side ClientNonceTxt__c filter
-        // so multi-tab same-user writes don't drop each other's events.
-        try {
-            this._clientNonce = (typeof crypto !== 'undefined' && crypto.randomUUID)
-                ? crypto.randomUUID()
-                : ('dh-' + Date.now() + '-' + Math.random().toString(36).slice(2));
-        } catch (e) {
-            this._clientNonce = 'dh-' + Date.now();
-        }
+    _subscribeToWorkItemChanges() {
         empOnError((err) => {
             // eslint-disable-next-line no-console
             console.warn('[DeliveryTimeline] empApi error:', JSON.stringify(err));
         });
-        empSubscribe(REMOTE_EVENT_CHANNEL, -1, (message) => {
-            try {
-                this._onRemoteEventMessage(message);
-            } catch (e) {
-                // eslint-disable-next-line no-console
-                console.warn('[DeliveryTimeline] remote event translate failed:', e && e.message);
+        empSubscribe(PE_CHANNEL, -1, (message) => {
+            const payload = message && message.data && message.data.payload;
+            if (!payload) {
+                return;
             }
+            // Namespace-aware key resolution — payloads expose unprefixed
+            // or namespaced keys depending on context. Mirrors
+            // deliveryWorkItemChat.js pattern.
+            const changeType = payload.ChangeTypeTxt__c
+                || payload[`${this._peNsPrefix()}ChangeTypeTxt__c`];
+            if (changeType !== PE_TASK_UPSERT) {
+                return;
+            }
+            this._scheduleRefetch();
         }).then((sub) => {
             this._empSubscription = sub;
         });
     }
 
-    _onRemoteEventMessage(message) {
-        const payload = message && message.data && message.data.payload;
-        if (!payload) return;
-        const ns = this._nsPrefix();
-        const changeType = payload.ChangeTypeTxt__c || payload[`${ns}ChangeTypeTxt__c`];
-        if (changeType !== TASK_UPSERT_CHANGE_TYPE && changeType !== TASK_DELETE_CHANGE_TYPE) {
-            // Ignore stage_change / comment_* — those are owned by other LWCs.
-            return;
+    _peNsPrefix() {
+        if (this.__peNsPrefix !== undefined) {
+            return this.__peNsPrefix;
         }
-        const eventNonce = payload.ClientNonceTxt__c || payload[`${ns}ClientNonceTxt__c`];
-        if (eventNonce && eventNonce === this._clientNonce) {
-            // Self-echo — our own write. Skip. The optimistic local mutation
-            // already updated the engine state.
-            return;
-        }
-        if (changeType === TASK_DELETE_CHANGE_TYPE) {
-            // Reserved for future trigger after-delete wiring; currently no
-            // publisher path emits this. Translate stub kept for symmetry.
-            const idsRaw = payload.TaskIdsJson__c || payload[`${ns}TaskIdsJson__c`];
-            if (!idsRaw) return;
-            const ids = JSON.parse(idsRaw);
-            this._mountHandle.pushRemoteEvent({
-                kind: 'task.delete',
-                version: 1,
-                ids,
-                source: 'dh-platform-event'
-            });
-            return;
-        }
-        const patchesRaw = payload.TaskPatchesJson__c || payload[`${ns}TaskPatchesJson__c`];
-        if (!patchesRaw) return;
-        const apexPatches = JSON.parse(patchesRaw);
-        const tasks = apexPatches.map((p) => this._translateApexPatch(p));
-        this._mountHandle.pushRemoteEvent({
-            kind: 'task.upsert',
-            version: 1,
-            tasks,
-            ts: Date.now(),
-            source: 'dh-platform-event'
-        });
-    }
-
-    /**
-     * Map Salesforce field-name patch (PascalCase + __c) → NG TaskPatch shape
-     * (camelCase). Only id is required; other keys present only when the
-     * field actually changed (per buildLiveGanttTaskPatch on the Apex side).
-     */
-    _translateApexPatch(p) {
-        const out = { id: p.Id };
-        if ('Name' in p) out.name = p.Name;
-        if ('BriefDescriptionTxt__c' in p) out.description = p.BriefDescriptionTxt__c;
-        if ('StageNamePk__c' in p) out.stage = p.StageNamePk__c;
-        if ('StatusPk__c' in p) out.status = p.StatusPk__c;
-        if ('PriorityPk__c' in p) out.priority = p.PriorityPk__c;
-        if ('PriorityGroupPk__c' in p) out.priorityGroup = p.PriorityGroupPk__c;
-        if ('SortOrderNumber__c' in p) out.sortOrder = p.SortOrderNumber__c;
-        if ('ParentWorkItemLookup__c' in p) out.parentId = p.ParentWorkItemLookup__c;
-        if ('EstimatedStartDevDate__c' in p) out.startDate = p.EstimatedStartDevDate__c;
-        if ('EstimatedEndDevDate__c' in p) out.endDate = p.EstimatedEndDevDate__c;
-        if ('ProjectedUATReadyDate__c' in p) out.uatDate = p.ProjectedUATReadyDate__c;
-        if ('CalculatedETADate__c' in p) out.etaDate = p.CalculatedETADate__c;
-        if ('ActivatedDateTime__c' in p) out.activatedAt = p.ActivatedDateTime__c;
-        return out;
-    }
-
-    /**
-     * Returns the namespace prefix (e.g. 'delivery__') in subscriber orgs, or
-     * empty string in scratch. Platform Event payloads expose unprefixed keys
-     * in some contexts and prefixed keys in others — checking both is the
-     * cheapest cross-org-safe pattern (mirrors deliveryWorkItemChat).
-     */
-    _nsPrefix() {
-        if (this.__nsPrefix !== undefined) return this.__nsPrefix;
-        try {
-            // CHANNEL is /event/%%%NAMESPACE_DOT%%%DeliveryWorkItemChange__e
-            // Post-load, %%%NAMESPACE_DOT%%% is replaced with '' (scratch) or
-            // 'delivery__' (subscriber). The constant in this file resolves
-            // at compile time so we re-read by lookup.
-            const m = REMOTE_EVENT_CHANNEL.match(/\/event\/(.*?)DeliveryWorkItemChange__e/);
-            this.__nsPrefix = (m && m[1]) ? m[1] : '';
-        } catch (e) {
-            this.__nsPrefix = '';
-        }
-        return this.__nsPrefix;
+        const m = PE_CHANNEL.match(/\/event\/(.*?)DeliveryWorkItemChange__e/);
+        this.__peNsPrefix = (m && m[1]) ? m[1] : '';
+        return this.__peNsPrefix;
     }
 
     async _handlePatch(patch) {

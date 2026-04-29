@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>ClientNonceTxt__c</fullName>
-    <description>Per-LWC-mount UUID supplied by the client that initiated this write. Subscribers compare against their own mount nonce to drop self-echoes (multi-tab same-user safe). Empty when the write didn't originate from a gantt LWC.</description>
-    <inlineHelpText>Per-mount client UUID for self-echo filtering. Empty for non-gantt-originated writes.</inlineHelpText>
-    <label>Client Nonce</label>
-    <length>36</length>
-    <type>Text</type>
-</CustomField>

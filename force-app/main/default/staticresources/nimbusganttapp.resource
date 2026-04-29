@@ -2664,9 +2664,9 @@ var NimbusGanttApp = (function(exports) {
     { category: "done", label: "Done", color: "#cbd5e1" }
   ];
   const CLOUD_NIMBUS_POOL = [
-    { name: "Glen", role: "Principal Engineer", hoursPerMonth: 80, active: true },
-    { name: "Mahi", role: "SFDC Dev", hoursPerMonth: 50, active: true },
-    { name: "Antima", role: "SFDC Dev (PT)", hoursPerMonth: 40, active: true }
+    { name: "Dev 4", role: "Principal Engineer", hoursPerMonth: 80, active: true },
+    { name: "Dev 1", role: "SFDC Dev", hoursPerMonth: 50, active: true },
+    { name: "Dev 3", role: "SFDC Dev (PT)", hoursPerMonth: 40, active: true }
   ];
   const CLS_TITLEBAR = "nga-titlebar bg-white border-b border-slate-200 px-3 py-1.5 flex flex-col gap-1.5 min-w-0 overflow-x-hidden";
   const CLS_TITLEBAR_ROW = "flex items-center gap-2 flex-wrap min-w-0";
@@ -5166,36 +5166,6 @@ var NimbusGanttApp = (function(exports) {
             if (dependencies !== void 0) allDependencies2 = normalizeDependencies(dependencies);
             _syncToCanvas();
           },
-          /** 0.185.37 — host-pumped server→client event channel. Hosts pump
-           *  Platform Event / SSE / websocket messages translated to
-           *  `RemoteEvent` shape; engine applies per-row merge with no full
-           *  re-layout, scroll/selection preserved. See
-           *  docs/dispatch-ng-remote-events.md. Skeleton ships task.upsert,
-           *  task.delete, bulk.replace; ts-only stale-drop. Sequence + dep
-           *  events + onRemoteEvent middleware land in 0.185.38–39. */
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          pushRemoteEvent(event) {
-            const gi = inst;
-            if (typeof gi.pushRemoteEvent === "function") {
-              gi.pushRemoteEvent(event);
-              if (event && event.kind === "bulk.replace" && Array.isArray(event.tasks)) {
-                allTasks2 = event.tasks;
-                if (Array.isArray(event.deps)) {
-                  allDependencies2 = normalizeDependencies(event.deps);
-                }
-              }
-            }
-          },
-          /** 0.185.37 — last applied wall-clock ts for a channel. Hosts
-           *  checkpoint this before disconnect so they can replay-from-cursor
-           *  on reconnect. Sequence-based equivalent ships in 0.185.38. */
-          getLastAppliedTs(channel) {
-            const gi = inst;
-            if (typeof gi.getLastAppliedTs === "function") {
-              return gi.getLastAppliedTs(channel);
-            }
-            return null;
-          },
           /** 0.185.32 — coordinate-based hit-test for host-driven right-click
            *  UX in LWS/Locker contexts where NG's internal document listeners
            *  silently no-op. Host attaches its own document listener, calls
@@ -6356,45 +6326,6 @@ var NimbusGanttApp = (function(exports) {
           } else {
             rebuildView();
           }
-        },
-        /** 0.185.37 — host-pumped server→client event channel. Hosts
-         *  translate Platform Event / SSE / websocket messages to
-         *  `RemoteEvent` shape; engine applies per-row merge with no full
-         *  re-layout, scroll/selection preserved. See
-         *  docs/dispatch-ng-remote-events.md. Skeleton ships task.upsert,
-         *  task.delete, bulk.replace; ts-only stale-drop. Sequence + dep
-         *  events + onRemoteEvent middleware land in 0.185.38–39.
-         *
-         *  bulk.replace also rewrites the host-side allTasks/allDependencies
-         *  arrays so that subsequent rebuildView()/refreshGantt() calls
-         *  don't blow away the pushed snapshot. task.upsert / task.delete
-         *  intentionally do NOT — those flow through the engine's reducer
-         *  only, so hosts that filter or transform tasks before
-         *  rebuildView() (epic grouping, search, etc.) keep working. */
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        pushRemoteEvent(event) {
-          if (!ganttInst) return;
-          const gi = ganttInst;
-          if (typeof gi.pushRemoteEvent !== "function") return;
-          gi.pushRemoteEvent(event);
-          if (event && event.kind === "bulk.replace" && Array.isArray(event.tasks)) {
-            allTasks = event.tasks;
-            if (Array.isArray(event.deps)) {
-              allDependencies = normalizeDependencies(event.deps);
-            }
-            depthMap = buildDepthMap(allTasks);
-          }
-        },
-        /** 0.185.37 — last applied wall-clock ts for a channel. Hosts
-         *  checkpoint this before disconnect so they can replay-from-cursor
-         *  on reconnect. Sequence-based equivalent ships in 0.185.38. */
-        getLastAppliedTs(channel) {
-          if (!ganttInst) return null;
-          const gi = ganttInst;
-          if (typeof gi.getLastAppliedTs === "function") {
-            return gi.getLastAppliedTs(channel);
-          }
-          return null;
         },
         /** 0.185.32 — coordinate-based hit-test for host-driven right-click
          *  UX in LWS/Locker contexts where NG's internal document listeners

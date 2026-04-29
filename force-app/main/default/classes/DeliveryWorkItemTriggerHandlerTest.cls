@@ -498,35 +498,32 @@ public class DeliveryWorkItemTriggerHandlerTest {
     }
 
     /**
-     * Toggle on with a clientNonce on the row → publish path runs without error
-     * and clientNonce is grouped per-mount. Insert + update both exercised.
+     * Toggle on → publishLiveGanttEvents path runs without error on insert + update
+     * for gantt-relevant field changes. Platform Events are fire-and-forget in test
+     * context, so this is a smoke test confirming no exception under the new path.
      */
     @IsTest
-    static void testLiveGanttEventsToggleOnWithClientNonce() {
+    static void testLiveGanttEventsToggleOnFiresOnGanttField() {
         System.runAs(testUser) {
             DeliveryHubSettings__c s = DeliveryHubSettings__c.getInstance();
             s.EnableLiveGanttEventsDateTime__c = Datetime.now();
             update s;
 
             Test.startTest();
-            // Insert path with nonce — exercises full-row payload
+            // Insert path — publisher emits task_upsert
             WorkItem__c fresh = new WorkItem__c(
                 BriefDescriptionTxt__c = 'Live Gantt Insert',
-                StageNamePk__c = 'Backlog',
-                ClientNonceTxt__c = 'mount-uuid-aaa'
+                StageNamePk__c = 'Backlog'
             );
             insert fresh;
 
-            // Update path with nonce — exercises diff-only patch
-            WorkItem__c existing = [SELECT Id, ClientNonceTxt__c FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Blocker' LIMIT 1];
-            existing.ClientNonceTxt__c = 'mount-uuid-bbb';
+            // Update path with a gantt-relevant change — fires task_upsert
+            WorkItem__c existing = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Blocker' LIMIT 1];
             existing.PriorityPk__c = 'High';
             update existing;
             Test.stopTest();
 
-            // Verify the records persisted; PE publish doesn't throw.
-            WorkItem__c reloaded = [SELECT Id, ClientNonceTxt__c, PriorityPk__c FROM WorkItem__c WHERE Id = :existing.Id];
-            System.assertEquals('mount-uuid-bbb', reloaded.ClientNonceTxt__c, 'Nonce should persist on the row');
+            WorkItem__c reloaded = [SELECT Id, PriorityPk__c FROM WorkItem__c WHERE Id = :existing.Id];
             System.assertEquals('High', reloaded.PriorityPk__c, 'Update should land');
         }
     }
