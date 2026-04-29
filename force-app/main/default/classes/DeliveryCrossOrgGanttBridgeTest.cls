@@ -46,12 +46,12 @@ private class DeliveryCrossOrgGanttBridgeTest {
         Test.stopTest();
 
         // Mock recorded the request — sanity check signature header is present.
-        System.assertNotEquals(null, BridgeCalloutMock.lastRequest, 'Mock should record the request');
-        String sig = BridgeCalloutMock.lastRequest.getHeader('X-DH-Signature');
+        System.assertNotEquals(null, lastBridgeRequest, 'Mock should record the request');
+        String sig = lastBridgeRequest.getHeader('X-DH-Signature');
         System.assert(String.isNotBlank(sig), 'X-DH-Signature header should be set');
         // Signature should match our re-computation of HMAC-SHA256
         Blob expected = Crypto.generateMac('HmacSHA256',
-            Blob.valueOf(BridgeCalloutMock.lastRequest.getBody()),
+            Blob.valueOf(lastBridgeRequest.getBody()),
             Blob.valueOf(SHARED_SECRET));
         System.assertEquals(EncodingUtil.convertToHex(expected), sig.toLowerCase(),
             'Signature must match HMAC of body with the shared secret');
@@ -193,6 +193,9 @@ private class DeliveryCrossOrgGanttBridgeTest {
             'Successful apply should return 200');
     }
 
+    /** Outer-class-scoped capture so inner mock can reach without `public static` on inner. */
+    private static HttpRequest lastBridgeRequest;
+
     private static String computeSig(String body, String secret) {
         Blob mac = Crypto.generateMac('HmacSHA256', Blob.valueOf(body), Blob.valueOf(secret));
         return EncodingUtil.convertToHex(mac);
@@ -201,13 +204,14 @@ private class DeliveryCrossOrgGanttBridgeTest {
     private class BridgeCalloutMock implements HttpCalloutMock {
         private Integer status;
         private String body;
-        public static HttpRequest lastRequest;
-        BridgeCalloutMock(Integer status, String body) {
-            this.status = status;
-            this.body = body;
+
+        private BridgeCalloutMock(Integer mockStatus, String mockBody) {
+            this.status = mockStatus;
+            this.body = mockBody;
         }
+
         public HttpResponse respond(HttpRequest req) {
-            lastRequest = req;
+            lastBridgeRequest = req;
             HttpResponse res = new HttpResponse();
             res.setStatusCode(status);
             res.setBody(body);

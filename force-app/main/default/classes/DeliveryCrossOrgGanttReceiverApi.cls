@@ -21,6 +21,13 @@
 @RestResource(urlMapping='/deliveryhub/v1/cross-org-gantt')
 global with sharing class DeliveryCrossOrgGanttReceiverApi {
 
+    /**
+     * @description Receive an inbound cross-org bridge POST. Verifies
+     *              signature against settings-stored secret, parses body,
+     *              dispatches to DeliveryCrossOrgGanttUpdateHandler, and
+     *              relays the handler's WebhookHandlerResult as the HTTP
+     *              response.
+     */
     @HttpPost
     global static void handlePost() {
         RestRequest req = RestContext.request;
@@ -42,10 +49,8 @@ global with sharing class DeliveryCrossOrgGanttReceiverApi {
                 respond(res, 401, 'Signature verification failed');
                 return;
             }
-            Map<String, Object> payload;
-            try {
-                payload = (Map<String, Object>) JSON.deserializeUntyped(body);
-            } catch (Exception parseErr) {
+            Map<String, Object> payload = parsePayload(body);
+            if (payload == null) {
                 respond(res, 400, 'Malformed JSON body');
                 return;
             }
@@ -58,14 +63,47 @@ global with sharing class DeliveryCrossOrgGanttReceiverApi {
         }
     }
 
+    /**
+     * @description Parse the request body as a JSON object. Returns null on
+     *              malformed JSON so the caller can respond 400.
+     * @param body Raw request body string.
+     * @return Decoded map, or null when the body isn't valid JSON.
+     */
+    private static Map<String, Object> parsePayload(String body) {
+        try {
+            return (Map<String, Object>) JSON.deserializeUntyped(body);
+        } catch (Exception e) {
+            // Malformed JSON — caller responds 400.
+            return null;
+        }
+    }
+
+    /**
+     * @description Compute HMAC-SHA256 of body with secret and compare against
+     *              the supplied header signature (case-insensitive hex compare).
+     * @param body Raw body bytes (as String).
+     * @param secret Shared HMAC secret from settings.
+     * @param headerSig Hex digest from the X-DH-Signature header.
+     * @return True when expected and actual digests match.
+     */
     @TestVisible
     private static Boolean signatureMatches(String body, String secret, String headerSig) {
-        Blob mac = Crypto.generateMac('HmacSHA256', Blob.valueOf(body == null ? '' : body),
-                                       Blob.valueOf(secret == null ? '' : secret));
+        Blob mac = Crypto.generateMac(
+            'HmacSHA256',
+            Blob.valueOf(body == null ? '' : body),
+            Blob.valueOf(secret == null ? '' : secret)
+        );
         String expected = EncodingUtil.convertToHex(mac);
         return expected.equalsIgnoreCase(headerSig);
     }
 
+    /**
+     * @description Write a JSON envelope onto the RestResponse with the given
+     *              status + message. Body shape: { status, message }.
+     * @param res Response to write.
+     * @param status HTTP status code to return.
+     * @param message Human-readable message for sender logs.
+     */
     private static void respond(RestResponse res, Integer status, String message) {
         res.statusCode = status;
         Map<String, Object> body = new Map<String, Object>{

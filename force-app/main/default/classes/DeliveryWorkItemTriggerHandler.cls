@@ -319,6 +319,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
      * @param old  Pre-update WorkItem__c row, or null on insert
      * @return Map with Id always set; field keys present only when changed (or always on insert)
      */
+    @SuppressWarnings('PMD.NcssMethodCount')
     private static Map<String, Object> buildLiveGanttTaskPatch(WorkItem__c t, WorkItem__c old) {
         Map<String, Object> patch = new Map<String, Object>{ 'Id' => t.Id };
         Boolean force = (old == null);
@@ -343,6 +344,11 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     /**
      * @description Adds a key/value to the patch map when force=true (insert) or when
      *              newVal differs from oldVal (update). Null-safe via Apex Object equality.
+     * @param patch The patch map being assembled.
+     * @param force True for insert context — every field always added.
+     * @param key Field API name used as map key.
+     * @param newVal Current value of the field.
+     * @param oldVal Pre-update value of the field (ignored when force=true).
      */
     private static void putIfChanged(Map<String, Object> patch, Boolean force, String key, Object newVal, Object oldVal) {
         if (force || newVal != oldVal) {
