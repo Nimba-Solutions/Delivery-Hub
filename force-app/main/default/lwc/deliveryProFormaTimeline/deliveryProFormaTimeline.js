@@ -64,12 +64,12 @@ const EMBEDDED_TAB_API_NAME = 'Delivery_Timeline';
 const FULLSCREEN_TAB_API_NAME = 'Delivery_Gantt_Full_Bleed';
 
 // Live updates channel — DeliveryWorkItemChange__e Platform Event.
-// On `task_upsert` events the gantt schedules a debounced refetch via the
-// existing `_scheduleRefetch` path (mirrors the chat LWC's refreshApex pattern;
-// no separate per-row engine push). `stage_change`/`comment_*` values are
-// owned by other LWCs and ignored here.
+// On `task_upsert` or `dependency_change` events the gantt schedules a
+// debounced refetch via the existing `_scheduleRefetch` path (mirrors the
+// chat LWC's refreshApex pattern; no separate per-row engine push).
+// `stage_change` / `comment_*` values are owned by other LWCs and ignored.
 const PE_CHANNEL = '/event/%%%NAMESPACE_DOT%%%DeliveryWorkItemChange__e';
-const PE_TASK_UPSERT = 'task_upsert';
+const GANTT_REFRESH_CHANGE_TYPES = new Set(['task_upsert', 'dependency_change']);
 
 export default class DeliveryProFormaTimeline extends NavigationMixin(LightningElement) {
 
@@ -840,7 +840,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             // deliveryWorkItemChat.js pattern.
             const changeType = payload.ChangeTypeTxt__c
                 || payload[`${this._peNsPrefix()}ChangeTypeTxt__c`];
-            if (changeType !== PE_TASK_UPSERT) {
+            if (!GANTT_REFRESH_CHANGE_TYPES.has(changeType)) {
                 return;
             }
             this._scheduleRefetch();
