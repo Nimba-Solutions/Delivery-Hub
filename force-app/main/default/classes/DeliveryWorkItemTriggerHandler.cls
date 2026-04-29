@@ -281,7 +281,6 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         }
 
         List<DeliveryWorkItemChange__e> events = new List<DeliveryWorkItemChange__e>();
-        List<Map<String, Object>> bridgePayloads = new List<Map<String, Object>>();
         for (String nonce : patchesByNonce.keySet()) {
             String patchesJson = JSON.serialize(patchesByNonce.get(nonce));
             events.add(new DeliveryWorkItemChange__e(
@@ -289,24 +288,14 @@ public without sharing class DeliveryWorkItemTriggerHandler {
                 TaskPatchesJson__c = patchesJson,
                 ClientNonceTxt__c  = nonce
             ));
-            // Bridge payload mirrors the Platform Event shape so the receiving
-            // org's handler can apply patches identically. Unconditional
-            // assembly is cheap; the bridge service fast-exits when toggle
-            // off / peer URL blank, so no callout cost when disabled.
-            bridgePayloads.add(new Map<String, Object>{
-                'ChangeTypeTxt__c'   => 'task_upsert',
-                'TaskPatchesJson__c' => patchesJson,
-                'ClientNonceTxt__c'  => nonce
-            });
         }
 
         EventBus.publish(events);
-
-        // Layer 2: cross-org bridge. Skip when this DML is itself an inbound
-        // bridge write — otherwise we'd ping-pong forever.
-        if (!DeliveryTriggerControl.inboundSyncContext) {
-            DeliveryCrossOrgGanttBridge.enqueueIfEnabled(bridgePayloads);
-        }
+        // Cross-org sync continues to flow through the existing DeliverySyncEngine
+        // rails (captureChanges → SyncItem__c → DeliverySyncItemProcessor) which
+        // are wired further down in handleAfter. If the schedule cadence proves
+        // too slow for the live demo, that's a tuning change to the scheduler,
+        // not new infrastructure.
     }
 
     /**
