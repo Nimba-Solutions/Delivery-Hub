@@ -353,4 +353,117 @@ private class DeliveryActivityFeedControllerTest {
             System.assert(events.size() >= 2, 'No filter should return all comments');
         }
     }
+
+    /**
+     * @description Stage_Change with null oldStage in the JSON should render
+     *              as '(empty) → newStage' instead of an empty detail. This
+     *              fixes the user-facing "Status changed (no context)" bug.
+     */
+    @IsTest
+    static void testParseStageChangeRendersEmptyOldStageAsFallback() {
+        System.runAs(testUser) {
+            WorkItem__c wi = [SELECT Id FROM WorkItem__c LIMIT 1];
+            insert new ActivityLog__c(
+                ActionTypePk__c    = 'Stage_Change',
+                RecordIdTxt__c     = wi.Id,
+                UserIdTxt__c       = UserInfo.getUserId(),
+                ContextDataTxt__c  = '{"oldStage":null,"newStage":"Backlog","workItemId":"' + wi.Id + '"}'
+            );
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
+                'changes', 0, null, null, null, null
+            );
+            Test.stopTest();
+
+            List<Object> events = (List<Object>) result.get('events');
+            Boolean foundFallback = false;
+            for (Object ev : events) {
+                Map<String, Object> event = (Map<String, Object>) ev;
+                String detail = (String) event.get('detail');
+                if (detail != null && detail.contains('(empty)') && detail.contains('Backlog')) {
+                    foundFallback = true;
+                    break;
+                }
+            }
+            System.assert(foundFallback,
+                'Stage_Change with null oldStage should render detail as "(empty) → Backlog"');
+        }
+    }
+
+    /**
+     * @description Field_Change with null oldValue/newValue in JSON should
+     *              render as '(empty) → ...' instead of literal "null → ..."
+     *              that the previous String.valueOf(null) path produced.
+     */
+    @IsTest
+    static void testParseFieldChangeRendersNullValuesAsFallback() {
+        System.runAs(testUser) {
+            WorkItem__c wi = [SELECT Id FROM WorkItem__c LIMIT 1];
+            insert new ActivityLog__c(
+                ActionTypePk__c    = 'Field_Change',
+                RecordIdTxt__c     = wi.Id,
+                UserIdTxt__c       = UserInfo.getUserId(),
+                ContextDataTxt__c  = '{"fieldLabel":"Status","oldValue":null,"newValue":"In Progress"}'
+            );
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
+                'changes', 0, null, null, null, null
+            );
+            Test.stopTest();
+
+            List<Object> events = (List<Object>) result.get('events');
+            Boolean foundFallback = false;
+            for (Object ev : events) {
+                Map<String, Object> event = (Map<String, Object>) ev;
+                String detail = (String) event.get('detail');
+                if (detail != null && detail.contains('(empty)')
+                    && detail.contains('In Progress')
+                    && !detail.contains('null')) {
+                    foundFallback = true;
+                    break;
+                }
+            }
+            System.assert(foundFallback,
+                'Field_Change with null oldValue should render detail as "(empty) → In Progress" (no literal "null")');
+        }
+    }
+
+    /**
+     * @description Malformed JSON in ContextDataTxt__c should not silently
+     *              produce an empty-detail row; renders a fallback so the
+     *              user sees signal and the WARN debug log surfaces the bug.
+     */
+    @IsTest
+    static void testParseChangeContextHandlesMalformedJson() {
+        System.runAs(testUser) {
+            WorkItem__c wi = [SELECT Id FROM WorkItem__c LIMIT 1];
+            insert new ActivityLog__c(
+                ActionTypePk__c    = 'Field_Change',
+                RecordIdTxt__c     = wi.Id,
+                UserIdTxt__c       = UserInfo.getUserId(),
+                ContextDataTxt__c  = '{this is not valid json'
+            );
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
+                'changes', 0, null, null, null, null
+            );
+            Test.stopTest();
+
+            List<Object> events = (List<Object>) result.get('events');
+            Boolean foundFallback = false;
+            for (Object ev : events) {
+                Map<String, Object> event = (Map<String, Object>) ev;
+                String detail = (String) event.get('detail');
+                if (detail != null && detail.contains('unparseable')) {
+                    foundFallback = true;
+                    break;
+                }
+            }
+            System.assert(foundFallback,
+                'Malformed JSON should render fallback detail "(change context unparseable)"');
+        }
+    }
 }
