@@ -982,6 +982,13 @@ public with sharing class DeliveryGanttController {
          *  in-flight items. Lets the gantt render a "shipped early/late" marker
          *  comparing actualEndDate vs endDate for Done items. */
         @AuraEnabled public String actualEndDate { get; set; }
+        /** @description Direct-child count when this row is a parent in the result
+         *  set; null when the row is a leaf. Powers "X of Y children done" badges
+         *  alongside the parent's rolled-up bar. */
+        @AuraEnabled public Integer childrenCount { get; set; }
+        /** @description Count of direct children whose variance is 'done' (terminal
+         *  stage). Pairs with childrenCount for the X-of-Y badge. */
+        @AuraEnabled public Integer doneChildrenCount { get; set; }
     }
 
     /** Stages where work is actively moving forward (bucket = active or top-priority) */
@@ -1098,11 +1105,121 @@ public with sharing class DeliveryGanttController {
             for (WorkItem__c item : items) {
                 rows.add(mapToProFormaRow(item));
             }
+            applyParentRollups(rows);
             return rows;
         } catch (Exception e) {
             AuraHandledException ahe = new AuraHandledException(e.getMessage());
             ahe.setMessage(e.getMessage());
             throw ahe;
+        }
+    }
+
+    /**
+     * @description Roll up child rows onto their parents so a parent's bar
+     *              reflects the aggregate state of the work breakdown rather
+     *              than whatever was manually typed onto the parent record.
+     *              Touches: estimatedHours, loggedHours, progress, startDate,
+     *              endDate, scheduleProgress, variance, childrenCount,
+     *              doneChildrenCount. Only applied when the row has children
+     *              in the result set; leaf rows are untouched.
+     *
+     *              Subtract-Glen lever: with this in place, daily worklogs
+     *              against children automatically move the parent's bar +
+     *              variance signal — no manual parent updates required.
+     * @param rows All rows in the result set (mutated in place).
+     */
+    private static void applyParentRollups(List<ProFormaTimelineRow> rows) {
+        Map<Id, List<ProFormaTimelineRow>> childrenByParent = new Map<Id, List<ProFormaTimelineRow>>();
+        for (ProFormaTimelineRow r : rows) {
+            if (String.isBlank(r.parentWorkItemId)) {
+                continue;
+            }
+            Id pid = (Id) r.parentWorkItemId;
+            if (!childrenByParent.containsKey(pid)) {
+                childrenByParent.put(pid, new List<ProFormaTimelineRow>());
+            }
+            childrenByParent.get(pid).add(r);
+        }
+        if (childrenByParent.isEmpty()) {
+            return;
+        }
+        for (ProFormaTimelineRow r : rows) {
+            List<ProFormaTimelineRow> kids = childrenByParent.get((Id) r.id);
+            if (kids == null || kids.isEmpty()) {
+                continue;
+            }
+            applyParentRollup(r, kids);
+        }
+    }
+
+    /**
+     * @description Override a parent row's fields with aggregates from its
+     *              children. Sums hours, takes earliest child start +
+     *              latest child end as the bar bounds, and recomputes
+     *              schedule progress + variance from those aggregates.
+     *              Variance is 'done' iff every child is done.
+     * @param parent Parent row (mutated).
+     * @param children Direct children of `parent` (rows whose parentWorkItemId == parent.id).
+     */
+    private static void applyParentRollup(ProFormaTimelineRow parent, List<ProFormaTimelineRow> children) {
+        Decimal totalEst = 0;
+        Decimal totalLogged = 0;
+        Boolean hasEstimate = false;
+        Date earliestStart = null;
+        Date latestEnd = null;
+        Integer doneCount = 0;
+
+        for (ProFormaTimelineRow c : children) {
+            if (c.estimatedHours != null) {
+                totalEst += c.estimatedHours;
+                hasEstimate = true;
+            }
+            if (c.loggedHours != null) {
+                totalLogged += c.loggedHours;
+            }
+            Date cStart = parseIsoDate(c.startDate);
+            if (cStart != null && (earliestStart == null || cStart < earliestStart)) {
+                earliestStart = cStart;
+            }
+            Date cEnd = parseIsoDate(c.endDate);
+            if (cEnd != null && (latestEnd == null || cEnd > latestEnd)) {
+                latestEnd = cEnd;
+            }
+            if ('done' == c.variance) {
+                doneCount++;
+            }
+        }
+
+        if (hasEstimate) {
+            parent.estimatedHours = totalEst;
+            parent.loggedHours = totalLogged;
+            parent.progress = totalEst > 0 ? Math.min(totalLogged / totalEst, 1.0) : null;
+        }
+        if (earliestStart != null) {
+            parent.startDate = String.valueOf(earliestStart);
+        }
+        if (latestEnd != null) {
+            parent.endDate = String.valueOf(latestEnd);
+        }
+        parent.scheduleProgress = computeScheduleProgress(earliestStart, latestEnd);
+        if (doneCount == children.size() && doneCount > 0) {
+            parent.variance = 'done';
+        } else {
+            parent.variance = computeVariance(parent.progress, parent.scheduleProgress, false);
+        }
+        parent.childrenCount = children.size();
+        parent.doneChildrenCount = doneCount;
+    }
+
+    /** Parse ISO YYYY-MM-DD date string back into Date; null-safe. */
+    private static Date parseIsoDate(String iso) {
+        if (String.isBlank(iso)) {
+            return null;
+        }
+        try {
+            return Date.valueOf(iso);
+        } catch (Exception e) {
+            return null;
         }
     }
 
