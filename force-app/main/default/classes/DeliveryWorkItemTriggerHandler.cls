@@ -34,6 +34,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             handleNetworkEntitySync(newRows);
             autoSetSLATargets(newRows);
             DeliveryFieldTrackingService.trackCreates(newRows);
+            publishLiveGanttEvents(newRows, null, true);
         }
 
         // 2. STAGE CHANGE EVENTS (real-time board refresh via Platform Events)
@@ -42,6 +43,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         //    + SLA pause/resume when stage enters/exits configured stages
         if (isUpdate) {
             publishStageChangeEvents(newRows, oldMap);
+            publishLiveGanttEvents(newRows, oldMap, false);
             logStageChanges(newRows, oldMap);
             DeliveryFieldTrackingService.trackChanges(newRows, oldMap);
             handleSLAPauseResume(newRows, oldMap);
@@ -223,6 +225,128 @@ public without sharing class DeliveryWorkItemTriggerHandler {
                 DeliveryEmailNotificationService.sendStageChangeEmails(changedIds, emailStageMap);
                 DeliveryExternalNotificationService.sendExternalStageChangeEmails(changedIds, emailStageMap);
             }
+        }
+    }
+
+    /**
+     * @description Publishes task_upsert Platform Events for connected gantt LWCs
+     *              (nimbus-gantt 0.185.38+ remote-events channel). Fires on after-insert
+     *              and after-update when EnableLiveGanttEventsDateTime__c is set on
+     *              DeliveryHubSettings__c. Patches are grouped by ClientNonceTxt__c so
+     *              subscribers can drop self-echoes via per-mount nonce comparison.
+     *
+     *              Insert payload: full set of gantt-relevant fields per row.
+     *              Update payload: only fields whose values changed (plus Id).
+     *
+     *              task_delete + dep_upsert/dep_delete are intentionally deferred — the
+     *              trigger has no after-delete hook and dependencies live on a separate
+     *              object. See dispatch-ng-remote-events.md for the host-side contract.
+     * @param newRows List of WorkItem__c records (post-trigger state)
+     * @param oldMap  Map of pre-trigger records keyed by Id (null on insert)
+     * @param isInsert True for after-insert context, false for after-update
+     */
+    private static void publishLiveGanttEvents(
+        List<WorkItem__c> newRows,
+        Map<Id, WorkItem__c> oldMap,
+        Boolean isInsert
+    ) {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
+        if (settings == null || settings.Id == null || settings.EnableLiveGanttEventsDateTime__c == null) {
+            return;
+        }
+
+        // Group patches by clientNonce so a single event carries one originating
+        // mount's writes — subscribers compare nonce against their own per-mount
+        // UUID to drop self-echoes (multi-tab same-user safe).
+        Map<String, List<Map<String, Object>>> patchesByNonce = new Map<String, List<Map<String, Object>>>();
+
+        for (WorkItem__c t : newRows) {
+            WorkItem__c old = isInsert ? null : (oldMap != null ? oldMap.get(t.Id) : null);
+            Map<String, Object> patch = buildLiveGanttTaskPatch(t, old);
+            // Skip rows where no gantt-relevant field changed (patch has only Id).
+            if (patch.size() <= 1) {
+                continue;
+            }
+            String nonce = String.isNotBlank(t.ClientNonceTxt__c) ? t.ClientNonceTxt__c : '';
+            List<Map<String, Object>> bucket = patchesByNonce.get(nonce);
+            if (bucket == null) {
+                bucket = new List<Map<String, Object>>();
+                patchesByNonce.put(nonce, bucket);
+            }
+            bucket.add(patch);
+        }
+
+        if (patchesByNonce.isEmpty()) {
+            return;
+        }
+
+        List<DeliveryWorkItemChange__e> events = new List<DeliveryWorkItemChange__e>();
+        List<Map<String, Object>> bridgePayloads = new List<Map<String, Object>>();
+        for (String nonce : patchesByNonce.keySet()) {
+            String patchesJson = JSON.serialize(patchesByNonce.get(nonce));
+            events.add(new DeliveryWorkItemChange__e(
+                ChangeTypeTxt__c   = 'task_upsert',
+                TaskPatchesJson__c = patchesJson,
+                ClientNonceTxt__c  = nonce
+            ));
+            // Bridge payload mirrors the Platform Event shape so the receiving
+            // org's handler can apply patches identically. Unconditional
+            // assembly is cheap; the bridge service fast-exits when toggle
+            // off / peer URL blank, so no callout cost when disabled.
+            bridgePayloads.add(new Map<String, Object>{
+                'ChangeTypeTxt__c'   => 'task_upsert',
+                'TaskPatchesJson__c' => patchesJson,
+                'ClientNonceTxt__c'  => nonce
+            });
+        }
+
+        EventBus.publish(events);
+
+        // Layer 2: cross-org bridge. Skip when this DML is itself an inbound
+        // bridge write — otherwise we'd ping-pong forever.
+        if (!DeliveryTriggerControl.inboundSyncContext) {
+            DeliveryCrossOrgGanttBridge.enqueueIfEnabled(bridgePayloads);
+        }
+    }
+
+    /**
+     * @description Builds a per-row JSON patch keyed by SObject API name. On insert,
+     *              includes all gantt-relevant fields (full row). On update, includes
+     *              only fields whose values changed, plus Id. The LWC adapter is
+     *              responsible for mapping SF field names to its camelCase TaskPatch
+     *              keys (id, parentId, sortOrder, name, status, startDate, endDate, ...).
+     * @param t    Current WorkItem__c row
+     * @param old  Pre-update WorkItem__c row, or null on insert
+     * @return Map with Id always set; field keys present only when changed (or always on insert)
+     */
+    private static Map<String, Object> buildLiveGanttTaskPatch(WorkItem__c t, WorkItem__c old) {
+        Map<String, Object> patch = new Map<String, Object>{ 'Id' => t.Id };
+        Boolean force = (old == null);
+
+        putIfChanged(patch, force, 'Name', t.Name, force ? null : old.Name);
+        putIfChanged(patch, force, 'BriefDescriptionTxt__c', t.BriefDescriptionTxt__c, force ? null : old.BriefDescriptionTxt__c);
+        putIfChanged(patch, force, 'StageNamePk__c', t.StageNamePk__c, force ? null : old.StageNamePk__c);
+        putIfChanged(patch, force, 'StatusPk__c', t.StatusPk__c, force ? null : old.StatusPk__c);
+        putIfChanged(patch, force, 'PriorityPk__c', t.PriorityPk__c, force ? null : old.PriorityPk__c);
+        putIfChanged(patch, force, 'PriorityGroupPk__c', t.PriorityGroupPk__c, force ? null : old.PriorityGroupPk__c);
+        putIfChanged(patch, force, 'SortOrderNumber__c', t.SortOrderNumber__c, force ? null : old.SortOrderNumber__c);
+        putIfChanged(patch, force, 'ParentWorkItemLookup__c', t.ParentWorkItemLookup__c, force ? null : old.ParentWorkItemLookup__c);
+        putIfChanged(patch, force, 'EstimatedStartDevDate__c', t.EstimatedStartDevDate__c, force ? null : old.EstimatedStartDevDate__c);
+        putIfChanged(patch, force, 'EstimatedEndDevDate__c', t.EstimatedEndDevDate__c, force ? null : old.EstimatedEndDevDate__c);
+        putIfChanged(patch, force, 'ProjectedUATReadyDate__c', t.ProjectedUATReadyDate__c, force ? null : old.ProjectedUATReadyDate__c);
+        putIfChanged(patch, force, 'CalculatedETADate__c', t.CalculatedETADate__c, force ? null : old.CalculatedETADate__c);
+        putIfChanged(patch, force, 'ActivatedDateTime__c', t.ActivatedDateTime__c, force ? null : old.ActivatedDateTime__c);
+
+        return patch;
+    }
+
+    /**
+     * @description Adds a key/value to the patch map when force=true (insert) or when
+     *              newVal differs from oldVal (update). Null-safe via Apex Object equality.
+     */
+    private static void putIfChanged(Map<String, Object> patch, Boolean force, String key, Object newVal, Object oldVal) {
+        if (force || newVal != oldVal) {
+            patch.put(key, newVal);
         }
     }
 

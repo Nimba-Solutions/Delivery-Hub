@@ -553,6 +553,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>WorkItem__c.ClientNonceTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>WorkItem__c.ClientPreApprovedHoursNumber__c</field>
         <readable>true</readable>
     </fieldPermissions>

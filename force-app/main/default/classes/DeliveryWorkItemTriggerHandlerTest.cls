@@ -471,4 +471,85 @@ public class DeliveryWorkItemTriggerHandlerTest {
             }
         }
     }
+
+    /**
+     * Toggle off → no live-gantt Platform Event publish path is exercised.
+     * Smoke test only; Platform Events are fire-and-forget in Apex test context.
+     */
+    @IsTest
+    static void testLiveGanttEventsToggleOff() {
+        System.runAs(testUser) {
+            // Setup left EnableLiveGanttEventsDateTime__c null on the singleton settings
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getInstance();
+            System.assertEquals(null, s.EnableLiveGanttEventsDateTime__c,
+                'Toggle should default to null (off)');
+
+            Test.startTest();
+            WorkItem__c t = [SELECT Id, StageNamePk__c FROM WorkItem__c LIMIT 1];
+            t.PriorityPk__c = 'High';
+            update t;
+
+            insert new WorkItem__c(BriefDescriptionTxt__c = 'New', StageNamePk__c = 'Backlog');
+            Test.stopTest();
+
+            // No assertion on publish (PE fire-and-forget); we're confirming
+            // the gated path does not throw with the toggle off.
+        }
+    }
+
+    /**
+     * Toggle on with a clientNonce on the row → publish path runs without error
+     * and clientNonce is grouped per-mount. Insert + update both exercised.
+     */
+    @IsTest
+    static void testLiveGanttEventsToggleOnWithClientNonce() {
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getInstance();
+            s.EnableLiveGanttEventsDateTime__c = Datetime.now();
+            update s;
+
+            Test.startTest();
+            // Insert path with nonce — exercises full-row payload
+            WorkItem__c fresh = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Live Gantt Insert',
+                StageNamePk__c = 'Backlog',
+                ClientNonceTxt__c = 'mount-uuid-aaa'
+            );
+            insert fresh;
+
+            // Update path with nonce — exercises diff-only patch
+            WorkItem__c existing = [SELECT Id, ClientNonceTxt__c FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Blocker' LIMIT 1];
+            existing.ClientNonceTxt__c = 'mount-uuid-bbb';
+            existing.PriorityPk__c = 'High';
+            update existing;
+            Test.stopTest();
+
+            // Verify the records persisted; PE publish doesn't throw.
+            WorkItem__c reloaded = [SELECT Id, ClientNonceTxt__c, PriorityPk__c FROM WorkItem__c WHERE Id = :existing.Id];
+            System.assertEquals('mount-uuid-bbb', reloaded.ClientNonceTxt__c, 'Nonce should persist on the row');
+            System.assertEquals('High', reloaded.PriorityPk__c, 'Update should land');
+        }
+    }
+
+    /**
+     * Update with no gantt-relevant field changes → publisher skips the row
+     * (patch with only Id is filtered out, no event published, no governor cost).
+     */
+    @IsTest
+    static void testLiveGanttEventsNoChangeSkipped() {
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getInstance();
+            s.EnableLiveGanttEventsDateTime__c = Datetime.now();
+            update s;
+
+            Test.startTest();
+            // Update a field NOT in the gantt-relevant set
+            WorkItem__c t = [SELECT Id, StepsToReproduceTxt__c FROM WorkItem__c LIMIT 1];
+            t.StepsToReproduceTxt__c = 'Repro steps not on gantt';
+            update t;
+            Test.stopTest();
+
+            // Smoke: no error. The publisher's size <= 1 guard skips empty patches.
+        }
+    }
 }

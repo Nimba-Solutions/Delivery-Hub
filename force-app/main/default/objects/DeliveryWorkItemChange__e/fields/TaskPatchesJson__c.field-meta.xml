@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>TaskPatchesJson__c</fullName>
+    <description>JSON array of per-row patches (Partial&lt;GanttTask&gt; with required id) for live gantt updates. Carries the smallest patch that captures each write so concurrent inline edits on other clients don't get clobbered. Populated when ChangeTypeTxt__c is task_upsert.</description>
+    <inlineHelpText>JSON array of per-row task patches. Each patch must include an id; absent keys are preserved by the gantt reducer.</inlineHelpText>
+    <label>Task Patches JSON</label>
+    <length>131072</length>
+    <type>LongTextArea</type>
+    <visibleLines>3</visibleLines>
+</CustomField>
