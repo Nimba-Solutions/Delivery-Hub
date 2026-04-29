@@ -22,7 +22,7 @@ const CHANNEL = '/event/%%%NAMESPACE_DOT%%%DeliveryWorkItemChange__e';
 // Change types we care about for record-page refresh. stage_change + comment_*
 // already drive their own LWCs (board, chat) via the same channel — getting
 // the LDS notification on those is harmless but not the primary goal.
-const REFRESH_CHANGE_TYPES = new Set(['task_upsert', 'stage_change']);
+const REFRESH_CHANGE_TYPES = new Set(['task_upsert', 'stage_change', 'dependency_change']);
 
 export default class DeliveryRecordLiveRefresh extends LightningElement {
     @api recordId;

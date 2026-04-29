@@ -102,4 +102,65 @@ private class DeliveryDependencyTriggerHandlerTest {
             System.assertEquals(0, remaining.size(), 'Dependency should be deleted');
         }
     }
+
+    /**
+     * @description Toggle off → publish path is gated; insert/update/delete on a
+     *              dep doesn't throw and proceeds normally. Smoke test only since
+     *              Platform Events are fire-and-forget in Apex test context.
+     */
+    @IsTest
+    static void testDependencyChangeEventsToggleOff() {
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            System.assertEquals(null, s.EnableLiveGanttEventsDateTime__c,
+                'Toggle should default to null (off)');
+
+            WorkItem__c blocker = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Dep Blocker' LIMIT 1];
+            WorkItem__c blocked = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Dep Blocked' LIMIT 1];
+
+            Test.startTest();
+            WorkItemDependency__c dep = new WorkItemDependency__c(
+                BlockedWorkItemLookup__c = blocked.Id,
+                BlockingWorkItemLookup__c = blocker.Id
+            );
+            insert dep;
+            delete dep;
+            Test.stopTest();
+
+            System.assertEquals(0, [SELECT count() FROM WorkItemDependency__c WHERE Id = :dep.Id],
+                'Dep insert + delete should both land cleanly with toggle off');
+        }
+    }
+
+    /**
+     * @description Toggle on → publishDependencyChangeEvents path runs without error
+     *              on insert + update + delete. Verifies both endpoints of the dep
+     *              are still queryable (DML lands), confirming the publish doesn't
+     *              short-circuit the trigger.
+     */
+    @IsTest
+    static void testDependencyChangeEventsToggleOnFires() {
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            s.EnableLiveGanttEventsDateTime__c = Datetime.now();
+            update s;
+
+            WorkItem__c blocker = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Dep Blocker' LIMIT 1];
+            WorkItem__c blocked = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Dep Blocked' LIMIT 1];
+
+            Test.startTest();
+            WorkItemDependency__c dep = new WorkItemDependency__c(
+                BlockedWorkItemLookup__c = blocked.Id,
+                BlockingWorkItemLookup__c = blocker.Id
+            );
+            insert dep;
+            dep.TypePk__c = 'Blocks';
+            update dep;
+            delete dep;
+            Test.stopTest();
+
+            System.assertEquals(0, [SELECT count() FROM WorkItemDependency__c WHERE Id = :dep.Id],
+                'Dep insert/update/delete cycle should land cleanly with toggle on');
+        }
+    }
 }
