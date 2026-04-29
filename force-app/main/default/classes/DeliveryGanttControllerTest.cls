@@ -736,6 +736,119 @@ private class DeliveryGanttControllerTest {
         }
     }
 
+    /**
+     * @description Parent row with two children should aggregate hours +
+     *              dates from the children. Children's worklog drives the
+     *              parent's progress without manual updates — the
+     *              subtract-Glen rollup story.
+     */
+    @IsTest
+    static void testProFormaParentRollupAggregatesChildrenHoursAndDates() {
+        System.runAs(testUser) {
+            WorkItem__c parent = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Parent epic',
+                StageNamePk__c = 'In Development',
+                ActivatedDateTime__c = Datetime.now(),
+                EstimatedHoursNumber__c = 999,
+                EstimatedStartDevDate__c = Date.today().addDays(-30)
+            );
+            insert parent;
+
+            WorkItem__c child1 = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Child A',
+                StageNamePk__c = 'In Development',
+                ActivatedDateTime__c = Datetime.now(),
+                ParentWorkItemLookup__c = parent.Id,
+                EstimatedHoursNumber__c = 10,
+                EstimatedStartDevDate__c = Date.today().addDays(-5),
+                EstimatedEndDevDate__c   = Date.today().addDays(5)
+            );
+            WorkItem__c child2 = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Child B',
+                StageNamePk__c = 'In Development',
+                ActivatedDateTime__c = Datetime.now(),
+                ParentWorkItemLookup__c = parent.Id,
+                EstimatedHoursNumber__c = 6,
+                EstimatedStartDevDate__c = Date.today().addDays(-2),
+                EstimatedEndDevDate__c   = Date.today().addDays(8)
+            );
+            insert new List<WorkItem__c>{ child1, child2 };
+
+            Test.startTest();
+            List<DeliveryGanttController.ProFormaTimelineRow> rows =
+                DeliveryGanttController.getProFormaTimelineData(false);
+            Test.stopTest();
+
+            DeliveryGanttController.ProFormaTimelineRow parentRow = null;
+            for (DeliveryGanttController.ProFormaTimelineRow r : rows) {
+                if (r.title == 'Parent epic') { parentRow = r; break; }
+            }
+            System.assertNotEquals(null, parentRow, 'Parent row should be in result set');
+            System.assertEquals(16, parentRow.estimatedHours,
+                'Parent estimatedHours should be sum of children (10+6), not the manually-typed 999');
+            System.assertEquals(2, parentRow.childrenCount,
+                'childrenCount should reflect direct children');
+            System.assertEquals(0, parentRow.doneChildrenCount,
+                'No terminal children → doneChildrenCount = 0');
+            System.assertEquals(String.valueOf(Date.today().addDays(-5)), parentRow.startDate,
+                'Parent startDate should be earliest child start');
+            System.assertEquals(String.valueOf(Date.today().addDays(8)), parentRow.endDate,
+                'Parent endDate should be latest child end');
+        }
+    }
+
+    /**
+     * @description When all children are terminal, parent's variance rolls
+     *              up to 'done' regardless of the parent's own stage. Lets
+     *              the gantt show "this epic is complete" even if the
+     *              parent record's stage hasn't been manually moved yet.
+     */
+    @IsTest
+    static void testProFormaParentRollupVarianceDoneWhenAllChildrenTerminal() {
+        System.runAs(testUser) {
+            WorkItem__c parent = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Parent epic 2',
+                StageNamePk__c = 'In Development',
+                ActivatedDateTime__c = Datetime.now(),
+                EstimatedHoursNumber__c = 5,
+                EstimatedStartDevDate__c = Date.today().addDays(-10),
+                EstimatedEndDevDate__c   = Date.today().addDays(5)
+            );
+            insert parent;
+
+            WorkItem__c child1 = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Done child A',
+                StageNamePk__c = 'Done',
+                ActivatedDateTime__c = Datetime.now(),
+                ParentWorkItemLookup__c = parent.Id,
+                EstimatedHoursNumber__c = 4
+            );
+            WorkItem__c child2 = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Done child B',
+                StageNamePk__c = 'Deployed to Prod',
+                ActivatedDateTime__c = Datetime.now(),
+                ParentWorkItemLookup__c = parent.Id,
+                EstimatedHoursNumber__c = 3
+            );
+            insert new List<WorkItem__c>{ child1, child2 };
+
+            Test.startTest();
+            List<DeliveryGanttController.ProFormaTimelineRow> rows =
+                DeliveryGanttController.getProFormaTimelineData(true);
+            Test.stopTest();
+
+            DeliveryGanttController.ProFormaTimelineRow parentRow = null;
+            for (DeliveryGanttController.ProFormaTimelineRow r : rows) {
+                if (r.title == 'Parent epic 2') { parentRow = r; break; }
+            }
+            System.assertNotEquals(null, parentRow, 'Parent row should be present');
+            System.assertEquals(2, parentRow.childrenCount, 'Two children');
+            System.assertEquals(2, parentRow.doneChildrenCount, 'Both children terminal → 2');
+            System.assertEquals('done', parentRow.variance,
+                'All children terminal → parent variance rolls up to done even though parent stage is not yet terminal');
+        }
+    }
+
     @IsTest
     static void testGetProFormaTimelineDataExplicitOverride() {
         // If PriorityGroupPk__c is set on the record, the DTO should use it
