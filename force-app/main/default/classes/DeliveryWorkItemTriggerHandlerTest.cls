@@ -471,4 +471,86 @@ public class DeliveryWorkItemTriggerHandlerTest {
             }
         }
     }
+
+    /**
+     * @description Toggle off → no live-gantt Platform Event publish path is exercised.
+     *              Smoke test only; Platform Events are fire-and-forget in Apex test context.
+     */
+    @IsTest
+    static void testLiveGanttEventsToggleOff() {
+        System.runAs(testUser) {
+            // Setup left EnableLiveGanttEventsDateTime__c null on the singleton settings
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getInstance();
+            System.assertEquals(null, s.EnableLiveGanttEventsDateTime__c,
+                'Toggle should default to null (off)');
+
+            Test.startTest();
+            WorkItem__c t = [SELECT Id, StageNamePk__c FROM WorkItem__c LIMIT 1];
+            t.PriorityPk__c = 'High';
+            update t;
+
+            insert new WorkItem__c(BriefDescriptionTxt__c = 'New', StageNamePk__c = 'Backlog');
+            Test.stopTest();
+
+            // No assertion on publish (PE fire-and-forget); we're confirming
+            // the gated path does not throw with the toggle off.
+        }
+    }
+
+    /**
+     * @description Toggle on → publishLiveGanttEvents path runs without error on insert + update
+     *              for gantt-relevant field changes. Platform Events are fire-and-forget in test
+     *              context, so this is a smoke test confirming no exception under the new path.
+     */
+    @IsTest
+    static void testLiveGanttEventsToggleOnFiresOnGanttField() {
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            s.EnableLiveGanttEventsDateTime__c = Datetime.now();
+            update s;
+
+            Test.startTest();
+            // Insert path — publisher emits task_upsert
+            WorkItem__c fresh = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Live Gantt Insert',
+                StageNamePk__c = 'Backlog'
+            );
+            insert fresh;
+
+            // Update path with a gantt-relevant change — fires task_upsert
+            WorkItem__c existing = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Blocker' LIMIT 1];
+            existing.PriorityPk__c = 'High';
+            update existing;
+            Test.stopTest();
+
+            WorkItem__c reloaded = [SELECT Id, PriorityPk__c FROM WorkItem__c WHERE Id = :existing.Id];
+            System.assertEquals('High', reloaded.PriorityPk__c, 'Update should land');
+        }
+    }
+
+    /**
+     * @description Update with no gantt-relevant field changes → publisher skips the row
+     *              (no event published, no governor cost).
+     */
+    @IsTest
+    static void testLiveGanttEventsNoChangeSkipped() {
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            s.EnableLiveGanttEventsDateTime__c = Datetime.now();
+            update s;
+
+            Test.startTest();
+            // Update a field NOT in the gantt-relevant set
+            WorkItem__c t = [SELECT Id, StepsToReproduceTxt__c FROM WorkItem__c LIMIT 1];
+            t.StepsToReproduceTxt__c = 'Repro steps not on gantt';
+            update t;
+            Test.stopTest();
+
+            // Verify the non-gantt field landed (smoke: trigger didn't blow up
+            // when toggle is on but no gantt-relevant fields changed).
+            WorkItem__c reloaded = [SELECT Id, StepsToReproduceTxt__c FROM WorkItem__c WHERE Id = :t.Id];
+            System.assertEquals('Repro steps not on gantt', reloaded.StepsToReproduceTxt__c,
+                'Non-gantt field update should persist; trigger should not have raised when no gantt-relevant change occurred');
+        }
+    }
 }

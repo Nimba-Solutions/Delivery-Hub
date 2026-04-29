@@ -34,6 +34,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             handleNetworkEntitySync(newRows);
             autoSetSLATargets(newRows);
             DeliveryFieldTrackingService.trackCreates(newRows);
+            publishLiveGanttEvents(newRows, null);
         }
 
         // 2. STAGE CHANGE EVENTS (real-time board refresh via Platform Events)
@@ -42,6 +43,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         //    + SLA pause/resume when stage enters/exits configured stages
         if (isUpdate) {
             publishStageChangeEvents(newRows, oldMap);
+            publishLiveGanttEvents(newRows, oldMap);
             logStageChanges(newRows, oldMap);
             DeliveryFieldTrackingService.trackChanges(newRows, oldMap);
             handleSLAPauseResume(newRows, oldMap);
@@ -224,6 +226,76 @@ public without sharing class DeliveryWorkItemTriggerHandler {
                 DeliveryExternalNotificationService.sendExternalStageChangeEmails(changedIds, emailStageMap);
             }
         }
+    }
+
+    /**
+     * @description Publishes a `task_upsert` Platform Event per WorkItem when any
+     *              gantt-relevant field changes — extends the existing
+     *              `stage_change` channel rather than introducing new fields.
+     *              Subscribers (deliveryProFormaTimeline, deliveryRecordLiveRefresh)
+     *              filter by ChangeTypeTxt__c and refetch the affected row(s) via
+     *              their existing Apex controllers — same pattern deliveryWorkItemChat
+     *              uses for comment events.
+     *
+     *              Gated by DeliveryHubSettings__c.EnableLiveGanttEventsDateTime__c
+     *              so admins can switch the new ChangeType on independently of the
+     *              existing stage_change traffic. Insert context: pass null oldMap.
+     * @param newRows List of WorkItem__c records (post-trigger state)
+     * @param oldMap  Map of pre-trigger records keyed by Id; null on insert
+     */
+    private static void publishLiveGanttEvents(
+        List<WorkItem__c> newRows,
+        Map<Id, WorkItem__c> oldMap
+    ) {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
+        if (settings == null || settings.Id == null || settings.EnableLiveGanttEventsDateTime__c == null) {
+            return;
+        }
+        List<DeliveryWorkItemChange__e> events = new List<DeliveryWorkItemChange__e>();
+        for (WorkItem__c t : newRows) {
+            WorkItem__c old = (oldMap != null) ? oldMap.get(t.Id) : null;
+            if (!hasGanttRelevantChange(t, old)) {
+                continue;
+            }
+            events.add(new DeliveryWorkItemChange__e(
+                WorkItemIdTxt__c = t.Id,
+                ChangeTypeTxt__c = 'task_upsert'
+            ));
+        }
+        if (!events.isEmpty()) {
+            EventBus.publish(events);
+        }
+        // Cross-org sync continues to flow through the existing DeliverySyncEngine
+        // rails (captureChanges → SyncItem__c → DeliverySyncItemProcessor) which
+        // are wired further down in handleAfter. Those rails are already real-time
+        // (Queueable enqueued inline at DeliverySyncEngine.cls line 167).
+    }
+
+    /**
+     * @description True when any gantt-relevant field on `t` differs from `old`,
+     *              or when `old` is null (insert). Inserts always count as changes;
+     *              updates only count when one of the gantt-displayed fields moved.
+     * @param t Current WorkItem__c row.
+     * @param old Pre-update WorkItem__c row, or null on insert.
+     * @return True when the gantt should refetch this row.
+     */
+    private static Boolean hasGanttRelevantChange(WorkItem__c t, WorkItem__c old) {
+        if (old == null) {
+            return true;
+        }
+        return t.StageNamePk__c != old.StageNamePk__c
+            || t.StatusPk__c != old.StatusPk__c
+            || t.PriorityPk__c != old.PriorityPk__c
+            || t.PriorityGroupPk__c != old.PriorityGroupPk__c
+            || t.SortOrderNumber__c != old.SortOrderNumber__c
+            || t.ParentWorkItemLookup__c != old.ParentWorkItemLookup__c
+            || t.EstimatedStartDevDate__c != old.EstimatedStartDevDate__c
+            || t.EstimatedEndDevDate__c != old.EstimatedEndDevDate__c
+            || t.ProjectedUATReadyDate__c != old.ProjectedUATReadyDate__c
+            || t.CalculatedETADate__c != old.CalculatedETADate__c
+            || t.ActivatedDateTime__c != old.ActivatedDateTime__c
+            || t.BriefDescriptionTxt__c != old.BriefDescriptionTxt__c
+            || t.Name != old.Name;
     }
 
     /**
