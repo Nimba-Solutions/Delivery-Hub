@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>CrossOrgGanttPeerUrlTxt__c</fullName>
+    <description>HTTPS URL of the peer org's inbound webhook endpoint that receives cross-org gantt updates. Example: https://mf-prod-org.my.salesforce.com/services/apexrest/delivery/deliveryhub/v1/webhook/cross-org-gantt. Set on each peer org pointing to the OTHER org. Empty disables the bridge regardless of EnableImmediateCrossOrgBridgeDateTime__c.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Peer org's webhook URL for cross-org gantt sync. Leave empty to disable.</inlineHelpText>
+    <label>Cross Org Gantt Peer URL</label>
+    <length>500</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

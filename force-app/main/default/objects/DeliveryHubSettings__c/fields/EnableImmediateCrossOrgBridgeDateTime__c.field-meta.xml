@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableImmediateCrossOrgBridgeDateTime__c</fullName>
+    <description>When non-null, WorkItem after-insert/update fires an immediate Queueable callout to CrossOrgGanttPeerUrlTxt__c (Layer 2 of live-events architecture). Replaces the asynchronous SyncItem-ledger drain for WorkItem field changes only — the existing SyncEngine remains the durable retry log and continues to handle non-fast-lane fields. Null = bridge off (slow-lane only). Pair with the peer URL + secret fields and EnableLiveGanttEventsDateTime__c.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set to a date/time to enable immediate cross-org bridge for WorkItem changes. Leave blank to fall back to SyncEngine slow-lane.</inlineHelpText>
+    <label>Enable Immediate Cross Org Bridge</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
