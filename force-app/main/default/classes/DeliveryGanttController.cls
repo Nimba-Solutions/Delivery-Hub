@@ -1161,6 +1161,7 @@ public with sharing class DeliveryGanttController {
      * @param parent Parent row (mutated).
      * @param children Direct children of `parent` (rows whose parentWorkItemId == parent.id).
      */
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
     private static void applyParentRollup(ProFormaTimelineRow parent, List<ProFormaTimelineRow> children) {
         Decimal totalEst = 0;
         Decimal totalLogged = 0;
@@ -1211,7 +1212,15 @@ public with sharing class DeliveryGanttController {
         parent.doneChildrenCount = doneCount;
     }
 
-    /** Parse ISO YYYY-MM-DD date string back into Date; null-safe. */
+    /**
+     * @description Parse an ISO YYYY-MM-DD date string back into a Date.
+     *              Null-safe: returns null when input is blank or unparseable.
+     *              Used by the parent-rollup pass to compute earliest-start /
+     *              latest-end across children whose dates are stored as
+     *              ISO strings on the DTO.
+     * @param iso ISO YYYY-MM-DD date string, or null.
+     * @return Parsed Date, or null when input is blank / unparseable.
+     */
     private static Date parseIsoDate(String iso) {
         if (String.isBlank(iso)) {
             return null;
