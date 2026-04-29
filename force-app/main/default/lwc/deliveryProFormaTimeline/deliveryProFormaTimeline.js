@@ -38,6 +38,7 @@ import { LightningElement, api } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import { loadScript } from 'lightning/platformResourceLoader';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import { subscribe as empSubscribe, unsubscribe as empUnsubscribe, onError as empOnError } from 'lightning/empApi';
 import NIMBUS_GANTT from '@salesforce/resourceUrl/nimbusgantt';
 import NIMBUS_GANTT_APP from '@salesforce/resourceUrl/nimbusganttapp';
 import CLOUDNIMBUS_CSS from '@salesforce/resourceUrl/cloudnimbustemplatecss';
@@ -61,6 +62,14 @@ const EMBEDDED_TAB_API_NAME = 'Delivery_Timeline';
 // surface keeps the menu bar when navigated to, which is NOT the fullscreen
 // UX. Always target Full_Bleed for the enter-fullscreen gesture.
 const FULLSCREEN_TAB_API_NAME = 'Delivery_Gantt_Full_Bleed';
+
+// Live updates channel — DeliveryWorkItemChange__e Platform Event.
+// On `task_upsert` events the gantt schedules a debounced refetch via the
+// existing `_scheduleRefetch` path (mirrors the chat LWC's refreshApex pattern;
+// no separate per-row engine push). `stage_change`/`comment_*` values are
+// owned by other LWCs and ignored here.
+const PE_CHANNEL = '/event/%%%NAMESPACE_DOT%%%DeliveryWorkItemChange__e';
+const PE_TASK_UPSERT = 'task_upsert';
 
 export default class DeliveryProFormaTimeline extends NavigationMixin(LightningElement) {
 
@@ -227,6 +236,10 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         if (this._viewportWriteTimer) {
             clearTimeout(this._viewportWriteTimer);
             this._viewportWriteTimer = null;
+        }
+        if (this._empSubscription) {
+            try { empUnsubscribe(this._empSubscription, () => {}); } catch (e) { /* best-effort */ }
+            this._empSubscription = null;
         }
         if (this._mounted) {
             try {
@@ -800,11 +813,49 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             } catch (e) { /* dispatchEvent unavailable */ }
             this._mounted = true;
             this._installCnEditBridge();
+            // Subscribe to DeliveryWorkItemChange__e — on `task_upsert` events
+            // (other clients' writes), schedule a debounced refetch through
+            // the existing _scheduleRefetch path. Mirrors the refreshApex
+            // pattern in deliveryWorkItemChat.js.
+            this._subscribeToWorkItemChanges();
         } catch (error) {
             // eslint-disable-next-line no-console
             console.error('[DeliveryTimeline] mount() threw — Locker Service container issue or bundle error:', error);
             this._showError('Timeline failed to render', error);
         }
+    }
+
+    _subscribeToWorkItemChanges() {
+        empOnError((err) => {
+            // eslint-disable-next-line no-console
+            console.warn('[DeliveryTimeline] empApi error:', JSON.stringify(err));
+        });
+        empSubscribe(PE_CHANNEL, -1, (message) => {
+            const payload = message && message.data && message.data.payload;
+            if (!payload) {
+                return;
+            }
+            // Namespace-aware key resolution — payloads expose unprefixed
+            // or namespaced keys depending on context. Mirrors
+            // deliveryWorkItemChat.js pattern.
+            const changeType = payload.ChangeTypeTxt__c
+                || payload[`${this._peNsPrefix()}ChangeTypeTxt__c`];
+            if (changeType !== PE_TASK_UPSERT) {
+                return;
+            }
+            this._scheduleRefetch();
+        }).then((sub) => {
+            this._empSubscription = sub;
+        });
+    }
+
+    _peNsPrefix() {
+        if (this.__peNsPrefix !== undefined) {
+            return this.__peNsPrefix;
+        }
+        const m = PE_CHANNEL.match(/\/event\/(.*?)DeliveryWorkItemChange__e/);
+        this.__peNsPrefix = (m && m[1]) ? m[1] : '';
+        return this.__peNsPrefix;
     }
 
     async _handlePatch(patch) {
