@@ -639,6 +639,26 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             // would otherwise reach for window.NimbusGantt at a point where
             // Locker Service proxies can still be settling.
             engine: window.NimbusGantt,
+            // NG 0.189.x — zone-aware right-click context menu. Auto-installed
+            // by IIFEApp; this block wires DH-side host callbacks per the
+            // integration dispatch (docs/dispatch-context-menu-integration.md
+            // in nimbus-gantt repo). Defaults render out of the box; we wire:
+            //   - canvas-empty → onCreateTask (Glen's "right-click empty
+            //     space → new task" ask from 2026-04-30)
+            //   - bar → onTaskAction('edit') opens the record page in same
+            //     tab; we also override the bar menu via onContextMenu to
+            //     ADD "Open in new tab" + "Chat about this"
+            //   - date-header → scroll-here uses NG's scrollToDate
+            //   - dependency → delete uses existing deleteWorkItemDependency
+            // Agent (✦) items are deliberately not wired — no LLM endpoint
+            // configured on DH side yet.
+            contextMenu: {
+                onContextMenu: (hit, pos) => this._customizeContextMenu(hit, pos),
+                onCreateTask: (init, pos) => this._handleCtxCreateTask(init, pos),
+                onTaskAction: (action, task, pos) => this._handleCtxTaskAction(action, task, pos),
+                onDateAction: (action, date, pos) => this._handleCtxDateAction(action, date, pos),
+                onDependencyAction: (action, depId, pos) => this._handleCtxDependencyAction(action, depId, pos),
+            },
         };
 
         // Wire onItemEdit on both embedded + fullscreen. NG 0.185.15's
@@ -1110,6 +1130,158 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         // namespace handling stays in one place; open in a new tab.
         const url = `/lightning/r/${this._vfPrefix()}WorkItem__c/${taskId}/view`;
         window.open(url, '_blank');
+    }
+
+    // ── Context-menu host callbacks (NG 0.189.x) ──────────────────────────
+    //
+    // Default-menu items render out of the box; these hooks make them DO
+    // things. Order in defaultMenu (per NG dispatch):
+    //   bar         → edit / reparent / change-bucket / mark-complete / delete
+    //   row-label   → same as bar (minus reparent menu)
+    //   date-header → scroll-here / zoom-to / add-milestone
+    //   canvas-empty→ create-here
+    //   bucket-header → add-task-to-bucket / collapse / expand
+    //   dependency  → change-type-* / delete
+
+    /**
+     * Customize the default menu per zone. Today: ADD "Open in new tab" +
+     * "Chat about this" to bar zone. Returning a non-empty array overrides
+     * NG's defaults for that zone, so we explicitly include the defaults
+     * we want to keep + the new items.
+     */
+    _customizeContextMenu(hit, _pos) {
+        if (hit.zone !== 'bar') {
+            // For all other zones, return undefined → NG renders its
+            // default menu and our onTaskAction / onCreateTask / etc.
+            // callbacks fire on selection.
+            return undefined;
+        }
+        const t = hit.task;
+        const recordUrl = `/lightning/r/${this._vfPrefix()}WorkItem__c/${t.id}/view`;
+        return [
+            { id: 'open-record', label: 'Open record', icon: '↗', onClick: () => window.open(recordUrl, '_blank') },
+            { id: 'open-here', label: 'Open record (this tab)', onClick: () => this._navigateRecord(t.id) },
+            { id: 'div0', label: '', divider: true },
+            { id: 'edit', label: 'Edit details…', icon: '✎', onClick: () => this._handleCtxTaskAction('edit', t, _pos) },
+            { id: 'mark-complete', label: 'Mark complete', icon: '✓', onClick: () => this._handleCtxTaskAction('mark-complete', t, _pos) },
+            { id: 'div1', label: '', divider: true },
+            { id: 'chat', label: 'Chat about this', icon: '💬', onClick: () => this._dispatchChatRequest(t.id) },
+            { id: 'div2', label: '', divider: true },
+            { id: 'soft-delete', label: 'Deactivate (remove from gantt)', icon: '×', onClick: () => this._handleCtxTaskAction('soft-delete', t, _pos) },
+        ];
+    }
+
+    /**
+     * canvas-empty → user wants a new WorkItem at the clicked spot. Navigate
+     * to the standard New record page with date + bucket prefilled. Same-tab
+     * because the user gestured "create here" — keeping the gantt context
+     * isn't useful when they're switching to data entry.
+     */
+    _handleCtxCreateTask(init, _pos) {
+        const defaultFieldValues = [];
+        if (init.startDate) defaultFieldValues.push(`EstimatedStartDevDate__c=${init.startDate}`);
+        if (init.endDate) defaultFieldValues.push(`EstimatedEndDevDate__c=${init.endDate}`);
+        if (init.parentId) defaultFieldValues.push(`ParentWorkItemLookup__c=${init.parentId}`);
+        if (init.bucket) defaultFieldValues.push(`PriorityGroupPk__c=${init.bucket}`);
+        defaultFieldValues.push('ActivatedDateTime__c=' + new Date().toISOString());
+        this[NavigationMixin.Navigate]({
+            type: 'standard__objectPage',
+            attributes: { objectApiName: `${this._vfPrefix()}WorkItem__c`, actionName: 'new' },
+            state: defaultFieldValues.length ? { defaultFieldValues: defaultFieldValues.join(',') } : {},
+        });
+    }
+
+    /**
+     * Bar / row-label menu items routed here by NG. 'reparent' and
+     * 'change-bucket' are no-ops at the host — NG handles them via its
+     * own gestures (drag-reparent, drag-into-bucket-header). The host
+     * doesn't need to surface a picker.
+     */
+    _handleCtxTaskAction(action, task, _pos) {
+        if (action === 'edit') {
+            this._navigateRecord(task.id, 'edit');
+        } else if (action === 'mark-complete') {
+            this._setStageThenRefetch(task.id, 'Done');
+        } else if (action === 'soft-delete' || action === 'delete') {
+            // 'delete' is the default item label; we treat it as soft-delete
+            // (clear ActivatedDateTime__c) to keep the row in the org but
+            // off the gantt. Real hard-delete would need an Apex method
+            // and a confirm modal — out of scope for this PR.
+            this._setActivatedThenRefetch(task.id, null);
+        }
+        // 'reparent' / 'change-bucket' fall through — NG handles via drag.
+    }
+
+    /**
+     * Date-header menu items routed here. 'scroll-here' uses NG's own
+     * scrollToDate API; the others (zoom-to, add-milestone) are surfaced by
+     * NG's defaults but we no-op them today (no DH milestone object,
+     * zoom-to is already covered by the chrome's zoom selector).
+     */
+    _handleCtxDateAction(action, date, _pos) {
+        if (action === 'scroll-here' && this._mountHandle && typeof this._mountHandle.scrollToDate === 'function') {
+            this._mountHandle.scrollToDate(date);
+        }
+        // Others ignored deliberately.
+    }
+
+    /**
+     * Dependency-arrow menu items routed here. 'delete' calls existing
+     * Apex; 'change-type-*' would need a new Apex setter — deferred until
+     * there's a clear product use case.
+     */
+    _handleCtxDependencyAction(action, depId, _pos) {
+        if (action === 'delete' && depId) {
+            // Reuse existing imperative Apex.
+            deleteWorkItemDependency({ dependencyId: depId })
+                .then(() => this._scheduleRefetch())
+                .catch((err) => this._showError('Could not delete dependency', err));
+        }
+        // change-type-* deferred.
+    }
+
+    _navigateRecord(taskId, actionName = 'view') {
+        if (!taskId) return;
+        if (actionName === 'view') {
+            // Same-tab navigation via NavigationMixin.
+            this[NavigationMixin.Navigate]({
+                type: 'standard__recordPage',
+                attributes: { recordId: taskId, objectApiName: `${this._vfPrefix()}WorkItem__c`, actionName: 'view' },
+            });
+        } else {
+            this[NavigationMixin.Navigate]({
+                type: 'standard__recordPage',
+                attributes: { recordId: taskId, objectApiName: `${this._vfPrefix()}WorkItem__c`, actionName },
+            });
+        }
+    }
+
+    _setStageThenRefetch(taskId, newStage) {
+        updateWorkItemFields({ workItemId: taskId, fields: { StageNamePk__c: newStage } })
+            .then(() => this._scheduleRefetch())
+            .catch((err) => this._showError('Could not update stage', err));
+    }
+
+    _setActivatedThenRefetch(taskId, value) {
+        updateWorkItemFields({ workItemId: taskId, fields: { ActivatedDateTime__c: value } })
+            .then(() => this._scheduleRefetch())
+            .catch((err) => this._showError('Could not deactivate', err));
+    }
+
+    /**
+     * Fire a custom DOM event the host page can listen for to mount its own
+     * chat panel scoped to the work item. Page wiring is host-side
+     * (FlexiPage component listens for 'dh:chat-request' and surfaces the
+     * appropriate UI). For now this is a no-op-when-not-listened pattern.
+     */
+    _dispatchChatRequest(taskId) {
+        try {
+            this.dispatchEvent(new CustomEvent('chatrequest', {
+                detail: { workItemId: taskId },
+                bubbles: true,
+                composed: true,
+            }));
+        } catch (e) { /* dispatchEvent unavailable */ }
     }
 
     /**
