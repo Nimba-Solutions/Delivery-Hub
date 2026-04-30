@@ -2664,9 +2664,9 @@ var NimbusGanttApp = (function(exports) {
     { category: "done", label: "Done", color: "#cbd5e1" }
   ];
   const CLOUD_NIMBUS_POOL = [
-    { name: "Dev 4", role: "Principal Engineer", hoursPerMonth: 80, active: true },
-    { name: "Dev 1", role: "SFDC Dev", hoursPerMonth: 50, active: true },
-    { name: "Dev 3", role: "SFDC Dev (PT)", hoursPerMonth: 40, active: true }
+    { name: "Glen", role: "Principal Engineer", hoursPerMonth: 80, active: true },
+    { name: "Mahi", role: "SFDC Dev", hoursPerMonth: 50, active: true },
+    { name: "Antima", role: "SFDC Dev (PT)", hoursPerMonth: 40, active: true }
   ];
   const CLS_TITLEBAR = "nga-titlebar bg-white border-b border-slate-200 px-3 py-1.5 flex flex-col gap-1.5 min-w-0 overflow-x-hidden";
   const CLS_TITLEBAR_ROW = "flex items-center gap-2 flex-wrap min-w-0";
@@ -4906,7 +4906,7 @@ var NimbusGanttApp = (function(exports) {
   }
   class IIFEApp {
     static mount(container, options) {
-      var _a, _b, _c, _d, _e, _f;
+      var _a, _b, _c, _d, _e, _f, _g, _h;
       const mountStartedAt = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
       IIFEApp.unmount(container);
       const templateName = options.template || "cloudnimbus";
@@ -5106,13 +5106,29 @@ var NimbusGanttApp = (function(exports) {
             getBucket: (task) => task.groupId || null
           }));
         }
+        if (options.temporalAsymmetry !== false && typeof ((_f = tplConfig.engine) == null ? void 0 : _f.TemporalAsymmetryPlugin) === "function") {
+          try {
+            inst.use(tplConfig.engine.TemporalAsymmetryPlugin(
+              typeof options.temporalAsymmetry === "object" ? options.temporalAsymmetry : {}
+            ));
+          } catch (_e2) {
+          }
+        }
+        if (options.contextMenu !== false && typeof ((_g = tplConfig.engine) == null ? void 0 : _g.ContextMenuPlugin) === "function") {
+          try {
+            inst.use(tplConfig.engine.ContextMenuPlugin(
+              typeof options.contextMenu === "object" ? options.contextMenu : {}
+            ));
+          } catch (_e2) {
+          }
+        }
         inst.setData(gtasks, allDependencies2);
         try {
           inst.expandAll();
         } catch (_e2) {
         }
         setTimeout(() => {
-          var _a2, _b2, _c2, _d2, _e2, _f2, _g, _h, _i, _j;
+          var _a2, _b2, _c2, _d2, _e2, _f2, _g2, _h2, _i, _j;
           try {
             const gi = inst;
             const iv = options.initialViewport;
@@ -5126,7 +5142,7 @@ var NimbusGanttApp = (function(exports) {
                 if (typeof x === "number") (_f2 = (_e2 = gi.scrollManager) == null ? void 0 : _e2.scrollToX) == null ? void 0 : _f2.call(_e2, Math.max(0, x));
               }
             } else {
-              const x = (_h = (_g = gi.timeScale) == null ? void 0 : _g.dateToX) == null ? void 0 : _h.call(_g, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
+              const x = (_h2 = (_g2 = gi.timeScale) == null ? void 0 : _g2.dateToX) == null ? void 0 : _h2.call(_g2, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
               if (typeof x === "number") (_j = (_i = gi.scrollManager) == null ? void 0 : _i.scrollToX) == null ? void 0 : _j.call(_i, Math.max(0, x));
             }
           } catch (_e3) {
@@ -5152,6 +5168,14 @@ var NimbusGanttApp = (function(exports) {
         };
         registry.push({ container, cleanup: cleanup2 });
         return {
+          /** 0.187.0 — direct access to the underlying NimbusGantt engine
+           *  instance. Hosts that want to install additional plugins
+           *  (HistoryPlugin / TimeCursorPlugin / etc.) after mount, or call
+           *  any core API not exposed on the handle, can do so via this
+           *  accessor. Loosely typed because the public NimbusGanttEngine
+           *  interface is intentionally minimal. */
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          gantt: inst,
           setTasks(tasks) {
             allTasks2 = tasks;
             _syncToCanvas();
@@ -5165,6 +5189,36 @@ var NimbusGanttApp = (function(exports) {
             allTasks2 = tasks;
             if (dependencies !== void 0) allDependencies2 = normalizeDependencies(dependencies);
             _syncToCanvas();
+          },
+          /** 0.185.37 — host-pumped server→client event channel. Hosts pump
+           *  Platform Event / SSE / websocket messages translated to
+           *  `RemoteEvent` shape; engine applies per-row merge with no full
+           *  re-layout, scroll/selection preserved. See
+           *  docs/dispatch-ng-remote-events.md. Skeleton ships task.upsert,
+           *  task.delete, bulk.replace; ts-only stale-drop. Sequence + dep
+           *  events + onRemoteEvent middleware land in 0.185.38–39. */
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          pushRemoteEvent(event) {
+            const gi = inst;
+            if (typeof gi.pushRemoteEvent === "function") {
+              gi.pushRemoteEvent(event);
+              if (event && event.kind === "bulk.replace" && Array.isArray(event.tasks)) {
+                allTasks2 = event.tasks;
+                if (Array.isArray(event.deps)) {
+                  allDependencies2 = normalizeDependencies(event.deps);
+                }
+              }
+            }
+          },
+          /** 0.185.37 — last applied wall-clock ts for a channel. Hosts
+           *  checkpoint this before disconnect so they can replay-from-cursor
+           *  on reconnect. Sequence-based equivalent ships in 0.185.38. */
+          getLastAppliedTs(channel) {
+            const gi = inst;
+            if (typeof gi.getLastAppliedTs === "function") {
+              return gi.getLastAppliedTs(channel);
+            }
+            return null;
           },
           /** 0.185.32 — coordinate-based hit-test for host-driven right-click
            *  UX in LWS/Locker contexts where NG's internal document listeners
@@ -5226,7 +5280,7 @@ var NimbusGanttApp = (function(exports) {
         };
       }
       let state = { ...INITIAL_STATE };
-      if ((_f = options.initialViewport) == null ? void 0 : _f.zoom) {
+      if ((_h = options.initialViewport) == null ? void 0 : _h.zoom) {
         state = { ...state, zoom: options.initialViewport.zoom };
       }
       let allTasks = options.tasks || [];
@@ -5830,7 +5884,7 @@ var NimbusGanttApp = (function(exports) {
         return null;
       }
       function initGantt(host) {
-        var _a2;
+        var _a2, _b2, _c2;
         const eng = resolveEngine();
         if (!eng || !eng.NimbusGantt) {
           host.style.cssText = "padding:20px;color:#b91c1c;font-size:13px";
@@ -5864,12 +5918,12 @@ var NimbusGanttApp = (function(exports) {
           colorMap: ((_a2 = options.config) == null ? void 0 : _a2.colorMap) || { ...STAGE_COLORS, ...STAGE_TO_CATEGORY_COLOR },
           readOnly: false,
           onTaskClick: (task) => {
-            var _a3, _b2;
+            var _a3, _b3;
             if (!task || !task.id || isBucketId(task.id)) return;
             dispatch({ type: "TOGGLE_DETAIL", taskId: task.id });
             const t = allTasks.find((x) => x.id === task.id);
             if (t) (_a3 = options.onTaskClick) == null ? void 0 : _a3.call(options, t, "canvas");
-            (_b2 = options.onItemClick) == null ? void 0 : _b2.call(options, task.id);
+            (_b3 = options.onItemClick) == null ? void 0 : _b3.call(options, task.id);
           },
           onTaskDblClick: (task) => {
             var _a3;
@@ -5995,13 +6049,13 @@ var NimbusGanttApp = (function(exports) {
         });
         const findTaskById = (id) => id ? allTasks.find((t) => t.id === id) ?? null : null;
         const onMouseOver = (e) => {
-          var _a3, _b2;
+          var _a3, _b3;
           const target = e.target;
           const row = (_a3 = target == null ? void 0 : target.closest) == null ? void 0 : _a3.call(target, ".ng-grid-row[data-task-id]");
           const id = (row == null ? void 0 : row.getAttribute("data-task-id")) ?? null;
           if (id && !isBucketId(id) && id !== lastHoveredTaskId) {
             lastHoveredTaskId = id;
-            (_b2 = options.onTaskHover) == null ? void 0 : _b2.call(options, id);
+            (_b3 = options.onTaskHover) == null ? void 0 : _b3.call(options, id);
           }
         };
         const onMouseLeave = () => {
@@ -6012,14 +6066,14 @@ var NimbusGanttApp = (function(exports) {
           }
         };
         const resolveTaskAtChrome = (clientX, clientY, target) => {
-          var _a3, _b2, _c2;
+          var _a3, _b3, _c3;
           const el2 = target;
           const row = (_a3 = el2 == null ? void 0 : el2.closest) == null ? void 0 : _a3.call(el2, ".ng-grid-row[data-task-id]");
           const rowId = (row == null ? void 0 : row.getAttribute("data-task-id")) ?? null;
           let taskId = rowId && !isBucketId(rowId) ? rowId : lastHoveredTaskId;
           if (!taskId) {
-            const hit = (_b2 = document.elementFromPoint) == null ? void 0 : _b2.call(document, clientX, clientY);
-            const hitRow = (_c2 = hit == null ? void 0 : hit.closest) == null ? void 0 : _c2.call(hit, "[data-task-id]");
+            const hit = (_b3 = document.elementFromPoint) == null ? void 0 : _b3.call(document, clientX, clientY);
+            const hitRow = (_c3 = hit == null ? void 0 : hit.closest) == null ? void 0 : _c3.call(hit, "[data-task-id]");
             const hitId = hitRow == null ? void 0 : hitRow.getAttribute("data-task-id");
             if (hitId && !isBucketId(hitId)) taskId = hitId;
           }
@@ -6061,13 +6115,29 @@ var NimbusGanttApp = (function(exports) {
             getBucketProgress: bucketProgressFn
           }));
         }
+        if (options.temporalAsymmetry !== false && typeof ((_b2 = tplConfig.engine) == null ? void 0 : _b2.TemporalAsymmetryPlugin) === "function") {
+          try {
+            ganttInst.use(tplConfig.engine.TemporalAsymmetryPlugin(
+              typeof options.temporalAsymmetry === "object" ? options.temporalAsymmetry : {}
+            ));
+          } catch (_e2) {
+          }
+        }
+        if (options.contextMenu !== false && typeof ((_c2 = tplConfig.engine) == null ? void 0 : _c2.ContextMenuPlugin) === "function") {
+          try {
+            ganttInst.use(tplConfig.engine.ContextMenuPlugin(
+              typeof options.contextMenu === "object" ? options.contextMenu : {}
+            ));
+          } catch (_e2) {
+          }
+        }
         ganttInst.setData(gtasks, allDependencies);
         try {
           ganttInst.expandAll();
         } catch (_e2) {
         }
         setTimeout(() => {
-          var _a3, _b2, _c2, _d2, _e2, _f2, _g, _h, _i, _j, _k, _l, _m;
+          var _a3, _b3, _c3, _d2, _e2, _f2, _g2, _h2, _i, _j, _k, _l, _m;
           try {
             const gi = ganttInst;
             const iv = options.initialViewport;
@@ -6077,15 +6147,15 @@ var NimbusGanttApp = (function(exports) {
               if (typeof ((_a3 = gi.scrollManager) == null ? void 0 : _a3.setScrollPosition) === "function") {
                 gi.scrollManager.setScrollPosition(x, y);
               } else {
-                (_c2 = (_b2 = gi.scrollManager) == null ? void 0 : _b2.scrollToX) == null ? void 0 : _c2.call(_b2, x);
+                (_c3 = (_b3 = gi.scrollManager) == null ? void 0 : _b3.scrollToX) == null ? void 0 : _c3.call(_b3, x);
                 (_e2 = (_d2 = gi.scrollManager) == null ? void 0 : _d2.scrollToY) == null ? void 0 : _e2.call(_d2, y);
               }
             } else if (options.initialFocusDate) {
               const parsed = parseFocusDate(options.initialFocusDate);
               if (parsed) {
                 const snapped = snapDateToZoomPeriod(parsed, state.zoom);
-                const x = (_g = (_f2 = gi.timeScale) == null ? void 0 : _f2.dateToX) == null ? void 0 : _g.call(_f2, snapped);
-                if (typeof x === "number") (_i = (_h = gi.scrollManager) == null ? void 0 : _h.scrollToX) == null ? void 0 : _i.call(_h, Math.max(0, x));
+                const x = (_g2 = (_f2 = gi.timeScale) == null ? void 0 : _f2.dateToX) == null ? void 0 : _g2.call(_f2, snapped);
+                if (typeof x === "number") (_i = (_h2 = gi.scrollManager) == null ? void 0 : _h2.scrollToX) == null ? void 0 : _i.call(_h2, Math.max(0, x));
               }
             } else {
               const x = (_k = (_j = gi.timeScale) == null ? void 0 : _j.dateToX) == null ? void 0 : _k.call(_j, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
@@ -6300,6 +6370,12 @@ var NimbusGanttApp = (function(exports) {
       };
       registry.push({ container, cleanup });
       return {
+        /** 0.187.0 — direct access to the underlying NimbusGantt engine
+         *  instance for additional plugin installs / direct core API calls. */
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        get gantt() {
+          return ganttInst;
+        },
         setTasks(tasks) {
           allTasks = tasks;
           depthMap = buildDepthMap(allTasks);
@@ -6326,6 +6402,45 @@ var NimbusGanttApp = (function(exports) {
           } else {
             rebuildView();
           }
+        },
+        /** 0.185.37 — host-pumped server→client event channel. Hosts
+         *  translate Platform Event / SSE / websocket messages to
+         *  `RemoteEvent` shape; engine applies per-row merge with no full
+         *  re-layout, scroll/selection preserved. See
+         *  docs/dispatch-ng-remote-events.md. Skeleton ships task.upsert,
+         *  task.delete, bulk.replace; ts-only stale-drop. Sequence + dep
+         *  events + onRemoteEvent middleware land in 0.185.38–39.
+         *
+         *  bulk.replace also rewrites the host-side allTasks/allDependencies
+         *  arrays so that subsequent rebuildView()/refreshGantt() calls
+         *  don't blow away the pushed snapshot. task.upsert / task.delete
+         *  intentionally do NOT — those flow through the engine's reducer
+         *  only, so hosts that filter or transform tasks before
+         *  rebuildView() (epic grouping, search, etc.) keep working. */
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        pushRemoteEvent(event) {
+          if (!ganttInst) return;
+          const gi = ganttInst;
+          if (typeof gi.pushRemoteEvent !== "function") return;
+          gi.pushRemoteEvent(event);
+          if (event && event.kind === "bulk.replace" && Array.isArray(event.tasks)) {
+            allTasks = event.tasks;
+            if (Array.isArray(event.deps)) {
+              allDependencies = normalizeDependencies(event.deps);
+            }
+            depthMap = buildDepthMap(allTasks);
+          }
+        },
+        /** 0.185.37 — last applied wall-clock ts for a channel. Hosts
+         *  checkpoint this before disconnect so they can replay-from-cursor
+         *  on reconnect. Sequence-based equivalent ships in 0.185.38. */
+        getLastAppliedTs(channel) {
+          if (!ganttInst) return null;
+          const gi = ganttInst;
+          if (typeof gi.getLastAppliedTs === "function") {
+            return gi.getLastAppliedTs(channel);
+          }
+          return null;
         },
         /** 0.185.32 — coordinate-based hit-test for host-driven right-click
          *  UX in LWS/Locker contexts where NG's internal document listeners
