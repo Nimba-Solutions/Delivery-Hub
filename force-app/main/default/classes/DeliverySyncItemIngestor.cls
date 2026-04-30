@@ -120,6 +120,18 @@ public without sharing class DeliverySyncItemIngestor {
             if (String.isBlank(wiRef)) {
                 wiRef = (String) payload.get('delivery__WorkItemLookup__c');
             }
+            // Legacy / peer-org outbounds may emit WorkItemId__c instead of
+            // WorkItemLookup__c (a stale outbound payload assembly path used
+            // the text-named field). Fall back to it when the lookup-named
+            // key is absent. Without this, Nimba's 80 historical WorkLog
+            // failures stayed Failed even after PR #737 because their
+            // payloads only carry WorkItemId__c. Audit 2026-04-30 17:30Z.
+            if (String.isBlank(wiRef)) {
+                wiRef = (String) payload.get('WorkItemId__c');
+            }
+            if (String.isBlank(wiRef)) {
+                wiRef = (String) payload.get('delivery__WorkItemId__c');
+            }
             if (String.isNotBlank(wiRef)) {
                 parentWorkItemRef = wiRef;
             }

@@ -19,7 +19,10 @@ public inherited sharing class DeliveryWorkItemCommentTriggerHandler {
 
         // Delivery Hub Integration (Unified Sync Engine)
         // We explicitly define which fields constitute the "Payload" for a comment to keep it clean.
-        Set<String> syncFields = new Set<String>{'BodyTxt__c', 'AuthorTxt__c'};
+        // WorkItemId__c is the parent FK — without it the receiver-side ingestor can't
+        // resolve which WorkItem to attach the comment to. Caused 6 stuck failures with
+        // REQUIRED_FIELD_MISSING [WorkItemId__c] on MF-Prod (audit 2026-04-30 17:00Z).
+        Set<String> syncFields = new Set<String>{'BodyTxt__c', 'AuthorTxt__c', 'WorkItemId__c'};
 
         // Pass to Engine
         DeliverySyncEngine.captureChanges(newRecords, null, syncFields);
@@ -124,8 +127,9 @@ public inherited sharing class DeliveryWorkItemCommentTriggerHandler {
      */
     public static void handleAfterUpdate(Map<Id, WorkItemComment__c> newMap, Map<Id, WorkItemComment__c> oldMap) {
         // Delivery Hub Integration (Handle Edits)
-        // Check for changes in Body or Author
-        Set<String> fieldsToTrack = new Set<String>{'BodyTxt__c', 'AuthorTxt__c'};
+        // Check for changes in Body or Author. WorkItemId__c included so reparent
+        // events on the comment also propagate cross-org (rare but valid edit).
+        Set<String> fieldsToTrack = new Set<String>{'BodyTxt__c', 'AuthorTxt__c', 'WorkItemId__c'};
 
         // Pass to Engine
         DeliverySyncEngine.captureChanges(newMap.values(), oldMap, fieldsToTrack);
