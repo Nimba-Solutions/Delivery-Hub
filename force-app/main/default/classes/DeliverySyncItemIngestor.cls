@@ -124,6 +124,23 @@ public without sharing class DeliverySyncItemIngestor {
                 parentWorkItemRef = wiRef;
             }
         }
+        // Same pattern for WorkItemComment — parent FK lives in the comment's
+        // own WorkItemId__c field, NOT in TargetId. Without this lookup the
+        // outer guard at the localParentId resolution block short-circuits
+        // (parentWorkItemRef stays blank when sender didn't populate TargetId)
+        // and the comment falls through to mapFields without WorkItemId__c
+        // set → REQUIRED_FIELD_MISSING. Caused 6 MF-Prod failures still
+        // present after the 2026-04-29 ingestor fix because that fix only
+        // wired the Pending-queue fallback, not the parentRef resolution.
+        if (objectType.containsIgnoreCase('WorkItemComment__c')) {
+            String wiRef = (String) payload.get('WorkItemId__c');
+            if (String.isBlank(wiRef)) {
+                wiRef = (String) payload.get('delivery__WorkItemId__c');
+            }
+            if (String.isNotBlank(wiRef)) {
+                parentWorkItemRef = wiRef;
+            }
+        }
 
         Id localParentId = null;
         if (localRecordId == null && String.isNotBlank(parentWorkItemRef) && (objectType.containsIgnoreCase('WorkItemComment__c') || objectType.equalsIgnoreCase('ContentVersion') || objectType.endsWithIgnoreCase('WorkLog__c'))) {
@@ -206,6 +223,16 @@ public without sharing class DeliverySyncItemIngestor {
             // the sender-org Id straight into the local field and SF rejects with
             // FIELD_INTEGRITY_EXCEPTION ("id value of incorrect type"). Caused 150
             // failures on Nimba 2026-04-23..29 before this fix.
+            fieldPayload.remove('WorkItemId__c');
+            fieldPayload.remove('delivery__WorkItemId__c');
+        }
+        // Same defense for WorkItemComment — strip the raw cross-org parent
+        // FK from payload so mapFields can't overwrite the resolved local Id
+        // we set via putSafe in the comment branch above.
+        if (objectType.containsIgnoreCase('WorkItemComment__c')) {
+            if (fieldPayload == payload) {
+                fieldPayload = new Map<String, Object>(payload);
+            }
             fieldPayload.remove('WorkItemId__c');
             fieldPayload.remove('delivery__WorkItemId__c');
         }
