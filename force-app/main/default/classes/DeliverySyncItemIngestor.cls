@@ -103,7 +103,7 @@ public without sharing class DeliverySyncItemIngestor {
 
         // For WorkLogs, resolve the parent WorkItem ID from the payload (not TargetId).
         // We intentionally do NOT strip cross-org lookup IDs from the caller's
-        // payload here. The Pending-queue path (queuePendingWorkLog) stashes
+        // payload here. The Pending-queue path (queuePendingChild) stashes
         // the raw payload via JSON.serialize(payload) for later replay, and
         // callers may re-invoke processInboundItem with the same Map instance
         // (idempotent re-delivery). Mutating the caller's map would:
@@ -155,7 +155,15 @@ public without sharing class DeliverySyncItemIngestor {
                 }
             }
 
-            if (localParentId != null && objectType.containsIgnoreCase('WorkItemComment__c')) {
+            if (objectType.containsIgnoreCase('WorkItemComment__c')) {
+                if (localParentId == null) {
+                    // Parent WorkItem hasn't synced yet → REQUIRED_FIELD_MISSING
+                    // would fire on insert. Stage as Pending so the resolver
+                    // re-runs after the parent lands. Same pattern WorkLog uses.
+                    // Pre-fix this caused 6+ MF-Prod comment failures (2026-04-29
+                    // audit) when chat fired before the parent WI sync.
+                    return queuePendingChild(objectType, parentWorkItemRef, payload);
+                }
                 putSafe(recordToUpsert, 'WorkItemId__c', localParentId);
             }
             if (objectType.endsWithIgnoreCase('WorkLog__c')) {
@@ -167,7 +175,7 @@ public without sharing class DeliverySyncItemIngestor {
                     // inbound, requeuePendingItems()/the resolver will flip
                     // this row to Queued and the processor retries the insert.
                     // See DeliverySyncItemPendingResolver.
-                    return queuePendingWorkLog(objectType, parentWorkItemRef, payload);
+                    return queuePendingChild(objectType, parentWorkItemRef, payload);
                 }
                 putSafe(recordToUpsert, 'WorkItemLookup__c', localParentId);
                 // Find a local WorkRequest for the Master-Detail parent
@@ -193,6 +201,13 @@ public without sharing class DeliverySyncItemIngestor {
             fieldPayload.remove('delivery__WorkItemLookup__c');
             fieldPayload.remove('RequestId__c');
             fieldPayload.remove('delivery__RequestId__c');
+            // Strip raw cross-org Id text fields too. WorkLog has WorkItemId__c
+            // alongside WorkItemLookup__c — without stripping, mapFields writes
+            // the sender-org Id straight into the local field and SF rejects with
+            // FIELD_INTEGRITY_EXCEPTION ("id value of incorrect type"). Caused 150
+            // failures on Nimba 2026-04-23..29 before this fix.
+            fieldPayload.remove('WorkItemId__c');
+            fieldPayload.remove('delivery__WorkItemId__c');
         }
 
         // Cross-org parent FK translation for WorkItem__c: the payload's
@@ -716,34 +731,38 @@ public without sharing class DeliverySyncItemIngestor {
     }
 
     /**
-     * @description Inserts an inbound Pending SyncItem__c carrying the raw
-     *              WorkLog payload so it can be re-processed once the parent
-     *              WorkItem lands. Enqueues DeliverySyncItemPendingResolver
+     * @description Inserts an inbound Pending SyncItem__c carrying the raw child
+     *              payload (WorkLog or Comment) so it can be re-processed once
+     *              the parent WorkItem lands. Enqueues DeliverySyncItemPendingResolver
      *              unless we're already at the queueable limit — the scheduled
      *              tick sweep (DeliveryHubScheduler.requeuePendingItems) is a
      *              safety net that catches anything we couldn't enqueue inline.
-     *              Idempotent on (parentWorkItemRef, SourceId): duplicate
-     *              re-deliveries reuse the existing Pending row rather than
-     *              forking duplicate resolvers.
-     * @param objectType        The payload object type (e.g., 'WorkLog__c').
-     * @param parentWorkItemRef Remote WorkItem identifier the log is parented to.
+     *              Idempotent on (objectType, parentWorkItemRef, SourceId):
+     *              duplicate re-deliveries reuse the existing Pending row.
+     *
+     *              Generalized from queuePendingWorkLog 2026-04-29 to also handle
+     *              WorkItemComment__c (was hard-failing with REQUIRED_FIELD_MISSING
+     *              when parent hadn't synced).
+     * @param objectType        The payload object type ('WorkLog__c' or 'WorkItemComment__c').
+     * @param parentWorkItemRef Remote WorkItem identifier the child is parented to.
      * @param payload           Full deserialized payload, stashed as JSON for replay.
      * @return The Pending SyncItem__c Id so the caller can return a non-null Id
      *         to the sync service (which treats null as failure).
      */
     @SuppressWarnings('PMD.ApexCRUDViolation')
-    private static Id queuePendingWorkLog(String objectType, String parentWorkItemRef, Map<String, Object> payload) {
+    private static Id queuePendingChild(String objectType, String parentWorkItemRef, Map<String, Object> payload) {
         String sourceId = (String) payload.get('SourceId');
         String globalSourceId = (String) payload.get('GlobalSourceId');
+        String stripped = stripNamespace(objectType);
 
-        // Idempotency: if we already hold a Pending row for this (parentRef, sourceId)
-        // pair just return the existing Id. Re-deliveries should not multiply Pending rows.
+        // Idempotency: if we already hold a Pending row for this (objectType, parentRef, sourceId)
+        // tuple just return the existing Id. Re-deliveries should not multiply Pending rows.
         if (String.isNotBlank(sourceId) && String.isNotBlank(parentWorkItemRef)) {
             List<SyncItem__c> existing = [
                 SELECT Id FROM SyncItem__c
                 WHERE DirectionPk__c = 'Inbound'
                 AND StatusPk__c = 'Pending'
-                AND ObjectTypePk__c = 'WorkLog__c'
+                AND ObjectTypePk__c = :stripped
                 AND RemoteExternalIdTxt__c = :sourceId
                 AND ParentRefTxt__c = :parentWorkItemRef
                 WITH SYSTEM_MODE
