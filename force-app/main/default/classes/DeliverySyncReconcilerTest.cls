@@ -136,6 +136,51 @@ private class DeliverySyncReconcilerTest {
     }
 
     /**
+     * @description Regression test for the namespace miss in buildWorkItemSyncItem.
+     * Pre-fix the WorkItem outbound payload contained only routing metadata
+     * (SourceId/GlobalSourceId/SenderOrgId/TargetId) because
+     * `populatedFields.containsKey('BriefDescriptionTxt__c')` returned false in
+     * subscriber orgs where the keys are namespaced. The receiver ingestor
+     * then rejected the SyncItem as "Blank WorkItem create rejected" and the
+     * reconciler re-fired it on every 15-min tick. Post-fix the syncFields
+     * land in the payload regardless of whether the runtime keys carry the
+     * namespace prefix.
+     */
+    @IsTest
+    static void testReconcilerPayloadIncludesSyncFields() {
+        System.runAs(testUser) {
+            delete [SELECT Id FROM SyncItem__c];
+
+            Test.startTest();
+            System.enqueueJob(new DeliverySyncReconciler());
+            Test.stopTest();
+
+            List<SyncItem__c> wiSyncs = [
+                SELECT PayloadTxt__c FROM SyncItem__c
+                WHERE ObjectTypePk__c = 'WorkItem__c'
+                AND DirectionPk__c = 'Outbound'
+            ];
+            System.assertEquals(1, wiSyncs.size(), 'Should create exactly one WorkItem SyncItem.');
+            String payload = wiSyncs[0].PayloadTxt__c;
+            System.assert(
+                payload.contains('BriefDescriptionTxt__c'),
+                'WorkItem reconciler payload must include BriefDescriptionTxt__c key. ' +
+                'Got: ' + payload
+            );
+            System.assert(
+                payload.contains('Reconcile Test Item'),
+                'WorkItem reconciler payload must include the actual description value. ' +
+                'Got: ' + payload
+            );
+            System.assert(
+                payload.contains('StageNamePk__c'),
+                'WorkItem reconciler payload must include StageNamePk__c key. ' +
+                'Got: ' + payload
+            );
+        }
+    }
+
+    /**
      * @description Verifies that the reconciler creates SyncItems for both a missing
      * WorkItem and a missing WorkLog in a single pass.
      */

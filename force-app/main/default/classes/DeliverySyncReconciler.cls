@@ -302,11 +302,27 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
     private SyncItem__c buildWorkItemSyncItem(WorkItem__c wi, WorkRequest__c req) {
         Map<String, Object> payload = new Map<String, Object>();
 
-        // Map all syncable fields
+        // Map all syncable fields. In subscriber orgs `getPopulatedFieldsAsMap`
+        // returns namespaced keys (`delivery__BriefDescriptionTxt__c`) while
+        // `getWorkItemSyncFields()` returns unprefixed names. A direct
+        // containsKey check therefore missed every field on every tick,
+        // emitting payloads with only routing metadata that the receiver
+        // ingestor rejected as "Blank WorkItem create rejected" — and because
+        // Failed is not in the reconciler's covered-status set, the gap
+        // re-fired every 15-min scheduler tick (~100 SyncItems/day on
+        // Nimba 2026-04-30 → 2026-05-01). Use the namespace-tolerant lookup
+        // mirrored from DeliverySyncEngine.getSafeValue.
         Map<String, Object> populatedFields = wi.getPopulatedFieldsAsMap();
         for (String field : getWorkItemSyncFields()) {
             if (populatedFields.containsKey(field)) {
                 payload.put(field, populatedFields.get(field));
+                continue;
+            }
+            for (String key : populatedFields.keySet()) {
+                if (key.endsWithIgnoreCase('__' + field)) {
+                    payload.put(field, populatedFields.get(key));
+                    break;
+                }
             }
         }
 
