@@ -191,6 +191,14 @@ private class DeliverySyncItemPendingResolverTest {
             for (Integer i = 0; i < 11; i++) {
                 resolver.resolvePending();
             }
+            // stopTest BEFORE recovery so the queueable enqueued by
+            // processInboundItem fires while the row is still Failed (it
+            // queries for Pending only, so it no-ops). If we left stopTest
+            // until the end, the queueable would run AFTER recovery flipped
+            // the row to Pending, find it, fail to replay, and bump
+            // RetryCountNumber__c off the zero we just reset.
+            Test.stopTest();
+
             SyncItem__c failed = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE Id = :pendingId];
             System.assertEquals('Failed', failed.StatusPk__c, 'Setup precondition: row should be Failed');
             System.assert(failed.ErrorLogTxt__c.contains('Parent WorkItem did not arrive'),
@@ -217,8 +225,10 @@ private class DeliverySyncItemPendingResolverTest {
             //    verifies the recovery method's own contract (Failed → Pending
             //    with cleared retry counter and error message so the next
             //    scheduler tick can pick the row up via the standard sweep).
+            //    Database.update inside recoverFailedWithResolvedParent does
+            //    not fire async jobs, so the recovered state is observable
+            //    without another stopTest.
             Integer recovered = new DeliverySyncItemPendingResolver().recoverFailedWithResolvedParent();
-            Test.stopTest();
 
             System.assertEquals(1, recovered, 'Recovery should flip exactly one row back to Pending');
 
