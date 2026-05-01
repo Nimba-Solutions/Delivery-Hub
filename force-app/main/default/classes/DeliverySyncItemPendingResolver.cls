@@ -80,17 +80,21 @@ global inherited sharing class DeliverySyncItemPendingResolver implements Queuea
      * @return Number of Failed rows requeued back to Pending in this run.
      */
     public Integer recoverFailedWithResolvedParent() {
-        String errorPrefix = FAILED_PARENT_NEVER_ARRIVED_PREFIX + '%';
+        // ErrorLogTxt__c is a Long Text Area — cannot be filtered in SOQL.
+        // Query Failed Inbound rows broadly and filter the marker prefix in
+        // Apex. ParentRefTxt__c being non-null is the cheap pre-filter that
+        // limits the scan to rows that the Pending → Failed flow originally
+        // wrote (rows from other failure paths leave ParentRefTxt__c blank).
         List<SyncItem__c> stuckFailed = [
             SELECT Id, ObjectTypePk__c, PayloadTxt__c, ParentRefTxt__c,
                    RemoteExternalIdTxt__c, RetryCountNumber__c, ErrorLogTxt__c
             FROM SyncItem__c
             WHERE DirectionPk__c = 'Inbound'
             AND StatusPk__c = 'Failed'
-            AND ErrorLogTxt__c LIKE :errorPrefix
+            AND ParentRefTxt__c != NULL
             WITH SYSTEM_MODE
             ORDER BY LastModifiedDate ASC
-            LIMIT 50
+            LIMIT 200
         ];
 
         if (stuckFailed.isEmpty()) {
@@ -100,6 +104,10 @@ global inherited sharing class DeliverySyncItemPendingResolver implements Queuea
         List<SyncItem__c> toUpdate = new List<SyncItem__c>();
         Integer recovered = 0;
         for (SyncItem__c row : stuckFailed) {
+            if (row.ErrorLogTxt__c == null
+                || !row.ErrorLogTxt__c.startsWith(FAILED_PARENT_NEVER_ARRIVED_PREFIX)) {
+                continue;
+            }
             Id localParent = resolveParent(row.ParentRefTxt__c);
             if (localParent == null) {
                 continue;
@@ -109,6 +117,11 @@ global inherited sharing class DeliverySyncItemPendingResolver implements Queuea
             row.ErrorLogTxt__c = null;
             toUpdate.add(row);
             recovered++;
+            // Cap recoveries per tick to keep the next sweep cheap and
+            // bounded — 50 self-heals is plenty for a single 15-min cadence.
+            if (recovered >= 50) {
+                break;
+            }
         }
 
         if (!toUpdate.isEmpty()) {
