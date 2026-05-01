@@ -126,8 +126,9 @@ public without sharing class DeliverySyncEngine {
                         // Kill-Switch: If target is the Global Source or matches incoming edge, suppress circular sync
                         if (blockedOrigins.contains((String)req.Id) || req.RemoteWorkItemIdTxt__c == globalSourceId) {
                             continue;
-                        } 
-                        itemsToInsert.add(createSyncItem(rec, req, allowedFields, globalSourceId, false));
+                        }
+                        SyncItem__c built = createSyncItem(rec, req, allowedFields, globalSourceId, false);
+                        if (built != null) { itemsToInsert.add(built); }
                     }
                 }
 
@@ -147,7 +148,8 @@ public without sharing class DeliverySyncEngine {
                         Boolean vendorPushEnabled = parentWorkItem.ClientNetworkEntityLookup__r.EnableVendorPushDateTime__c != null
                             && String.isNotBlank(parentWorkItem.ClientNetworkEntityLookup__r.IntegrationEndpointUrlTxt__c);
 
-                        itemsToInsert.add(createSyncItem(rec, null, allowedFields, globalSourceId, vendorPushEnabled));
+                        SyncItem__c built = createSyncItem(rec, null, allowedFields, globalSourceId, vendorPushEnabled);
+                        if (built != null) { itemsToInsert.add(built); }
                     }
                 }
             }
@@ -298,6 +300,19 @@ public without sharing class DeliverySyncEngine {
 
     @SuppressWarnings('PMD.ExcessiveParameterList')
     private static SyncItem__c createSyncItem(SObject rec, WorkRequest__c req, Set<String> allowedFields, String globalSourceId, Boolean vendorPush) {
+        // Empty-payload guard #1: zero allowedFields means the caller wired
+        // up no syncable schema. Any SyncItem we'd build here would carry
+        // only routing metadata and the receiver ingestor would reject it
+        // as "Blank ... create rejected" (and reconciler would re-fire it
+        // every 15-min tick — see PR #742 reconciler namespace bug post-mortem
+        // for the cascade pattern). Refuse cleanly with a WARN log.
+        if (allowedFields == null || allowedFields.isEmpty()) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliverySyncEngine] Skipping outbound SyncItem — allowedFields empty for '
+                + rec.getSObjectType().getDescribe().getName() + ' ' + rec.Id);
+            return null;
+        }
+
         SyncItem__c item = new SyncItem__c(
             StatusPk__c = 'Queued',
             DirectionPk__c = 'Outbound',
@@ -313,9 +328,32 @@ public without sharing class DeliverySyncEngine {
         populateLookupField(item, cleanName, rec.Id);
 
         Map<String, Object> payload = new Map<String, Object>();
+        Boolean anyBusinessFieldPopulated = false;
         for (String f : allowedFields) {
-            payload.put(f, getSafeValue(rec, f));
+            Object value = getSafeValue(rec, f);
+            payload.put(f, value);
+            if (value != null) {
+                anyBusinessFieldPopulated = true;
+            }
         }
+
+        // Empty-payload guard #2: every allowed field resolved to null.
+        // In after-insert/after-update trigger context, getPopulatedFieldsAsMap
+        // returns the record's full field state — so all-null means either
+        // the namespace lookup failed (PR #742 class), the syncFields list
+        // contains only fields that don't exist on this record, or the
+        // record itself is genuinely blank. None of those should fan out:
+        // the receiver would reject and the reconciler would loop. Refuse
+        // with a WARN so the health dashboard / debug log captures the
+        // signal but the dispatcher isn't poisoned.
+        if (!anyBusinessFieldPopulated) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliverySyncEngine] Skipping outbound SyncItem — every allowed field '
+                + 'resolved to null for ' + cleanName + ' ' + rec.Id
+                + ' (allowedFields=' + allowedFields.size() + ')');
+            return null;
+        }
+
         payload.put('SourceId', rec.Id);
         payload.put('GlobalSourceId', globalSourceId);
         payload.put('SenderOrgId', UserInfo.getOrganizationId());
