@@ -57,6 +57,80 @@ global inherited sharing class DeliverySyncItemPendingResolver implements Queuea
     }
 
     /**
+     * @description Marker prefix the Pending → Failed flow writes to
+     *              ErrorLogTxt__c when retries exhaust without the parent
+     *              arriving. Used by `recoverFailedWithResolvedParent` to
+     *              find rows that can now self-heal.
+     */
+    @TestVisible
+    private static final String FAILED_PARENT_NEVER_ARRIVED_PREFIX = 'Parent WorkItem did not arrive';
+
+    /**
+     * @description Sweeps Failed inbound rows whose terminal error was
+     *              "Parent WorkItem did not arrive ..." and re-queues them
+     *              back to Pending when the parent now resolves. Without
+     *              this, an Inbound row that exhausted retries before the
+     *              cross-org parent caught up stays Failed forever even
+     *              after the parent lands — exactly the class of stuck
+     *              rows seen on dh-prod 2026-05-01 (6 WorkLog Inbound rows
+     *              Failed with "Parent WorkItem did not arrive within 10
+     *              retry attempts" while the parents had since synced).
+     *              Resets RetryCountNumber__c to zero so the regular
+     *              resolver gets a clean budget on the next tick.
+     * @return Number of Failed rows requeued back to Pending in this run.
+     */
+    public Integer recoverFailedWithResolvedParent() {
+        // ErrorLogTxt__c is a Long Text Area — cannot be filtered in SOQL.
+        // Query Failed Inbound rows broadly and filter the marker prefix in
+        // Apex. ParentRefTxt__c being non-null is the cheap pre-filter that
+        // limits the scan to rows that the Pending → Failed flow originally
+        // wrote (rows from other failure paths leave ParentRefTxt__c blank).
+        List<SyncItem__c> stuckFailed = [
+            SELECT Id, ObjectTypePk__c, PayloadTxt__c, ParentRefTxt__c,
+                   RemoteExternalIdTxt__c, RetryCountNumber__c, ErrorLogTxt__c
+            FROM SyncItem__c
+            WHERE DirectionPk__c = 'Inbound'
+            AND StatusPk__c = 'Failed'
+            AND ParentRefTxt__c != NULL
+            WITH SYSTEM_MODE
+            ORDER BY LastModifiedDate ASC
+            LIMIT 200
+        ];
+
+        if (stuckFailed.isEmpty()) {
+            return 0;
+        }
+
+        List<SyncItem__c> toUpdate = new List<SyncItem__c>();
+        Integer recovered = 0;
+        for (SyncItem__c row : stuckFailed) {
+            if (row.ErrorLogTxt__c == null
+                || !row.ErrorLogTxt__c.startsWith(FAILED_PARENT_NEVER_ARRIVED_PREFIX)) {
+                continue;
+            }
+            Id localParent = resolveParent(row.ParentRefTxt__c);
+            if (localParent == null) {
+                continue;
+            }
+            row.StatusPk__c = 'Pending';
+            row.RetryCountNumber__c = 0;
+            row.ErrorLogTxt__c = null;
+            toUpdate.add(row);
+            recovered++;
+            // Cap recoveries per tick to keep the next sweep cheap and
+            // bounded — 50 self-heals is plenty for a single 15-min cadence.
+            if (recovered >= 50) {
+                break;
+            }
+        }
+
+        if (!toUpdate.isEmpty()) {
+            Database.update(toUpdate, AccessLevel.SYSTEM_MODE);
+        }
+        return recovered;
+    }
+
+    /**
      * @description Core resolver loop. Extracted for reuse by the scheduler
      *              path which wants to invoke synchronously in tests.
      * @return Number of rows promoted to Synced in this run.
