@@ -512,14 +512,15 @@ global with sharing class DeliveryActivityFeedController {
     }
 
     /**
-     * Returns true when a Field_Change ActivityLog event should NOT render in
-     * the Activity Feed. Two suppression rules:
-     *   1. Field is in SUPPRESSED_FIELD_API_NAMES (description-only edits etc.)
-     *   2. oldValue == newValue (no-op saves; e.g. trigger logic re-flipping
-     *      Status to its existing value, or rollup recalcs landing on the
-     *      same number).
-     * Falls open on parse error so the parseChangeContext fallback path stays
-     * the single source of truth for malformed JSON.
+     * @description Returns true when a Field_Change ActivityLog event should
+     * NOT render in the Activity Feed. Two suppression rules: (1) field is in
+     * SUPPRESSED_FIELD_API_NAMES (description-only edits etc.); (2) oldValue
+     * equals newValue (no-op saves; e.g. trigger logic re-flipping Status to
+     * its existing value, or rollup recalcs landing on the same number).
+     * Falls open on parse error so parseChangeContext stays the single source
+     * of truth for malformed JSON fallback.
+     * @param contextDataJson Raw ContextDataTxt__c JSON from the ActivityLog__c row.
+     * @return True if the event should be filtered out of the feed.
      */
     private static Boolean shouldSuppressFieldChange(String contextDataJson) {
         if (String.isBlank(contextDataJson)) {
@@ -548,6 +549,14 @@ global with sharing class DeliveryActivityFeedController {
         }
     }
 
+    /**
+     * @description Strips the namespace prefix from a field API name so
+     * `delivery__WorkDescriptionTxt__c` and the unprefixed
+     * `WorkDescriptionTxt__c` both match suppression rules. Mirrors the
+     * helper in DeliverySyncItemIngestor.
+     * @param apiName The field API name as captured in ContextDataTxt__c.
+     * @return The API name with the namespace prefix removed if one was present.
+     */
     private static String stripFieldNamespace(String apiName) {
         if (String.isNotBlank(apiName) && apiName.countMatches('__') > 1) {
             return apiName.substringAfter('__');
