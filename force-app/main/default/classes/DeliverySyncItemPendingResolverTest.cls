@@ -159,6 +159,85 @@ private class DeliverySyncItemPendingResolverTest {
     }
 
     /**
+     * @description Regression test for the Failed-Inbound-with-resolved-parent
+     *              recovery path. When a Pending row exhausts retries before
+     *              the parent arrives, it flips to Failed. Pre-fix the row
+     *              stayed Failed forever even after the parent landed via a
+     *              later sync tick. Post-fix the scheduler-driven
+     *              `recoverFailedWithResolvedParent` sweep flips the row
+     *              back to Pending so the next resolver tick can replay it.
+     *
+     *              Empirical motivator: dh-prod 2026-05-01 had 6 WL Inbound
+     *              rows Failed with "Parent WorkItem did not arrive within
+     *              10 retry attempts" while the parents had since synced.
+     */
+    @IsTest
+    static void testRecoverFailedWithResolvedParent() {
+        System.runAs(testUser) {
+            Map<String, Object> logPayload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-WL-LATE-RECOVER-001',
+                'GlobalSourceId' => 'REMOTE-WL-LATE-RECOVER-001',
+                'WorkItemLookup__c' => 'REMOTE-WI-LATE-RECOVER-001',
+                'HoursLoggedNumber__c' => 2.25,
+                'WorkDateDate__c' => String.valueOf(Date.today()),
+                'WorkDescriptionTxt__c' => 'Logged before parent synced — late recovery'
+            };
+
+            Test.startTest();
+            // 1. Stage Pending; drive past max-retry to flip Failed.
+            Id pendingId = DeliverySyncItemIngestor.processInboundItem('WorkLog__c', logPayload);
+            DeliverySyncItemPendingResolver resolver =
+                new DeliverySyncItemPendingResolver('REMOTE-WI-LATE-RECOVER-001');
+            for (Integer i = 0; i < 11; i++) {
+                resolver.resolvePending();
+            }
+            SyncItem__c failed = [SELECT StatusPk__c, ErrorLogTxt__c FROM SyncItem__c WHERE Id = :pendingId];
+            System.assertEquals('Failed', failed.StatusPk__c, 'Setup precondition: row should be Failed');
+            System.assert(failed.ErrorLogTxt__c.contains('Parent WorkItem did not arrive'),
+                'Setup precondition: ErrorLog should match the recovery prefix');
+
+            // 2. Parent WorkItem arrives via inbound (creates ledger entry).
+            WorkItem__c parent = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Late-arriving parent for recovery test',
+                StageNamePk__c = 'In Development'
+            );
+            insert parent;
+            insert new SyncItem__c(
+                ObjectTypePk__c        = 'WorkItem__c',
+                DirectionPk__c         = 'Inbound',
+                StatusPk__c            = 'Synced',
+                LocalRecordIdTxt__c    = (String) parent.Id,
+                RemoteExternalIdTxt__c = 'REMOTE-WI-LATE-RECOVER-001',
+                GlobalSourceIdTxt__c   = 'REMOTE-WI-LATE-RECOVER-001'
+            );
+
+            // 3. Recovery sweep flips Failed back to Pending; next resolver tick
+            //    replays the payload now that the parent resolves.
+            Integer recovered = new DeliverySyncItemPendingResolver().recoverFailedWithResolvedParent();
+            System.assertEquals(1, recovered, 'Recovery should flip exactly one row back to Pending');
+
+            new DeliverySyncItemPendingResolver('REMOTE-WI-LATE-RECOVER-001').resolvePending();
+            Test.stopTest();
+
+            SyncItem__c finalRow = [
+                SELECT StatusPk__c, RetryCountNumber__c, ErrorLogTxt__c
+                FROM SyncItem__c WHERE Id = :pendingId
+            ];
+            System.assertEquals('Synced', finalRow.StatusPk__c,
+                'Row should ultimately reach Synced via the recovery + replay path');
+
+            List<WorkLog__c> logs = [
+                SELECT Id, HoursLoggedNumber__c, WorkDescriptionTxt__c
+                FROM WorkLog__c
+                WHERE WorkItemLookup__c = :parent.Id
+            ];
+            System.assertEquals(1, logs.size(), 'Replayed payload should land exactly one WorkLog');
+            System.assertEquals(2.25, logs[0].HoursLoggedNumber__c,
+                'Hours must round-trip through Pending → Failed → Pending → Synced');
+        }
+    }
+
+    /**
      * @description Two re-deliveries of the same payload should coalesce to a
      *              single Pending row — the ingestor is idempotent on
      *              (SourceId, parentRef).
