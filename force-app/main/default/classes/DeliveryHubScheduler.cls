@@ -37,13 +37,22 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
      * @description Sweeps inbound SyncItem__c rows stuck in Pending status
      *              (stashed by DeliverySyncItemIngestor when a WorkLog's
      *              parent WorkItem hadn't synced yet) and enqueues the
-     *              resolver to re-attempt resolution. Runs every tick
-     *              alongside requeueFailedItems/requeueStagedItemsWithEndpoint
-     *              so the race-condition backlog self-heals without manual
-     *              intervention. No-ops when zero Pending rows exist.
+     *              resolver to re-attempt resolution. Also recovers Failed
+     *              inbound rows whose terminal error was "Parent WorkItem
+     *              did not arrive ..." — once the parent lands via a later
+     *              sync tick the row flips back to Pending so the resolver
+     *              can replay the payload, instead of staying Failed forever.
+     *              Empirical motivator: dh-prod 2026-05-01 had 6 WL Inbound
+     *              rows Failed with that exact error while the parents had
+     *              since synced (verified by manual re-trigger replays).
+     *              Runs every tick alongside requeueFailedItems/
+     *              requeueStagedItemsWithEndpoint so the race-condition
+     *              backlog self-heals without manual intervention.
      */
     private static void requeuePendingItems() {
         try {
+            new DeliverySyncItemPendingResolver().recoverFailedWithResolvedParent();
+
             Integer pendingCount = [
                 SELECT COUNT()
                 FROM SyncItem__c
