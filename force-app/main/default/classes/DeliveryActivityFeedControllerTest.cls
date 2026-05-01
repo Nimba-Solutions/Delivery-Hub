@@ -217,6 +217,108 @@ private class DeliveryActivityFeedControllerTest {
         }
     }
 
+    // ── Field-change suppression tests ─────────────────────────────────
+
+    @IsTest
+    static void testFieldChangeSuppressDescriptionOnly() {
+        WorkItem__c wi = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Feed Test Item 1' LIMIT 1];
+        insert new ActivityLog__c(
+            ActionTypePk__c   = 'Field_Change',
+            RecordIdTxt__c    = wi.Id,
+            UserIdTxt__c      = UserInfo.getUserId(),
+            ContextDataTxt__c = JSON.serialize(new Map<String, Object>{
+                'fieldName'  => 'WorkDescriptionTxt__c',
+                'fieldLabel' => 'Description',
+                'oldValue'   => 'Old text',
+                'newValue'   => 'New text'
+            })
+        );
+
+        System.runAs(testUser) {
+            Test.startTest();
+            Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
+                'changes', 0, null, null, null, null
+            );
+            Test.stopTest();
+
+            List<Object> events = (List<Object>) result.get('events');
+            for (Object ev : events) {
+                Map<String, Object> event = (Map<String, Object>) ev;
+                System.assertNotEquals('field_change', event.get('type'),
+                    'Description-only field change should be suppressed');
+            }
+        }
+    }
+
+    @IsTest
+    static void testFieldChangeSuppressNoOp() {
+        WorkItem__c wi = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Feed Test Item 1' LIMIT 1];
+        insert new ActivityLog__c(
+            ActionTypePk__c   = 'Field_Change',
+            RecordIdTxt__c    = wi.Id,
+            UserIdTxt__c      = UserInfo.getUserId(),
+            ContextDataTxt__c = JSON.serialize(new Map<String, Object>{
+                'fieldName'  => 'StatusPk__c',
+                'fieldLabel' => 'Status',
+                'oldValue'   => 'Approved',
+                'newValue'   => 'Approved'
+            })
+        );
+
+        System.runAs(testUser) {
+            Test.startTest();
+            Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
+                'changes', 0, null, null, null, null
+            );
+            Test.stopTest();
+
+            List<Object> events = (List<Object>) result.get('events');
+            for (Object ev : events) {
+                Map<String, Object> event = (Map<String, Object>) ev;
+                System.assertNotEquals('field_change', event.get('type'),
+                    'No-op (old==new) field change should be suppressed');
+            }
+        }
+    }
+
+    @IsTest
+    static void testFieldChangeKeepsRealChange() {
+        WorkItem__c wi = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Feed Test Item 1' LIMIT 1];
+        insert new ActivityLog__c(
+            ActionTypePk__c   = 'Field_Change',
+            RecordIdTxt__c    = wi.Id,
+            UserIdTxt__c      = UserInfo.getUserId(),
+            ContextDataTxt__c = JSON.serialize(new Map<String, Object>{
+                'fieldName'  => 'HoursLoggedNumber__c',
+                'fieldLabel' => 'Hours Logged',
+                'oldValue'   => '1.5',
+                'newValue'   => '2.0'
+            })
+        );
+
+        System.runAs(testUser) {
+            Test.startTest();
+            Map<String, Object> result = DeliveryActivityFeedController.getActivityFeed(
+                'changes', 0, null, null, null, null
+            );
+            Test.stopTest();
+
+            List<Object> events = (List<Object>) result.get('events');
+            Boolean foundRealChange = false;
+            for (Object ev : events) {
+                Map<String, Object> event = (Map<String, Object>) ev;
+                if (event.get('type') == 'field_change') {
+                    String detail = (String) event.get('detail');
+                    if (detail != null && detail.contains('1.5') && detail.contains('2.0')) {
+                        foundRealChange = true;
+                    }
+                }
+            }
+            System.assert(foundRealChange,
+                'Real Hours Logged change should surface with FROM → TO detail');
+        }
+    }
+
     // ── getConversations tests ─────────────────────────────────────────
 
     @IsTest
