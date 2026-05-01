@@ -223,6 +223,64 @@ private class DeliverySyncEngineTest {
 
     // ── Additional Coverage Tests ───────────────────────────────────────
 
+    /**
+     * @description Empty-payload guard #1 — when a caller passes an empty
+     *              allowedFields Set, captureChanges should not emit a
+     *              SyncItem. Pre-guard, the receiver-side ingestor would
+     *              have rejected the resulting routing-metadata-only payload
+     *              and the reconciler would re-fire the gap every tick.
+     */
+    @IsTest
+    static void testEmptyAllowedFieldsSkipsSyncItem() {
+        System.runAs(testUser) {
+            WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
+            delete [SELECT Id FROM SyncItem__c];
+
+            Test.startTest();
+            DeliverySyncEngine.captureChanges(
+                new List<SObject>{t},
+                null,
+                new Set<String>()
+            );
+            Test.stopTest();
+
+            Integer count = [SELECT COUNT() FROM SyncItem__c];
+            System.assertEquals(0, count,
+                'No SyncItems should be created when allowedFields is empty');
+        }
+    }
+
+    /**
+     * @description Empty-payload guard #2 — when every allowed field
+     *              resolves to null on a record (typo'd field names,
+     *              namespace-stripping bug, or genuinely blank record),
+     *              the SyncItem should be skipped with a WARN log instead
+     *              of poisoning the dispatcher with a routing-only payload.
+     *              This is the receiver-side bug class behind PR #742.
+     */
+    @IsTest
+    static void testAllNullBusinessFieldsSkipsSyncItem() {
+        System.runAs(testUser) {
+            WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
+            delete [SELECT Id FROM SyncItem__c];
+
+            Test.startTest();
+            // Pass field names that don't exist on WorkItem__c — every
+            // getSafeValue lookup returns null, mimicking the namespace
+            // bug + typo-bug profile.
+            DeliverySyncEngine.captureChanges(
+                new List<SObject>{t},
+                null,
+                new Set<String>{'NonExistentField1__c', 'NonExistentField2__c'}
+            );
+            Test.stopTest();
+
+            Integer count = [SELECT COUNT() FROM SyncItem__c];
+            System.assertEquals(0, count,
+                'No SyncItems should be created when every allowed field resolves to null');
+        }
+    }
+
     @IsTest
     static void testCaptureChangesNullRecordsReturnsEarly() {
         System.runAs(testUser) {
