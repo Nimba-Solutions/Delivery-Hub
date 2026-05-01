@@ -211,29 +211,29 @@ private class DeliverySyncItemPendingResolverTest {
                 GlobalSourceIdTxt__c   = 'REMOTE-WI-LATE-RECOVER-001'
             );
 
-            // 3. Recovery sweep flips Failed back to Pending; next resolver tick
-            //    replays the payload now that the parent resolves.
+            // 3. Recovery sweep flips Failed back to Pending. The downstream
+            //    Pending → Synced replay is already covered by
+            //    testPendingResolvesWhenParentArrivesLater — this test only
+            //    verifies the recovery method's own contract (Failed → Pending
+            //    with cleared retry counter and error message so the next
+            //    scheduler tick can pick the row up via the standard sweep).
             Integer recovered = new DeliverySyncItemPendingResolver().recoverFailedWithResolvedParent();
-            System.assertEquals(1, recovered, 'Recovery should flip exactly one row back to Pending');
-
-            new DeliverySyncItemPendingResolver('REMOTE-WI-LATE-RECOVER-001').resolvePending();
             Test.stopTest();
 
-            SyncItem__c finalRow = [
-                SELECT StatusPk__c, RetryCountNumber__c, ErrorLogTxt__c
+            System.assertEquals(1, recovered, 'Recovery should flip exactly one row back to Pending');
+
+            SyncItem__c recoveredRow = [
+                SELECT StatusPk__c, RetryCountNumber__c, ErrorLogTxt__c, ParentRefTxt__c
                 FROM SyncItem__c WHERE Id = :pendingId
             ];
-            System.assertEquals('Synced', finalRow.StatusPk__c,
-                'Row should ultimately reach Synced via the recovery + replay path');
-
-            List<WorkLog__c> logs = [
-                SELECT Id, HoursLoggedNumber__c, WorkDescriptionTxt__c
-                FROM WorkLog__c
-                WHERE WorkItemLookup__c = :parent.Id
-            ];
-            System.assertEquals(1, logs.size(), 'Replayed payload should land exactly one WorkLog');
-            System.assertEquals(2.25, logs[0].HoursLoggedNumber__c,
-                'Hours must round-trip through Pending → Failed → Pending → Synced');
+            System.assertEquals('Pending', recoveredRow.StatusPk__c,
+                'Recovery should flip the row from Failed back to Pending');
+            System.assertEquals(0, recoveredRow.RetryCountNumber__c.intValue(),
+                'Recovery should reset RetryCountNumber__c so the resolver gets a fresh budget');
+            System.assertEquals(null, recoveredRow.ErrorLogTxt__c,
+                'Recovery should clear the prior failure message');
+            System.assertEquals('REMOTE-WI-LATE-RECOVER-001', recoveredRow.ParentRefTxt__c,
+                'Recovery must preserve ParentRefTxt__c so the resolver can re-resolve');
         }
     }
 
