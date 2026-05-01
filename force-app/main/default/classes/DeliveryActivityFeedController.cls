@@ -13,6 +13,13 @@ global with sharing class DeliveryActivityFeedController {
 
     private static final Integer PAGE_SIZE = 25;
 
+    // Field-change events on these (namespace-stripped, lowercase) API names are
+    // suppressed from the Activity Feed as cosmetic/ambient noise. Description
+    // edits and rollup recalcs don't tell a reader anything they need to act on.
+    private static final Set<String> SUPPRESSED_FIELD_API_NAMES = new Set<String>{
+        'workdescriptiontxt__c'
+    };
+
     // ── Unified Activity Feed ──────────────────────────────────────────
 
     /**
@@ -429,7 +436,10 @@ global with sharing class DeliveryActivityFeedController {
 
         List<Map<String, Object>> results = new List<Map<String, Object>>();
         for (ActivityLog__c al : logs) {
-            results.add(buildActivityLogEvent(al, userNameMap));
+            Map<String, Object> ev = buildActivityLogEvent(al, userNameMap);
+            if (ev != null) {
+                results.add(ev);
+            }
         }
         return results;
     }
@@ -463,6 +473,9 @@ global with sharing class DeliveryActivityFeedController {
     }
 
     private static Map<String, Object> buildActivityLogEvent(ActivityLog__c al, Map<Id, String> userNameMap) {
+        if (al.ActionTypePk__c == 'Field_Change' && shouldSuppressFieldChange(al.ContextDataTxt__c)) {
+            return null;
+        }
         String userName = resolveUserName(al.UserIdTxt__c, userNameMap);
         Map<String, String> changeInfo = parseChangeContext(al.ContextDataTxt__c, al.ActionTypePk__c);
         Id recordId = safeToId(al.RecordIdTxt__c);
@@ -496,6 +509,59 @@ global with sharing class DeliveryActivityFeedController {
             System.debug(LoggingLevel.FINE, 'Invalid Id string: ' + idString);
             return null;
         }
+    }
+
+    /**
+     * @description Returns true when a Field_Change ActivityLog event should
+     * NOT render in the Activity Feed. Two suppression rules: (1) field is in
+     * SUPPRESSED_FIELD_API_NAMES (description-only edits etc.); (2) oldValue
+     * equals newValue (no-op saves; e.g. trigger logic re-flipping Status to
+     * its existing value, or rollup recalcs landing on the same number).
+     * Falls open on parse error so parseChangeContext stays the single source
+     * of truth for malformed JSON fallback.
+     * @param contextDataJson Raw ContextDataTxt__c JSON from the ActivityLog__c row.
+     * @return True if the event should be filtered out of the feed.
+     */
+    private static Boolean shouldSuppressFieldChange(String contextDataJson) {
+        if (String.isBlank(contextDataJson)) {
+            return false;
+        }
+        try {
+            Map<String, Object> ctx = (Map<String, Object>) JSON.deserializeUntyped(contextDataJson);
+            String fieldName = ctx.get('fieldName') == null
+                ? ''
+                : stripFieldNamespace(String.valueOf(ctx.get('fieldName'))).toLowerCase();
+            if (SUPPRESSED_FIELD_API_NAMES.contains(fieldName)) {
+                return true;
+            }
+            Object oldVal = ctx.get('oldValue');
+            Object newVal = ctx.get('newValue');
+            if (oldVal == null && newVal == null) {
+                return true;
+            }
+            if (oldVal != null && newVal != null
+                && String.valueOf(oldVal) == String.valueOf(newVal)) {
+                return true;
+            }
+            return false;
+        } catch (JSONException ex) {
+            return false;
+        }
+    }
+
+    /**
+     * @description Strips the namespace prefix from a field API name so
+     * `delivery__WorkDescriptionTxt__c` and the unprefixed
+     * `WorkDescriptionTxt__c` both match suppression rules. Mirrors the
+     * helper in DeliverySyncItemIngestor.
+     * @param apiName The field API name as captured in ContextDataTxt__c.
+     * @return The API name with the namespace prefix removed if one was present.
+     */
+    private static String stripFieldNamespace(String apiName) {
+        if (String.isNotBlank(apiName) && apiName.countMatches('__') > 1) {
+            return apiName.substringAfter('__');
+        }
+        return apiName;
     }
 
     private static Map<String, String> parseChangeContext(String contextDataJson, String actionType) {
