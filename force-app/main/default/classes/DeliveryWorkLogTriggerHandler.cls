@@ -203,16 +203,12 @@ public with sharing class DeliveryWorkLogTriggerHandler {
             return;
         }
 
-        // Align WorkLog outbound scope to the upstream-client edge defined in
-        // DeliverySyncEngine.captureChanges. A WorkLog is eligible for outbound
-        // sync if and only if its parent WorkItem would itself push upstream —
-        // i.e. the parent's ClientNetworkEntityLookup__c has EntityTypePk__c
-        // IN ('Client','Both') AND a populated IntegrationEndpointUrlTxt__c.
-        // Without the EntityTypePk__c + endpoint guard, WorkLogs were shipped
-        // to orgs that never received the parent WorkItem (T-0129: 8.5h of
-        // time landed on dh-prod as orphaned inbound SyncItems with no local
-        // parent to resolve against — permanently unbillable until manual
-        // hand-firing of the parent outbound).
+        // ── Hub mode: upstream to Client ───────────────────────────────
+        // Eligible iff the parent WorkItem's ClientNetworkEntityLookup__c
+        // is Client/Both with a populated endpoint. Without this guard
+        // WorkLogs shipped to orgs that never received the parent WorkItem
+        // (T-0129: 8.5h on dh-prod as orphan inbound, permanently unbillable
+        // until manual hand-firing).
         Map<Id, WorkItem__c> clientWorkItems = new Map<Id, WorkItem__c>([
             SELECT Id, ClientNetworkEntityLookup__c
             FROM WorkItem__c
@@ -223,11 +219,38 @@ public with sharing class DeliveryWorkLogTriggerHandler {
             WITH SYSTEM_MODE
         ]);
 
-        if (clientWorkItems.isEmpty()) {
+        // ── Push mode: downstream to Vendor via WorkRequest bridge ─────
+        // Mirrors the Push branch in DeliverySyncEngine.captureChanges
+        // (lines 86-104) so WorkLog outbound also fans out via active
+        // WorkRequest connections to Vendor/Both entities. Pre-fix the WL
+        // handler ONLY did Hub mode — orgs whose WI parent had no Client
+        // entry (e.g. MF-Prod, where the only NetworkEntity is Cloud Nimbus
+        // as a Vendor) silently dropped every WorkLog outbound. Empirically:
+        // MF-Prod 9 WLs inserted 2026-05-01 → zero SyncItems → 69.5h had
+        // to be manually mirrored to dh-prod for the April invoice.
+        Map<Id, List<WorkRequest__c>> pushRoutes = new Map<Id, List<WorkRequest__c>>();
+        for (WorkRequest__c req : [
+            SELECT Id, WorkItemId__c, RemoteWorkItemIdTxt__c
+            FROM WorkRequest__c
+            WHERE WorkItemId__c IN :workItemIds
+            AND StatusPk__c != 'Inactive'
+            AND DeliveryEntityLookup__c != null
+            AND DeliveryEntityLookup__r.EntityTypePk__c IN ('Vendor', 'Both')
+            AND DeliveryEntityLookup__r.IntegrationEndpointUrlTxt__c != null
+            WITH SYSTEM_MODE
+        ]) {
+            if (!pushRoutes.containsKey(req.WorkItemId__c)) {
+                pushRoutes.put(req.WorkItemId__c, new List<WorkRequest__c>());
+            }
+            pushRoutes.get(req.WorkItemId__c).add(req);
+        }
+
+        if (clientWorkItems.isEmpty() && pushRoutes.isEmpty()) {
             return;
         }
 
         List<SyncItem__c> syncItems = buildSyncItems(logs, clientWorkItems);
+        syncItems.addAll(buildPushSyncItems(logs, pushRoutes));
         if (!syncItems.isEmpty()) {
             Database.insert(syncItems, AccessLevel.SYSTEM_MODE);
             if (!Test.isRunningTest() && Limits.getQueueableJobs() == 0 && !System.isQueueable() && !System.isFuture()) {
@@ -301,6 +324,53 @@ public with sharing class DeliveryWorkLogTriggerHandler {
                 GlobalSourceIdTxt__c    = (String) wl.Id,
                 PayloadTxt__c           = JSON.serialize(payload)
             ));
+        }
+        return items;
+    }
+
+    /**
+     * @description Builds Push-mode outbound SyncItem__c records — one per
+     *              (WorkLog × WorkRequest-route) pair — for every WorkLog
+     *              whose parent WorkItem fans out to a Vendor/Both
+     *              NetworkEntity through an active WorkRequest bridge.
+     *              Mirrors the Hub-mode buildSyncItems shape but populates
+     *              RequestLookup__c + payload.TargetId so the dispatcher
+     *              routes via the WorkRequest's DeliveryEntity endpoint.
+     * @param logs The WorkLog__c records being synced.
+     * @param pushRoutes Map of parent WorkItem Id → list of active
+     *                   WorkRequest connections to Vendor/Both entities.
+     * @return List of Push-mode SyncItem__c records ready for insert.
+     */
+    private static List<SyncItem__c> buildPushSyncItems(List<WorkLog__c> logs, Map<Id, List<WorkRequest__c>> pushRoutes) {
+        String senderOrgId = UserInfo.getOrganizationId();
+        List<SyncItem__c> items = new List<SyncItem__c>();
+        for (WorkLog__c wl : logs) {
+            List<WorkRequest__c> reqs = pushRoutes.get(wl.WorkItemLookup__c);
+            if (reqs == null || reqs.isEmpty()) {
+                continue;
+            }
+            for (WorkRequest__c req : reqs) {
+                Map<String, Object> payload = new Map<String, Object>{
+                    'SourceId'               => wl.Id,
+                    'SenderOrgId'            => senderOrgId,
+                    'GlobalSourceId'         => (String) wl.Id,
+                    'TargetId'               => req.RemoteWorkItemIdTxt__c,
+                    'WorkItemLookup__c'      => wl.WorkItemLookup__c,
+                    'HoursLoggedNumber__c'   => wl.HoursLoggedNumber__c,
+                    'WorkDateDate__c'        => String.valueOf(wl.WorkDateDate__c),
+                    'WorkDescriptionTxt__c'  => wl.WorkDescriptionTxt__c
+                };
+                items.add(new SyncItem__c(
+                    ObjectTypePk__c         = 'WorkLog__c',
+                    LocalRecordIdTxt__c     = wl.Id,
+                    WorkItemLookup__c       = wl.WorkItemLookup__c,
+                    RequestLookup__c        = req.Id,
+                    DirectionPk__c          = 'Outbound',
+                    StatusPk__c             = 'Queued',
+                    GlobalSourceIdTxt__c    = (String) wl.Id,
+                    PayloadTxt__c           = JSON.serialize(payload)
+                ));
+            }
         }
         return items;
     }
