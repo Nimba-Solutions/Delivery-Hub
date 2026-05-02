@@ -344,13 +344,22 @@ private class DeliveryWorkLogTriggerHandlerTest {
             );
             Test.stopTest();
 
-            List<SyncItem__c> items = [
+            // T-0129 invariant: Hub-mode (upstream-to-Client) WL outbound must
+            // NOT fire when parent's ClientNetworkEntity is Vendor-typed (the
+            // 8.5h phantom-ledger bug class). Push-mode WL outbound to a
+            // routed Vendor is a separate direction added by PR #746 and IS
+            // expected to fire here (the WI itself fans out Push too via
+            // DeliverySyncEngine.captureChanges, so the WL travelling
+            // alongside is symmetric and correct). Assertion narrowed to
+            // Hub-mode rows only (RequestLookup__c is null).
+            List<SyncItem__c> hubItems = [
                 SELECT Id FROM SyncItem__c
                 WHERE WorkItemLookup__c = :disconnectedWorkItem.Id
                 AND ObjectTypePk__c = 'WorkLog__c'
+                AND RequestLookup__c = null
             ];
-            System.assertEquals(0, items.size(),
-                'WorkLog for a WorkItem whose client entity is not Client/Both must not create an outbound SyncItem');
+            System.assertEquals(0, hubItems.size(),
+                'Hub-mode WL outbound must not fire when parent client entity is Vendor-typed');
         }
     }
 
@@ -450,26 +459,40 @@ private class DeliveryWorkLogTriggerHandlerTest {
     @IsTest
     static void testWorkLogPushModeViaVendorRoute() {
         System.runAs(testUser) {
-            // Setup mirrors MF-Prod: only Vendor entity, no Client. The
-            // standard @TestSetup vendor lacks an endpoint URL — populate
-            // one here so the Push query matches.
-            NetworkEntity__c vendor = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Test Vendor' LIMIT 1];
-            vendor.IntegrationEndpointUrlTxt__c = 'https://test-vendor.example.com';
-            update vendor;
+            // Build an isolated MF-Prod-shaped scenario inside the test:
+            // only a Vendor entity (no Client), parent WI with no
+            // ClientNetworkEntityLookup, and an active WorkRequest bridge
+            // routing to that Vendor (with endpoint URL). Pre-fix this
+            // produced zero SyncItems on MF-Prod; post-fix one Push-mode
+            // SyncItem should fire.
+            NetworkEntity__c pushVendor = new NetworkEntity__c(
+                Name = 'Push-Mode Vendor',
+                EntityTypePk__c = 'Vendor',
+                StatusPk__c = 'Active',
+                IntegrationEndpointUrlTxt__c = 'https://push-vendor.example.com'
+            );
+            insert pushVendor;
 
-            // The "unlinked" WI has no ClientNetworkEntityLookup but DOES have
-            // a WorkRequest pointing at the (now-endpointed) vendor. Pre-fix
-            // this scenario produced zero SyncItems; post-fix it should
-            // produce one Push-mode SyncItem.
-            WorkItem__c workItem = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'No Client Work Item' LIMIT 1];
-            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
-            request.RemoteWorkItemIdTxt__c = 'REMOTE-VENDOR-WI-001';
-            update request;
+            WorkItem__c pushWi = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Push-mode WI (no client)',
+                StageNamePk__c = 'In Development'
+            );
+            insert pushWi;
+
+            WorkRequest__c pushReq = new WorkRequest__c(
+                WorkItemId__c = pushWi.Id,
+                DeliveryEntityLookup__c = pushVendor.Id,
+                QuotedHoursNumber__c = 10,
+                HourlyRateCurrency__c = 100,
+                StatusPk__c = 'Accepted',
+                RemoteWorkItemIdTxt__c = 'REMOTE-VENDOR-WI-001'
+            );
+            insert pushReq;
 
             Test.startTest();
             insert new WorkLog__c(
-                RequestId__c           = request.Id,
-                WorkItemLookup__c      = workItem.Id,
+                RequestId__c           = pushReq.Id,
+                WorkItemLookup__c      = pushWi.Id,
                 HoursLoggedNumber__c   = 4.5,
                 WorkDateDate__c        = Date.today(),
                 WorkDescriptionTxt__c  = 'Push-mode regression test'
@@ -479,14 +502,14 @@ private class DeliveryWorkLogTriggerHandlerTest {
             List<SyncItem__c> items = [
                 SELECT Id, ObjectTypePk__c, DirectionPk__c, StatusPk__c, RequestLookup__c, PayloadTxt__c
                 FROM SyncItem__c
-                WHERE WorkItemLookup__c = :workItem.Id
+                WHERE WorkItemLookup__c = :pushWi.Id
                 AND ObjectTypePk__c = 'WorkLog__c'
             ];
             System.assertEquals(1, items.size(),
                 'Push-mode WL outbound should produce one SyncItem when parent WI has a routed Vendor request');
             System.assertEquals('Outbound', items[0].DirectionPk__c);
             System.assertEquals('Queued', items[0].StatusPk__c);
-            System.assertEquals(request.Id, items[0].RequestLookup__c,
+            System.assertEquals(pushReq.Id, items[0].RequestLookup__c,
                 'Push-mode SyncItem must carry RequestLookup__c so the dispatcher routes via the vendor endpoint');
             System.assert(items[0].PayloadTxt__c.contains('REMOTE-VENDOR-WI-001'),
                 'Payload must include the remote WorkItem Id as TargetId for vendor-side ingestor');
