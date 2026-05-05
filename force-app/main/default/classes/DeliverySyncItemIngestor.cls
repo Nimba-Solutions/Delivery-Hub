@@ -376,6 +376,30 @@ public without sharing class DeliverySyncItemIngestor {
             }
         }
 
+        // Predecisional gate (5/5 incident): refuse inbound WorkItem writes
+        // whose payload carries a non-null MarkedPredecisionalDateTime__c
+        // unless the receiving org has opted in via DeliveryHubSettings__c.
+        // EnablePredecisionalIngestDateTime__c. The 5 QBAG-* records leaked
+        // from a sandbox into production because nothing on the receiver
+        // side knew they were proposal-staging only. Applies to both insert
+        // and update so a sandbox-side flip can't mutate already-promoted
+        // production records back into a predecisional state.
+        if (objectType.endsWithIgnoreCase('WorkItem__c')
+                && !objectType.endsWithIgnoreCase('WorkItemComment__c')
+                && isPredecisionalPayload(payload)) {
+            DeliveryHubSettings__c gateSettings = DeliveryHubSettings__c.getOrgDefaults();
+            Boolean ingestEnabled = gateSettings != null
+                && gateSettings.EnablePredecisionalIngestDateTime__c != null;
+            if (!ingestEnabled) {
+                throw new DeliverySyncEngine.SyncException(
+                    'Predecisional WorkItem refused at ingestor: receiving org '
+                    + 'has not enabled predecisional ingest. Mark the source '
+                    + 'record non-predecisional or set '
+                    + 'DeliveryHubSettings__c.EnablePredecisionalIngestDateTime__c '
+                    + 'to opt-in. SourceId: ' + sourceId);
+            }
+        }
+
         // Tell trigger handlers that the source org owns auto-populated fields
         // (e.g. WorkItem__c.ActivatedDateTime__c) so receiver-side defaults
         // don't overwrite the source value during ingest.
@@ -729,6 +753,32 @@ public without sharing class DeliverySyncItemIngestor {
                 return;
             }
         }
+    }
+
+    /**
+     * @description Checks whether an inbound WorkItem payload carries a
+     * non-null MarkedPredecisionalDateTime__c value. Tolerates both the
+     * bare and namespaced field keys; tolerates the value arriving as a
+     * String, DateTime, or pre-serialized number (different sender stacks
+     * shape DateTimes differently).
+     * @param payload Deserialized inbound payload.
+     * @return True when the payload marks the record predecisional.
+     */
+    private static Boolean isPredecisionalPayload(Map<String, Object> payload) {
+        if (payload == null) {
+            return false;
+        }
+        Object raw = payload.get('MarkedPredecisionalDateTime__c');
+        if (raw == null) {
+            raw = payload.get(getNamespacePrefix() + 'MarkedPredecisionalDateTime__c');
+        }
+        if (raw == null) {
+            return false;
+        }
+        if (raw instanceof String) {
+            return String.isNotBlank((String) raw);
+        }
+        return true;
     }
 
     private static Boolean hasField(Schema.SObjectType type, String fieldName) {
