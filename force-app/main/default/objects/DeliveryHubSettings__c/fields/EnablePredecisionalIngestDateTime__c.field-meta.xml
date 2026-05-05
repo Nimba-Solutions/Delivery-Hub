@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnablePredecisionalIngestDateTime__c</fullName>
+    <description>When non-null, this org accepts inbound WorkItem records whose MarkedPredecisionalDateTime__c is also set. Null = predecisional inbounds are refused (default). Sandboxes that stage proposal content for review should leave this null on the production peer and set it on themselves so predecisional content stays in the sandbox until promoted.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set to a date/time to allow predecisional WorkItems to land in this org via cross-org sync. Leave blank to refuse predecisional inbound (recommended for production).</inlineHelpText>
+    <label>Enable Predecisional Ingest</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
