@@ -632,10 +632,14 @@ private class DeliverySyncItemIngestorTest {
         upsert settings;
 
         System.runAs(testUser) {
+            // ISO 8601 format mirrors how outbound JSON.serialize shapes
+            // DateTime fields on the wire — what mapFields' DateTime branch
+            // expects to deserialize cleanly.
+            String isoNow = DateTime.now().formatGmt('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'');
             Map<String, Object> payload = new Map<String, Object>{
                 'SourceId' => 'REMOTE-PREDECISIONAL-001',
                 'BriefDescriptionTxt__c' => 'QBAG-X: predecisional sandbox item',
-                'MarkedPredecisionalDateTime__c' => String.valueOf(DateTime.now())
+                'MarkedPredecisionalDateTime__c' => isoNow
             };
 
             Test.startTest();
@@ -673,10 +677,11 @@ private class DeliverySyncItemIngestorTest {
         upsert settings;
 
         System.runAs(testUser) {
+            String isoNow = DateTime.now().formatGmt('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'');
             Map<String, Object> payload = new Map<String, Object>{
                 'SourceId' => 'REMOTE-PREDECISIONAL-002',
                 'BriefDescriptionTxt__c' => 'QBAG-Y: opt-in receiver',
-                'MarkedPredecisionalDateTime__c' => String.valueOf(DateTime.now())
+                'MarkedPredecisionalDateTime__c' => isoNow
             };
 
             Test.startTest();
