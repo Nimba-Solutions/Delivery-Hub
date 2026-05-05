@@ -108,7 +108,14 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             'BountyTokenTxt__c',
             'BountyDifficultyPk__c',
             'BountySkillsTxt__c',
-            'BountyMaxClaimsNumber__c'
+            'BountyMaxClaimsNumber__c',
+            // MarkedPredecisionalDateTime__c travels with the record so receivers
+            // can refuse predecisional inbound when their DeliveryHubSettings__c
+            // does not have EnablePredecisionalIngestDateTime__c set. Closes the
+            // QBAG-leakage gap (5/5: 5 proposal-staging items synced from a
+            // sandbox into a production org because nothing on the receiver
+            // side knew they were predecisional).
+            'MarkedPredecisionalDateTime__c'
         };
 
         DeliverySyncEngine.captureChanges(newRows, oldMap, syncFields);
