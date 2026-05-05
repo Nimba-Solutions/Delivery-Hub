@@ -619,6 +619,111 @@ private class DeliverySyncItemIngestorTest {
         }
     }
 
+    @IsTest
+    static void testPredecisionalInsertRefusedWhenSettingNull() {
+        // Receiving org with EnablePredecisionalIngestDateTime__c = null (default)
+        // must refuse a predecisional inbound WorkItem create. Closes the QBAG-leakage
+        // gap (5 sandbox proposal-staging items synced into a production org 5/5).
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        if (settings == null) {
+            settings = new DeliveryHubSettings__c();
+        }
+        settings.EnablePredecisionalIngestDateTime__c = null;
+        upsert settings;
+
+        System.runAs(testUser) {
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-PREDECISIONAL-001',
+                'BriefDescriptionTxt__c' => 'QBAG-X: predecisional sandbox item',
+                'MarkedPredecisionalDateTime__c' => String.valueOf(DateTime.now())
+            };
+
+            Test.startTest();
+            Boolean threw = false;
+            String msg;
+            try {
+                DeliverySyncItemIngestor.processInboundItem('WorkItem__c', payload);
+            } catch (DeliverySyncEngine.SyncException e) {
+                threw = true;
+                msg = e.getMessage();
+            }
+            Test.stopTest();
+
+            System.assert(threw, 'Predecisional inbound must be refused when receiving org has not opted in');
+            System.assert(msg.contains('Predecisional WorkItem refused'),
+                'Refusal message should identify the predecisional gate; got: ' + msg);
+
+            List<WorkItem__c> created = [
+                SELECT Id FROM WorkItem__c
+                WHERE BriefDescriptionTxt__c = 'QBAG-X: predecisional sandbox item'
+            ];
+            System.assertEquals(0, created.size(), 'No WorkItem should be created when the gate refuses the inbound');
+        }
+    }
+
+    @IsTest
+    static void testPredecisionalInsertAllowedWhenSettingEnabled() {
+        // Receiving org that opts in (e.g., a sandbox staging proposals) must
+        // accept predecisional inbound WorkItems normally.
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        if (settings == null) {
+            settings = new DeliveryHubSettings__c();
+        }
+        settings.EnablePredecisionalIngestDateTime__c = DateTime.now();
+        upsert settings;
+
+        System.runAs(testUser) {
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-PREDECISIONAL-002',
+                'BriefDescriptionTxt__c' => 'QBAG-Y: opt-in receiver',
+                'MarkedPredecisionalDateTime__c' => String.valueOf(DateTime.now())
+            };
+
+            Test.startTest();
+            Id resultId = DeliverySyncItemIngestor.processInboundItem('WorkItem__c', payload);
+            Test.stopTest();
+
+            System.assertNotEquals(null, resultId, 'Predecisional inbound must be accepted when the gate is open');
+            WorkItem__c after = [
+                SELECT BriefDescriptionTxt__c, MarkedPredecisionalDateTime__c
+                FROM WorkItem__c WHERE Id = :resultId
+            ];
+            System.assertEquals('QBAG-Y: opt-in receiver', after.BriefDescriptionTxt__c);
+            System.assertNotEquals(null, after.MarkedPredecisionalDateTime__c,
+                'Predecisional flag should be persisted on the receiver-side record so the receiver can re-emit it cross-org');
+        }
+    }
+
+    @IsTest
+    static void testNonPredecisionalInsertAllowedWhenSettingNull() {
+        // Regression guard: orgs with the gate closed must still accept normal
+        // (non-predecisional) inbound creates without interference.
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        if (settings == null) {
+            settings = new DeliveryHubSettings__c();
+        }
+        settings.EnablePredecisionalIngestDateTime__c = null;
+        upsert settings;
+
+        System.runAs(testUser) {
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-NORMAL-003',
+                'BriefDescriptionTxt__c' => 'Non-predecisional inbound'
+            };
+
+            Test.startTest();
+            Id resultId = DeliverySyncItemIngestor.processInboundItem('WorkItem__c', payload);
+            Test.stopTest();
+
+            System.assertNotEquals(null, resultId, 'Non-predecisional inbound must pass through the closed gate');
+            WorkItem__c after = [
+                SELECT MarkedPredecisionalDateTime__c FROM WorkItem__c WHERE Id = :resultId
+            ];
+            System.assertEquals(null, after.MarkedPredecisionalDateTime__c,
+                'Receiver-side flag should remain null when the source did not mark the record predecisional');
+        }
+    }
+
     /**
      * @description Minimal HttpCalloutMock for the pull-callout path —
      *              tests that exercise the ingestor enqueue a fetcher

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>MarkedPredecisionalDateTime__c</fullName>
+    <description>When non-null, this work item is predecisional (proposal-staging only) and must not be ingested into orgs that have not enabled predecisional ingest on DeliveryHubSettings__c. The timestamp records when the record was marked predecisional. Travels with the record via the sync field set so receivers can enforce the gate locally.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set to a date/time when this item is for proposal staging only. Receiving orgs without predecisional ingest enabled will refuse the inbound write.</inlineHelpText>
+    <label>Marked Predecisional</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
