@@ -53,6 +53,8 @@ import updateWorkItemParent from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGa
 import createWorkItemDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.createWorkItemDependency';
 import deleteWorkItemDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.deleteWorkItemDependency';
 import updateWorkItemFields from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemFields';
+import isBypassAuditPassEnabled from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.isBypassAuditPassEnabled';
+import commitGanttPatches from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.commitGanttPatches';
 
 // Tab DeveloperNames used by the fullscreen nav pair. Centralized here so the
 // names are discoverable from a single search.
@@ -476,16 +478,19 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
 
     async _loadAndMount() {
         try {
-            // Parallel-fetch tasks + dependencies. Dependencies include
-            // completed-dependent tasks (showCompleted:true) so dangling
-            // arrows don't disappear when the target task is hidden — v0
-            // NG renders them gracefully.
-            const [data, deps] = await Promise.all([
+            // Parallel-fetch tasks + dependencies + audit-pass setting.
+            // Dependencies include completed-dependent tasks
+            // (showCompleted:true) so dangling arrows don't disappear when
+            // the target task is hidden. Bypass setting is read once at
+            // mount; admin toggle takes effect on next page load.
+            const [data, deps, bypass] = await Promise.all([
                 getProFormaTimelineData({ showCompleted: false }),
                 getGanttDependencies({ showCompleted: true }),
+                isBypassAuditPassEnabled(),
             ]);
             this._tasks = data || [];
             this._dependencies = this._mapDependenciesForNg(deps);
+            this._auditPassEnabled = !bypass;
             // Give DOM a tick to render the container
             await new Promise(resolve => setTimeout(resolve, 0));
             this._mount();
@@ -660,6 +665,43 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 onDependencyAction: (action, depId, pos) => this._handleCtxDependencyAction(action, depId, pos),
             },
         };
+
+        // Audit-pass wiring: when DeliveryHubSettings__c.BypassAuditPassDateTime__c
+        // is null (default, safe), buffer drag/reorder edits in nimbus-gantt's
+        // pendingBuffer and let the operator review + Submit + commit in batch.
+        // When the setting is set, drags DML immediately as before. The
+        // setting is read once at mount; flipping it requires a refresh.
+        if (this._auditPassEnabled) {
+            mountConfig.batchMode = true;
+            mountConfig.onAuditSubmit = async (note) => {
+                if (!this._mountHandle || typeof this._mountHandle.getPendingEdits !== 'function') {
+                    return { ok: false, msg: 'Gantt handle missing getPendingEdits — cannot read pending buffer' };
+                }
+                const pending = this._mountHandle.getPendingEdits() || [];
+                if (pending.length === 0) {
+                    return { ok: true, msg: 'no changes to commit' };
+                }
+                try {
+                    const result = await commitGanttPatches({
+                        patchesJson: JSON.stringify(pending),
+                        commitNote: note || null,
+                    });
+                    // Refetch authoritative state so the post-commit gantt matches
+                    // what just persisted (vs. relying on optimistic patches).
+                    await this._scheduleRefetch();
+                    return {
+                        ok: true,
+                        msg: (result && result.message) || `${pending.length} patches committed`,
+                    };
+                } catch (error) {
+                    const errMsg = (error && error.body && error.body.message)
+                        || (error && error.message)
+                        || String(error);
+                    this._showError('Audit-pass commit failed', error);
+                    return { ok: false, msg: errMsg };
+                }
+            };
+        }
 
         // Wire onItemEdit on both embedded + fullscreen. NG 0.185.15's
         // DetailPanel uses this callback for form-submit regardless of
