@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>BypassAuditPassDateTime__c</fullName>
+    <description>When non-null, bypass the gantt audit-pass review step — drag/reorder edits DML immediately as they did before audit-pass was wired up. Null = audit-pass ON (default; safe), edits buffer in pendingBuffer until the operator reviews them in the audit panel and clicks Submit + commit. Inverted-name field (Bypass, not Enable) so the safe posture is the default null state, mirroring the LWC1503 inverted-prop convention.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set to a date/time to bypass the audit-pass step (drag = immediate save). Leave blank for audit-pass behavior (drag stages a change, operator submits + commits in batch).</inlineHelpText>
+    <label>Bypass Audit Pass</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
