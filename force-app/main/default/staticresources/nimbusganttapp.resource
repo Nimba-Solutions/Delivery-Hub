@@ -4078,9 +4078,22 @@ var NimbusGanttApp = (function(exports) {
         await runSubmit();
         return;
       }
-      openPreviewModal(pending, async () => {
-        await runSubmit();
-      });
+      openPreviewModal(
+        pending,
+        async () => {
+          await runSubmit();
+        },
+        // 0.190 — per-row ✗ rejector. When the host wires
+        // config.onRejectPendingChange, surface it; modal calls back into
+        // the audit-pass module to refresh its row list against the
+        // freshly-shrunk buffer (latestProps.config.pendingChanges is
+        // updated by the IIFEApp's syncPendingChanges → renderSlots cycle).
+        p.config.onRejectPendingChange ? (taskId) => {
+          var _a, _b;
+          (_b = (_a = p.config).onRejectPendingChange) == null ? void 0 : _b.call(_a, taskId);
+          return latestProps.config.pendingChanges ?? [];
+        } : void 0
+      );
     }
     async function runSubmit() {
       const p = latestProps;
@@ -4117,9 +4130,10 @@ var NimbusGanttApp = (function(exports) {
       }
     };
   }
-  function openPreviewModal(items, onConfirm) {
+  function openPreviewModal(items, onConfirm, onReject) {
     const existing = document.getElementById("ng-audit-preview-modal");
     if (existing) existing.remove();
+    let currentItems = items.slice();
     const backdrop = document.createElement("div");
     backdrop.id = "ng-audit-preview-modal";
     backdrop.setAttribute("role", "dialog");
@@ -4132,8 +4146,6 @@ var NimbusGanttApp = (function(exports) {
     header.style.cssText = "padding:14px 18px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between";
     const title = document.createElement("div");
     title.style.cssText = "font-size:14px;font-weight:600;color:#0f172a";
-    const kinds = summarizeKinds(items);
-    title.textContent = "Review " + items.length + " change" + (items.length === 1 ? "" : "s") + " - " + kinds;
     const close = document.createElement("button");
     close.type = "button";
     close.textContent = "✕";
@@ -4147,31 +4159,59 @@ var NimbusGanttApp = (function(exports) {
     body.style.cssText = "padding:8px 18px 12px;overflow-y:auto;flex:1";
     const list = document.createElement("ul");
     list.style.cssText = "margin:0;padding:0;list-style:none;font-size:12.5px;color:#334155";
-    for (const it of items) {
-      const li = document.createElement("li");
-      li.style.cssText = "padding:8px 0;border-bottom:1px solid #f1f5f9";
-      const head = document.createElement("div");
-      head.style.cssText = "display:flex;align-items:baseline;gap:8px;flex-wrap:wrap";
-      const idEl = document.createElement("code");
-      idEl.style.cssText = "font-family:ui-monospace,monospace;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-size:11.5px;color:#0f172a";
-      idEl.textContent = it.id;
-      head.appendChild(idEl);
-      if (it.title && it.title !== it.id) {
-        const titleEl = document.createElement("span");
-        titleEl.style.cssText = "color:#0f172a;font-weight:500";
-        titleEl.textContent = it.title;
-        head.appendChild(titleEl);
-      }
-      li.appendChild(head);
-      const descs = it.descs && it.descs.length ? it.descs : it.fields.map((f) => f + " edited");
-      const descList = document.createElement("div");
-      descList.style.cssText = "margin-top:3px;color:#475569;font-size:12px;line-height:1.45";
-      descList.textContent = descs.join(" · ");
-      li.appendChild(descList);
-      list.appendChild(li);
-    }
     body.appendChild(list);
     panel.appendChild(body);
+    function renderRows() {
+      title.textContent = "Review " + currentItems.length + " change" + (currentItems.length === 1 ? "" : "s") + " - " + summarizeKinds(currentItems);
+      while (list.firstChild) list.removeChild(list.firstChild);
+      for (const it of currentItems) {
+        const li = document.createElement("li");
+        li.style.cssText = "padding:8px 0;border-bottom:1px solid #f1f5f9;display:flex;gap:8px;align-items:flex-start";
+        const main = document.createElement("div");
+        main.style.cssText = "flex:1;min-width:0";
+        const head = document.createElement("div");
+        head.style.cssText = "display:flex;align-items:baseline;gap:8px;flex-wrap:wrap";
+        const idEl = document.createElement("code");
+        idEl.style.cssText = "font-family:ui-monospace,monospace;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-size:11.5px;color:#0f172a";
+        idEl.textContent = it.id;
+        head.appendChild(idEl);
+        if (it.title && it.title !== it.id) {
+          const titleEl = document.createElement("span");
+          titleEl.style.cssText = "color:#0f172a;font-weight:500";
+          titleEl.textContent = it.title;
+          head.appendChild(titleEl);
+        }
+        main.appendChild(head);
+        const descs = it.descs && it.descs.length ? it.descs : it.fields.map((f) => f + " edited");
+        const descList = document.createElement("div");
+        descList.style.cssText = "margin-top:3px;color:#475569;font-size:12px;line-height:1.45";
+        descList.textContent = descs.join(" · ");
+        main.appendChild(descList);
+        li.appendChild(main);
+        if (onReject) {
+          const rejectBtn = document.createElement("button");
+          rejectBtn.type = "button";
+          rejectBtn.textContent = "✗";
+          rejectBtn.setAttribute("data-testid", "audit-preview-reject");
+          rejectBtn.setAttribute("data-task-id", it.id);
+          rejectBtn.setAttribute("aria-label", "Reject changes for " + (it.title || it.id));
+          rejectBtn.title = "Reject this change (revert this row, keep the rest)";
+          rejectBtn.style.cssText = "flex:0 0 auto;background:transparent;border:1px solid #cbd5e1;border-radius:6px;padding:2px 8px;font-size:12px;color:#64748b;cursor:pointer;line-height:1.2";
+          rejectBtn.addEventListener("click", () => {
+            const next = onReject(it.id);
+            currentItems = next;
+            if (currentItems.length === 0) {
+              cleanup();
+              return;
+            }
+            renderRows();
+          });
+          li.appendChild(rejectBtn);
+        }
+        list.appendChild(li);
+      }
+    }
+    renderRows();
     const footer = document.createElement("div");
     footer.style.cssText = "padding:12px 18px;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:flex-end;gap:8px";
     const cancel = document.createElement("button");
@@ -5261,6 +5301,9 @@ var NimbusGanttApp = (function(exports) {
           },
           discardEdits() {
           },
+          removePendingPatch() {
+            return false;
+          },
           /** 0.185.1 — same impl as the chrome-aware path. Snap then scroll. */
           scrollToDate(date) {
             var _a2, _b2, _c2, _d2;
@@ -5410,12 +5453,14 @@ var NimbusGanttApp = (function(exports) {
       function bufferEdit(taskId, kind, payloadDelta, originalDelta) {
         const key = taskId + "::" + kind;
         const existing = pendingBuffer.get(key);
+        const snap = (existing == null ? void 0 : existing.original) ?? originalDelta;
         if (kind === "edit") {
           pendingBuffer.set(key, {
             taskId,
             kind: "edit",
             changes: { ...(existing == null ? void 0 : existing.changes) ?? {}, ...payloadDelta },
-            original: (existing == null ? void 0 : existing.original) ?? originalDelta,
+            original: snap,
+            before: snap,
             ts: Date.now()
           });
         } else {
@@ -5426,10 +5471,25 @@ var NimbusGanttApp = (function(exports) {
               ...(existing == null ? void 0 : existing.reorderPayload) ?? {},
               ...payloadDelta
             },
-            original: (existing == null ? void 0 : existing.original) ?? originalDelta,
+            original: snap,
+            before: snap,
             ts: Date.now()
           });
         }
+      }
+      function revertOneBuffered(p) {
+        const idx = allTasks.findIndex((t) => t.id === p.taskId);
+        if (idx === -1) return;
+        const u = { ...allTasks[idx] };
+        if (p.kind === "edit") {
+          if (p.original.startDate !== void 0) u.startDate = p.original.startDate;
+          if (p.original.endDate !== void 0) u.endDate = p.original.endDate;
+        } else {
+          if (p.original.priorityGroup !== void 0) u.priorityGroup = p.original.priorityGroup;
+          if (p.original.parentId !== void 0) u.parentWorkItemId = p.original.parentId;
+          if (p.original.sortOrder !== void 0) u.sortOrder = p.original.sortOrder;
+        }
+        allTasks[idx] = u;
       }
       function buildPendingChangesFromBuffer() {
         if (pendingBuffer.size === 0) return [];
@@ -5473,6 +5533,24 @@ var NimbusGanttApp = (function(exports) {
         if (!options.batchMode) return;
         tplConfig.pendingChanges = buildPendingChangesFromBuffer();
         renderSlots();
+      }
+      if (options.batchMode) {
+        tplConfig.onRejectPendingChange = (taskId) => {
+          let removed = false;
+          for (const kind of ["edit", "reorder"]) {
+            const key = taskId + "::" + kind;
+            const p = pendingBuffer.get(key);
+            if (!p) continue;
+            revertOneBuffered(p);
+            pendingBuffer.delete(key);
+            removed = true;
+          }
+          if (!removed) return;
+          const stillBuffered = pendingBuffer.has(taskId + "::edit") || pendingBuffer.has(taskId + "::reorder");
+          if (!stillBuffered) dirtyTaskIds.delete(taskId);
+          syncPendingChanges();
+          refreshGantt();
+        };
       }
       function dimColor(hex) {
         if (!hex) return "#94a3b880";
@@ -6555,23 +6633,27 @@ var NimbusGanttApp = (function(exports) {
          *  the user clicks Cancel on the audit preview modal. */
         discardEdits() {
           for (const p of pendingBuffer.values()) {
-            const idx = allTasks.findIndex((t) => t.id === p.taskId);
-            if (idx === -1) continue;
-            const u = { ...allTasks[idx] };
-            if (p.kind === "edit") {
-              if (p.original.startDate !== void 0) u.startDate = p.original.startDate;
-              if (p.original.endDate !== void 0) u.endDate = p.original.endDate;
-            } else {
-              if (p.original.priorityGroup !== void 0) u.priorityGroup = p.original.priorityGroup;
-              if (p.original.parentId !== void 0) u.parentWorkItemId = p.original.parentId;
-              if (p.original.sortOrder !== void 0) u.sortOrder = p.original.sortOrder;
-            }
-            allTasks[idx] = u;
+            revertOneBuffered(p);
           }
           pendingBuffer.clear();
           dirtyTaskIds.clear();
           syncPendingChanges();
           refreshGantt();
+        },
+        /** 0.190 — visual-only revert for ONE buffered patch. Cherry-pick
+         *  reject from the audit preview modal. Returns true when an entry
+         *  was removed; false on no-op (already committed, never staged). */
+        removePendingPatch(taskId, kind) {
+          const key = taskId + "::" + kind;
+          const p = pendingBuffer.get(key);
+          if (!p) return false;
+          revertOneBuffered(p);
+          pendingBuffer.delete(key);
+          const stillBuffered = pendingBuffer.has(taskId + "::edit") || pendingBuffer.has(taskId + "::reorder");
+          if (!stillBuffered) dirtyTaskIds.delete(taskId);
+          syncPendingChanges();
+          refreshGantt();
+          return true;
         },
         destroy() {
           IIFEApp.unmount(container);
