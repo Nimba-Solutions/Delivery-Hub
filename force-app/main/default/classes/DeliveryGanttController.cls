@@ -1375,4 +1375,218 @@ public with sharing class DeliveryGanttController {
         Date anchor = startDt > today ? startDt : today;
         return anchor.addDays(14);
     }
+
+    /**
+     * @description Returns true when the org has opted to bypass the gantt
+     *              audit-pass step (drag = immediate DML). Null setting →
+     *              false → audit-pass is ON and operators stage edits in
+     *              the pendingBuffer until they Submit + commit. Inverted
+     *              naming so the safe posture (audit-on) is the default.
+     * @return true when BypassAuditPassDateTime__c is set, false otherwise.
+     */
+    @AuraEnabled(cacheable=true)
+    public static Boolean isBypassAuditPassEnabled() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        return settings != null && settings.BypassAuditPassDateTime__c != null;
+    }
+
+    /**
+     * @description Bulk-commit handler for nimbus-gantt audit-pass. Accepts
+     *              the JSON-serialized pendingBuffer array from the bundle's
+     *              getPendingEdits() and applies every patch atomically:
+     *              all `edit` patches first (date changes), then all
+     *              `reorder` patches (parent / priorityGroup / sortOrder).
+     *              This ordering matches the bundle's commitEdits() flush
+     *              order — sortOrder reads neighbor state, so date writes
+     *              must land first to avoid neighbor races.
+     *
+     *              Atomicity: wrapped in Database.setSavepoint —
+     *              any patch failure rolls every prior write back, leaving
+     *              the org in its pre-submit state. The exception thrown
+     *              to the LWC carries the failing patch index + reason so
+     *              the audit panel can highlight which row to fix.
+     * @param patchesJson JSON array of pending patches from getPendingEdits().
+     *                    Each entry: { taskId, kind: "edit"|"reorder",
+     *                    changes?: { startDate, endDate },
+     *                    reorderPayload?: { parentId, priorityGroup,
+     *                    sortOrder, position, beforeTaskId, afterTaskId } }.
+     * @param commitNote Optional operator note captured in the audit panel
+     *                   commit-note input. Currently logged for forensics;
+     *                   future PR will persist as an ActivityLog entry.
+     * @return Map with: ok (Boolean), committed (Integer count),
+     *         message (Strring summary). On failure, throws AuraHandledException
+     *         carrying the failing patch index + the underlying error.
+     */
+    @AuraEnabled
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount')
+    public static Map<String, Object> commitGanttPatches(String patchesJson, String commitNote) {
+        if (String.isBlank(patchesJson)) {
+            throw new AuraHandledException('commitGanttPatches called with empty patchesJson');
+        }
+        List<Object> rawPatches;
+        try {
+            rawPatches = (List<Object>) JSON.deserializeUntyped(patchesJson);
+        } catch (Exception parseEx) {
+            AuraHandledException ahe = new AuraHandledException('Invalid patchesJson: ' + parseEx.getMessage());
+            ahe.setMessage('Invalid patchesJson: ' + parseEx.getMessage());
+            throw ahe;
+        }
+        if (rawPatches == null || rawPatches.isEmpty()) {
+            return new Map<String, Object>{ 'ok' => true, 'committed' => 0, 'message' => 'no patches' };
+        }
+
+        // Partition by kind: edits first, reorders second. Indices preserved
+        // (relative to the input array) so a failing patch reports its
+        // original position to the operator.
+        List<Map<String, Object>> edits = new List<Map<String, Object>>();
+        List<Map<String, Object>> reorders = new List<Map<String, Object>>();
+        for (Integer i = 0; i < rawPatches.size(); i++) {
+            Map<String, Object> p = (Map<String, Object>) rawPatches[i];
+            p.put('_index', i);
+            String kind = (String) p.get('kind');
+            if ('edit'.equalsIgnoreCase(kind)) {
+                edits.add(p);
+            } else if ('reorder'.equalsIgnoreCase(kind)) {
+                reorders.add(p);
+            } else {
+                throw new AuraHandledException('Patch ' + i + ' has unknown kind: ' + kind);
+            }
+        }
+
+        Savepoint sp = Database.setSavepoint();
+        Integer committedCount = 0;
+        Integer failingIndex = -1;
+        try {
+            for (Map<String, Object> p : edits) {
+                failingIndex = (Integer) p.get('_index');
+                applyEditPatch(p);
+                committedCount++;
+            }
+            for (Map<String, Object> p : reorders) {
+                failingIndex = (Integer) p.get('_index');
+                applyReorderPatch(p);
+                committedCount++;
+            }
+        } catch (Exception runEx) {
+            Database.rollback(sp);
+            String msg = 'Audit-pass commit failed at patch ' + failingIndex
+                + ' (committed ' + committedCount + ' before rollback): ' + runEx.getMessage();
+            System.debug(LoggingLevel.WARN, '[commitGanttPatches] ' + msg);
+            AuraHandledException ahe = new AuraHandledException(msg);
+            ahe.setMessage(msg);
+            throw ahe;
+        }
+
+        if (String.isNotBlank(commitNote)) {
+            System.debug(LoggingLevel.INFO,
+                '[commitGanttPatches] commit note: ' + commitNote
+                + ' (' + committedCount + ' patches)');
+        }
+        return new Map<String, Object>{
+            'ok' => true,
+            'committed' => committedCount,
+            'message' => committedCount + ' patches committed'
+        };
+    }
+
+    /**
+     * @description Applies a single `edit` patch (date changes) by direct DML.
+     *              Inlined rather than calling updateWorkItemDates so the
+     *              outer savepoint can roll back cleanly — the public method
+     *              wraps in its own try/catch + AuraHandledException, which
+     *              would short-circuit our atomicity guarantee.
+     * @param patch The pending-buffer entry of kind="edit".
+     */
+    private static void applyEditPatch(Map<String, Object> patch) {
+        String taskId = (String) patch.get('taskId');
+        if (String.isBlank(taskId)) {
+            throw new IllegalArgumentException('edit patch missing taskId at index ' + patch.get('_index'));
+        }
+        Map<String, Object> changes = (Map<String, Object>) patch.get('changes');
+        if (changes == null || changes.isEmpty()) {
+            // Empty edit patches are harmless no-ops (nimbus-gantt sometimes
+            // emits an edit immediately followed by a reorder on the same
+            // taskId; the reorder carries the substantive change). Don't
+            // error — just skip so the operator's batch isn't poisoned.
+            return;
+        }
+        WorkItem__c item = new WorkItem__c(Id = taskId);
+        Object sd = changes.get('startDate');
+        if (sd != null && String.isNotBlank(String.valueOf(sd))) {
+            item.EstimatedStartDevDate__c = Date.valueOf(String.valueOf(sd));
+        }
+        Object ed = changes.get('endDate');
+        if (ed != null && String.isNotBlank(String.valueOf(ed))) {
+            item.EstimatedEndDevDate__c = Date.valueOf(String.valueOf(ed));
+        }
+        update item; //NOPMD - with sharing class handles CRUD
+    }
+
+    /**
+     * @description Applies a single `reorder` patch by routing parent /
+     *              priorityGroup / sortOrder mutations to the existing
+     *              private helpers used by the immediate-mode methods.
+     *              Mirrors the legacy onItemReorder dispatch in
+     *              deliveryProFormaTimeline.js so audit-mode and immediate-mode
+     *              produce identical resulting rows.
+     * @param patch The pending-buffer entry of kind="reorder".
+     */
+    @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+    private static void applyReorderPatch(Map<String, Object> patch) {
+        String taskId = (String) patch.get('taskId');
+        if (String.isBlank(taskId)) {
+            throw new IllegalArgumentException('reorder patch missing taskId at index ' + patch.get('_index'));
+        }
+        Map<String, Object> rp = (Map<String, Object>) patch.get('reorderPayload');
+        if (rp == null) {
+            return;
+        }
+
+        DeliverySyncEngine.setSyncContext();
+
+        // Parent change: write directly. Null is a valid value (un-parents).
+        if (rp.containsKey('parentId')) {
+            Object pid = rp.get('parentId');
+            WorkItem__c item = new WorkItem__c(Id = taskId);
+            item.ParentWorkItemLookup__c = pid == null ? null : (Id) String.valueOf(pid);
+            update item; //NOPMD - with sharing class handles CRUD
+        }
+
+        // Priority-group change: write directly when no positional info is
+        // present. When position/beforeTaskId/afterTaskId is also set, the
+        // reorder branch below handles bucket re-anchoring AND priority-group
+        // assignment via the dense reorder, so we skip the standalone write.
+        Boolean hasPositional = rp.get('position') != null
+            || rp.get('beforeTaskId') != null
+            || rp.get('afterTaskId') != null;
+        if (rp.containsKey('priorityGroup') && !hasPositional) {
+            Object pg = rp.get('priorityGroup');
+            WorkItem__c item = new WorkItem__c(Id = taskId);
+            item.PriorityGroupPk__c = pg == null ? null : String.valueOf(pg);
+            update item; //NOPMD - with sharing class handles CRUD
+        }
+
+        // Positional reorder: dense-renumber the destination bucket. This is
+        // the same path immediate-mode uses (reorderWorkItemDense) — inlined
+        // here to compose with the outer savepoint.
+        if (hasPositional) {
+            String position = String.valueOf(rp.get('position'));
+            String priorityGroup = rp.containsKey('priorityGroup') && rp.get('priorityGroup') != null
+                ? String.valueOf(rp.get('priorityGroup'))
+                : null;
+            String beforeTaskId = rp.get('beforeTaskId') == null ? null : String.valueOf(rp.get('beforeTaskId'));
+            String afterTaskId = rp.get('afterTaskId') == null ? null : String.valueOf(rp.get('afterTaskId'));
+            if (String.isBlank(priorityGroup)) {
+                throw new IllegalArgumentException('reorder patch with position needs priorityGroup at index ' + patch.get('_index'));
+            }
+            List<WorkItem__c> bucket = loadBucketItems(priorityGroup);
+            List<WorkItem__c> finalOrder = spliceForReorder(bucket, taskId, position, beforeTaskId, afterTaskId);
+            applyDenseSortOrders(finalOrder);
+        } else if (rp.containsKey('sortOrder') && rp.get('sortOrder') != null) {
+            // Non-positional sortOrder write (rare; explicit numeric override).
+            WorkItem__c item = new WorkItem__c(Id = taskId);
+            item.SortOrderNumber__c = (Decimal) rp.get('sortOrder');
+            update item; //NOPMD - with sharing class handles CRUD
+        }
+    }
 }
