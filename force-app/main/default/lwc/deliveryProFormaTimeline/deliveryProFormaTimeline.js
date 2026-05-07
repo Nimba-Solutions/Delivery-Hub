@@ -260,6 +260,7 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             this._mountHandle = null;
         }
         this._uninstallCnEditBridge();
+        this._destroyTooltip();
         this._uninstallFullscreenChromeHide();
     }
 
@@ -562,22 +563,26 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             //     onItemEdit here for fullscreen only — inlined fully so NG's
             //     stub-detection heuristic (if that's what tripped earlier)
             //     can't misread a method-reference arrow as empty.
-            onPatch: (patch) => this._handlePatch(patch),
-            onItemReorder: (taskId, payload) => this._handleItemReorder(taskId, payload),
-            onItemReorderError: (taskId, error) => this._handleItemReorderError(taskId, error),
+            // onPatch / onItemReorder are conditionally wired at the bottom of
+            // this method — only when audit-pass is BYPASSED (drag = immediate
+            // DML). When audit-pass is ON (default), the engine's batchMode
+            // path buffers drags into pendingBuffer and we deliberately do
+            // NOT wire these so there's zero chance the engine takes the
+            // immediate-dispatch branch by mistake. See the
+            // `if (!this._auditPassEnabled)` block below.
+            onTaskHover: (taskId) => this._handleTaskHover(taskId),
             // NG 0.185.26 — generic TitleBar button slot. DH contributes a
             // Show/Hide Header toggle that reveals the SF page-header chrome
             // that the Timeline tab hides by default.
             titleBarButtons: this._buildHostTitleBarButtons(),
-            // onItemClick wired — opens the standard SF record page for the
-            // clicked WorkItem. The NG-default DetailPanel was reported as
-            // not visible / not opening for users in the embedded Lightning
-            // surface; explicit navigation via NavigationMixin is the durable
-            // affordance. Side effect: NG suppresses its default TOGGLE_DETAIL
-            // when host wires onItemClick — DetailPanel is reachable via
-            // explicit Detail-toggle button in the chrome / from the record
-            // page itself.
-            onItemClick: (taskId) => this._handleItemClick(taskId),
+            // onItemClick deliberately NOT wired (5/6) so the bundle's
+            // default DetailPanel popover opens on bar click. Earlier this
+            // was wired to navigate to the record page in a new tab because
+            // the DetailPanel was reported as not opening on the embedded
+            // surface — that issue has since been resolved on the bundle
+            // side (NG 0.190.0). Glen's 5/6 feedback: prefers the in-gantt
+            // DetailPanel popover. New-tab record nav is still reachable
+            // from the DetailPanel link itself or via right-click → Open.
             onViewportChange: (state) => this._handleViewportChange(state),
             initialViewport: this._readInitialViewport(),
             // Dormant prop wiring — NG implements the handler in a future
@@ -703,11 +708,17 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             };
         }
 
-        // Wire onItemEdit on both embedded + fullscreen. NG 0.185.15's
-        // DetailPanel uses this callback for form-submit regardless of
-        // surface. Prior fullscreen-only gate left embedded's DetailPanel
-        // silently unable to save when user edited fields from task click.
-        if (true) {
+        // Bypass-mode wiring (audit-pass OFF · BypassAuditPassDateTime__c set):
+        // wire all the immediate-DML callbacks so drag/reorder/click-edit
+        // persist on commit as before. When audit-pass is ON (default), we
+        // skip ALL of these — the bundle's batchMode path buffers drags into
+        // pendingBuffer and the operator submits in batch via onAuditSubmit.
+        // Skipping here is what guarantees the engine takes the buffer
+        // branch (line 5600 of the bundle) instead of immediate dispatch.
+        if (!this._auditPassEnabled) {
+            mountConfig.onPatch = (patch) => this._handlePatch(patch);
+            mountConfig.onItemReorder = (taskId, payload) => this._handleItemReorder(taskId, payload);
+            mountConfig.onItemReorderError = (taskId, error) => this._handleItemReorderError(taskId, error);
             mountConfig.onItemEdit = async (taskId, changes) => {
                 const id = this._normalizeTaskId(taskId);
                 let changesLog = {};
@@ -821,6 +832,10 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 hasOnItemReorder: !!mountConfig.onItemReorder,
                 hasOnItemClick: !!mountConfig.onItemClick,
                 hasOnViewportChange: !!mountConfig.onViewportChange,
+                hasOnTaskHover: !!mountConfig.onTaskHover,
+                hasOnAuditSubmit: !!mountConfig.onAuditSubmit,
+                batchMode: mountConfig.batchMode === true,
+                auditPassEnabled: this._auditPassEnabled === true,
                 taskCount: mountConfig.tasks ? mountConfig.tasks.length : 0,
                 chromeVisibleDefault: mountConfig.chromeVisibleDefault,
                 features: mountConfig.features,
@@ -1172,6 +1187,76 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         // namespace handling stays in one place; open in a new tab.
         const url = `/lightning/r/${this._vfPrefix()}WorkItem__c/${taskId}/view`;
         window.open(url, '_blank');
+    }
+
+    /**
+     * NG 0.189+ onTaskHover(taskId|null). Fires once per row entry/leave —
+     * not on every mousemove, so we track cursor position separately to
+     * follow it. Renders a body-level tooltip with the task title +
+     * truncated (200 char) description so users can identify a row
+     * without clicking through to the DetailPanel.
+     */
+    _handleTaskHover(taskId) {
+        if (!taskId) {
+            this._hideTooltip();
+            return;
+        }
+        const norm = String(taskId);
+        const task = (this._tasks || []).find(
+            (t) => String(t.id) === norm || String(t.workItemId) === norm
+        );
+        if (!task) {
+            this._hideTooltip();
+            return;
+        }
+        const title = task.name || task.workItemId || '';
+        const desc = (task.description || '').trim();
+        const truncated = desc.length > 200 ? desc.slice(0, 200) + '…' : desc;
+        const text = truncated ? `${title} — ${truncated}` : title;
+        this._showTooltip(text);
+    }
+
+    _showTooltip(text) {
+        if (!this._tooltipEl) {
+            const el = document.createElement('div');
+            el.id = 'dh-gantt-tooltip';
+            el.style.cssText = [
+                'position:fixed', 'z-index:2147483645', 'max-width:420px',
+                'padding:8px 12px', 'background:#0f172a', 'color:#fff',
+                'border-radius:6px', 'pointer-events:none',
+                'box-shadow:0 8px 16px rgba(0,0,0,0.2)',
+                'font:12px ui-sans-serif,system-ui,-apple-system,sans-serif',
+                'line-height:1.4', 'display:none', 'white-space:normal',
+                'word-break:break-word'
+            ].join(';');
+            document.body.appendChild(el);
+            this._tooltipEl = el;
+            this._tooltipMouseHandler = (e) => {
+                if (!this._tooltipEl || this._tooltipEl.style.display === 'none') return;
+                this._tooltipEl.style.left = (e.clientX + 14) + 'px';
+                this._tooltipEl.style.top = (e.clientY + 14) + 'px';
+            };
+            document.addEventListener('mousemove', this._tooltipMouseHandler);
+        }
+        this._tooltipEl.textContent = text;
+        this._tooltipEl.style.display = 'block';
+    }
+
+    _hideTooltip() {
+        if (this._tooltipEl) {
+            this._tooltipEl.style.display = 'none';
+        }
+    }
+
+    _destroyTooltip() {
+        if (this._tooltipMouseHandler) {
+            document.removeEventListener('mousemove', this._tooltipMouseHandler);
+            this._tooltipMouseHandler = null;
+        }
+        if (this._tooltipEl && this._tooltipEl.parentNode) {
+            this._tooltipEl.parentNode.removeChild(this._tooltipEl);
+        }
+        this._tooltipEl = null;
     }
 
     // ── Context-menu host callbacks (NG 0.189.x) ──────────────────────────
