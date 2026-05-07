@@ -11,8 +11,13 @@
         <valueSetDefinition>
             <sorted>false</sorted>
             <value>
-                <fullName>New</fullName>
+                <fullName>Active</fullName>
                 <default>true</default>
+                <label>Active</label>
+            </value>
+            <value>
+                <fullName>New</fullName>
+                <default>false</default>
                 <label>New</label>
             </value>
             <value>
