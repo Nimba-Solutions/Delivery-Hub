@@ -65,6 +65,25 @@ private class DeliveryHubInstallHandlerTest {
     }
 
     @IsTest
+    static void testInstallBackfillsStaleStatusNewWorkItems() {
+        System.runAs(testUser) {
+            WorkItem__c stale = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Pre-upgrade stale WI',
+                StageNamePk__c         = 'In Development',
+                StatusPk__c            = 'New'
+            );
+            insert stale;
+            Test.setCreatedDate(stale.Id, Datetime.now().addDays(-7));
+
+            Test.testInstall(new DeliveryHubInstallHandler(), null, false);
+
+            WorkItem__c reloaded = [SELECT StatusPk__c FROM WorkItem__c WHERE Id = :stale.Id];
+            System.assertEquals('Active', reloaded.StatusPk__c,
+                'Install handler should backfill pre-upgrade stale Status=New records');
+        }
+    }
+
+    @IsTest
     static void testInstallIsIdempotentOnRepeatedScheduling() {
         System.runAs(testUser) {
             Test.testInstall(new DeliveryHubInstallHandler(), null, false);
