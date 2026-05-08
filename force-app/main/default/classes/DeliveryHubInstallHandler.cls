@@ -19,6 +19,7 @@ global class DeliveryHubInstallHandler implements InstallHandler {
         initializeDefaultSettings();
         scheduleSyncJobs();
         backfillUserPermissionSets();
+        backfillWorkItemStatusDefaults();
         enqueueInitialReconciliation();
     }
 
@@ -75,6 +76,23 @@ global class DeliveryHubInstallHandler implements InstallHandler {
         } catch (Exception e) {
             System.debug(LoggingLevel.WARN,
                 '[DeliveryHubInstallHandler] PermissionSet backfill failed: '
+                + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Flips WorkItems stuck at Status=New (created before the
+     *              field-level default was corrected in PR #752) to Active
+     *              so they become visible to the gantt's Active filter.
+     *              Wrapped in try/catch — install must not fail because of
+     *              record-level data issues.
+     */
+    private static void backfillWorkItemStatusDefaults() {
+        try {
+            DeliveryWorkItemBackfillService.backfillStatusDefaults();
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryHubInstallHandler] WorkItem Status backfill failed: '
                 + e.getMessage());
         }
     }
