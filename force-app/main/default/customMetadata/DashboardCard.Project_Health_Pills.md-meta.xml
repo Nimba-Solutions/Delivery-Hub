@@ -15,7 +15,7 @@
     <values><field>CardSizeTxt__c</field><value xsi:type="xsd:string">large</value></values>
     <values><field>ThresholdWarningNumber__c</field><value xsi:nil="true"/></values>
     <values><field>ThresholdCriticalNumber__c</field><value xsi:nil="true"/></values>
-    <values><field>ClickThroughUrlTxt__c</field><value xsi:type="xsd:string">list:WorkItem__c.Recent</value></values>
+    <values><field>ClickThroughUrlTxt__c</field><value xsi:type="xsd:string">report:Hours_By_Project_By_Month</value></values>
     <values><field>InfoPopoverTxt__c</field><value xsi:type="xsd:string">Top 10 Active WorkItems ranked by overrun risk. Two pills per row:
 
 ON-BUDGET = EstimatedHoursNumber ÷ TotalLoggedHoursSum. Green = at or under budget. Yellow 80-99%. Red &lt; 80% (significantly over).
