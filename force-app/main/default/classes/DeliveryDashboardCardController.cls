@@ -9,7 +9,7 @@
 global with sharing class DeliveryDashboardCardController {
 
     @AuraEnabled(cacheable=true)
-    public static List<CardConfig> getCardsForPage(String pageKey) {
+    global static List<CardConfig> getCardsForPage(String pageKey) {
         String currentProfile = [SELECT Profile.Name FROM User WHERE Id = :UserInfo.getUserId() WITH SYSTEM_MODE].Profile.Name;
         List<CardConfig> cards = new List<CardConfig>();
         for (DashboardCard__mdt card : [
@@ -34,7 +34,7 @@ global with sharing class DeliveryDashboardCardController {
     }
 
     @AuraEnabled
-    public static Object getCardData(String dataSource, String filterJson) {
+    global static Object getCardData(String dataSource, String filterJson) {
         switch on dataSource {
             when 'activeWorkItems' {
                 return [
