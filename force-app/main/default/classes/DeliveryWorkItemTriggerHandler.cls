@@ -389,23 +389,12 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     public static void handleBeforeInsert(List<WorkItem__c> newWorkItems) {
         Datetime now = Datetime.now();
         // When the inbound-sync ingestor is performing the insert, the source
-        // org owns ActivatedDateTime__c AND StatusPk__c — skip receiver-side
-        // auto-population so the source's values (often null for non-active
-        // items, possibly 'New' for predecisional items) are preserved.
+        // org owns ActivatedDateTime__c — skip receiver-side auto-population so
+        // the source's value (often null for non-active items) is preserved.
         Boolean skipAutoActivate = DeliveryTriggerControl.inboundSyncContext;
         for (WorkItem__c workItem : newWorkItems) {
             if (!skipAutoActivate && workItem.ActivatedDateTime__c == null) {
                 workItem.ActivatedDateTime__c = now;
-            }
-            // Status=New normalize. PR #752 changed the field-level default to
-            // Active, but field defaults only fire when the caller OMITS the
-            // field. UI quick-actions, screen flows, and Apex DML that
-            // explicitly set StatusPk__c='New' bypass that default — leaving
-            // records that surfaces filter on Status reject. Only normalize
-            // when NOT in inbound-sync context so peers can carry deliberate
-            // 'New' values across orgs (e.g. predecisional staging).
-            if (!skipAutoActivate && workItem.StatusPk__c == 'New') {
-                workItem.StatusPk__c = 'Active';
             }
             if (workItem.StageEnteredDateTime__c == null) {
                 workItem.StageEnteredDateTime__c = now;
