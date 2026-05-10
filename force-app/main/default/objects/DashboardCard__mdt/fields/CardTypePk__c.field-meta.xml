@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>CardTypePk__c</fullName>
-    <description>The visual type of this dashboard card: Metric (single number), List (rows), Pie Chart, or Bar Chart.</description>
+    <description>The visual type of this dashboard card: Metric (single number), List (rows), Pie Chart, Bar Chart, or Pills (per-row traffic-light scores).</description>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
     <label>Card Type</label>
@@ -29,6 +29,11 @@
                 <fullName>BarChart</fullName>
                 <default>false</default>
                 <label>Bar Chart</label>
+            </value>
+            <value>
+                <fullName>Pills</fullName>
+                <default>false</default>
+                <label>Pills</label>
             </value>
         </valueSetDefinition>
     </valueSet>

@@ -22,13 +22,29 @@
             <div class="slds-grid slds-wrap slds-p-around_small">
                 <template for:each={cards} for:item="card">
                     <div key={card.key} class={card.sizeClass}>
-                        <article class="dh-hero-card">
+                        <article class={card.cardClass} data-url={card.clickThroughUrl} onclick={handleCardClick}>
                             <header class="dh-card-header">
                                 <template lwc:if={card.iconName}>
                                     <lightning-icon icon-name={card.iconName} size="x-small"></lightning-icon>
                                 </template>
                                 <h3 class="dh-card-title">{card.title}</h3>
+                                <template lwc:if={card.hasInfoPopover}>
+                                    <button
+                                        type="button"
+                                        class="dh-info-btn"
+                                        data-key={card.key}
+                                        title="About this card"
+                                        onclick={handleInfoToggle}>
+                                        <lightning-icon icon-name="utility:info" size="xx-small" alternative-text="Info"></lightning-icon>
+                                    </button>
+                                </template>
                             </header>
+
+                            <template lwc:if={card.infoPopoverOpen}>
+                                <div class="dh-info-popover">
+                                    <p>{card.infoPopover}</p>
+                                </div>
+                            </template>
 
                             <!-- Metric Card -->
                             <template lwc:if={card.isMetric}>
@@ -63,6 +79,19 @@
                                                 <span class="dh-list-item-meta"> — {item.value}</span>
                                             </div>
                                         </template>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <!-- Pills Card (per-row traffic-light scores: On-Schedule / On-Budget) -->
+                            <template lwc:if={card.isPills}>
+                                <div class="dh-pills-list">
+                                    <template for:each={card.pills} for:item="pill">
+                                        <div key={pill.key} class="dh-pill-row" data-url={pill.recordUrl} onclick={handlePillClick}>
+                                            <span class="dh-pill-label" title={pill.label}>{pill.label}</span>
+                                            <span class={pill.budgetPillClass} title="On-Budget (estimated ÷ logged hours)">{pill.budgetLabel}</span>
+                                            <span class={pill.schedulePillClass} title="On-Schedule (days remaining vs ETA)">{pill.scheduleLabel}</span>
+                                        </div>
                                     </template>
                                 </div>
                             </template>

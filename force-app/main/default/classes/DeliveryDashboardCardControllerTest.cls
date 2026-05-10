@@ -343,4 +343,122 @@ private class DeliveryDashboardCardControllerTest {
 
         System.assertEquals(null, result, 'Unknown data source should return null');
     }
+
+    @IsTest
+    static void testHoursByMonthLast6ReturnsSixBuckets() {
+        WorkItem__c wi = new WorkItem__c(
+            BriefDescriptionTxt__c = 'Hours-by-month test',
+            StageNamePk__c         = 'In Development',
+            ActivatedDateTime__c   = Datetime.now()
+        );
+        insert wi;
+        WorkRequest__c wr = new WorkRequest__c(
+            WorkItemId__c         = wi.Id,
+            QuotedHoursNumber__c  = 10,
+            HourlyRateCurrency__c = 100,
+            StatusPk__c           = 'Accepted'
+        );
+        insert wr;
+        insert new WorkLog__c(
+            RequestId__c          = wr.Id,
+            WorkItemLookup__c     = wi.Id,
+            HoursLoggedNumber__c  = 7,
+            WorkDateDate__c       = Date.today(),
+            WorkDescriptionTxt__c = 'work this month'
+        );
+
+        Test.startTest();
+        Object result = DeliveryDashboardCardController.getCardData('hoursByMonthLast6', null);
+        Test.stopTest();
+
+        List<Object> data = (List<Object>) result;
+        System.assertEquals(6, data.size(), 'Should always return 6 monthly buckets even when most are empty');
+        // Last bucket = current month, should reflect the 7h entry
+        Map<String, Object> currentMonth = (Map<String, Object>) data[5];
+        System.assertEquals(7, (Decimal) currentMonth.get('value'),
+            'Current month bucket should sum HoursLoggedNumber for WorkDateDate within the month');
+    }
+
+    @IsTest
+    static void testProjectHealthPillsHandlesEmpty() {
+        Test.startTest();
+        Object result = DeliveryDashboardCardController.getCardData('projectHealthPills', null);
+        Test.stopTest();
+
+        List<Object> data = (List<Object>) result;
+        System.assertNotEquals(null, data, 'Should return non-null list even with no qualifying WIs');
+    }
+
+    @IsTest
+    static void testProjectHealthPillsRanksByOverrun() {
+        // Two Active WIs — one over budget (red), one under (green).
+        // Expectation: both surface, the over-budget one ranks first (worst-first sort).
+        WorkItem__c overBudget = new WorkItem__c(
+            BriefDescriptionTxt__c   = 'Over budget',
+            StageNamePk__c           = 'In Development',
+            ActivatedDateTime__c     = Datetime.now(),
+            EstimatedHoursNumber__c  = 5,
+            EstimatedEndDevDate__c   = Date.today().addDays(10)
+        );
+        WorkItem__c underBudget = new WorkItem__c(
+            BriefDescriptionTxt__c   = 'Under budget',
+            StageNamePk__c           = 'In Development',
+            ActivatedDateTime__c     = Datetime.now(),
+            EstimatedHoursNumber__c  = 100,
+            EstimatedEndDevDate__c   = Date.today().addDays(10)
+        );
+        insert new List<WorkItem__c>{ overBudget, underBudget };
+
+        WorkRequest__c overWr = new WorkRequest__c(
+            WorkItemId__c         = overBudget.Id,
+            QuotedHoursNumber__c  = 5,
+            HourlyRateCurrency__c = 100,
+            StatusPk__c           = 'Accepted'
+        );
+        WorkRequest__c underWr = new WorkRequest__c(
+            WorkItemId__c         = underBudget.Id,
+            QuotedHoursNumber__c  = 100,
+            HourlyRateCurrency__c = 100,
+            StatusPk__c           = 'Accepted'
+        );
+        insert new List<WorkRequest__c>{ overWr, underWr };
+
+        // 20h logged on overBudget (5h estimate) → ratio 0.25 → red
+        // 5h logged on underBudget (100h estimate) → ratio 20 → green
+        insert new List<WorkLog__c>{
+            new WorkLog__c(RequestId__c = overWr.Id, WorkItemLookup__c = overBudget.Id, HoursLoggedNumber__c = 20, WorkDescriptionTxt__c = 'a'),
+            new WorkLog__c(RequestId__c = underWr.Id, WorkItemLookup__c = underBudget.Id, HoursLoggedNumber__c = 5, WorkDescriptionTxt__c = 'b')
+        };
+
+        Test.startTest();
+        Object result = DeliveryDashboardCardController.getCardData('projectHealthPills', null);
+        Test.stopTest();
+
+        List<Object> data = (List<Object>) result;
+        System.assert(data.size() >= 2, 'Should surface both qualifying WIs');
+        Map<String, Object> first = (Map<String, Object>) data[0];
+        System.assertEquals('danger', first.get('budgetClass'),
+            'Worst-first sort: over-budget red pill should be the first row');
+    }
+
+    @IsTest
+    static void testCardConfigSurfacesNewFields() {
+        // Smoke test: cards returned by getCardsForPage should include the new
+        // clickThroughUrl + infoPopover fields on the CardConfig DTO. (Test
+        // only validates the DTO surface — actual values come from
+        // DashboardCard__mdt records, which Test.loadData would seed.)
+        Test.startTest();
+        List<DeliveryDashboardCardController.CardConfig> cards =
+            DeliveryDashboardCardController.getCardsForPage('home');
+        Test.stopTest();
+
+        System.assertNotEquals(null, cards, 'Cards list should not be null');
+        // If any card returns, verify the new properties exist on the DTO
+        // (always present, possibly null — that's fine).
+        for (DeliveryDashboardCardController.CardConfig c : cards) {
+            // No assertion about value; just verify no exception accessing the field
+            String tmp = c.clickThroughUrl;
+            String tmp2 = c.infoPopover;
+        }
+    }
 }
