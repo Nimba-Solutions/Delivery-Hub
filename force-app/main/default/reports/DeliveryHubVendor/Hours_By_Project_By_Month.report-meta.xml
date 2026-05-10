@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <columns>
+        <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkItemLookup__c</field>
+    </columns>
+    <columns>
+        <aggregateTypes>Sum</aggregateTypes>
+        <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%HoursLoggedNumber__c</field>
+    </columns>
+    <description>Matrix: hours logged per project (rows) × calendar month (columns). All-time, no date filter — answers Jose&apos;s 5/8 ask for the April | May | June breakdown per project. Filtered to Approved + null status (treats logged-without-approval-workflow as countable).</description>
+    <format>Matrix</format>
+    <groupingsAcross>
+        <dateGranularity>Month</dateGranularity>
+        <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkDateDate__c</field>
+        <sortOrder>Asc</sortOrder>
+    </groupingsAcross>
+    <groupingsDown>
+        <dateGranularity>Day</dateGranularity>
+        <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkItemLookup__c</field>
+        <sortOrder>Asc</sortOrder>
+    </groupingsDown>
+    <name>Hours by Project by Month</name>
+    <reportType>%%%NAMESPACE%%%Work_Logs__c</reportType>
+    <scope>organization</scope>
+    <showDetails>false</showDetails>
+    <showGrandTotal>true</showGrandTotal>
+    <showSubTotals>true</showSubTotals>
+</Report>

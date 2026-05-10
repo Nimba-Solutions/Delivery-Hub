@@ -39,6 +39,8 @@ export default class DeliveryExecutiveDashboard extends LightningElement {
                         displayValue = 'Error';
                         metricClass = 'dh-metric dh-metric--danger';
                     }
+                    const isPills = cfg.cardType === 'Pills';
+                    const isChart = cfg.cardType === 'PieChart' || cfg.cardType === 'BarChart';
                     return {
                         ...cfg,
                         data,
@@ -48,13 +50,30 @@ export default class DeliveryExecutiveDashboard extends LightningElement {
                         isList: cfg.cardType === 'List',
                         isPieChart: cfg.cardType === 'PieChart',
                         isBarChart: cfg.cardType === 'BarChart',
-                        isChart: cfg.cardType === 'PieChart' || cfg.cardType === 'BarChart',
+                        isChart,
+                        isPills,
+                        hasClickThrough: !!cfg.clickThroughUrl,
+                        hasInfoPopover: !!cfg.infoPopover,
+                        infoPopoverOpen: false,
+                        cardClass: this.buildCardClass(cfg.clickThroughUrl),
                         sizeClass: 'slds-col slds-size_1-of-1 slds-medium-size_1-of-' + (cfg.cardSize === 'large' ? '1' : cfg.cardSize === 'small' ? '4' : '2') + ' slds-p-around_x-small',
                         chartBars: Array.isArray(data) ? data.map((d, i) => ({
                             key: String(i),
                             label: d.label || '',
                             value: d.value || 0,
                             pct: 0
+                        })) : [],
+                        pills: isPills && Array.isArray(data) ? data.map((row, i) => ({
+                            key: row.id || String(i),
+                            id: row.id,
+                            label: row.label,
+                            estimated: row.estimated,
+                            logged: row.logged,
+                            budgetLabel: row.budgetLabel,
+                            scheduleLabel: row.scheduleLabel,
+                            budgetPillClass: 'dh-pill dh-pill--' + (row.budgetClass || 'neutral'),
+                            schedulePillClass: 'dh-pill dh-pill--' + (row.scheduleClass || 'neutral'),
+                            recordUrl: row.id ? '/lightning/r/' + this.workItemApiName() + '/' + row.id + '/view' : null
                         })) : []
                     };
                 })
@@ -79,6 +98,50 @@ export default class DeliveryExecutiveDashboard extends LightningElement {
 
     handleRefresh() {
         this.loadDashboard();
+    }
+
+    handleCardClick(event) {
+        // Cards are made clickable when DashboardCard__mdt.ClickThroughUrlTxt__c
+        // is populated. Opens in a new tab so the user keeps the dashboard
+        // context and can compare side-by-side.
+        const url = event.currentTarget.dataset.url;
+        if (url) {
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
+    }
+
+    handleInfoToggle(event) {
+        // Clicking the ⓘ icon toggles the popover for THIS card only.
+        // Stop propagation so the click-through-url handler on the card doesn't
+        // also fire (info button is nested inside a clickable card).
+        event.stopPropagation();
+        event.preventDefault();
+        const cardKey = event.currentTarget.dataset.key;
+        this.cards = this.cards.map((c) => ({
+            ...c,
+            infoPopoverOpen: c.key === cardKey ? !c.infoPopoverOpen : false
+        }));
+    }
+
+    handlePillClick(event) {
+        // Pill rows in a Pills-type card are individually clickable —
+        // navigate to the underlying WorkItem record.
+        event.stopPropagation();
+        const url = event.currentTarget.dataset.url;
+        if (url) {
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
+    }
+
+    buildCardClass(clickThroughUrl) {
+        return clickThroughUrl ? 'dh-hero-card dh-hero-card--clickable' : 'dh-hero-card';
+    }
+
+    workItemApiName() {
+        // Hardcoded namespace prefix is replaced at package-build time on
+        // subscriber orgs. In source it stays as the placeholder so the
+        // packaging tool can rewrite it.
+        return '%%%NAMESPACE%%%WorkItem__c';
     }
 
     get hasCards() {

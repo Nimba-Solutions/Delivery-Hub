@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ClickThroughUrlTxt__c</fullName>
+    <description>Optional URL the card navigates to when clicked. Use Lightning relative paths like /lightning/r/Report/00OUN.../view to drill into the underlying report or list view that explains the card&apos;s data source.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>Card becomes clickable when set. Opens in a new tab. Leave blank for a non-interactive card.</inlineHelpText>
+    <label>Click Through URL</label>
+    <length>255</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

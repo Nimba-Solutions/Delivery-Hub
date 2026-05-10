@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Project Health (Top 10)</label>
+    <protected>false</protected>
+    <values><field>TitleTxt__c</field><value xsi:type="xsd:string">Project Health (Top 10)</value></values>
+    <values><field>DescriptionTxt__c</field><value xsi:type="xsd:string">Per-project On-Schedule and On-Budget scores ranked worst-first</value></values>
+    <values><field>CardTypePk__c</field><value xsi:type="xsd:string">Pills</value></values>
+    <values><field>IconNameTxt__c</field><value xsi:type="xsd:string">utility:check</value></values>
+    <values><field>DataSourceTxt__c</field><value xsi:type="xsd:string">projectHealthPills</value></values>
+    <values><field>FilterJsonTxt__c</field><value xsi:nil="true"/></values>
+    <values><field>SortOrderNumber__c</field><value xsi:type="xsd:double">3.7</value></values>
+    <values><field>PageKeyTxt__c</field><value xsi:type="xsd:string">home</value></values>
+    <values><field>VisibleToProfilesTxt__c</field><value xsi:nil="true"/></values>
+    <values><field>EnabledDateTime__c</field><value xsi:type="xsd:dateTime">2026-05-10T00:00:00.000Z</value></values>
+    <values><field>CardSizeTxt__c</field><value xsi:type="xsd:string">large</value></values>
+    <values><field>ThresholdWarningNumber__c</field><value xsi:nil="true"/></values>
+    <values><field>ThresholdCriticalNumber__c</field><value xsi:nil="true"/></values>
+    <values><field>ClickThroughUrlTxt__c</field><value xsi:type="xsd:string">list:WorkItem__c.Recent</value></values>
+    <values><field>InfoPopoverTxt__c</field><value xsi:type="xsd:string">Top 10 Active WorkItems ranked by overrun risk. Two pills per row:
+
+ON-BUDGET = EstimatedHoursNumber ÷ TotalLoggedHoursSum. Green = at or under budget. Yellow 80-99%. Red &lt; 80% (significantly over).
+
+ON-SCHEDULE = days remaining until ETA (CalculatedETADate fallback EstimatedEndDevDate). Green ≥ 7d. Yellow 0-6d. Red = past due.
+
+Click any row to open the WorkItem record. Click the card title area to open the WorkItem list view.</value></values>
+</CustomMetadata>
