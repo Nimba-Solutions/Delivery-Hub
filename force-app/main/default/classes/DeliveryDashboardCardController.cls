@@ -16,7 +16,8 @@ global with sharing class DeliveryDashboardCardController {
             SELECT DeveloperName, TitleTxt__c, DescriptionTxt__c, CardTypePk__c,
                    IconNameTxt__c, DataSourceTxt__c, FilterJsonTxt__c,
                    SortOrderNumber__c, CardSizeTxt__c, VisibleToProfilesTxt__c,
-                   ThresholdWarningNumber__c, ThresholdCriticalNumber__c
+                   ThresholdWarningNumber__c, ThresholdCriticalNumber__c,
+                   ClickThroughUrlTxt__c, InfoPopoverTxt__c
             FROM DashboardCard__mdt
             WHERE PageKeyTxt__c = :pageKey
             AND EnabledDateTime__c != NULL
@@ -184,9 +185,135 @@ global with sharing class DeliveryDashboardCardController {
                     WITH SYSTEM_MODE
                 ];
             }
+            when 'hoursByMonthLast6' {
+                // Bar chart series: each bar = one calendar month, value = sum of hours
+                // logged that month (by WorkDateDate__c — when the work was actually done,
+                // matching what Jose's report uses). Rolling last-6-months window so the
+                // dashboard tile shows a familiar shape: April | May | June | ... at a glance.
+                Date sixMonthsAgo = Date.today().addMonths(-5).toStartOfMonth();
+                Map<String, Decimal> monthly = new Map<String, Decimal>();
+                List<String> orderedKeys = new List<String>();
+                Date cursor = sixMonthsAgo;
+                for (Integer i = 0; i < 6; i++) {
+                    String k = cursor.year() + '-' + String.valueOf(cursor.month()).leftPad(2, '0');
+                    monthly.put(k, 0);
+                    orderedKeys.add(k);
+                    cursor = cursor.addMonths(1);
+                }
+                for (AggregateResult ar : [
+                    SELECT CALENDAR_YEAR(WorkDateDate__c) yr,
+                           CALENDAR_MONTH(WorkDateDate__c) mo,
+                           SUM(HoursLoggedNumber__c) total
+                    FROM WorkLog__c
+                    WHERE WorkDateDate__c >= :sixMonthsAgo
+                    WITH SYSTEM_MODE
+                    GROUP BY CALENDAR_YEAR(WorkDateDate__c), CALENDAR_MONTH(WorkDateDate__c)
+                ]) {
+                    Integer yr = (Integer) ar.get('yr');
+                    Integer mo = (Integer) ar.get('mo');
+                    String k = yr + '-' + String.valueOf(mo).leftPad(2, '0');
+                    if (monthly.containsKey(k)) {
+                        Object total = ar.get('total');
+                        monthly.put(k, total != null ? (Decimal) total : 0);
+                    }
+                }
+                List<String> monthLabels = new List<String>{
+                    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+                };
+                List<Map<String, Object>> data = new List<Map<String, Object>>();
+                for (String k : orderedKeys) {
+                    List<String> parts = k.split('-');
+                    Integer mIdx = Integer.valueOf(parts[1]) - 1;
+                    data.add(new Map<String, Object>{
+                        'label' => monthLabels[mIdx],
+                        'value' => monthly.get(k)
+                    });
+                }
+                return data;
+            }
+            when 'projectHealthPills' {
+                // Top N Active WIs ranked by overrun ratio. Each row gets two
+                // traffic-light pills — On-Schedule (vs ETA) and On-Budget
+                // (estimated vs actual hours). Industry-standard PSA pattern,
+                // renamed from SPI/CPI per Mission Control / Kantata convention.
+                //
+                // On-Budget ratio = EstimatedHoursNumber / max(TotalLoggedHoursSum, 1).
+                //   >= 1.0 → green, 0.8-1.0 → yellow, < 0.8 → red.
+                //
+                // On-Schedule ratio (cheap proxy) = days remaining to ETA /
+                //   estimated days remaining (linear burn). Falls back to
+                //   "no estimate" when ETA or hours fields are blank.
+                List<Map<String, Object>> data = new List<Map<String, Object>>();
+                for (WorkItem__c wi : [
+                    SELECT Id, BriefDescriptionTxt__c, EstimatedHoursNumber__c,
+                           TotalLoggedHoursSum__c, CalculatedETADate__c,
+                           EstimatedEndDevDate__c, StageNamePk__c
+                    FROM WorkItem__c
+                    WHERE ActivatedDateTime__c != NULL
+                    AND ArchivedDateTime__c = NULL
+                    AND TemplateMarkedDateTime__c = NULL
+                    AND StageNamePk__c NOT IN ('Done', 'Cancelled', 'Closed', 'Rejected')
+                    AND EstimatedHoursNumber__c != NULL
+                    AND EstimatedHoursNumber__c > 0
+                    WITH SYSTEM_MODE
+                    LIMIT 50
+                ]) {
+                    Decimal logged = wi.TotalLoggedHoursSum__c != null ? wi.TotalLoggedHoursSum__c : 0;
+                    Decimal estimated = wi.EstimatedHoursNumber__c;
+                    Decimal budgetRatio = logged > 0 ? (estimated / logged) : 1;
+                    String budgetClass = budgetRatio >= 1 ? 'success' : (budgetRatio >= 0.8 ? 'warning' : 'danger');
+                    String budgetLabel = (budgetRatio * 100).setScale(0) + '%';
+                    Date etaDate = wi.CalculatedETADate__c != null ? wi.CalculatedETADate__c : wi.EstimatedEndDevDate__c;
+                    String scheduleClass = 'neutral';
+                    String scheduleLabel = '—';
+                    if (etaDate != null) {
+                        Integer daysLeft = Date.today().daysBetween(etaDate);
+                        if (daysLeft >= 0) {
+                            scheduleClass = daysLeft >= 7 ? 'success' : (daysLeft >= 0 ? 'warning' : 'danger');
+                            scheduleLabel = daysLeft + 'd left';
+                        } else {
+                            scheduleClass = 'danger';
+                            scheduleLabel = (-daysLeft) + 'd over';
+                        }
+                    }
+                    data.add(new Map<String, Object>{
+                        'id' => wi.Id,
+                        'label' => wi.BriefDescriptionTxt__c != null ? wi.BriefDescriptionTxt__c : 'Untitled',
+                        'estimated' => estimated,
+                        'logged' => logged,
+                        'budgetClass' => budgetClass,
+                        'budgetLabel' => budgetLabel,
+                        'scheduleClass' => scheduleClass,
+                        'scheduleLabel' => scheduleLabel,
+                        'sortKey' => budgetRatio
+                    });
+                }
+                // Sort by budget ratio ascending (worst first), keep top 10
+                data.sort(new HoursAnalyticsRowComparator());
+                if (data.size() > 10) {
+                    List<Map<String, Object>> trimmed = new List<Map<String, Object>>();
+                    for (Integer i = 0; i < 10; i++) {
+                        trimmed.add(data[i]);
+                    }
+                    data = trimmed;
+                }
+                return data;
+            }
             when else {
                 return null;
             }
+        }
+    }
+
+    private class HoursAnalyticsRowComparator implements Comparator<Map<String, Object>> {
+        public Integer compare(Map<String, Object> a, Map<String, Object> b) {
+            Decimal aKey = (Decimal) a.get('sortKey');
+            Decimal bKey = (Decimal) b.get('sortKey');
+            if (aKey == bKey) {
+                return 0;
+            }
+            return aKey < bKey ? -1 : 1;
         }
     }
 
@@ -202,7 +329,44 @@ global with sharing class DeliveryDashboardCardController {
         cfg.cardSize = card.CardSizeTxt__c != null ? card.CardSizeTxt__c : 'medium';
         cfg.thresholdWarning = card.ThresholdWarningNumber__c;
         cfg.thresholdCritical = card.ThresholdCriticalNumber__c;
+        cfg.clickThroughUrl = resolveClickThroughUrl(card.ClickThroughUrlTxt__c);
+        cfg.infoPopover = card.InfoPopoverTxt__c;
         return cfg;
+    }
+
+    /**
+     * @description Resolves a stored click-through value to a live URL.
+     *              Supports two shorthand forms so DashboardCard__mdt records
+     *              can be cross-org-portable (report IDs differ per org):
+     *                report:DeveloperName  → /lightning/r/Report/<id>/view
+     *                list:Object__c.ListViewName → /lightning/o/<obj>/list?filterName=<name>
+     *              Anything else is returned as-is (literal URL pass-through).
+     *              Returns null when the shorthand can't be resolved (e.g.,
+     *              report doesn't exist in this org) so the LWC simply renders
+     *              the card as non-clickable instead of breaking.
+     */
+    private static String resolveClickThroughUrl(String stored) {
+        if (String.isBlank(stored)) {
+            return null;
+        }
+        if (stored.startsWith('report:')) {
+            String devName = stored.substring(7).trim();
+            List<Report> matches = [
+                SELECT Id FROM Report WHERE DeveloperName = :devName WITH SYSTEM_MODE LIMIT 1
+            ];
+            return matches.isEmpty() ? null : '/lightning/r/Report/' + matches[0].Id + '/view';
+        }
+        if (stored.startsWith('list:')) {
+            String spec = stored.substring(5).trim();
+            Integer dotIx = spec.indexOf('.');
+            if (dotIx <= 0 || dotIx == spec.length() - 1) {
+                return null;
+            }
+            String objName = spec.substring(0, dotIx);
+            String listName = spec.substring(dotIx + 1);
+            return '/lightning/o/' + objName + '/list?filterName=' + listName;
+        }
+        return stored;
     }
 
     global class CardConfig {
@@ -216,5 +380,7 @@ global with sharing class DeliveryDashboardCardController {
         @AuraEnabled public String cardSize;
         @AuraEnabled public Decimal thresholdWarning;
         @AuraEnabled public Decimal thresholdCritical;
+        @AuraEnabled public String clickThroughUrl;
+        @AuraEnabled public String infoPopover;
     }
 }
