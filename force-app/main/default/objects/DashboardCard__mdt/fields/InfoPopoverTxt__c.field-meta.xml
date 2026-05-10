@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>InfoPopoverTxt__c</fullName>
+    <description>Optional explainer rendered in a popover when the user hovers/clicks the card&apos;s ⓘ icon. Use this to spell out the data source, calculation, or any caveats so the audience understands what the card is showing.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>Plain text. Renders as a tooltip-style popover on the card. ⓘ icon only appears when this is set.</inlineHelpText>
+    <label>Info Popover</label>
+    <length>32000</length>
+    <required>false</required>
+    <type>LongTextArea</type>
+    <visibleLines>4</visibleLines>
+</CustomField>

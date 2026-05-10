@@ -15,4 +15,6 @@
     <values><field>CardSizeTxt__c</field><value xsi:type="xsd:string">small</value></values>
     <values><field>ThresholdWarningNumber__c</field><value xsi:nil="true"/></values>
     <values><field>ThresholdCriticalNumber__c</field><value xsi:nil="true"/></values>
+    <values><field>ClickThroughUrlTxt__c</field><value xsi:type="xsd:string">report:Monthly_Hours</value></values>
+    <values><field>InfoPopoverTxt__c</field><value xsi:type="xsd:string">Sums HoursLoggedNumber__c on every WorkLog where the WORK DATE falls in the current calendar month. Click the card to open the underlying "Hours Logged (by Work Date)" report grouped by project. Excludes Approved-only filtering — every WorkLog counts because the approval workflow isn&apos;t currently enforced (StatusPk__c stays NULL on most records).</value></values>
 </CustomMetadata>

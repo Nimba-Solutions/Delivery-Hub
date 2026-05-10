@@ -127,6 +127,98 @@
 .dh-list-item-label { color: var(--dh-text); font-weight: 500; }
 .dh-list-item-meta  { color: var(--dh-text-muted); font-size: 0.75rem; }
 
+/* ── Clickable card affordance ── */
+.dh-hero-card--clickable {
+    cursor: pointer;
+}
+.dh-hero-card--clickable:hover {
+    border-color: var(--dh-accent);
+}
+
+/* ── Info popover button ── */
+.dh-info-btn {
+    margin-left: auto;
+    background: transparent;
+    border: 0;
+    padding: 0.125rem;
+    cursor: pointer;
+    color: var(--dh-text-subtle);
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+}
+.dh-info-btn:hover {
+    background: var(--dh-surface-hover);
+    color: var(--dh-text-muted);
+}
+
+.dh-info-popover {
+    background: var(--dh-surface-sunken);
+    border: 1px solid var(--dh-border);
+    border-radius: var(--dh-radius);
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--dh-text-muted);
+    line-height: 1.4;
+    white-space: pre-wrap;
+}
+.dh-info-popover p { margin: 0; }
+
+/* ── Pills card type — per-row traffic-light scores ── */
+.dh-pills-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+.dh-pill-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: var(--dh-radius);
+    cursor: pointer;
+    transition: background 150ms var(--dh-ease);
+}
+.dh-pill-row:hover {
+    background: var(--dh-surface-hover);
+}
+.dh-pill-label {
+    font-size: 0.8125rem;
+    color: var(--dh-text);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.dh-pill {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.dh-pill--success {
+    background: #d1fae5;
+    color: #065f46;
+}
+.dh-pill--warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+.dh-pill--danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+.dh-pill--neutral {
+    background: var(--dh-surface-sunken);
+    color: var(--dh-text-subtle);
+}
+
 /* ── Empty state ── */
 .dh-empty {
     text-align: center;
