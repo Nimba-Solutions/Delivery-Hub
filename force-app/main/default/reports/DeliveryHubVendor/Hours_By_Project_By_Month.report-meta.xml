@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Report xmlns="http://soap.sforce.com/2006/04/metadata">
     <columns>
-        <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkItemLookup__c</field>
-    </columns>
-    <columns>
         <aggregateTypes>Sum</aggregateTypes>
         <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%HoursLoggedNumber__c</field>
     </columns>
@@ -15,7 +12,6 @@
         <sortOrder>Asc</sortOrder>
     </groupingsAcross>
     <groupingsDown>
-        <dateGranularity>Day</dateGranularity>
         <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%WorkItemLookup__c</field>
         <sortOrder>Asc</sortOrder>
     </groupingsDown>
