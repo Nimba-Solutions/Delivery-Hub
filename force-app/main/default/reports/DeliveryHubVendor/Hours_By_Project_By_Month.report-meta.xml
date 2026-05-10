@@ -7,7 +7,7 @@
         <aggregateTypes>Sum</aggregateTypes>
         <field>%%%NAMESPACE%%%WorkLog__c$%%%NAMESPACE%%%HoursLoggedNumber__c</field>
     </columns>
-    <description>Matrix: hours logged per project (rows) × calendar month (columns). All-time, no date filter — answers Jose&apos;s 5/8 ask for the April | May | June breakdown per project. Filtered to Approved + null status (treats logged-without-approval-workflow as countable).</description>
+    <description>Matrix: hours logged per project (rows) × calendar month (columns). All-time, no date filter. Answers the multi-month per-project breakdown ask — drilled into from the &quot;Hours by Month (Last 6)&quot; dashboard tile.</description>
     <format>Matrix</format>
     <groupingsAcross>
         <dateGranularity>Month</dateGranularity>

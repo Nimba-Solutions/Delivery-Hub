@@ -292,7 +292,11 @@ global with sharing class DeliveryDashboardCardController {
                 // Sort by budget ratio ascending (worst first), keep top 10
                 data.sort(new HoursAnalyticsRowComparator());
                 if (data.size() > 10) {
-                    data = data.subList(0, 10);
+                    List<Map<String, Object>> trimmed = new List<Map<String, Object>>();
+                    for (Integer i = 0; i < 10; i++) {
+                        trimmed.add(data[i]);
+                    }
+                    data = trimmed;
                 }
                 return data;
             }
@@ -306,7 +310,9 @@ global with sharing class DeliveryDashboardCardController {
         public Integer compare(Map<String, Object> a, Map<String, Object> b) {
             Decimal aKey = (Decimal) a.get('sortKey');
             Decimal bKey = (Decimal) b.get('sortKey');
-            if (aKey == bKey) return 0;
+            if (aKey == bKey) {
+                return 0;
+            }
             return aKey < bKey ? -1 : 1;
         }
     }
