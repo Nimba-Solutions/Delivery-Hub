@@ -2,7 +2,7 @@
 
 This guide walks you through installing Delivery Hub, running the setup wizard, creating your first work item, and optionally configuring cross-org sync, document signing, and external API access.
 
-**Current release**: `0.200` — see the [Changelog](CHANGELOG.md) for the full history.
+**Current release**: `0.226` — see the [Changelog](CHANGELOG.md) for the full history. (CHANGELOG entries through 0.200 are PR-by-PR; later releases ship as a stream of named PRs — see the GitHub release tags `release/0.201.x` … `release/0.226.x` for the per-version manifests.)
 
 ---
 

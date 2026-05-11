@@ -4,6 +4,32 @@ All notable changes to the Delivery Hub package are documented here. Versions ma
 
 ---
 
+## [0.201 — 0.226] — 2026-04-23 → 2026-05-10 (per-PR detail not back-filled)
+
+The release cadence accelerated past the per-PR changelog format starting in late April 2026. The per-version manifest lives in the GitHub release tags (`release/0.201.x` … `release/0.226.x`); per-PR detail lives in `git log --oneline` and the GitHub PR descriptions. The themes that shipped in this stretch:
+
+- **Sync resilience triangle** (#742, #744, #745, #746) — namespace-tolerant payload field lookup, Failed-Inbound auto-recovery when the parent eventually crosses, sender-side empty-payload guard, WL Push-mode fan-out via Vendor WorkRequest bridge.
+- **Predecisional gate** (#747, #748) — receiver-side `WorkItem__c.MarkedPredecisionalDateTime__c` + per-org `EnablePredecisionalIngestDateTime__c` opt-in. Sandbox proposal-staging stops crossing into prod when the receiver hasn't opted in. Validated pattern for any future cross-org content-class gating.
+- **Gantt audit-pass + UX** (#749, #750, #751, #754, #756) — `BypassAuditPassDateTime__c` + `commitGanttPatches` Apex + `batchMode: true` LWC, NG bundle bumped 0.190.0 → 0.190.1 → 0.190.2, tooltip-on-hover + DetailPanel-on-click + ContextMenuPlugin wire-up.
+- **WorkItem Status default fix** (#752, #753) — field-level default flipped `New` → `Active`, plus install-time backfill for stale `Status=New` rows. Closed the invisible-WI gap where new WIs created via UI/data-loader/sync-without-Status were excluded from the gantt's Active filter.
+- **Live-event awareness** (#731, #732, #733, #734, #741) — three more LWCs subscribe to `DeliveryWorkItemChange__e` (board metrics, dependencies, activity timeline) on the existing rails. Activity Feed gets real values + fallback context, suppressed description-only and no-op events.
+- **Cross-org real-time** (PR #731, #738) — front-end live-update awareness on existing `DeliveryWorkItemChange__e` channel; gantt right-click ContextMenuPlugin. Subscribers: `deliveryProFormaTimeline`, `deliveryRecordLiveRefresh` (headless), board, dependency LWCs, activity timeline. Gated by `DeliveryHubSettings__c.EnableLiveGanttEventsDateTime__c`.
+- **Sync chain debugging arc** (#737, #739, #740) — ingestor strip + Pending queue, Comment fallback to `WorkItemId__c`, outbound payload carries `WorkItemId__c`. Lesson: pull stuck `PayloadTxt__c` first; receiver-side fixes don't help when outbound payload is missing the field.
+- **Zero-touch tenant install** (#722) — `DeliveryHubInstallHandler.onInstall()` now schedules all background jobs and auto-assigns the installer to `DeliveryHubAdmin` permission-set group. Closes the "I installed and nothing's running" gap.
+- **Stripe payment webhook** (#724) — generic `IntegrationProvider__mdt`-driven inbound webhook receiver. Stripe is the first wire-up; the framework supports more. HMAC verification, idempotency, returns 401 on every call until admin sets `SignatureSecretTxt__c` AND `EnabledDateTime__c`.
+- **Health dashboard** (#725, #730) — `deliveryHubHealthDashboard` LWC + admin home placement. Self-assessment + one-click repairs.
+- **Metadata-driven mothership/sync fields** (#726) — `CloudNimbusGlobalSettings__mdt.MothershipEntityNameTxt__c` and `SyncFieldsJsonTxt__c` replace hardcoded brand + field allowlist. Forks become viable.
+- **Custom-object cap recovery** (#727) — deleted `DeliveryTeam__mdt` + `ApprovalStep__mdt` + their orphan service/test classes (37→35). Both were unused frameworks; subscriber upgrades clean up via `destructiveChanges`.
+- **Dashboard hours visibility** (#755) — Jose-friendly matrix report + 2 new tiles + click-to-drill + info-popover. `DashboardCard__mdt` gains `DrillReportTxt__c` / `DrillListViewTxt__c` / `InfoTextTxt__c` so future tiles configure without LWC edits.
+- **Cross-path GlobalSourceId dedup** (#757) — `DeliverySyncItemIngestor.processInboundItem` pre-INSERT check stops dh-prod CREATE duplicates when the same record arrives via two paths. See [ARCHITECTURE.md § Cross-Path GlobalSourceId Dedup](ARCHITECTURE.md).
+- **Dual-FK Pending queue extension** (#758) — `WorkItemDependency__c` cross-org sync stashes Pending until BOTH parents resolve. Same Pending pattern as the WorkLog race; harder shape.
+- **Soft-delete normalize + isSyncContext relay** (#759) — soft-delete payloads stay soft-deletes across the chain instead of looking like fresh INSERTs; `isSyncContext` survives across chained Queueables.
+- **Depth-charge audit scaffold** (#760) — `SyncItem__c.ChangeTypeTxt__c` + `NetworkEntity__c.RevealFulfillmentDepthPk__c` + `JurisdictionTxt__c` + `DeliveryDepthProbeService`. Local-segment chain assembly today; recursive cross-org probe is a follow-on PR. See [depth-charge-architecture.md](depth-charge-architecture.md).
+
+Per-PR detail is intentionally not back-filled here — the PR descriptions on GitHub stay authoritative. The summary above is a reading guide, not a replacement.
+
+---
+
 ## [0.200] — 2026-04-22
 
 Release bundle targeting April invoicing + the two most active production paper cuts. Renumbered from the in-flight `0.99` branch label to `0.200` so the package version monotonically advances past the already-installed `0.199`.
