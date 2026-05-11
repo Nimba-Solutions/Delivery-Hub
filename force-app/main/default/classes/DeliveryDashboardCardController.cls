@@ -370,17 +370,17 @@ global with sharing class DeliveryDashboardCardController {
     }
 
     global class CardConfig {
-        @AuraEnabled public String key;
-        @AuraEnabled public String title;
-        @AuraEnabled public String description;
-        @AuraEnabled public String cardType;
-        @AuraEnabled public String iconName;
-        @AuraEnabled public String dataSource;
-        @AuraEnabled public String filterJson;
-        @AuraEnabled public String cardSize;
-        @AuraEnabled public Decimal thresholdWarning;
-        @AuraEnabled public Decimal thresholdCritical;
-        @AuraEnabled public String clickThroughUrl;
-        @AuraEnabled public String infoPopover;
+        @AuraEnabled global String key;
+        @AuraEnabled global String title;
+        @AuraEnabled global String description;
+        @AuraEnabled global String cardType;
+        @AuraEnabled global String iconName;
+        @AuraEnabled global String dataSource;
+        @AuraEnabled global String filterJson;
+        @AuraEnabled global String cardSize;
+        @AuraEnabled global Decimal thresholdWarning;
+        @AuraEnabled global Decimal thresholdCritical;
+        @AuraEnabled global String clickThroughUrl;
+        @AuraEnabled global String infoPopover;
     }
 }
