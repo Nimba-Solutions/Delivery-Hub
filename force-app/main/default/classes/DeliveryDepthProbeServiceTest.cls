@@ -10,6 +10,26 @@
 @IsTest
 private class DeliveryDepthProbeServiceTest {
 
+    /**
+     * @description Disable the auto-WorkRequest-creation trigger so each
+     *              test controls exactly how many WorkRequests exist for
+     *              its WI. Without this, DeliveryWorkItemTriggerHandler.
+     *              handleNetworkEntitySync auto-creates a second WorkRequest
+     *              pointing at the first active Vendor (which IS our test
+     *              peer), inflating root.children.size() to 2 and breaking
+     *              the size-1 assertions. Caught in PR #760's beta_create
+     *              upload-beta apex test phase.
+     */
+    @TestSetup
+    static void disableAutoCreateWorkRequest() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        if (settings.Id == null) {
+            settings.SetupOwnerId = UserInfo.getOrganizationId();
+        }
+        settings.EnableAutoCreateWorkRequestDateTime__c = null;
+        upsert settings;
+    }
+
     @IsTest
     static void testGetFulfillmentChainReturnsRootWithLocalOrg() {
         WorkItem__c wi = new WorkItem__c(
