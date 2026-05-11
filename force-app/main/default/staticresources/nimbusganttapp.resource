@@ -4946,7 +4946,7 @@ var NimbusGanttApp = (function(exports) {
   }
   class IIFEApp {
     static mount(container, options) {
-      var _a, _b, _c, _d, _e, _f, _g, _h;
+      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l;
       const mountStartedAt = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
       IIFEApp.unmount(container);
       const templateName = options.template || "cloudnimbus";
@@ -5162,13 +5162,44 @@ var NimbusGanttApp = (function(exports) {
           } catch (_e2) {
           }
         }
+        if (options.history !== false && typeof ((_h = tplConfig.engine) == null ? void 0 : _h.HistoryPlugin) === "function") {
+          try {
+            inst.use(tplConfig.engine.HistoryPlugin(
+              typeof options.history === "object" ? options.history : {}
+            ));
+          } catch (_e2) {
+          }
+        }
+        if (options.timeCursor !== false && typeof ((_i = tplConfig.engine) == null ? void 0 : _i.TimeCursorPlugin) === "function") {
+          try {
+            inst.use(tplConfig.engine.TimeCursorPlugin(
+              typeof options.timeCursor === "object" ? options.timeCursor : {}
+            ));
+          } catch (_e2) {
+          }
+        }
+        if (options.historyStrip !== false && typeof ((_j = tplConfig.engine) == null ? void 0 : _j.HistoryStripPlugin) === "function") {
+          try {
+            inst.use(tplConfig.engine.HistoryStripPlugin(
+              typeof options.historyStrip === "object" ? options.historyStrip : {}
+            ));
+          } catch (_e2) {
+          }
+        }
+        if (options.baseline && options.baseline !== false && typeof ((_k = tplConfig.engine) == null ? void 0 : _k.BaselinePlugin) === "function") {
+          try {
+            const blOpts = Array.isArray(options.baseline) ? { baselineTasks: options.baseline } : options.baseline;
+            inst.use(tplConfig.engine.BaselinePlugin(blOpts));
+          } catch (_e2) {
+          }
+        }
         inst.setData(gtasks, allDependencies2);
         try {
           inst.expandAll();
         } catch (_e2) {
         }
         setTimeout(() => {
-          var _a2, _b2, _c2, _d2, _e2, _f2, _g2, _h2, _i, _j;
+          var _a2, _b2, _c2, _d2, _e2, _f2, _g2, _h2, _i2, _j2;
           try {
             const gi = inst;
             const iv = options.initialViewport;
@@ -5183,7 +5214,7 @@ var NimbusGanttApp = (function(exports) {
               }
             } else {
               const x = (_h2 = (_g2 = gi.timeScale) == null ? void 0 : _g2.dateToX) == null ? void 0 : _h2.call(_g2, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
-              if (typeof x === "number") (_j = (_i = gi.scrollManager) == null ? void 0 : _i.scrollToX) == null ? void 0 : _j.call(_i, Math.max(0, x));
+              if (typeof x === "number") (_j2 = (_i2 = gi.scrollManager) == null ? void 0 : _i2.scrollToX) == null ? void 0 : _j2.call(_i2, Math.max(0, x));
             }
           } catch (_e3) {
           }
@@ -5323,7 +5354,7 @@ var NimbusGanttApp = (function(exports) {
         };
       }
       let state = { ...INITIAL_STATE };
-      if ((_h = options.initialViewport) == null ? void 0 : _h.zoom) {
+      if ((_l = options.initialViewport) == null ? void 0 : _l.zoom) {
         state = { ...state, zoom: options.initialViewport.zoom };
       }
       let allTasks = options.tasks || [];
@@ -5962,7 +5993,7 @@ var NimbusGanttApp = (function(exports) {
         return null;
       }
       function initGantt(host) {
-        var _a2, _b2, _c2;
+        var _a2, _b2, _c2, _d2, _e2, _f2, _g2;
         const eng = resolveEngine();
         if (!eng || !eng.NimbusGantt) {
           host.style.cssText = "padding:20px;color:#b91c1c;font-size:13px";
@@ -6024,7 +6055,7 @@ var NimbusGanttApp = (function(exports) {
           onTaskMove: (task, s, e) => {
             try {
               console.log("[NG] main onTaskMove received", task == null ? void 0 : task.id, s, e);
-            } catch (_e2) {
+            } catch (_e3) {
             }
             if (!task || !task.id || isBucketId(task.id)) return;
             onTaskEditAsync(task.id, s, e, { startDate: s, endDate: e });
@@ -6032,7 +6063,7 @@ var NimbusGanttApp = (function(exports) {
           onTaskResize: (task, s, e) => {
             try {
               console.log("[NG] main onTaskResize received", task == null ? void 0 : task.id, s, e);
-            } catch (_e2) {
+            } catch (_e3) {
             }
             if (!task || !task.id || isBucketId(task.id)) return;
             const orig = allTasks.find((t) => t.id === task.id);
@@ -6052,7 +6083,7 @@ var NimbusGanttApp = (function(exports) {
           onBarReorderDrag: (task, targetTaskId, targetRowIndex, targetBucketId) => {
             try {
               console.log("[NG] main onBarReorderDrag received", task == null ? void 0 : task.id, "→ target=", targetTaskId, "rowIdx=", targetRowIndex, "bucket=", targetBucketId);
-            } catch (_e2) {
+            } catch (_e3) {
             }
             if (!task || !task.id || isBucketId(task.id)) return;
             const srcTask = allTasks.find((t) => t.id === task.id);
@@ -6120,7 +6151,7 @@ var NimbusGanttApp = (function(exports) {
                 "→ patch=",
                 JSON.stringify(patch)
               );
-            } catch (_e2) {
+            } catch (_e3) {
             }
             interceptedOnPatch(patch);
           }
@@ -6198,7 +6229,7 @@ var NimbusGanttApp = (function(exports) {
             ganttInst.use(tplConfig.engine.TemporalAsymmetryPlugin(
               typeof options.temporalAsymmetry === "object" ? options.temporalAsymmetry : {}
             ));
-          } catch (_e2) {
+          } catch (_e3) {
           }
         }
         if (options.contextMenu !== false && typeof ((_c2 = tplConfig.engine) == null ? void 0 : _c2.ContextMenuPlugin) === "function") {
@@ -6206,16 +6237,47 @@ var NimbusGanttApp = (function(exports) {
             ganttInst.use(tplConfig.engine.ContextMenuPlugin(
               typeof options.contextMenu === "object" ? options.contextMenu : {}
             ));
-          } catch (_e2) {
+          } catch (_e3) {
+          }
+        }
+        if (options.history !== false && typeof ((_d2 = tplConfig.engine) == null ? void 0 : _d2.HistoryPlugin) === "function") {
+          try {
+            ganttInst.use(tplConfig.engine.HistoryPlugin(
+              typeof options.history === "object" ? options.history : {}
+            ));
+          } catch (_e3) {
+          }
+        }
+        if (options.timeCursor !== false && typeof ((_e2 = tplConfig.engine) == null ? void 0 : _e2.TimeCursorPlugin) === "function") {
+          try {
+            ganttInst.use(tplConfig.engine.TimeCursorPlugin(
+              typeof options.timeCursor === "object" ? options.timeCursor : {}
+            ));
+          } catch (_e3) {
+          }
+        }
+        if (options.historyStrip !== false && typeof ((_f2 = tplConfig.engine) == null ? void 0 : _f2.HistoryStripPlugin) === "function") {
+          try {
+            ganttInst.use(tplConfig.engine.HistoryStripPlugin(
+              typeof options.historyStrip === "object" ? options.historyStrip : {}
+            ));
+          } catch (_e3) {
+          }
+        }
+        if (options.baseline && options.baseline !== false && typeof ((_g2 = tplConfig.engine) == null ? void 0 : _g2.BaselinePlugin) === "function") {
+          try {
+            const blOpts = Array.isArray(options.baseline) ? { baselineTasks: options.baseline } : options.baseline;
+            ganttInst.use(tplConfig.engine.BaselinePlugin(blOpts));
+          } catch (_e3) {
           }
         }
         ganttInst.setData(gtasks, allDependencies);
         try {
           ganttInst.expandAll();
-        } catch (_e2) {
+        } catch (_e3) {
         }
         setTimeout(() => {
-          var _a3, _b3, _c3, _d2, _e2, _f2, _g2, _h2, _i, _j, _k, _l, _m;
+          var _a3, _b3, _c3, _d3, _e3, _f3, _g3, _h2, _i2, _j2, _k2, _l2, _m;
           try {
             const gi = ganttInst;
             const iv = options.initialViewport;
@@ -6226,20 +6288,20 @@ var NimbusGanttApp = (function(exports) {
                 gi.scrollManager.setScrollPosition(x, y);
               } else {
                 (_c3 = (_b3 = gi.scrollManager) == null ? void 0 : _b3.scrollToX) == null ? void 0 : _c3.call(_b3, x);
-                (_e2 = (_d2 = gi.scrollManager) == null ? void 0 : _d2.scrollToY) == null ? void 0 : _e2.call(_d2, y);
+                (_e3 = (_d3 = gi.scrollManager) == null ? void 0 : _d3.scrollToY) == null ? void 0 : _e3.call(_d3, y);
               }
             } else if (options.initialFocusDate) {
               const parsed = parseFocusDate(options.initialFocusDate);
               if (parsed) {
                 const snapped = snapDateToZoomPeriod(parsed, state.zoom);
-                const x = (_g2 = (_f2 = gi.timeScale) == null ? void 0 : _f2.dateToX) == null ? void 0 : _g2.call(_f2, snapped);
-                if (typeof x === "number") (_i = (_h2 = gi.scrollManager) == null ? void 0 : _h2.scrollToX) == null ? void 0 : _i.call(_h2, Math.max(0, x));
+                const x = (_g3 = (_f3 = gi.timeScale) == null ? void 0 : _f3.dateToX) == null ? void 0 : _g3.call(_f3, snapped);
+                if (typeof x === "number") (_i2 = (_h2 = gi.scrollManager) == null ? void 0 : _h2.scrollToX) == null ? void 0 : _i2.call(_h2, Math.max(0, x));
               }
             } else {
-              const x = (_k = (_j = gi.timeScale) == null ? void 0 : _j.dateToX) == null ? void 0 : _k.call(_j, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
-              if (typeof x === "number") (_m = (_l = gi.scrollManager) == null ? void 0 : _l.scrollToX) == null ? void 0 : _m.call(_l, Math.max(0, x));
+              const x = (_k2 = (_j2 = gi.timeScale) == null ? void 0 : _j2.dateToX) == null ? void 0 : _k2.call(_j2, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
+              if (typeof x === "number") (_m = (_l2 = gi.scrollManager) == null ? void 0 : _l2.scrollToX) == null ? void 0 : _m.call(_l2, Math.max(0, x));
             }
-          } catch (_e3) {
+          } catch (_e4) {
           }
         }, 50);
         if (cleanupShading) cleanupShading();
@@ -6258,7 +6320,7 @@ var NimbusGanttApp = (function(exports) {
                 if (prevCleanupDrag2) prevCleanupDrag2();
               };
             }
-          } catch (_e2) {
+          } catch (_e3) {
           }
         }
       }
