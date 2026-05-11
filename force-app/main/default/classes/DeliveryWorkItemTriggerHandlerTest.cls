@@ -568,6 +568,11 @@ public class DeliveryWorkItemTriggerHandlerTest {
         );
         insert wi;
 
+        // Hundreds of existing tests teardown via delete and shouldn't need
+        // boilerplate, so the gate is skipped in test context by default.
+        // Flip the test-only override to verify the production gate behaves.
+        DeliveryWorkItemTriggerHandler.enforceHardDeleteBlockInTest = true;
+
         Test.startTest();
         Boolean caughtRefusal = false;
         try {
@@ -575,6 +580,8 @@ public class DeliveryWorkItemTriggerHandlerTest {
         } catch (DmlException e) {
             caughtRefusal = e.getMessage().containsIgnoreCase('Hard-deleting WorkItem')
                 || e.getDmlMessage(0).containsIgnoreCase('Hard-deleting WorkItem');
+        } finally {
+            DeliveryWorkItemTriggerHandler.enforceHardDeleteBlockInTest = false;
         }
         Test.stopTest();
 
