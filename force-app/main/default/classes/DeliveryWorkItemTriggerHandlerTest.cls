@@ -553,4 +553,83 @@ public class DeliveryWorkItemTriggerHandlerTest {
                 'Non-gantt field update should persist; trigger should not have raised when no gantt-relevant change occurred');
         }
     }
+
+    /**
+     * @description Hard-delete is refused at the before-delete trigger by
+     *              default. The DH model uses soft-delete (set
+     *              ActivatedDateTime__c = null) so audit history is preserved
+     *              and cross-org sync stays clean.
+     */
+    @IsTest
+    static void testHardDeleteIsRefused() {
+        WorkItem__c wi = new WorkItem__c(
+            BriefDescriptionTxt__c = 'Will not be hard-deleted',
+            StageNamePk__c         = 'In Development'
+        );
+        insert wi;
+
+        Test.startTest();
+        Boolean caughtRefusal = false;
+        try {
+            delete wi;
+        } catch (DmlException e) {
+            caughtRefusal = e.getMessage().containsIgnoreCase('Hard-deleting WorkItem')
+                || e.getDmlMessage(0).containsIgnoreCase('Hard-deleting WorkItem');
+        }
+        Test.stopTest();
+
+        System.assert(caughtRefusal, 'Hard-delete must be refused with the "Hard-deleting WorkItem" addError');
+        Integer remaining = [SELECT COUNT() FROM WorkItem__c WHERE Id = :wi.Id];
+        System.assertEquals(1, remaining, 'Record must still exist after the refusal');
+    }
+
+    /**
+     * @description Soft-delete (set ActivatedDateTime__c = null) is the
+     *              supported "delete" path. Verifies it works without raising.
+     */
+    @IsTest
+    static void testSoftDeleteWorks() {
+        WorkItem__c wi = new WorkItem__c(
+            BriefDescriptionTxt__c = 'Will be soft-deleted',
+            StageNamePk__c         = 'In Development'
+        );
+        insert wi;
+        WorkItem__c afterInsert = [SELECT ActivatedDateTime__c FROM WorkItem__c WHERE Id = :wi.Id];
+        System.assertNotEquals(null, afterInsert.ActivatedDateTime__c,
+            'Insert should auto-stamp ActivatedDateTime__c (existing behavior)');
+
+        Test.startTest();
+        wi.ActivatedDateTime__c = null;
+        update wi;
+        Test.stopTest();
+
+        WorkItem__c reloaded = [SELECT ActivatedDateTime__c FROM WorkItem__c WHERE Id = :wi.Id];
+        System.assertEquals(null, reloaded.ActivatedDateTime__c, 'Soft-delete should clear ActivatedDateTime__c');
+    }
+
+    /**
+     * @description Admin-bypass: setting triggerDisabled=true before the delete
+     *              allows hard-delete for legitimate cleanup scripts and tests.
+     *              This is the explicit-bypass path the addError message points to.
+     */
+    @IsTest
+    static void testHardDeleteAllowedWhenTriggerDisabled() {
+        WorkItem__c wi = new WorkItem__c(
+            BriefDescriptionTxt__c = 'Will be hard-deleted via bypass',
+            StageNamePk__c         = 'In Development'
+        );
+        insert wi;
+
+        Test.startTest();
+        DeliveryWorkItemTriggerHandler.triggerDisabled = true;
+        try {
+            delete wi;
+        } finally {
+            DeliveryWorkItemTriggerHandler.triggerDisabled = false;
+        }
+        Test.stopTest();
+
+        Integer remaining = [SELECT COUNT() FROM WorkItem__c WHERE Id = :wi.Id];
+        System.assertEquals(0, remaining, 'Bypass should allow the hard delete to land');
+    }
 }

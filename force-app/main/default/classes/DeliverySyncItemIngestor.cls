@@ -30,7 +30,13 @@ public without sharing class DeliverySyncItemIngestor {
      */
     @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount')
     public static Id processInboundItem(String objectType, Map<String, Object> payload) {
-        DeliverySyncEngine.setSyncContext();
+        // Use the senderOrgId-aware setter so DeliverySyncEngine.captureChanges
+        // can fan out to non-source destinations during this transaction
+        // (enables the daisy-chain relay MF → Nimba → dh-prod). Falls back
+        // to the legacy full-suppress when SenderOrgId is missing from the
+        // payload — safe default.
+        String inboundSenderOrgId = (String) payload.get('SenderOrgId');
+        DeliverySyncEngine.setInboundContext(inboundSenderOrgId);
 
         Schema.SObjectType targetType = findSObjectType(objectType);
         if (targetType == null) {
