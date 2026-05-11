@@ -3,11 +3,11 @@
     <fullName>ChangeTypeTxt__c</fullName>
     <description>Categorizes the purpose of this SyncItem payload. Default values: record_change (the standard cross-org record sync — backward-compat default when blank), depth_probe (an outbound query asking peers to reveal their fulfillment chain at a configured depth), depth_response (an inbound reply from a peer carrying its chain segment). Free-text on purpose so future packet types can be added without restricted-picklist propagation pain.</description>
     <externalId>false</externalId>
-    <fieldManageability>DeveloperControlled</fieldManageability>
     <inlineHelpText>Free text. Blank or "record_change" = standard payload. "depth_probe" / "depth_response" = depth-charge audit packets.</inlineHelpText>
     <label>Change Type</label>
     <length>80</length>
     <required>false</required>
+    <trackTrending>false</trackTrending>
     <type>Text</type>
     <unique>false</unique>
 </CustomField>
