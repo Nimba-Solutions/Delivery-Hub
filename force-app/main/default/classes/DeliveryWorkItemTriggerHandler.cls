@@ -353,6 +353,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
      * @param oldMap Map of old WorkItem__c records keyed by Id
      */
     public static void handleBeforeUpdate(List<WorkItem__c> newWorkItems, Map<Id, WorkItem__c> oldMap) {
+        protectGanttCriticalFieldsFromNull(newWorkItems, oldMap);
         stampStageEnteredOnUpdate(newWorkItems, oldMap);
 
         // Auto-generate bounty token when BountyEnabledDateTime__c flips to true on update
@@ -391,6 +392,82 @@ public without sharing class DeliveryWorkItemTriggerHandler {
                 }
             }
         }
+    }
+
+    /**
+     * @description Refuses non-null → null transitions on the WI fields that
+     *              gate gantt visibility (EstimatedStartDevDate, EstimatedEndDevDate,
+     *              SortOrderNumber). These fields are how the gantt knows what to
+     *              render where; clearing them silently makes WIs vanish from the
+     *              user's view, which has surfaced as "lost the Joe-era items
+     *              again" twice now (4/30 fix, recurred 5/11).
+     *
+     *              Root cause is bulk Apex scripts that load a WI without these
+     *              fields in the SELECT, then update — the SObject in memory has
+     *              null for the un-loaded fields, the update writes null back
+     *              over real values. The fix at the script layer is to use the
+     *              partial-update pattern: `update new WorkItem__c(Id=x, field=y)`
+     *              instead of full-record update. The fix at the trigger layer
+     *              (this method) is to refuse the destructive transition outright.
+     *
+     *              Bypass for legitimate clears: set
+     *              DeliveryWorkItemTriggerHandler.triggerDisabled = true before
+     *              the DML. The bypass makes the intent explicit + auditable.
+     *
+     *              Skipped during inbound-sync context (peer org's value is
+     *              source of truth — including legitimate nulls).
+     *
+     *              Skipped in test context by default with override flag
+     *              enforceGanttFieldGuardInTest — same pattern as the hard-delete
+     *              guard from PR #759. Hundreds of existing tests patch WI
+     *              records without populating these fields and shouldn't need
+     *              triggerDisabled boilerplate.
+     * @param newWorkItems List of new WorkItem__c records (post-mutation).
+     * @param oldMap Map of old WorkItem__c records keyed by Id.
+     */
+    private static void protectGanttCriticalFieldsFromNull(List<WorkItem__c> newWorkItems, Map<Id, WorkItem__c> oldMap) {
+        if (DeliverySyncEngine.isSyncContext) {
+            return;
+        }
+        if (Test.isRunningTest() && !enforceGanttFieldGuardInTest) {
+            return;
+        }
+        for (WorkItem__c wi : newWorkItems) {
+            WorkItem__c oldWi = oldMap.get(wi.Id);
+            if (oldWi == null) {
+                continue;
+            }
+            if (oldWi.EstimatedStartDevDate__c != null && wi.EstimatedStartDevDate__c == null) {
+                wi.addError(buildGanttFieldGuardMessage('EstimatedStartDevDate__c'));
+                continue;
+            }
+            if (oldWi.EstimatedEndDevDate__c != null && wi.EstimatedEndDevDate__c == null) {
+                wi.addError(buildGanttFieldGuardMessage('EstimatedEndDevDate__c'));
+                continue;
+            }
+            if (oldWi.SortOrderNumber__c != null && wi.SortOrderNumber__c == null) {
+                wi.addError(buildGanttFieldGuardMessage('SortOrderNumber__c'));
+                continue;
+            }
+        }
+    }
+
+    /**
+     * @description Test-only override: when true, the gantt-field guard fires
+     *              inside test context too. Default false so existing tests
+     *              that update WIs without populating these fields don't need
+     *              triggerDisabled boilerplate. Refusal-test flips this.
+     */
+    @TestVisible
+    private static Boolean enforceGanttFieldGuardInTest = false;
+
+    private static String buildGanttFieldGuardMessage(String fieldName) {
+        return 'Cannot clear ' + fieldName + ' on a WorkItem — it makes the record gantt-invisible. '
+            + 'If your script intends to update other fields, use the partial-update pattern: '
+            + 'update new WorkItem__c(Id = wi.Id, otherField = newValue). If you genuinely intend '
+            + 'to remove this record from the gantt, use Deactivate (set ActivatedDateTime__c = null) '
+            + 'instead. Admin scripts that genuinely need to null this field must set '
+            + 'DeliveryWorkItemTriggerHandler.triggerDisabled = true before the DML.';
     }
 
     /**

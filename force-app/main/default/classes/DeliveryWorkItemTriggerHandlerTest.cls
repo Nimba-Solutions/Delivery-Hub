@@ -639,4 +639,213 @@ public class DeliveryWorkItemTriggerHandlerTest {
         Integer remaining = [SELECT COUNT() FROM WorkItem__c WHERE Id = :wi.Id];
         System.assertEquals(0, remaining, 'Bypass should allow the hard delete to land');
     }
+
+    /**
+     * @description Joe-era guard: refuses non-null → null transitions on
+     *              EstimatedStartDevDate__c / EstimatedEndDevDate__c /
+     *              SortOrderNumber__c. These fields gate gantt visibility;
+     *              clearing them silently makes WIs vanish from the user's
+     *              view (recurring issue per MF-Claude 5/11 finding).
+     */
+    @IsTest
+    static void testGanttFieldGuardRefusesEstimatedStartNullOut() {
+        WorkItem__c wi = new WorkItem__c(
+            BriefDescriptionTxt__c   = 'Has start date',
+            StageNamePk__c           = 'In Development',
+            EstimatedStartDevDate__c = Date.today()
+        );
+        insert wi;
+
+        DeliveryWorkItemTriggerHandler.enforceGanttFieldGuardInTest = true;
+
+        Test.startTest();
+        Boolean caughtRefusal = false;
+        try {
+            wi.EstimatedStartDevDate__c = null;
+            update wi;
+        } catch (DmlException e) {
+            caughtRefusal = e.getMessage().containsIgnoreCase('Cannot clear EstimatedStartDevDate__c');
+        } finally {
+            DeliveryWorkItemTriggerHandler.enforceGanttFieldGuardInTest = false;
+        }
+        Test.stopTest();
+
+        System.assert(caughtRefusal, 'Null-out of EstimatedStartDevDate__c must be refused');
+        WorkItem__c reloaded = [SELECT EstimatedStartDevDate__c FROM WorkItem__c WHERE Id = :wi.Id];
+        System.assertNotEquals(null, reloaded.EstimatedStartDevDate__c,
+            'Original value must still be there after the refusal');
+    }
+
+    @IsTest
+    static void testGanttFieldGuardRefusesEstimatedEndNullOut() {
+        WorkItem__c wi = new WorkItem__c(
+            BriefDescriptionTxt__c   = 'Has end date',
+            StageNamePk__c           = 'In Development',
+            EstimatedEndDevDate__c   = Date.today().addDays(7)
+        );
+        insert wi;
+
+        DeliveryWorkItemTriggerHandler.enforceGanttFieldGuardInTest = true;
+
+        Test.startTest();
+        Boolean caughtRefusal = false;
+        try {
+            wi.EstimatedEndDevDate__c = null;
+            update wi;
+        } catch (DmlException e) {
+            caughtRefusal = e.getMessage().containsIgnoreCase('Cannot clear EstimatedEndDevDate__c');
+        } finally {
+            DeliveryWorkItemTriggerHandler.enforceGanttFieldGuardInTest = false;
+        }
+        Test.stopTest();
+
+        System.assert(caughtRefusal, 'Null-out of EstimatedEndDevDate__c must be refused');
+    }
+
+    @IsTest
+    static void testGanttFieldGuardRefusesSortOrderNullOut() {
+        WorkItem__c wi = new WorkItem__c(
+            BriefDescriptionTxt__c   = 'Has sort order',
+            StageNamePk__c           = 'In Development',
+            SortOrderNumber__c       = 100
+        );
+        insert wi;
+
+        DeliveryWorkItemTriggerHandler.enforceGanttFieldGuardInTest = true;
+
+        Test.startTest();
+        Boolean caughtRefusal = false;
+        try {
+            wi.SortOrderNumber__c = null;
+            update wi;
+        } catch (DmlException e) {
+            caughtRefusal = e.getMessage().containsIgnoreCase('Cannot clear SortOrderNumber__c');
+        } finally {
+            DeliveryWorkItemTriggerHandler.enforceGanttFieldGuardInTest = false;
+        }
+        Test.stopTest();
+
+        System.assert(caughtRefusal, 'Null-out of SortOrderNumber__c must be refused');
+    }
+
+    /**
+     * @description Guard must allow null → non-null transitions (setting a
+     *              date for the first time). Only blocks the destructive direction.
+     */
+    @IsTest
+    static void testGanttFieldGuardAllowsNullToValueTransition() {
+        WorkItem__c wi = new WorkItem__c(
+            BriefDescriptionTxt__c = 'Initially no dates',
+            StageNamePk__c         = 'Backlog'
+        );
+        insert wi;
+
+        DeliveryWorkItemTriggerHandler.enforceGanttFieldGuardInTest = true;
+
+        Test.startTest();
+        try {
+            wi.EstimatedStartDevDate__c = Date.today();
+            wi.EstimatedEndDevDate__c   = Date.today().addDays(5);
+            update wi;
+        } finally {
+            DeliveryWorkItemTriggerHandler.enforceGanttFieldGuardInTest = false;
+        }
+        Test.stopTest();
+
+        WorkItem__c reloaded = [SELECT EstimatedStartDevDate__c, EstimatedEndDevDate__c FROM WorkItem__c WHERE Id = :wi.Id];
+        System.assertEquals(Date.today(), reloaded.EstimatedStartDevDate__c,
+            'Setting a previously-null date must succeed');
+        System.assertEquals(Date.today().addDays(5), reloaded.EstimatedEndDevDate__c,
+            'Setting a previously-null end date must succeed');
+    }
+
+    /**
+     * @description Guard must allow value → different-value transitions
+     *              (rescheduling). Only blocks value → null.
+     */
+    @IsTest
+    static void testGanttFieldGuardAllowsValueToValueTransition() {
+        WorkItem__c wi = new WorkItem__c(
+            BriefDescriptionTxt__c   = 'Reschedule me',
+            StageNamePk__c           = 'In Development',
+            EstimatedStartDevDate__c = Date.today()
+        );
+        insert wi;
+
+        DeliveryWorkItemTriggerHandler.enforceGanttFieldGuardInTest = true;
+
+        Test.startTest();
+        try {
+            wi.EstimatedStartDevDate__c = Date.today().addDays(3);
+            update wi;
+        } finally {
+            DeliveryWorkItemTriggerHandler.enforceGanttFieldGuardInTest = false;
+        }
+        Test.stopTest();
+
+        WorkItem__c reloaded = [SELECT EstimatedStartDevDate__c FROM WorkItem__c WHERE Id = :wi.Id];
+        System.assertEquals(Date.today().addDays(3), reloaded.EstimatedStartDevDate__c,
+            'Rescheduling (value → different value) must succeed');
+    }
+
+    /**
+     * @description Admin-bypass: setting triggerDisabled=true before the
+     *              update allows null-out for legitimate cleanup scripts.
+     */
+    @IsTest
+    static void testGanttFieldGuardBypassedWhenTriggerDisabled() {
+        WorkItem__c wi = new WorkItem__c(
+            BriefDescriptionTxt__c   = 'Will be force-cleared',
+            StageNamePk__c           = 'In Development',
+            EstimatedStartDevDate__c = Date.today()
+        );
+        insert wi;
+
+        Test.startTest();
+        DeliveryWorkItemTriggerHandler.triggerDisabled = true;
+        try {
+            wi.EstimatedStartDevDate__c = null;
+            update wi;
+        } finally {
+            DeliveryWorkItemTriggerHandler.triggerDisabled = false;
+        }
+        Test.stopTest();
+
+        WorkItem__c reloaded = [SELECT EstimatedStartDevDate__c FROM WorkItem__c WHERE Id = :wi.Id];
+        System.assertEquals(null, reloaded.EstimatedStartDevDate__c,
+            'Bypass must allow the null-out');
+    }
+
+    /**
+     * @description Inbound-sync context skip: the guard does NOT fire when
+     *              DeliverySyncEngine.isSyncContext is true. Source org's
+     *              value (including legitimate nulls) is the source of truth.
+     */
+    @IsTest
+    static void testGanttFieldGuardSkippedDuringInboundSync() {
+        WorkItem__c wi = new WorkItem__c(
+            BriefDescriptionTxt__c   = 'Inbound sync nulls a date',
+            StageNamePk__c           = 'In Development',
+            EstimatedStartDevDate__c = Date.today()
+        );
+        insert wi;
+
+        DeliveryWorkItemTriggerHandler.enforceGanttFieldGuardInTest = true;
+        DeliverySyncEngine.setInboundContext('00DTESTSENDER001');
+
+        Test.startTest();
+        try {
+            wi.EstimatedStartDevDate__c = null;
+            update wi;
+        } finally {
+            DeliveryWorkItemTriggerHandler.enforceGanttFieldGuardInTest = false;
+            DeliverySyncEngine.isSyncContext = false;
+            DeliverySyncEngine.inboundSenderOrgId = null;
+        }
+        Test.stopTest();
+
+        WorkItem__c reloaded = [SELECT EstimatedStartDevDate__c FROM WorkItem__c WHERE Id = :wi.Id];
+        System.assertEquals(null, reloaded.EstimatedStartDevDate__c,
+            'Inbound-sync context must allow source-org-driven nulls');
+    }
 }
