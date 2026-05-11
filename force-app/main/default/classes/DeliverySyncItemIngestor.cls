@@ -64,6 +64,25 @@ public without sharing class DeliverySyncItemIngestor {
         Id localRequestId = null;
         Id localRecordId = findLocalId(targetType, sourceId);
 
+        // Cross-path dedup via GlobalSourceId. When a record arrives via two
+        // different sync paths (e.g. MF → dh-prod direct AND MF → Nimba →
+        // dh-prod), the two payloads carry DIFFERENT SourceIds (each one is
+        // the immediate sender's local record Id) but the SAME GlobalSourceId
+        // (the origin record Id, set once at the birthplace per
+        // DeliverySyncEngine.captureChanges:117-119 and propagated unchanged
+        // across hops). Without this check, findLocalId returns null on the
+        // second-path SourceId because the inbound ledger entry was created
+        // against the FIRST path's SourceId, and the ingestor inserts a
+        // duplicate local record. Verified 2026-05-10: dh-prod ended up with
+        // 8 copies of 4 RR Phase WIs because the 4 originals each arrived
+        // via both MF-direct and MF→Nimba paths.
+        if (localRecordId == null && String.isNotBlank(globalSourceId)) {
+            Id globalMatch = findLocalIdByGlobalSource(targetType, globalSourceId);
+            if (globalMatch != null) {
+                localRecordId = globalMatch;
+            }
+        }
+
         // If it's a Work Item, also check the WorkRequest__c bridge (Downstream Origin).
         // The bridge carries explicit downstream routing context (localRequestId), so
         // we always capture it when present. But we only promote bridge.WorkItemId__c
@@ -492,6 +511,49 @@ public without sharing class DeliverySyncItemIngestor {
             WHERE RemoteExternalIdTxt__c = :remoteId
             AND ObjectTypePk__c = :cleanName
             AND DirectionPk__c = 'Inbound'
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate DESC
+            LIMIT 50
+        ];
+
+        for (SyncItem__c entry : ledger) {
+            Id candidate = (Id) entry.LocalRecordIdTxt__c;
+            if (validateLocalIdExists(type, candidate)) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @description Cross-path dedup: returns the local record Id of any
+     *              existing inbound ledger entry for the same GlobalSourceId,
+     *              regardless of which sender's SourceId originally created
+     *              it. Used to prevent duplicate inserts when the same record
+     *              arrives via two transitive paths (e.g. MF-direct AND
+     *              MF → Nimba → dh-prod) — those paths carry the same
+     *              GlobalSourceId but different SourceIds.
+     *
+     *              Returns null when no matching ledger entry exists OR when
+     *              every candidate's local record has been deleted. Falls
+     *              through to the normal insert path in either case.
+     * @param type The expected SObjectType of the local record.
+     * @param globalSourceId The origin-record Id stamped at the birthplace.
+     * @return The validated local record Id, or null if none.
+     */
+    private static Id findLocalIdByGlobalSource(Schema.SObjectType type, String globalSourceId) {
+        if (String.isBlank(globalSourceId)) {
+            return null;
+        }
+        String cleanName = stripNamespace(type.getDescribe().getName());
+
+        List<SyncItem__c> ledger = [
+            SELECT LocalRecordIdTxt__c
+            FROM SyncItem__c
+            WHERE GlobalSourceIdTxt__c = :globalSourceId
+            AND ObjectTypePk__c = :cleanName
+            AND DirectionPk__c = 'Inbound'
+            AND LocalRecordIdTxt__c != NULL
             WITH SYSTEM_MODE
             ORDER BY CreatedDate DESC
             LIMIT 50

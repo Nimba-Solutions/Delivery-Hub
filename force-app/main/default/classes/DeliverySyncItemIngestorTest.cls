@@ -761,4 +761,106 @@ private class DeliverySyncItemIngestorTest {
             return res;
         }
     }
+
+    /**
+     * @description Cross-path dedup regression guard. When the same record
+     *              arrives via two different sync paths (e.g. MF → dh-prod
+     *              direct AND MF → Nimba → dh-prod), the two payloads carry
+     *              DIFFERENT SourceIds (each path's immediate-sender record Id)
+     *              but the SAME GlobalSourceId (origin record Id). Pre-fix:
+     *              findLocalId returned null on the second path's SourceId
+     *              and the ingestor inserted a duplicate. Post-fix:
+     *              findLocalIdByGlobalSource finds the existing local twin
+     *              via the GlobalSourceId stamp on the first path's ledger
+     *              entry, the second path becomes an UPDATE.
+     *
+     *              Scenario: dh-prod's perspective. WorkItem X originates
+     *              on MF. Path A: MF → dh-prod direct (SourceId = MF's
+     *              record Id). Path B: MF → Nimba → dh-prod (SourceId =
+     *              Nimba's record Id, GlobalSourceId = MF's record Id).
+     *              Both should result in ONE local WI on dh-prod.
+     */
+    @IsTest
+    static void testInboundCrossPathDedupViaGlobalSourceId() {
+        System.runAs(testUser) {
+            // Path A already happened: an existing local WorkItem exists, with
+            // an inbound ledger entry that recorded MF's GlobalSourceId.
+            WorkItem__c existingLocal = new WorkItem__c(BriefDescriptionTxt__c = 'Path-A-arrived');
+            insert existingLocal;
+            insert new SyncItem__c(
+                DirectionPk__c = 'Inbound',
+                StatusPk__c = 'Synced',
+                ObjectTypePk__c = 'WorkItem__c',
+                RemoteExternalIdTxt__c = 'MF-PATH-A-SOURCE',
+                GlobalSourceIdTxt__c = 'MF-ORIGIN-RECORD-ID',
+                LocalRecordIdTxt__c = existingLocal.Id,
+                WorkItemLookup__c = existingLocal.Id
+            );
+
+            // Path B arrives: different SourceId (Nimba's record Id), same
+            // GlobalSourceId. Without the cross-path dedup, the ingestor
+            // would findLocalId(NIMBA-PATH-B-SOURCE) → null → INSERT new
+            // duplicate WorkItem.
+            Map<String, Object> pathBPayload = new Map<String, Object>{
+                'SourceId' => 'NIMBA-PATH-B-SOURCE',
+                'GlobalSourceId' => 'MF-ORIGIN-RECORD-ID',
+                'BriefDescriptionTxt__c' => 'Path-B-arrived (should update Path A record, not insert)'
+            };
+
+            Integer beforeCount = [SELECT COUNT() FROM WorkItem__c];
+
+            Test.startTest();
+            DeliverySyncItemIngestor.processInboundItem('WorkItem__c', pathBPayload);
+            Test.stopTest();
+
+            Integer afterCount = [SELECT COUNT() FROM WorkItem__c];
+            System.assertEquals(beforeCount, afterCount,
+                'Cross-path dedup must reuse the existing local WI rather than insert a duplicate');
+
+            WorkItem__c reloaded = [SELECT BriefDescriptionTxt__c FROM WorkItem__c WHERE Id = :existingLocal.Id];
+            System.assertEquals('Path-B-arrived (should update Path A record, not insert)', reloaded.BriefDescriptionTxt__c,
+                'Path B payload should have UPDATED the existing record (proves dedup matched)');
+        }
+    }
+
+    /**
+     * @description Confirms cross-path dedup degrades gracefully when the
+     *              ledger entry exists but its local record was deleted.
+     *              Falls through to the normal insert path so a fresh local
+     *              record gets created and a new ledger entry is written.
+     */
+    @IsTest
+    static void testInboundCrossPathDedupSkipsDeletedLocal() {
+        System.runAs(testUser) {
+            WorkItem__c orphanLocal = new WorkItem__c(BriefDescriptionTxt__c = 'Will be deleted');
+            insert orphanLocal;
+            Id orphanId = orphanLocal.Id;
+            insert new SyncItem__c(
+                DirectionPk__c = 'Inbound',
+                StatusPk__c = 'Synced',
+                ObjectTypePk__c = 'WorkItem__c',
+                RemoteExternalIdTxt__c = 'MF-PATH-A-SOURCE-DELETED',
+                GlobalSourceIdTxt__c = 'MF-ORIGIN-DELETED-LOCAL',
+                LocalRecordIdTxt__c = orphanId,
+                WorkItemLookup__c = orphanId
+            );
+            delete orphanLocal;
+
+            Map<String, Object> pathBPayload = new Map<String, Object>{
+                'SourceId' => 'NIMBA-PATH-B-SOURCE-NEW',
+                'GlobalSourceId' => 'MF-ORIGIN-DELETED-LOCAL',
+                'BriefDescriptionTxt__c' => 'Should INSERT (orphan local was deleted)'
+            };
+
+            Integer beforeCount = [SELECT COUNT() FROM WorkItem__c];
+
+            Test.startTest();
+            DeliverySyncItemIngestor.processInboundItem('WorkItem__c', pathBPayload);
+            Test.stopTest();
+
+            Integer afterCount = [SELECT COUNT() FROM WorkItem__c];
+            System.assertEquals(beforeCount + 1, afterCount,
+                'When ledger-matched local record was deleted, must insert fresh');
+        }
+    }
 }
