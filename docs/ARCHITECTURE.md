@@ -40,15 +40,16 @@ High-level architecture overview of the Delivery Hub Salesforce managed package.
 | **WorkflowEscalationRule\_\_mdt** | Rule-based escalation conditions and actions | Condition fields, notification config |
 | **WorkflowStageRequirement\_\_mdt** | Required fields for stage gate enforcement | Stage, required field, validation message |
 | **SLARule\_\_mdt** | SLA target definitions | Response/resolution time targets |
-| **CloudNimbusGlobalSettings\_\_mdt** | Global configuration defaults | Default vendor settings |
-| **OpenAIConfiguration\_\_mdt** | AI integration settings | API key, model, endpoint |
+| **CloudNimbusGlobalSettings\_\_mdt** | Global configuration defaults — drives metadata-driven mothership name + outbound `SyncFieldsJsonTxt__c` allowlist (PR #726) | BrandNameTxt\_\_c, MothershipEntityNameTxt\_\_c, SyncFieldsJsonTxt\_\_c |
 | **DocumentTemplate\_\_mdt** | Registry of document templates (Invoice, Status\_Report, Client\_Agreement, Contractor\_Agreement, Security\_Audit, Certificate\_Of\_Completion) | PortalComponentTxt\_\_c, DataQueryTxt\_\_c, OutputFormatsTxt\_\_c, AiPromptTxt\_\_c, WorkflowTypeTxt\_\_c, DescriptionTxt\_\_c, RequiresSigningCheckbox\_\_c, ElectronicConsentTextTxt\_\_c |
 | **DocumentTemplateSlot\_\_mdt** | Signer slot configuration per template (one record per signer role) | TemplateTypeTxt\_\_c, ActionLabelTxt\_\_c, RoleTxt\_\_c, SortOrderNumber\_\_c, AutoAssignTxt\_\_c |
 | **TrackedField\_\_mdt** | Fields the Activity Tracking system monitors for change logging | ObjectApiNameTxt\_\_c, FieldApiNameTxt\_\_c, FieldLabelTxt\_\_c, EnabledDateTime\_\_c, SortOrderNumber\_\_c |
-| **ApprovalStep\_\_mdt** | Formal approval chain definition — sequential approvers per workflow stage transition | WorkflowTypeTxt\_\_c, FromStageTxt\_\_c, ToStageTxt\_\_c, StepOrderNumber\_\_c, ApproverProfileTxt\_\_c, RequiredCheckboxDateTime\_\_c |
-| **DashboardCard\_\_mdt** | Executive Dashboard card configuration (CMT-driven, no code deploy to add cards) | TitleTxt\_\_c, QueryTxt\_\_c, SizePk\_\_c, TargetAppPk\_\_c, SortOrderNumber\_\_c |
-| **DeliveryTeam\_\_mdt** | Team-based visibility membership — defines who sees which board | TeamNameTxt\_\_c, MemberUserIdTxt\_\_c, NetworkEntityIdTxt\_\_c |
+| **DashboardCard\_\_mdt** | Executive Dashboard card configuration (CMT-driven, no code deploy to add cards). PR #755 added click-drill (`DrillReportTxt__c` / `DrillListViewTxt__c`) and info-popover (`InfoTextTxt__c`) so Jose-style hours-visibility tiles work without rebuilding the LWC. | TitleTxt\_\_c, QueryTxt\_\_c, SizePk\_\_c, TargetAppPk\_\_c, SortOrderNumber\_\_c, DrillReportTxt\_\_c, DrillListViewTxt\_\_c, InfoTextTxt\_\_c |
 | **DeveloperCapacity\_\_mdt** | Developer capacity for allocation calculations (Phase 4 velocity planning) | DeveloperUserIdTxt\_\_c, WeeklyCapacityNumber\_\_c, UtilizationTargetPct\_\_c |
+| **IntegrationProvider\_\_mdt** | Inbound webhook receiver registry (Stripe payment webhook today; framework supports more). HMAC secret + direction + enable-toggle stored per provider. | NameTxt\_\_c, DirectionTxt\_\_c, SignatureSecretTxt\_\_c, EnabledDateTime\_\_c, HandlerClassTxt\_\_c |
+| **UserAutoAssignConfig\_\_mdt** | Maps inbound users to default permission-set group + role at zero-touch install (PR #722). | UserCriteriaTxt\_\_c, PermissionSetGroupTxt\_\_c |
+
+**Removed in PR #727 (custom-object cap recovery, 37 → 35 objects):** `DeliveryTeam__mdt` and `ApprovalStep__mdt` — orphan frameworks with no live call sites. Apex services (`DeliveryTeamPermissionService`, `DeliveryApprovalChainService`) and their tests are gone too. Subscriber upgrades clean up via `destructiveChanges`. If you see references to these in older docs, they are stale.
 
 ### Platform Events
 
@@ -151,6 +152,20 @@ DeliveryHubPoller (scheduled or manual)
 ### Pending Queue (Race-Condition Handling)
 
 Added in v0.200. When an inbound child payload (a WorkLog, for example) arrives before its parent WorkItem's payload, the ingestor stops hard-throwing and instead inserts the inbound `SyncItem__c` with `StatusPk__c = 'Pending'`, storing the parent's remote id in `ParentRefTxt__c`. A `DeliverySyncItemPendingResolver` Queueable is then enqueued inline and retries parent resolution via bridge → ledger → direct-id fallback. If the parent still isn't present, the row stays `Pending`. `DeliveryHubScheduler.requeuePendingItems()` sweeps all Pending rows every 15 minutes, so the backlog auto-drains the moment the parent arrives — no admin action required. Rows that can't resolve after `DEFAULT_MAX_RETRIES` (10 attempts) flip to `Failed` with a descriptive `ErrorLogTxt__c`, matching the existing retry-ceiling contract.
+
+PR #758 extended the same Pending pattern to `WorkItemDependency__c` cross-org sync. Dependencies have **two** parent FKs (`BlockingWorkItemLookup__c` + `BlockedWorkItemLookup__c`) — both must resolve before the row can land. The ingestor stashes the inbound payload as Pending until both parents arrive, then replays. Dual-FK is the harder shape; the resolver handles it transparently.
+
+### Cross-Path GlobalSourceId Dedup (PR #757)
+
+When the same record reaches a receiver via **two different paths** (e.g., dh-prod gets a WorkItem from Nimba via the normal sync path AND via a cloudnimbusllc.com webhook ingest at roughly the same time), the receiver could create duplicate WorkItem rows because each path looks up the local record via a different lookup chain (bridge vs. direct-id). PR #757 adds a `GlobalSourceIdTxt__c`-based pre-INSERT check in `DeliverySyncItemIngestor.processInboundItem` that suppresses the second create when an existing local record already carries the same GlobalSourceId. Eliminates the dh-prod CREATE-duplicate gap that was producing ghost rows.
+
+### Soft-Delete Normalize + isSyncContext Relay (PR #759)
+
+Cross-org "delete" semantics are surprisingly subtle: SF doesn't replicate `isDeleted` over the sync mesh, and a Vendor org soft-deleting a WorkItem shouldn't look like a fresh INSERT to the Client receiver. PR #759 normalizes the soft-delete shape across the chain — when a WorkItem's `IsDeletedDateTime__c` is stamped (DH's soft-delete pattern), the outbound payload carries the stamp, and the receiver applies it as a stamp rather than reinstantiating. Also tightens `DeliverySyncEngine.isSyncContext` so the relay flag survives across chained Queueables instead of resetting on each new transaction.
+
+### Depth-Charge Audit Scaffold (PR #760)
+
+Foundational schema for upstream-audit / fulfillment-chain queries — see [depth-charge-architecture.md](depth-charge-architecture.md). Adds `SyncItem__c.ChangeTypeTxt__c` (free-text packet-purpose tag, allows `depth_probe` / `depth_response` without restricted-picklist propagation pain), `NetworkEntity__c.RevealFulfillmentDepthPk__c` per-peer consent setting, and `NetworkEntity__c.JurisdictionTxt__c`. New `DeliveryDepthProbeService` returns the **local segment** of the chain (this org + its downstream Vendor peers, each filtered by its own reveal level). Recursive cross-org probe + response handling is a follow-on PR. Use case: ITAR / GDPR / state-licensed-work attestation via opt-in vendor reveal.
 
 ---
 
@@ -288,18 +303,21 @@ See [Sync API Guide](SYNC_API_GUIDE.md) for full documentation.
 
 | Trigger | Object | Purpose |
 |---------|--------|---------|
-| `DeliveryWorkItemTrigger` | WorkItem\_\_c | Fires sync engine on insert/update. Stamps `StageEnteredDateTime__c` on stage change. Publishes platform events for real-time UI. |
+| `DeliveryWorkItemTrigger` | WorkItem\_\_c | Fires sync engine on insert/update. Stamps `StageEnteredDateTime__c` on stage change. Defaults `StatusPk__c` to `Active` (PR #752 — UI/Apex/data-loader inserts that omit Status no longer land at `New` and disappear from the gantt's Active filter). Publishes platform events for real-time UI. |
 | `DeliveryWorkItemCommentTrigger` | WorkItemComment\_\_c | Fires sync engine for comment replication. |
 | `DeliveryContentDocumentLinkTrigger` | ContentDocumentLink | Fires sync engine when files are attached to work items. |
 | `DeliveryWorkLogTrigger` | WorkLog\_\_c | Fires sync engine for time entry replication, gated on approval. |
 | `DeliveryBountyClaimTrigger` | BountyClaim\_\_c | Routes bounty claims back to the origin org via the sync engine. |
-| `DeliveryWorkItemDependencyTrigger` | WorkItemDependency\_\_c | Invalidates the dependency graph cache on insert/update/delete. |
+| `DeliveryDependencyTrigger` | WorkItemDependency\_\_c | Invalidates the dependency graph cache and emits cross-org sync rows for both endpoints (PR #758 dual-FK Pending). |
 | `DeliveryWorkRequestTrigger` | WorkRequest\_\_c | Resolves vendor routing on insert; fires sync engine bridge updates. |
 | `DeliveryNetworkEntityTrigger` | NetworkEntity\_\_c | Validates connection status + API key fields on insert/update. |
-| `DeliveryDeliveryDocumentTrigger` | DeliveryDocument\_\_c | Auto-creates `DocumentAction__c` slots for signing-required templates. |
-| `DeliveryDeliveryTransactionTrigger` | DeliveryTransaction\_\_c | Rolls up payment totals onto the parent document. |
-| `DeliveryDocumentActionTrigger` | DocumentAction\_\_c | Advances the parent document status to `Approved` when all slots are `Completed`. |
+| `DeliveryDocumentTrigger` | DeliveryDocument\_\_c, DocumentAction\_\_c | Document lifecycle: auto-creates `DocumentAction__c` slots for signing-required templates; advances the parent document status to `Approved` when all slots are `Completed`. |
+| `DeliveryTransactionTrigger` | DeliveryTransaction\_\_c | Rolls up payment totals onto the parent document. |
 | `DeliveryActivityLogTrigger` | ActivityLog\_\_c | Computes the SHA-256 hash chain via `DeliveryAuditChainService.setHashOnInsert()`. |
+| `DeliveryNotificationPreferenceTrigger` | NotificationPreference\_\_c | Picklist integrity guard via `DeliveryPicklistIntegrityService` (see [PICKLIST_INTEGRITY.md](PICKLIST_INTEGRITY.md)). |
+| `DeliverySyncItemTrigger` | SyncItem\_\_c | Picklist integrity guard for `StatusPk__c` and `ObjectTypePk__c`. |
+| `DeliveryUserTrigger` | User | Auto-assigns permission-set group on user insert per `UserAutoAssignConfig__mdt` (PR #722 zero-touch tenant install). |
+| `DeliveryDocEventTrigger` / `DeliverySyncEventTrigger` | platform events | Subscribers that fan out external-system notifications for `DeliveryDocEvent__e` and `DeliverySync__e`. |
 
 All triggers delegate to the appropriate service. The sync engine checks `DeliverySyncEngine.isSyncContext` to prevent recursive firing during inbound sync processing.
 
@@ -623,9 +641,9 @@ See [DOCUMENT_ACTIONING_FEATURE.md](DOCUMENT_ACTIONING_FEATURE.md) for the full 
 | **DeliveryRateLimitService** | Per-entity request throttle for Public API (`PublicApiRateLimitNumber__c`, default 100/hr) and Sync API (`SyncApiRateLimitNumber__c`, default 60/hr). HTTP 429 + `Retry-After: 3600` on breach. Disabled when fields are `null`. |
 | **DeliveryAuditChainService** | SHA-256 hash chain on `ActivityLog__c`. Each row stores its hash and parent hash. `LegalHoldEnabledDateTime__c` on settings prevents deletion. `validateChain(batchSize)` walks the chain and returns first-mismatch metadata. |
 | **DeliveryCryptoService** | HMAC-SHA256 request signing for outbound sync. Reads `HmacSecretTxt__c` from the target `NetworkEntity__c` and adds `X-Signature` header. Receiving org validates. No secret = no signing (backward compatible). |
-| **DeliveryApprovalChainService** | Multi-step approval workflows for work item stage transitions. Approvers + order defined via `ApprovalStep__mdt`. Approval events tracked with timestamps, approver identity, and comments. Integrates with stage gates. |
-| **DeliveryTeamPermissionService** | Record-level board scoping by team membership. Work items visible only to members of the assigned team (defined on `NetworkEntity__c` via `DeliveryTeam__mdt`). Admins retain full visibility. Opt-in via `TeamVisibilityEnabledDateTime__c`. |
 | **DeliveryArchivalService** | Automated archival of completed work items and related records after a configurable retention period (`ArchivalRetentionDaysNumber__c`, default 365). Archived records excluded from board queries and API responses but remain queryable for compliance. Restore on demand. |
+
+> **Removed in PR #727:** `DeliveryApprovalChainService` and `DeliveryTeamPermissionService` were deleted along with their CMTs (`ApprovalStep__mdt`, `DeliveryTeam__mdt`) — both were unused frameworks. If you need multi-step approval or team-based row visibility, those are net-new builds, not revivals.
 
 ### Operational
 
@@ -652,7 +670,7 @@ See [DOCUMENT_ACTIONING_FEATURE.md](DOCUMENT_ACTIONING_FEATURE.md) for the full 
 
 Every enterprise feature uses the DateTime pattern — `null` means off, a populated timestamp means "on, since X". Examples:
 
-- `LegalHoldEnabledDateTime__c`, `TeamVisibilityEnabledDateTime__c`, `ArchivalEnabledDateTime__c`, `EnableAdminSigningDateTime__c`, `EnableBusinessHoursSLADateTime__c` — all on `DeliveryHubSettings__c`
+- `LegalHoldEnabledDateTime__c`, `ArchivalEnabledDateTime__c`, `EnableAdminSigningDateTime__c`, `EnableBusinessHoursSLADateTime__c`, `EnableLiveGanttEventsDateTime__c`, `EnablePredecisionalIngestDateTime__c`, `BypassAuditPassDateTime__c` — all on `DeliveryHubSettings__c`
 - `HmacSecretTxt__c`, `EnableVendorPushDateTime__c` — per `NetworkEntity__c`
 - `PublicApiRateLimitNumber__c`, `SyncApiRateLimitNumber__c`, `ArchivalRetentionDaysNumber__c` — numeric knobs on `DeliveryHubSettings__c`
 
@@ -756,10 +774,10 @@ These are in addition to `DeliveryWorkItemChange__e` which drives real-time UI u
 
 | Category | Count |
 |----------|-------|
-| Apex classes | 224 (114 production + 110 test) |
-| LWC components | 68 |
+| Apex classes | ~270 (production + test, roughly 50/50 split — `git ls-files force-app/main/default/classes/*.cls \| Measure-Object` for the live count) |
+| LWC components | 70 |
 | Custom Objects | 16 |
 | Custom Metadata Types | 14 |
 | Platform Events | 5 (DeliveryWorkItemChange\_\_e, DeliverySync\_\_e, DeliveryEscalation\_\_e, DeliveryDocEvent\_\_e, GanttRemoteEvent\_\_e) |
-| Permission Sets | 3 (DeliveryHubApp, DeliveryHubAdmin_App, DeliveryHubGuestUser) |
-| Triggers | 13 |
+| Permission Sets | 4 (DeliveryHubApp, DeliveryHubAdmin\_App, DeliveryHubGuestUser, Delivery\_Hub\_Gantt\_Fullscreen) plus 2 PSGs (DeliveryHubAdmin, DeliveryHubUser) |
+| Triggers | 16 |
