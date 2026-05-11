@@ -449,4 +449,126 @@ private class DeliverySyncEngineTest {
                 'GlobalSourceId should be inherited from the existing ledger entry');
         }
     }
+
+    /**
+     * @description Refined relay gate: when isSyncContext=true AND
+     *              inboundSenderOrgId is unset (legacy callers / unknown
+     *              source), captureChanges must full-suppress (safe default).
+     *              Backward-compat regression guard.
+     */
+    @IsTest
+    static void testRefinedGateLegacyFullSuppress() {
+        System.runAs(testUser) {
+            WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
+            delete [SELECT Id FROM SyncItem__c];
+            DeliverySyncEngine.setSyncContext();  // Legacy path — no senderOrgId
+            DeliverySyncEngine.inboundSenderOrgId = null;
+
+            Test.startTest();
+            t.BriefDescriptionTxt__c = 'Legacy isSyncContext should suppress';
+            DeliverySyncEngine.captureChanges(
+                new List<SObject>{t},
+                null,
+                new Set<String>{'BriefDescriptionTxt__c'}
+            );
+            Test.stopTest();
+
+            Integer outbound = [SELECT COUNT() FROM SyncItem__c WHERE DirectionPk__c = 'Outbound'];
+            System.assertEquals(0, outbound,
+                'Legacy isSyncContext (no senderOrgId) must full-suppress fan-out');
+        }
+    }
+
+    /**
+     * @description Refined relay gate happy path: with senderOrgId set,
+     *              fan-out proceeds to destinations that are NOT the source.
+     *              Enables daisy-chain relay MF → Nimba → dh-prod (Nimba's
+     *              fan-out to dh-prod is no longer blocked just because the
+     *              record arrived via inbound sync from MF).
+     */
+    @IsTest
+    static void testRefinedGateFansOutToNonSource() {
+        System.runAs(testUser) {
+            // Stamp the existing downstream Vendor with a non-MF OrgId so the
+            // per-route filter compares against it. (The setup vendor has no
+            // OrgIdTxt by default — give it one for this test.)
+            NetworkEntity__c vendor = [SELECT Id, OrgIdTxt__c FROM NetworkEntity__c WHERE Name = 'Downstream Vendor' LIMIT 1];
+            vendor.OrgIdTxt__c = '00DOTHERORG00001';
+            update vendor;
+
+            WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
+            delete [SELECT Id FROM SyncItem__c];
+
+            // Inbound from a DIFFERENT org (not the vendor). Vendor is a
+            // non-source destination — should still receive fan-out.
+            DeliverySyncEngine.setInboundContext('00DSENDERFROM001');
+
+            Test.startTest();
+            t.BriefDescriptionTxt__c = 'Relay should fire to non-source vendor';
+            DeliverySyncEngine.captureChanges(
+                new List<SObject>{t},
+                null,
+                new Set<String>{'BriefDescriptionTxt__c'}
+            );
+            Test.stopTest();
+
+            List<SyncItem__c> outbound = [
+                SELECT Id, RequestLookup__c, PayloadTxt__c FROM SyncItem__c
+                WHERE DirectionPk__c = 'Outbound'
+            ];
+            List<SyncItem__c> matched = new List<SyncItem__c>();
+            for (SyncItem__c si : outbound) {
+                if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('non-source vendor')) {
+                    matched.add(si);
+                }
+            }
+            System.assert(!matched.isEmpty(),
+                'Refined gate should allow fan-out to non-source destinations during inbound context');
+        }
+    }
+
+    /**
+     * @description Refined relay gate echo-suppression: when senderOrgId
+     *              matches a destination's OrgId, that route is skipped
+     *              (no echo back to the org that sent us the record).
+     */
+    @IsTest
+    static void testRefinedGateBlocksEchoToSource() {
+        System.runAs(testUser) {
+            // Stamp the downstream Vendor as IF it were the source org.
+            NetworkEntity__c vendor = [SELECT Id, OrgIdTxt__c FROM NetworkEntity__c WHERE Name = 'Downstream Vendor' LIMIT 1];
+            vendor.OrgIdTxt__c = '00DSAMEASORIGIN1';
+            update vendor;
+
+            WorkItem__c t = [SELECT Id FROM WorkItem__c LIMIT 1];
+            delete [SELECT Id FROM SyncItem__c];
+
+            // Inbound from the SAME org as the vendor → should suppress fan-out
+            // to that vendor (no echo).
+            DeliverySyncEngine.setInboundContext('00DSAMEASORIGIN1');
+
+            Test.startTest();
+            t.BriefDescriptionTxt__c = 'Should NOT echo to source vendor';
+            DeliverySyncEngine.captureChanges(
+                new List<SObject>{t},
+                null,
+                new Set<String>{'BriefDescriptionTxt__c'}
+            );
+            Test.stopTest();
+
+            List<SyncItem__c> outbound = [
+                SELECT Id, RequestLookup__c, PayloadTxt__c FROM SyncItem__c
+                WHERE DirectionPk__c = 'Outbound'
+            ];
+            Integer pushCount = 0;
+            for (SyncItem__c si : outbound) {
+                if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('echo to source')
+                        && si.RequestLookup__c != null) {
+                    pushCount++;
+                }
+            }
+            System.assertEquals(0, pushCount,
+                'Refined gate must NOT echo back to the source-org destination');
+        }
+    }
 }

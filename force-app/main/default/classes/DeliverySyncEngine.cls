@@ -10,11 +10,38 @@
 public without sharing class DeliverySyncEngine {
 
     public static Boolean isSyncContext = false;
+    /**
+     * @description Org Id of the peer that sent us the inbound payload that
+     *              triggered the current sync context. When set, captureChanges
+     *              uses per-route filtering (skip routes targeting the source)
+     *              instead of the legacy full-suppress early-return — enabling
+     *              relay paths like MF → Nimba → dh-prod. When null but
+     *              isSyncContext is true, falls back to legacy full-suppress
+     *              behavior (safe default — don't fan out when we don't know
+     *              who sent us).
+     */
+    public static String inboundSenderOrgId;
     @TestVisible private static Set<String> blockedOrigins = new Set<String>();
 
     /** @description Flags the current transaction as a sync context to prevent recursive processing. */
     public static void setSyncContext() {
         isSyncContext = true;
+    }
+
+    /**
+     * @description Marks current transaction as inbound-sync context AND
+     *              records the source peer's Org Id. Use this in the inbound
+     *              ingestor when the payload carries SenderOrgId. Enables
+     *              the relay path: captureChanges fans out to non-source
+     *              destinations (e.g., Nimba forwarding MF's record to
+     *              dh-prod) while still blocking the echo back to the source.
+     * @param senderOrgId The Org Id of the peer that sent us the inbound payload.
+     */
+    public static void setInboundContext(String senderOrgId) {
+        isSyncContext = true;
+        if (String.isNotBlank(senderOrgId)) {
+            inboundSenderOrgId = senderOrgId.trim();
+        }
     }
     
     /**
@@ -37,9 +64,25 @@ public without sharing class DeliverySyncEngine {
      */
     @SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.NcssMethodCount')
     public static void captureChanges(List<SObject> newRecords, Map<Id, SObject> oldMap, Set<String> allowedFields) {
-        if (isSyncContext || newRecords == null || newRecords.isEmpty()) {
+        if (newRecords == null || newRecords.isEmpty()) {
             return;
         }
+        // Refined relay gate (replaces legacy full-suppress early-return):
+        //   isSyncContext + inboundSenderOrgId set → proceed with per-route
+        //     filter (skip routes targeting the source org). Enables the
+        //     daisy-chain relay MF → Nimba → dh-prod that the legacy gate
+        //     was unintentionally blocking.
+        //   isSyncContext + inboundSenderOrgId null → legacy full-suppress
+        //     (safe default — caller didn't tell us who sent the inbound,
+        //     so we can't tell which routes are echoes vs legitimate fan-out).
+        //   isSyncContext false → normal DML, no source filter.
+        if (isSyncContext && String.isBlank(inboundSenderOrgId)) {
+            return;
+        }
+        // Capture for per-route comparison below. Cleared at the end of the
+        // method so the next captureChanges call in the same transaction
+        // (e.g., chained DML on multiple object types) gets a clean slate.
+        String sourceOrgIdForRouting = isSyncContext ? inboundSenderOrgId : null;
 
         try {
             Set<Id> workItemIds = new Set<Id>();
@@ -76,7 +119,8 @@ public without sharing class DeliverySyncEngine {
             Map<Id, WorkItem__c> parentWorkItems = new Map<Id, WorkItem__c>([
                 SELECT Id, ClientNetworkEntityLookup__c, ClientNetworkEntityLookup__r.EntityTypePk__c,
                        ClientNetworkEntityLookup__r.EnableVendorPushDateTime__c,
-                       ClientNetworkEntityLookup__r.IntegrationEndpointUrlTxt__c
+                       ClientNetworkEntityLookup__r.IntegrationEndpointUrlTxt__c,
+                       ClientNetworkEntityLookup__r.OrgIdTxt__c
                 FROM WorkItem__c
                 WHERE Id IN :workItemIds
                 WITH SYSTEM_MODE
@@ -84,13 +128,14 @@ public without sharing class DeliverySyncEngine {
 
             // 3. Evaluate Downstream Routing Edges (Active, Typed Requests)
             List<WorkRequest__c> connections = [
-                SELECT Id, WorkItemId__c, RemoteWorkItemIdTxt__c, DeliveryEntityLookup__c, 
-                       DeliveryEntityLookup__r.IntegrationEndpointUrlTxt__c, 
-                       DeliveryEntityLookup__r.EntityTypePk__c, StatusPk__c 
-                FROM WorkRequest__c 
-                WHERE WorkItemId__c IN :workItemIds 
-                  AND StatusPk__c != 'Inactive' 
-                  AND DeliveryEntityLookup__c != NULL 
+                SELECT Id, WorkItemId__c, RemoteWorkItemIdTxt__c, DeliveryEntityLookup__c,
+                       DeliveryEntityLookup__r.IntegrationEndpointUrlTxt__c,
+                       DeliveryEntityLookup__r.EntityTypePk__c,
+                       DeliveryEntityLookup__r.OrgIdTxt__c, StatusPk__c
+                FROM WorkRequest__c
+                WHERE WorkItemId__c IN :workItemIds
+                  AND StatusPk__c != 'Inactive'
+                  AND DeliveryEntityLookup__c != NULL
                   AND DeliveryEntityLookup__r.EntityTypePk__c IN ('Vendor', 'Both')
                 WITH SYSTEM_MODE
             ];
@@ -127,6 +172,12 @@ public without sharing class DeliverySyncEngine {
                         if (blockedOrigins.contains((String)req.Id) || req.RemoteWorkItemIdTxt__c == globalSourceId) {
                             continue;
                         }
+                        // Inbound-relay gate: don't echo back to the org that sent us this record.
+                        // Compares route's destination NetworkEntity OrgId against the inbound senderOrgId.
+                        if (sourceOrgIdForRouting != null && req.DeliveryEntityLookup__r != null
+                                && matchesOrgId(req.DeliveryEntityLookup__r.OrgIdTxt__c, sourceOrgIdForRouting)) {
+                            continue;
+                        }
                         SyncItem__c built = createSyncItem(rec, req, allowedFields, globalSourceId, false);
                         if (built != null) { itemsToInsert.add(built); }
                     }
@@ -142,6 +193,11 @@ public without sharing class DeliverySyncEngine {
                         // Kill-Switch: Do not sync to Client if they are the Global Source or sent this to us
                         if (blockedOrigins.contains((String)parentWorkItem.ClientNetworkEntityLookup__c) ||
                             (String)parentWorkItem.ClientNetworkEntityLookup__c == globalSourceId) {
+                            continue;
+                        }
+                        // Inbound-relay gate: don't echo back to the org that sent us this record.
+                        if (sourceOrgIdForRouting != null
+                                && matchesOrgId(parentWorkItem.ClientNetworkEntityLookup__r.OrgIdTxt__c, sourceOrgIdForRouting)) {
                             continue;
                         }
 
@@ -275,6 +331,26 @@ public without sharing class DeliverySyncEngine {
             }
         }
         return false;
+    }
+
+    /**
+     * @description Tolerant 15-vs-18-char Org Id match. SF stores OrgId as
+     *              both 15-char case-sensitive and 18-char case-insensitive
+     *              variants in different fields; this helper compares the
+     *              first 15 chars of each so a config row stamped with the
+     *              18-char form still matches a payload's 15-char form (or
+     *              vice versa).
+     * @param a One Org Id (any length).
+     * @param b Other Org Id (any length).
+     * @return True when the first 15 chars match.
+     */
+    private static Boolean matchesOrgId(String a, String b) {
+        if (String.isBlank(a) || String.isBlank(b)) {
+            return false;
+        }
+        String left = a.length() >= 15 ? a.substring(0, 15) : a;
+        String right = b.length() >= 15 ? b.substring(0, 15) : b;
+        return left == right;
     }
 
     private static Id getWorkItemId(SObject rec) {
