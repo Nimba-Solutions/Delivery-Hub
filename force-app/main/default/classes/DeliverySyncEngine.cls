@@ -279,8 +279,16 @@ public without sharing class DeliverySyncEngine {
 
     private static Id getWorkItemId(SObject rec) {
         String name = rec.getSObjectType().getDescribe().getName();
-        if (name.endsWithIgnoreCase('WorkItem__c') && !name.endsWithIgnoreCase('WorkItemComment__c')) {
+        if (name.endsWithIgnoreCase('WorkItem__c') && !name.endsWithIgnoreCase('WorkItemComment__c') && !name.endsWithIgnoreCase('WorkItemDependency__c')) {
             return rec.Id;
+        }
+        // WorkItemDependency__c is a 2-FK bridge — neither endpoint is named
+        // WorkItemId__c. Use BlockedWorkItemLookup__c as the routing anchor
+        // (the "owning" side semantically — the dep is rendered on the
+        // gantt as an inbound arrow on the blocked WI). The receiver-side
+        // ingestor translates BOTH lookups via the ledger before insert.
+        if (name.endsWithIgnoreCase('WorkItemDependency__c')) {
+            return (Id) getSafeValue(rec, 'BlockedWorkItemLookup__c');
         }
         return (Id) getSafeValue(rec, 'WorkItemId__c');
     }

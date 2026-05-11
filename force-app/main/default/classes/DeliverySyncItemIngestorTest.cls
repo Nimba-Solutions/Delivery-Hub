@@ -763,6 +763,113 @@ private class DeliverySyncItemIngestorTest {
     }
 
     /**
+     * @description Cross-org WorkItemDependency__c inbound — both endpoint
+     *              lookups resolve via the inbound ledger, dep inserts with
+     *              local FKs (not sender-org FKs which would fail).
+     */
+    @IsTest
+    static void testInboundDependencyResolvesBothEndpointsViaLedger() {
+        System.runAs(testUser) {
+            // Setup: two local WorkItems + ledger entries that map them to
+            // sender-org Ids. Mirrors the post-WI-sync state on the receiver.
+            WorkItem__c localBlocking = new WorkItem__c(BriefDescriptionTxt__c = 'Local twin of sender Blocking');
+            WorkItem__c localBlocked = new WorkItem__c(BriefDescriptionTxt__c = 'Local twin of sender Blocked');
+            insert new List<WorkItem__c>{ localBlocking, localBlocked };
+
+            insert new List<SyncItem__c>{
+                new SyncItem__c(
+                    DirectionPk__c = 'Inbound',
+                    StatusPk__c = 'Synced',
+                    ObjectTypePk__c = 'WorkItem__c',
+                    RemoteExternalIdTxt__c = 'SENDER-BLOCKING-WI-1',
+                    LocalRecordIdTxt__c = localBlocking.Id,
+                    WorkItemLookup__c = localBlocking.Id
+                ),
+                new SyncItem__c(
+                    DirectionPk__c = 'Inbound',
+                    StatusPk__c = 'Synced',
+                    ObjectTypePk__c = 'WorkItem__c',
+                    RemoteExternalIdTxt__c = 'SENDER-BLOCKED-WI-1',
+                    LocalRecordIdTxt__c = localBlocked.Id,
+                    WorkItemLookup__c = localBlocked.Id
+                )
+            };
+
+            // Inbound dep payload carries sender-org WI Ids in the lookups.
+            // Without the dual-FK translation, mapFields would write those
+            // sender Ids straight into the local fields and SF would reject
+            // with FIELD_INTEGRITY_EXCEPTION. With the fix, ingestor
+            // translates each via the ledger and inserts the dep with
+            // local FKs.
+            Map<String, Object> depPayload = new Map<String, Object>{
+                'SourceId' => 'SENDER-DEP-1',
+                'GlobalSourceId' => 'SENDER-DEP-1',
+                'BlockingWorkItemLookup__c' => 'SENDER-BLOCKING-WI-1',
+                'BlockedWorkItemLookup__c' => 'SENDER-BLOCKED-WI-1',
+                'TypePk__c' => 'Blocks'
+            };
+
+            Test.startTest();
+            DeliverySyncItemIngestor.processInboundItem('WorkItemDependency__c', depPayload);
+            Test.stopTest();
+
+            List<WorkItemDependency__c> deps = [
+                SELECT Id, BlockingWorkItemLookup__c, BlockedWorkItemLookup__c, TypePk__c
+                FROM WorkItemDependency__c
+                WHERE BlockingWorkItemLookup__c = :localBlocking.Id
+            ];
+            System.assertEquals(1, deps.size(), 'Dep should be inserted with both local FKs translated');
+            System.assertEquals(localBlocked.Id, deps[0].BlockedWorkItemLookup__c,
+                'BlockedWorkItemLookup__c must be translated to local Id');
+            System.assertEquals('Blocks', deps[0].TypePk__c, 'TypePk__c should pass through');
+        }
+    }
+
+    /**
+     * @description Cross-org WorkItemDependency__c inbound — when one
+     *              endpoint's parent WorkItem hasn't synced locally yet,
+     *              the dep is queued as Pending instead of failing with
+     *              REQUIRED_FIELD_MISSING. Self-heals when the missing
+     *              parent eventually arrives.
+     */
+    @IsTest
+    static void testInboundDependencyQueuesPendingWhenEndpointMissing() {
+        System.runAs(testUser) {
+            // Only ONE of the two parents has a local twin. The other
+            // hasn't synced yet (no ledger entry).
+            WorkItem__c localBlocking = new WorkItem__c(BriefDescriptionTxt__c = 'Only Blocking landed locally');
+            insert localBlocking;
+            insert new SyncItem__c(
+                DirectionPk__c = 'Inbound',
+                StatusPk__c = 'Synced',
+                ObjectTypePk__c = 'WorkItem__c',
+                RemoteExternalIdTxt__c = 'SENDER-BLOCKING-WI-2',
+                LocalRecordIdTxt__c = localBlocking.Id,
+                WorkItemLookup__c = localBlocking.Id
+            );
+
+            Map<String, Object> depPayload = new Map<String, Object>{
+                'SourceId' => 'SENDER-DEP-2',
+                'GlobalSourceId' => 'SENDER-DEP-2',
+                'BlockingWorkItemLookup__c' => 'SENDER-BLOCKING-WI-2',
+                'BlockedWorkItemLookup__c' => 'SENDER-BLOCKED-WI-2-NOT-YET-LOCAL',
+                'TypePk__c' => 'Blocks'
+            };
+
+            Integer beforeDepCount = [SELECT COUNT() FROM WorkItemDependency__c];
+
+            Test.startTest();
+            Id pendingId = DeliverySyncItemIngestor.processInboundItem('WorkItemDependency__c', depPayload);
+            Test.stopTest();
+
+            Integer afterDepCount = [SELECT COUNT() FROM WorkItemDependency__c];
+            System.assertEquals(beforeDepCount, afterDepCount,
+                'Dep must NOT be inserted when an endpoint parent is unresolved — must queue Pending');
+            System.assertNotEquals(null, pendingId, 'Pending SyncItem Id should be returned');
+        }
+    }
+
+    /**
      * @description Cross-path dedup regression guard. When the same record
      *              arrives via two different sync paths (e.g. MF → dh-prod
      *              direct AND MF → Nimba → dh-prod), the two payloads carry
