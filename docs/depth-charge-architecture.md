@@ -1,6 +1,6 @@
 # Depth-charge audit architecture
 
-**Status:** scaffold shipped (schema + local-segment assembly). Recursive cross-org probe + response handling is a follow-on PR.
+**Status:** scaffold shipped in PR #760 (schema + local-segment assembly). Recursive cross-org probe + response handling is a follow-on PR — see "Follow-on PR" section below.
 
 ## What it is
 
