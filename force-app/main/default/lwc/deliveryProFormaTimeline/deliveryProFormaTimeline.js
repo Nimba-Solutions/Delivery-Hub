@@ -1354,17 +1354,34 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
 
     /**
      * Dependency-arrow menu items routed here. 'delete' calls existing
-     * Apex; 'change-type-*' would need a new Apex setter — deferred until
-     * there's a clear product use case.
+     * Apex with optimistic local update + setData (per NG 0.191.0
+     * cascade brief — avoids the full refetch round-trip).
+     *
+     * 'change-type-*' (FS/SS/FF/SF from NG's auto-installed
+     * ContextMenuPlugin) intentionally deferred: DH's TypePk__c picklist
+     * is semantic (Blocks / Relates To / Clones), not scheduler-style.
+     * Wiring change-type without first deciding the DH dep model would
+     * either silently mis-translate or surface confusing errors.
      */
     _handleCtxDependencyAction(action, depId, _pos) {
         if (action === 'delete' && depId) {
-            // Reuse existing imperative Apex.
-            deleteWorkItemDependency({ dependencyId: depId })
-                .then(() => this._scheduleRefetch())
-                .catch((err) => this._showError('Could not delete dependency', err));
+            // Snapshot for revert-on-failure.
+            const previousDeps = this._dependencies;
+            this._dependencies = (previousDeps || []).filter(d => d.id !== depId);
+            if (this._mountHandle && typeof this._mountHandle.setData === 'function') {
+                this._mountHandle.setData(this._tasks, this._dependencies);
+            }
+            deleteWorkItemDependency({ depId })
+                .catch((err) => {
+                    // Revert local state if Apex rejected.
+                    this._dependencies = previousDeps;
+                    if (this._mountHandle && typeof this._mountHandle.setData === 'function') {
+                        this._mountHandle.setData(this._tasks, this._dependencies);
+                    }
+                    this._showError('Could not delete dependency', err);
+                });
         }
-        // change-type-* deferred.
+        // change-type-* deferred — see method docstring.
     }
 
     _navigateRecord(taskId, actionName = 'view') {
