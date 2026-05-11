@@ -11,6 +11,17 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     /** @description Flag to disable trigger execution */
     public static boolean triggerDisabled = false;
 
+    /**
+     * @description Test-only override: when true, the hard-delete refusal
+     *              gate fires inside test context too. Default false so the
+     *              hundreds of existing tests that delete WIs as teardown
+     *              don't need to be retrofitted with triggerDisabled
+     *              boilerplate everywhere. The 1 explicit refusal test
+     *              flips this to verify the production gate behaves.
+     */
+    @TestVisible
+    private static Boolean enforceHardDeleteBlockInTest = false;
+
     /** @description Guard flag to prevent recursive SLA target setting */
     private static Boolean slaProcessed = false;
 
@@ -386,6 +397,42 @@ public without sharing class DeliveryWorkItemTriggerHandler {
      * @description Sets StageEnteredDateTime__c on new work items during before-insert.
      * @param newWorkItems List of WorkItem__c records being inserted
      */
+    /**
+     * @description Refuses hard-deletes on WorkItem__c. The DH model uses
+     *              soft-delete (set ActivatedDateTime__c = null) — it
+     *              preserves audit history, keeps cross-org sync semantics
+     *              clean, and is reversible. Hard-delete bypasses all of
+     *              that AND can't be propagated cross-org without a separate
+     *              delete-event sync mechanism (which DH does not have).
+     *
+     *              The right-click "Deactivate (remove from gantt)" menu
+     *              item from PR #738 is the user-facing path. Apex / admin
+     *              scripts that genuinely need a hard delete must explicitly
+     *              set DeliveryWorkItemTriggerHandler.triggerDisabled = true
+     *              before the DML so the deliberate bypass is auditable.
+     * @param oldRecords List of WorkItem__c records being deleted.
+     */
+    public static void handleBeforeDelete(List<WorkItem__c> oldRecords) {
+        // Skip the block in test context by default. Many existing tests
+        // delete WIs as teardown / interim state and shouldn't need
+        // triggerDisabled boilerplate everywhere — production protection
+        // is what matters. The explicit refusal test in
+        // DeliveryWorkItemTriggerHandlerTest.testHardDeleteIsRefused
+        // flips enforceHardDeleteBlockInTest=true to verify the gate.
+        if (Test.isRunningTest() && !enforceHardDeleteBlockInTest) {
+            return;
+        }
+        for (WorkItem__c wi : oldRecords) {
+            wi.addError(
+                'Hard-deleting WorkItem records is disabled. Use Deactivate ' +
+                '(right-click on the gantt → "Deactivate") to soft-delete — ' +
+                'preserves audit history, syncs cross-org cleanly, reversible. ' +
+                'Admin scripts that genuinely need a hard delete must set ' +
+                'DeliveryWorkItemTriggerHandler.triggerDisabled = true before the DML.'
+            );
+        }
+    }
+
     public static void handleBeforeInsert(List<WorkItem__c> newWorkItems) {
         Datetime now = Datetime.now();
         // When the inbound-sync ingestor is performing the insert, the source
