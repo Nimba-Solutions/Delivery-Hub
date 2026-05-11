@@ -238,11 +238,53 @@ public without sharing class DeliverySyncItemIngestor {
             }
         }
 
+        // WorkItemDependency__c — dual-FK translation. Both endpoint
+        // lookups (BlockingWorkItemLookup__c + BlockedWorkItemLookup__c)
+        // carry sender-org WorkItem Ids that won't resolve locally. Translate
+        // each via the inbound SyncItem ledger. Queue as Pending if EITHER
+        // parent hasn't synced yet. Self-healing semantics match WorkLog and
+        // WorkItemComment — when whichever parent arrives later, the
+        // resolver replays this payload; if the OTHER parent is still
+        // missing the replay re-queues against that one. Eventually
+        // consistent. Lives outside the WorkLog/Comment/ContentVersion
+        // conditional above because dep has its own dual-parent shape that
+        // doesn't fit the single-parentWorkItemRef pattern.
+        if (objectType.endsWithIgnoreCase('WorkItemDependency__c') && localRecordId == null) {
+            String blockingRef = (String) payload.get('BlockingWorkItemLookup__c');
+            if (String.isBlank(blockingRef)) {
+                blockingRef = (String) payload.get('delivery__BlockingWorkItemLookup__c');
+            }
+            String blockedRef = (String) payload.get('BlockedWorkItemLookup__c');
+            if (String.isBlank(blockedRef)) {
+                blockedRef = (String) payload.get('delivery__BlockedWorkItemLookup__c');
+            }
+            Id localBlocking = resolveDependencyEndpoint(blockingRef);
+            Id localBlocked = resolveDependencyEndpoint(blockedRef);
+            if (localBlocking == null) {
+                return queuePendingChild(objectType, blockingRef, payload);
+            }
+            if (localBlocked == null) {
+                return queuePendingChild(objectType, blockedRef, payload);
+            }
+            putSafe(recordToUpsert, 'BlockingWorkItemLookup__c', localBlocking);
+            putSafe(recordToUpsert, 'BlockedWorkItemLookup__c', localBlocked);
+        }
+
         // For WorkLogs: now that the Pending-queue early-return is past, strip
         // the remote-ref lookup keys on a scoped copy so mapFields doesn't
         // overwrite the resolved local parent Id with a cross-org string value.
         // Non-WorkLog paths pass the payload through unchanged.
         Map<String, Object> fieldPayload = payload;
+        if (objectType.endsWithIgnoreCase('WorkItemDependency__c')) {
+            // Same defense as WorkLog — strip the raw sender-org FK strings
+            // on a scoped copy so mapFields doesn't overwrite the local Ids
+            // we just resolved via the ledger.
+            fieldPayload = new Map<String, Object>(payload);
+            fieldPayload.remove('BlockingWorkItemLookup__c');
+            fieldPayload.remove('delivery__BlockingWorkItemLookup__c');
+            fieldPayload.remove('BlockedWorkItemLookup__c');
+            fieldPayload.remove('delivery__BlockedWorkItemLookup__c');
+        }
         if (objectType.endsWithIgnoreCase('WorkLog__c')) {
             fieldPayload = new Map<String, Object>(payload);
             fieldPayload.remove('WorkItemLookup__c');
@@ -523,6 +565,43 @@ public without sharing class DeliverySyncItemIngestor {
             }
         }
         return null;
+    }
+
+    /**
+     * @description Translates a sender-org WorkItem reference to a local Id
+     *              for use in dual-FK records (currently
+     *              WorkItemDependency__c). Mirrors the inline lookup pattern
+     *              used for single-parent records (WorkLog/WorkItemComment)
+     *              but extracted as a helper since dep needs it called twice.
+     *              Order: ledger lookup, then "is it already a local Id"
+     *              fallback (echo path).
+     * @param ref The sender-org WorkItem Id string from the payload.
+     * @return The validated local WorkItem Id, or null if unresolvable.
+     */
+    private static Id resolveDependencyEndpoint(String ref) {
+        if (String.isBlank(ref)) {
+            return null;
+        }
+        List<SyncItem__c> ledger = [
+            SELECT LocalRecordIdTxt__c FROM SyncItem__c
+            WHERE RemoteExternalIdTxt__c = :ref
+              AND ObjectTypePk__c = 'WorkItem__c'
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (!ledger.isEmpty() && String.isNotBlank((String) ledger[0].LocalRecordIdTxt__c)) {
+            try {
+                Id ledgerId = (Id) ledger[0].LocalRecordIdTxt__c;
+                Schema.SObjectType wiType = findSObjectType('WorkItem__c');
+                if (wiType != null && validateLocalIdExists(wiType, ledgerId)) {
+                    return ledgerId;
+                }
+            } catch (Exception e) {
+                System.debug(LoggingLevel.FINE, 'Dep endpoint ledger cast failed: ' + e.getMessage());
+            }
+        }
+        // Echo-path fallback: maybe ref is already a local Id.
+        return tryAsLocalWorkItemId(ref);
     }
 
     /**

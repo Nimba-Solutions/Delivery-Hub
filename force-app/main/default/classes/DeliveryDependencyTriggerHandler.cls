@@ -14,6 +14,20 @@
 public with sharing class DeliveryDependencyTriggerHandler {
 
     /**
+     * @description Fields included in cross-org SyncItem payloads. Both
+     *              endpoint lookups must be present so the receiver can
+     *              translate them via its inbound ledger to local twins.
+     *              TypePk__c carries the relationship semantics (Blocks /
+     *              Relates To / Clones).
+     */
+    private static final Set<String> SYNC_FIELDS = new Set<String>{
+        'BlockingWorkItemLookup__c',
+        'BlockedWorkItemLookup__c',
+        'TypePk__c',
+        'ExternalIdTxt__c'
+    };
+
+    /**
      * @description Handles after-insert: tracks creation of dependency records and
      *              fires dependency_change events for both endpoints of each new dep.
      * @param newRecords List of newly inserted WorkItemDependency__c records.
@@ -22,6 +36,7 @@ public with sharing class DeliveryDependencyTriggerHandler {
         if (!DeliveryTriggerControl.runAfterLogic) { return; }
         DeliveryFieldTrackingService.trackCreates(newRecords);
         publishDependencyChangeEvents(newRecords);
+        DeliverySyncEngine.captureChanges(newRecords, null, SYNC_FIELDS);
     }
 
     /**
@@ -35,6 +50,7 @@ public with sharing class DeliveryDependencyTriggerHandler {
         if (!DeliveryTriggerControl.runAfterLogic) { return; }
         DeliveryFieldTrackingService.trackChanges(newRecords, oldMap);
         publishDependencyChangeEvents(newRecords);
+        DeliverySyncEngine.captureChanges(newRecords, oldMap, SYNC_FIELDS);
     }
 
     /**
