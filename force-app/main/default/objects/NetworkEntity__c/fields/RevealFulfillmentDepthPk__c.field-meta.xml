@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RevealFulfillmentDepthPk__c</fullName>
+    <description>How much of this peer's fulfillment chain is exposed when responding to a depth-charge probe. Off = refuse to reveal anything (audit chain stops here). OrgOnly = reveal this peer's own org identity but not any sub-vendors. OrgAndJurisdiction = reveal org + jurisdiction (country/state) — sufficient for most regulatory checks (ITAR / GDPR / state-licensed work). Full = reveal everything including downstream peers + per-user attribution. Defaults to Off so consent is opt-in per-peer.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>Default Off. Set to OrgOnly / OrgAndJurisdiction / Full to opt this peer into upstream depth-charge audits.</inlineHelpText>
+    <label>Reveal Fulfillment Depth</label>
+    <required>false</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Off</fullName>
+                <default>true</default>
+                <label>Off (refuse all probes)</label>
+            </value>
+            <value>
+                <fullName>OrgOnly</fullName>
+                <default>false</default>
+                <label>Org Only</label>
+            </value>
+            <value>
+                <fullName>OrgAndJurisdiction</fullName>
+                <default>false</default>
+                <label>Org + Jurisdiction</label>
+            </value>
+            <value>
+                <fullName>Full</fullName>
+                <default>false</default>
+                <label>Full (org + jurisdiction + downstream chain + user attribution)</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>
