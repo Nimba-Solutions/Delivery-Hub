@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>JurisdictionTxt__c</fullName>
+    <description>Geographic / regulatory jurisdiction this peer operates from. Free text but recommended ISO-style values: country code (US, DE, IN), country-state (US-CA, US-NY), or named regulatory zone (EU, GDPR, ITAR-US). Surfaced when this peer's RevealFulfillmentDepthPk__c is OrgAndJurisdiction or higher. Used by depth-charge audits to verify regulatory chain (e.g., "all work was done by contiguous US-located vendors").</description>
+    <externalId>false</externalId>
+    <inlineHelpText>e.g., US-CA, EU-DE, ITAR-US. Surfaced in depth-charge audits when reveal level is OrgAndJurisdiction or Full.</inlineHelpText>
+    <label>Jurisdiction</label>
+    <length>100</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
