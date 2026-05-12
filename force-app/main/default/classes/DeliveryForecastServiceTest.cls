@@ -30,9 +30,28 @@ private class DeliveryForecastServiceTest {
         return wi;
     }
 
+    /**
+     * @description WorkLog__c.RequestId__c is a Master-Detail to WorkRequest__c
+     *              and is required at insert in the packaging org. Auto-mint a
+     *              per-WorkItem bridge WorkRequest__c on first buildLog call so
+     *              callers don't have to thread it through.
+     */
+    private static Map<Id, Id> bridgeByWi = new Map<Id, Id>();
+
     private static WorkLog__c buildLog(Id wiId, Decimal hours, Date workDate) {
+        Id requestId = bridgeByWi.get(wiId);
+        if (requestId == null) {
+            WorkRequest__c bridge = new WorkRequest__c(
+                WorkItemId__c = wiId,
+                StatusPk__c = 'Active'
+            );
+            insert bridge;
+            requestId = bridge.Id;
+            bridgeByWi.put(wiId, requestId);
+        }
         return new WorkLog__c(
             WorkItemLookup__c = wiId,
+            RequestId__c = requestId,
             HoursLoggedNumber__c = hours,
             WorkDateDate__c = workDate,
             WorkDescriptionTxt__c = 'forecast test log'
