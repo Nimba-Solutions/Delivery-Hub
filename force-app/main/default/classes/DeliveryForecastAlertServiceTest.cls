@@ -152,11 +152,16 @@ private class DeliveryForecastAlertServiceTest {
 
     @IsTest
     static void testChildWiIgnored() {
-        // Only root-level WIs (ParentWorkItemLookup__c = null) should sweep.
-        WorkItem__c parent = insertActiveRoot('Parent', 100, null, null);
+        // Only root-level WIs (ParentWorkItemLookup__c = null) enter the sweep.
+        // Tree-rollup combines parent + child estimates and logs, so the parent
+        // fires only when the COMBINED rollup crosses threshold. With parent=2h
+        // est and child=3h est, total estimate = 5h. Child logs 40h. Rollup
+        // projected = 40h logged at velocity 10h/wk against 5h scope → trivially
+        // > 110%. Parent fires; child never enters the candidate list.
+        WorkItem__c parent = insertActiveRoot('Parent', 2, null, null);
         WorkItem__c child = new WorkItem__c(
             BriefDescriptionTxt__c = 'child',
-            EstimatedHoursNumber__c = 5,
+            EstimatedHoursNumber__c = 3,
             ParentWorkItemLookup__c = parent.Id,
             ActivatedDateTime__c = Datetime.now(),
             StatusPk__c = 'Active',
@@ -168,7 +173,6 @@ private class DeliveryForecastAlertServiceTest {
         } finally {
             DeliveryWorkItemTriggerHandler.triggerDisabled = false;
         }
-        // Heavy logs on child to push over budget.
         insert new List<WorkLog__c>{
             buildLog(child.Id, 10, Date.today().addDays(-21)),
             buildLog(child.Id, 10, Date.today().addDays(-14)),
@@ -181,10 +185,13 @@ private class DeliveryForecastAlertServiceTest {
         Integer fired = DeliveryForecastAlertService.runSweep();
         Test.stopTest();
 
-        // Parent rolls up the child's logs and IS over budget → expected to fire.
-        // Child itself is not a root → not directly evaluated; the rollup is what matters.
         System.assertEquals(1, fired,
-            'Only the root WI fires; child rolls up under parent automatically');
+            'Parent rolls up child logs over the combined estimate → exactly one alert (root only)');
+
+        WorkItem__c childAfter = [SELECT LastForecastAlertDateTime__c
+                                 FROM WorkItem__c WHERE Id = :child.Id LIMIT 1];
+        System.assertEquals(null, childAfter.LastForecastAlertDateTime__c,
+            'Child WI must NOT be alerted directly — it was never a sweep candidate');
     }
 
     @IsTest
