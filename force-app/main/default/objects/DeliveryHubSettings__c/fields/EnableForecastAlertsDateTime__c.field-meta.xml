@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableForecastAlertsDateTime__c</fullName>
+    <description>When non-null, the daily forecast-alert scan is active. Scans active root WorkItems where projectedFinalHours > EstimatedHoursNumber * ForecastAlertThresholdPercentNumber and pushes a bell + email + (when configured) Slack alert to the WI owner. Null disables the feature.</description>
+    <externalId>false</externalId>
+    <label>Enable Forecast Alerts</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

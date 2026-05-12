@@ -1,0 +1,22 @@
+<template>
+    <template lwc:if={hasData}>
+        <div class="pills-row">
+            <div class={onBudgetPill.pillClass} title={onBudgetPill.tooltip}>
+                <div class="pill-label">{onBudgetPill.name}</div>
+                <div class={onBudgetPill.badgeClass}>{onBudgetPill.label}</div>
+                <div class="pill-sub">{onBudgetPill.subtext}</div>
+            </div>
+            <div class={onSchedulePill.pillClass} title={onSchedulePill.tooltip}>
+                <div class="pill-label">{onSchedulePill.name}</div>
+                <div class={onSchedulePill.badgeClass}>{onSchedulePill.label}</div>
+                <div class="pill-sub">{onSchedulePill.subtext}</div>
+            </div>
+        </div>
+    </template>
+    <template lwc:if={errorMessage}>
+        <div class="pills-error">
+            <lightning-icon icon-name="utility:error" size="x-small"></lightning-icon>
+            <span>{errorMessage}</span>
+        </div>
+    </template>
+</template>

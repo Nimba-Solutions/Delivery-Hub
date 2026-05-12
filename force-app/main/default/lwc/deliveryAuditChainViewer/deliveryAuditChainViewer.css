@@ -1,0 +1,185 @@
+:host {
+    display: block;
+}
+
+.audit-card {
+    background: #ffffff;
+    border-radius: 0.75rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    font-size: 0.8125rem;
+}
+
+.audit-header {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(135deg, #faf5ff 0%, #eff6ff 100%);
+}
+
+.audit-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.audit-header-icon {
+    color: #7c3aed;
+}
+
+.audit-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 0.15rem 0;
+}
+
+.audit-subtitle {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+.audit-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.audit-depth {
+    width: 8rem;
+}
+
+.audit-probe-btn {
+    background: #7c3aed;
+    color: #ffffff;
+    border: 1px solid #6d28d9;
+    border-radius: 0.375rem;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.audit-probe-btn:hover:not(:disabled) {
+    background: #6d28d9;
+}
+
+.audit-probe-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.audit-loading {
+    padding: 2rem 1rem;
+    text-align: center;
+}
+
+.audit-loading-sub {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+.audit-error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 1rem 1.25rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    color: #991b1b;
+}
+
+.audit-empty {
+    padding: 2rem 1.25rem;
+    text-align: center;
+    color: #6b7280;
+}
+
+.audit-empty-sub {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-top: 0.5rem;
+}
+
+.audit-results {
+    padding: 0.5rem 0;
+}
+
+.audit-row {
+    padding: 0.5rem 1.25rem;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.audit-row:last-child {
+    border-bottom: none;
+}
+
+.audit-row-main {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.audit-org-name {
+    font-weight: 600;
+    color: #111827;
+}
+
+.audit-row-meta {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.25rem;
+    font-size: 0.6875rem;
+    color: #6b7280;
+}
+
+.audit-meta-item {
+    display: inline-block;
+}
+
+.reveal-badge {
+    font-size: 0.6875rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.reveal-badge--full {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #6ee7b7;
+}
+
+.reveal-badge--mid {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #93c5fd;
+}
+
+.reveal-badge--low {
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fcd34d;
+}
+
+.reveal-badge--redacted {
+    background: #f3f4f6;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+}
+
+.reveal-badge--neutral {
+    background: #f9fafb;
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
+}
