@@ -1,0 +1,134 @@
+<template>
+    <div class="hours-card">
+
+        <div class="hours-header">
+            <div class="hours-header-left">
+                <lightning-icon icon-name="utility:clock" alternative-text="Monthly hours" size="small" class="hours-header-icon"></lightning-icon>
+                <div>
+                    <h2 class="hours-title">Monthly Hours</h2>
+                    <p class="hours-subtitle">Hours logged across this project and its descendants</p>
+                </div>
+            </div>
+            <div class="hours-header-right">
+                <button type="button"
+                        class="hours-toggle"
+                        onclick={handleToggleRange}
+                        disabled={isLoading}>
+                    {toggleLabel}
+                </button>
+            </div>
+        </div>
+
+        <template lwc:if={isLoading}>
+            <div class="hours-loading">
+                <lightning-spinner alternative-text="Loading monthly hours..." size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <template lwc:if={hasError}>
+            <div class="hours-error">
+                <lightning-icon icon-name="utility:error" size="x-small"></lightning-icon>
+                <span>{errorMessage}</span>
+            </div>
+        </template>
+
+        <template lwc:if={hasData}>
+            <div class="hours-summary-row">
+                <div class="summary-tile">
+                    <div class="summary-label">Logged</div>
+                    <div class="summary-value">{totalLoggedDisplay}h</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="summary-label">Estimated</div>
+                    <div class="summary-value">{totalEstimatedDisplay}h</div>
+                </div>
+                <template lwc:if={hasTarget}>
+                    <div class="summary-tile">
+                        <div class="summary-label">Monthly target</div>
+                        <div class="summary-value">{monthlyTargetDisplay}h</div>
+                    </div>
+                    <div class="summary-tile">
+                        <div class="summary-label">Variance</div>
+                        <div class={varianceClass}>{variancePercent}</div>
+                    </div>
+                </template>
+                <div class="summary-tile">
+                    <div class="summary-label">Items in tree</div>
+                    <div class="summary-value">{descendantCountDisplay}</div>
+                </div>
+            </div>
+
+            <div class="hours-body">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     viewBox={svgViewBox}
+                     class="hours-svg"
+                     preserveAspectRatio="xMidYMid meet">
+
+                    <template for:each={gridLines} for:item="gl">
+                        <line key={gl.key}
+                              x1={chartLeft} y1={gl.y}
+                              x2={chartRight} y2={gl.y}
+                              class="grid-line"></line>
+                    </template>
+
+                    <template for:each={gridLines} for:item="gl">
+                        <text key={gl.labelKey}
+                              x={yLabelX} y={gl.y}
+                              class="axis-label axis-label--y">{gl.label}</text>
+                    </template>
+
+                    <template for:each={bars} for:item="bar">
+                        <rect key={bar.key}
+                              x={bar.x} y={bar.y}
+                              width={bar.width} height={bar.height}
+                              class={bar.cssClass}>
+                            <title key={bar.tooltipKey}>{bar.tooltip}</title>
+                        </rect>
+                    </template>
+
+                    <template lwc:if={hasTarget}>
+                        <line x1={chartLeft} y1={targetLineY}
+                              x2={chartRight} y2={targetLineY}
+                              class="target-line"></line>
+                    </template>
+
+                    <template for:each={xLabels} for:item="xl">
+                        <text key={xl.key}
+                              x={xl.x} y={xLabelY}
+                              class="axis-label axis-label--x">{xl.label}</text>
+                    </template>
+
+                    <line x1={chartLeft} y1={chartTop}
+                          x2={chartLeft} y2={chartBottom}
+                          class="axis-line"></line>
+                    <line x1={chartLeft} y1={chartBottom}
+                          x2={chartRight} y2={chartBottom}
+                          class="axis-line"></line>
+                </svg>
+            </div>
+
+            <div class="hours-legend">
+                <span class="legend-item">
+                    <span class="legend-swatch legend-swatch--under"></span>At/under target
+                </span>
+                <span class="legend-item">
+                    <span class="legend-swatch legend-swatch--over"></span>Over target
+                </span>
+                <template lwc:if={hasTarget}>
+                    <span class="legend-item">
+                        <span class="legend-line legend-line--target"></span>Monthly target
+                    </span>
+                </template>
+            </div>
+        </template>
+
+        <template lwc:if={isEmpty}>
+            <div class="hours-empty">
+                <lightning-icon icon-name="utility:clock" size="medium" class="hours-empty-icon"></lightning-icon>
+                <p>No hours logged in this window</p>
+                <p class="hours-empty-sub">Log work against this item or any of its descendants to populate this chart.</p>
+            </div>
+        </template>
+
+    </div>
+</template>
