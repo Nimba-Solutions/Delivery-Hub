@@ -137,6 +137,16 @@ global without sharing class DeliveryHubSyncService {
                 }
             }
 
+            // 2c. Depth-probe protocol branch: pseudo-objectType used for
+            //     audit-chain probes. Bypasses the regular ingestor and returns
+            //     the local fulfillment-chain segment directly as HTTP 200.
+            if (objectType.equalsIgnoreCase('DepthProbeMessage')) {
+                String probeResponse = DeliveryDepthProbeService.handleInboundProbe(payload);
+                res.statusCode = 200;
+                res.responseBody = Blob.valueOf(probeResponse);
+                return;
+            }
+
             // 3. Hand off to Ingestor
             Id processedId = DeliverySyncItemIngestor.processInboundItem(objectType, payload);
 
