@@ -1,0 +1,73 @@
+<template>
+    <div class="audit-card">
+        <div class="audit-header">
+            <div class="audit-header-left">
+                <lightning-icon icon-name="utility:graph" alternative-text="Audit chain" size="small" class="audit-header-icon"></lightning-icon>
+                <div>
+                    <h2 class="audit-title">Fulfillment Audit Chain</h2>
+                    <p class="audit-subtitle">Reveals downstream peers + jurisdictions per their consent</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="audit-controls">
+            <lightning-combobox
+                label="Probe depth"
+                value={depth}
+                options={depthOptions}
+                onchange={handleDepthChange}
+                variant="label-hidden"
+                class="audit-depth">
+            </lightning-combobox>
+            <button type="button"
+                    class="audit-probe-btn"
+                    onclick={handleProbe}
+                    disabled={isLoading}>
+                <template lwc:if={isLoading}>
+                    Probing…
+                </template>
+                <template lwc:else>
+                    Probe chain
+                </template>
+            </button>
+        </div>
+
+        <template lwc:if={isLoading}>
+            <div class="audit-loading">
+                <lightning-spinner alternative-text="Probing cross-org chain..." size="small"></lightning-spinner>
+                <p class="audit-loading-sub">Recursive HTTP probes can take 5-30s per hop.</p>
+            </div>
+        </template>
+
+        <template lwc:if={errorMessage}>
+            <div class="audit-error">
+                <lightning-icon icon-name="utility:error" size="x-small"></lightning-icon>
+                <span>{errorMessage}</span>
+            </div>
+        </template>
+
+        <template lwc:if={hasResults}>
+            <div class="audit-results">
+                <template for:each={flattened} for:item="row">
+                    <div key={row.key} class="audit-row" style={row.indentStyle}>
+                        <div class="audit-row-main">
+                            <span class="audit-org-name">{row.orgName}</span>
+                            <span class={row.badgeClass}>{row.revealLevel}</span>
+                        </div>
+                        <div class="audit-row-meta">
+                            <span class="audit-meta-item">Org Id: {row.orgId}</span>
+                            <span class="audit-meta-item">Jurisdiction: {row.jurisdiction}</span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+        <template lwc:if={hasNoResults}>
+            <div class="audit-empty">
+                <p>No peers found in this org's segment of the chain.</p>
+                <p class="audit-empty-sub">Either this WorkItem has no downstream Vendor edges, or all peers refused the probe (reveal=Off).</p>
+            </div>
+        </template>
+    </div>
+</template>
