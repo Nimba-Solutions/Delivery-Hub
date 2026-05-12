@@ -143,7 +143,7 @@ global with sharing class DeliveryDepthProbeService {
         root.children = new List<DepthChainNode>();
 
         for (WorkRequest__c req : [
-            SELECT Id, DeliveryEntityLookup__c, RemoteWorkItemIdTxt__c,
+            SELECT Id, WorkItemId__c, DeliveryEntityLookup__c, RemoteWorkItemIdTxt__c,
                    DeliveryEntityLookup__r.Name,
                    DeliveryEntityLookup__r.OrgIdTxt__c,
                    DeliveryEntityLookup__r.JurisdictionTxt__c,
