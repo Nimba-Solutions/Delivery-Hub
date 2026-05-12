@@ -1,0 +1,140 @@
+<template>
+    <div class="burnup-card">
+
+        <div class="burnup-header">
+            <div class="burnup-header-left">
+                <lightning-icon icon-name="utility:chart" alternative-text="Burn-up" size="small" class="burnup-header-icon"></lightning-icon>
+                <div>
+                    <h2 class="burnup-title">Velocity Forecast</h2>
+                    <p class="burnup-subtitle">Rolling 4-week velocity projected to scope</p>
+                </div>
+            </div>
+        </div>
+
+        <template lwc:if={isLoading}>
+            <div class="burnup-loading">
+                <lightning-spinner alternative-text="Computing forecast..." size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <template lwc:if={hasError}>
+            <div class="burnup-error">
+                <lightning-icon icon-name="utility:error" size="x-small"></lightning-icon>
+                <span>{errorMessage}</span>
+            </div>
+        </template>
+
+        <template lwc:if={hasData}>
+            <div class={statusBannerClass}>{statusBannerText}</div>
+
+            <div class="burnup-summary-row">
+                <div class="summary-tile">
+                    <div class="summary-label">Velocity</div>
+                    <div class="summary-value">{velocityDisplay}</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="summary-label">Weeks remaining</div>
+                    <div class="summary-value">{weeksRemainingDisplay}</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="summary-label">Projected completion</div>
+                    <div class="summary-value">{projectedCompletionDisplay}</div>
+                    <div class="summary-sub">{confidenceRangeDisplay}</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="summary-label">Projected final</div>
+                    <div class={overBudgetClass}>{projectedFinalDisplay}</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="summary-label">Scope</div>
+                    <div class="summary-value">{scopeDisplay}</div>
+                </div>
+            </div>
+
+            <div class="burnup-body">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     viewBox={svgViewBox}
+                     class="burnup-svg"
+                     preserveAspectRatio="xMidYMid meet">
+
+                    <template for:each={gridLines} for:item="gl">
+                        <line key={gl.key}
+                              x1={chartLeft} y1={gl.y}
+                              x2={chartRight} y2={gl.y}
+                              class="grid-line"></line>
+                    </template>
+
+                    <template for:each={gridLines} for:item="gl">
+                        <text key={gl.labelKey}
+                              x={yLabelX} y={gl.y}
+                              class="axis-label axis-label--y">{gl.label}</text>
+                    </template>
+
+                    <template lwc:if={hasScopeLine}>
+                        <line x1={chartLeft} y1={scopeLineY}
+                              x2={chartRight} y2={scopeLineY}
+                              class="scope-line"></line>
+                        <text x={chartRight} y={scopeLineY}
+                              class="scope-label">Scope</text>
+                    </template>
+
+                    <polyline points={actualLinePoints}
+                              class="chart-line chart-line--actual"
+                              fill="none"></polyline>
+
+                    <template lwc:if={hasProjection}>
+                        <polyline points={projectionLinePoints}
+                                  class="chart-line chart-line--projection"
+                                  fill="none"></polyline>
+                    </template>
+
+                    <template lwc:if={hasTodayMarker}>
+                        <line x1={todayMarkerX} y1={chartTop}
+                              x2={todayMarkerX} y2={chartBottom}
+                              class="today-marker"></line>
+                        <text x={todayMarkerX} y={chartTop}
+                              class="today-label">Today</text>
+                    </template>
+
+                    <template for:each={xLabels} for:item="xl">
+                        <text key={xl.key}
+                              x={xl.x} y={xLabelY}
+                              class="axis-label axis-label--x">{xl.label}</text>
+                    </template>
+
+                    <line x1={chartLeft} y1={chartTop}
+                          x2={chartLeft} y2={chartBottom}
+                          class="axis-line"></line>
+                    <line x1={chartLeft} y1={chartBottom}
+                          x2={chartRight} y2={chartBottom}
+                          class="axis-line"></line>
+                </svg>
+            </div>
+
+            <div class="burnup-legend">
+                <span class="legend-item">
+                    <span class="legend-line legend-line--actual"></span>Actual logged (cumulative)
+                </span>
+                <template lwc:if={hasProjection}>
+                    <span class="legend-item">
+                        <span class="legend-line legend-line--projection"></span>Projection at current velocity
+                    </span>
+                </template>
+                <template lwc:if={hasScopeLine}>
+                    <span class="legend-item">
+                        <span class="legend-line legend-line--scope"></span>Scope
+                    </span>
+                </template>
+            </div>
+        </template>
+
+        <template lwc:if={isEmpty}>
+            <div class="burnup-empty">
+                <lightning-icon icon-name="utility:chart" size="medium" class="burnup-empty-icon"></lightning-icon>
+                <p>No logged hours yet</p>
+                <p class="burnup-empty-sub">Log work against this project (or its descendants) to build velocity history.</p>
+            </div>
+        </template>
+
+    </div>
+</template>

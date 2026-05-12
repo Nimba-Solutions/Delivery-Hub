@@ -1,0 +1,247 @@
+:host {
+    display: block;
+}
+
+.hours-card {
+    background: #ffffff;
+    border-radius: 0.75rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    font-size: 0.8125rem;
+}
+
+.hours-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.125rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfeff 100%);
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.hours-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.hours-header-icon {
+    color: #059669;
+}
+
+.hours-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 0.15rem 0;
+}
+
+.hours-subtitle {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+.hours-toggle {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    color: #374151;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.hours-toggle:hover:not(:disabled) {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.hours-toggle:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.hours-loading {
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+}
+
+.hours-error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 1rem 1.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    color: #991b1b;
+}
+
+.hours-empty {
+    padding: 3rem 2rem;
+    text-align: center;
+    color: #6b7280;
+}
+
+.hours-empty-icon {
+    color: #d1d5db;
+    margin-bottom: 0.75rem;
+}
+
+.hours-empty-sub {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-top: 0.25rem;
+}
+
+.hours-summary-row {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    flex-wrap: wrap;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.summary-tile {
+    flex: 1 1 7rem;
+    min-width: 6.5rem;
+}
+
+.summary-label {
+    font-size: 0.6875rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.15rem;
+}
+
+.summary-value {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.summary-variance {
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.summary-variance--under {
+    color: #15803d;
+}
+
+.summary-variance--over {
+    color: #b91c1c;
+}
+
+.hours-body {
+    padding: 1rem 1.25rem 0.25rem;
+}
+
+.hours-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.grid-line {
+    stroke: #e5e7eb;
+    stroke-width: 1;
+    stroke-dasharray: 4 3;
+}
+
+.axis-line {
+    stroke: #9ca3af;
+    stroke-width: 1.5;
+}
+
+.axis-label {
+    font-size: 10px;
+    fill: #6b7280;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.axis-label--y {
+    text-anchor: end;
+    dominant-baseline: middle;
+}
+
+.axis-label--x {
+    text-anchor: middle;
+    dominant-baseline: hanging;
+}
+
+.bar {
+    transition: opacity 0.15s ease;
+}
+
+.bar:hover {
+    opacity: 0.85;
+}
+
+.bar--under {
+    fill: #10b981;
+}
+
+.bar--over {
+    fill: #ef4444;
+}
+
+.target-line {
+    stroke: #6b7280;
+    stroke-width: 1.5;
+    stroke-dasharray: 6 4;
+    pointer-events: none;
+}
+
+.hours-legend {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid #f3f4f6;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.6875rem;
+    color: #6b7280;
+}
+
+.legend-swatch {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 2px;
+}
+
+.legend-swatch--under {
+    background: #10b981;
+}
+
+.legend-swatch--over {
+    background: #ef4444;
+}
+
+.legend-line {
+    display: inline-block;
+    width: 1.25rem;
+    height: 3px;
+    border-radius: 2px;
+}
+
+.legend-line--target {
+    background: #6b7280;
+    background-image: linear-gradient(90deg, #6b7280 0 6px, transparent 6px 10px);
+    height: 2px;
+}
