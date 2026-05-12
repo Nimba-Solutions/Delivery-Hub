@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ForecastAlertThresholdPercentNumber__c</fullName>
+    <description>Percent threshold above which forecast alerts fire. Default 110 = alert when projected final hours exceed estimated by 10% or more. Tunable per org.</description>
+    <externalId>false</externalId>
+    <label>Forecast Alert Threshold %</label>
+    <precision>5</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>
