@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LastForecastAlertDateTime__c</fullName>
+    <description>Timestamp of the most recent forecast-alert delivery for this WorkItem. Cooldown guard for DeliveryForecastAlertService: re-alert only when LastForecastAlertProjectedHoursNumber worsens by ≥10% OR ≥7 days since this stamp.</description>
+    <externalId>false</externalId>
+    <label>Last Forecast Alert</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
