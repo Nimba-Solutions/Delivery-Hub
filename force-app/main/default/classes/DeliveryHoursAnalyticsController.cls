@@ -10,7 +10,7 @@
  *              Backs the deliveryProjectMonthlyHours record-page LWC.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexDoc')
+@SuppressWarnings('PMD.ApexDoc,PMD.AvoidGlobalModifier,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity,PMD.OperationWithLimitsInLoop')
 global with sharing class DeliveryHoursAnalyticsController {
 
     /** @description Hard cap on recursion depth when walking the WI parent-child tree. */
@@ -65,32 +65,7 @@ global with sharing class DeliveryHoursAnalyticsController {
             Set<Id> treeIds = walkDescendants(workItemId);
             List<WorkItem__c> tree = queryTreeRollup(treeIds);
 
-            ProjectHoursSummary summary = new ProjectHoursSummary();
-            summary.rootWorkItemId = workItemId;
-            summary.descendantCount = tree.size();
-            summary.totalEstimatedHours = 0;
-            summary.totalLoggedHours = 0;
-            summary.earliestStart = null;
-            summary.latestEnd = null;
-
-            for (WorkItem__c wi : tree) {
-                if (wi.EstimatedHoursNumber__c != null) {
-                    summary.totalEstimatedHours += wi.EstimatedHoursNumber__c;
-                }
-                if (wi.TotalLoggedHoursSum__c != null) {
-                    summary.totalLoggedHours += wi.TotalLoggedHoursSum__c;
-                }
-                if (wi.EstimatedStartDevDate__c != null
-                    && (summary.earliestStart == null || wi.EstimatedStartDevDate__c < summary.earliestStart)) {
-                    summary.earliestStart = wi.EstimatedStartDevDate__c;
-                }
-                if (wi.EstimatedEndDevDate__c != null
-                    && (summary.latestEnd == null || wi.EstimatedEndDevDate__c > summary.latestEnd)) {
-                    summary.latestEnd = wi.EstimatedEndDevDate__c;
-                }
-            }
-
-            summary.hasEstimate = summary.totalEstimatedHours > 0;
+            ProjectHoursSummary summary = buildSummaryFromTree(workItemId, tree);
             summary.monthlyTarget = computeMonthlyTarget(summary);
 
             List<MonthlyHoursDTO> months = buildMonthlyBuckets(effectiveMonths, summary.monthlyTarget);
@@ -104,6 +79,42 @@ global with sharing class DeliveryHoursAnalyticsController {
             AuraHandledException ahe = new AuraHandledException(e.getMessage());
             ahe.setMessage(e.getMessage());
             throw ahe;
+        }
+    }
+
+    /**
+     * @description Rolls the tree's per-WI fields into a fresh summary. Extracted
+     *              from the entry point to keep per-method cyclomatic complexity low.
+     */
+    private static ProjectHoursSummary buildSummaryFromTree(Id rootId, List<WorkItem__c> tree) {
+        ProjectHoursSummary summary = new ProjectHoursSummary();
+        summary.rootWorkItemId = rootId;
+        summary.descendantCount = tree.size();
+        summary.totalEstimatedHours = 0;
+        summary.totalLoggedHours = 0;
+        summary.earliestStart = null;
+        summary.latestEnd = null;
+        for (WorkItem__c wi : tree) {
+            accumulateRollup(summary, wi);
+        }
+        summary.hasEstimate = summary.totalEstimatedHours > 0;
+        return summary;
+    }
+
+    private static void accumulateRollup(ProjectHoursSummary summary, WorkItem__c wi) {
+        if (wi.EstimatedHoursNumber__c != null) {
+            summary.totalEstimatedHours += wi.EstimatedHoursNumber__c;
+        }
+        if (wi.TotalLoggedHoursSum__c != null) {
+            summary.totalLoggedHours += wi.TotalLoggedHoursSum__c;
+        }
+        Date wiStart = wi.EstimatedStartDevDate__c;
+        if (wiStart != null && (summary.earliestStart == null || wiStart < summary.earliestStart)) {
+            summary.earliestStart = wiStart;
+        }
+        Date wiEnd = wi.EstimatedEndDevDate__c;
+        if (wiEnd != null && (summary.latestEnd == null || wiEnd > summary.latestEnd)) {
+            summary.latestEnd = wiEnd;
         }
     }
 

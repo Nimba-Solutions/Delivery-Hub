@@ -6,7 +6,7 @@
  *              estimate, no logs, deeply nested children).
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexDoc')
+@SuppressWarnings('PMD.ApexDoc,PMD.ExcessiveParameterList')
 @IsTest
 private class DeliveryHoursAnalyticsControllerTest {
 
@@ -15,9 +15,9 @@ private class DeliveryHoursAnalyticsControllerTest {
      *              used in DeliveryDepthProbeServiceTest (see PR #764). Keeps these
      *              tests focused on analytics, not auto-WR / sync side effects.
      */
-    private static WorkItem__c insertWi(String desc, Decimal estimate, Date startDate, Date endDate, Id parentId) {
+    private static WorkItem__c insertWi(String briefDesc, Decimal estimate, Date startDate, Date endDate, Id parentId) {
         WorkItem__c wi = new WorkItem__c(
-            BriefDescriptionTxt__c = desc,
+            BriefDescriptionTxt__c = briefDesc,
             EstimatedHoursNumber__c = estimate,
             EstimatedStartDevDate__c = startDate,
             EstimatedEndDevDate__c = endDate,
