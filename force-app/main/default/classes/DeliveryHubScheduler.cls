@@ -28,6 +28,7 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         enqueueWeeklyDigestIfDue();
         enqueueInvoiceGenerationIfDue();
         enqueueOverdueRemindersIfEnabled();
+        enqueueForecastAlertsIfDue();
         processScheduledDocumentSends();
         runReconciliation();
         recalcWorkItemETAsIfTopOfHour();
@@ -290,6 +291,34 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
             if (settings != null && settings.EnableOverdueRemindersDateTime__c != null) {
                 System.enqueueJob(new DeliveryOverdueReminderQueueable());
             }
+        } catch (Exception ex) {
+            String msg = ex.getMessage();
+            msg.length();
+        }
+    }
+
+    /**
+     * @description Enqueues the forecast-alert sweep once per day at 8 AM UTC
+     *              when the feature is enabled in org settings. Scheduled one
+     *              hour before overdue reminders so daily-cadence alerts cluster
+     *              in a 9 AM UTC window. Idempotent: gated by LastForecastAlertScanDate
+     *              so multiple scheduler ticks on the same day don't double-fire.
+     */
+    private static void enqueueForecastAlertsIfDue() {
+        try {
+            Integer currentHour = DateTime.now().hourGmt();
+            if (currentHour != 8) {
+                return;
+            }
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            if (settings == null || settings.EnableForecastAlertsDateTime__c == null) {
+                return;
+            }
+            Date today = Date.today();
+            if (settings.LastForecastAlertScanDate__c == today) {
+                return;
+            }
+            System.enqueueJob(new DeliveryForecastAlertQueueable());
         } catch (Exception ex) {
             String msg = ex.getMessage();
             msg.length();

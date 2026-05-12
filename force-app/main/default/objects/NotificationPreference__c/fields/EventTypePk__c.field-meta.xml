@@ -18,6 +18,7 @@
             <value><fullName>Document_Action</fullName><default>false</default><label>Document Action</label></value>
             <value><fullName>Comment</fullName><default>false</default><label>Comment</label></value>
             <value><fullName>Assignment</fullName><default>false</default><label>Assignment</label></value>
+            <value><fullName>Forecast_Risk</fullName><default>false</default><label>Forecast Risk</label></value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>

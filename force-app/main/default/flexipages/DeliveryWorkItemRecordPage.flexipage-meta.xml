@@ -755,6 +755,24 @@
         <type>Facet</type>
     </flexiPageRegions>
 
+    <!-- Hours & Forecast tab content — Phase 2A monthly bars + Phase 3 velocity burn-up -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryProjectMonthlyHours</componentName>
+                <identifier>c_deliveryProjectMonthlyHours</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryProjectBurnUpChart</componentName>
+                <identifier>c_deliveryProjectBurnUpChart</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>hoursForecastTabContent</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
     <!-- ══ Tab Set ══ -->
     <flexiPageRegions>
         <itemInstances>
@@ -787,6 +805,20 @@
                 </componentInstanceProperties>
                 <componentName>flexipage:tab</componentName>
                 <identifier>detailTab</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>hoursForecastTabContent</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>title</name>
+                    <value>Hours &amp; Forecast</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:tab</componentName>
+                <identifier>hoursForecastTab</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
@@ -827,6 +859,12 @@
 
     <!-- Tab 1: Actions — things the user does -->
     <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryHoursPills</componentName>
+                <identifier>c_deliveryHoursPills</identifier>
+            </componentInstance>
+        </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentName>deliveryScore</componentName>
@@ -883,6 +921,12 @@
             <componentInstance>
                 <componentName>deliveryRecurringConfig</componentName>
                 <identifier>c_deliveryRecurringConfig</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryAuditChainViewer</componentName>
+                <identifier>c_deliveryAuditChainViewer</identifier>
             </componentInstance>
         </itemInstances>
         <name>sidebarContextContent</name>
