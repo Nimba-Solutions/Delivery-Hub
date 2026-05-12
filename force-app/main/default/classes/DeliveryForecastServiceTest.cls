@@ -113,14 +113,16 @@ private class DeliveryForecastServiceTest {
 
     @IsTest
     static void testVelocityComputedFromRollingWindow() {
-        WorkItem__c root = insertWi('Velocity', 200, Date.today().addDays(-28), Date.today().addDays(60), null);
+        WorkItem__c root = insertWi('Velocity', 200, Date.today().addDays(-21), Date.today().addDays(60), null);
 
-        // 4 weeks of logs at 10h each → velocity = 10h/wk, stddev = 0
+        // 4 weekly buckets of 10h each, anchored at today (no trailing empty
+        // bucket — without the today-anchor log the most-recent week is empty
+        // and the 4-week rolling window averages [10,10,10,0]/4 = 7.5).
         insert new List<WorkLog__c>{
-            buildLog(root.Id, 10, Date.today().addDays(-28)),
             buildLog(root.Id, 10, Date.today().addDays(-21)),
             buildLog(root.Id, 10, Date.today().addDays(-14)),
-            buildLog(root.Id, 10, Date.today().addDays(-7))
+            buildLog(root.Id, 10, Date.today().addDays(-7)),
+            buildLog(root.Id, 10, Date.today())
         };
 
         Test.startTest();
@@ -221,7 +223,10 @@ private class DeliveryForecastServiceTest {
     @IsTest
     static void testSingleWeekHistorySetsVelocityButNoConfidence() {
         WorkItem__c root = insertWi('SingleWeek', 40, Date.today().addDays(-7), Date.today().addDays(28), null);
-        insert buildLog(root.Id, 8, Date.today().addDays(-3));
+        // Anchor on today so the log lands in the SAME weekly bucket as the
+        // window cursor. addDays(-3) leaks into the prior week's bucket on most
+        // weekdays (and creates 2 buckets: [8, 0], giving mean 4 instead of 8).
+        insert buildLog(root.Id, 8, Date.today());
 
         Test.startTest();
         DeliveryForecastService.ProjectForecast f =
