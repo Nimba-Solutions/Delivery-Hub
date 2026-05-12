@@ -26,7 +26,7 @@
  *              - Mirrors DeliveryOverdueReminderService.shouldSendReminder pattern.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexDoc,PMD.AvoidGlobalModifier,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity,PMD.OperationWithLimitsInLoop,PMD.ApexCRUDViolation,PMD.NcssMethodCount')
+@SuppressWarnings('PMD.ApexDoc,PMD.AvoidGlobalModifier,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity,PMD.OperationWithLimitsInLoop,PMD.ApexCRUDViolation,PMD.NcssMethodCount,PMD.ExcessiveParameterList')
 global with sharing class DeliveryForecastAlertService {
 
     /** @description Default threshold % above which a WI is alertable. */
