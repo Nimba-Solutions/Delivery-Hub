@@ -279,6 +279,132 @@
         <type>Facet</type>
     </flexiPageRegions>
 
+    <!-- Dunning: Left column (OverdueReminderCount, OverdueReminderLevel) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.OverdueReminderCountNumber__c</fieldItem>
+                <identifier>RecordOverdueReminderCountNumber_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.OverdueReminderLevelPk__c</fieldItem>
+                <identifier>RecordOverdueReminderLevelPk_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-dd-dunning-left</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Dunning: Right column (LastOverdueReminderDateTime) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.LastOverdueReminderDateTime__c</fieldItem>
+                <identifier>RecordLastOverdueReminderDateTime_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-dd-dunning-right</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Scheduled Send: Left column (ScheduledSendDateTime) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ScheduledSendDateTime__c</fieldItem>
+                <identifier>RecordScheduledSendDateTime_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-dd-sched-left</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Scheduled Send: Right column (ScheduledRecipientEmail) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ScheduledRecipientEmailTxt__c</fieldItem>
+                <identifier>RecordScheduledRecipientEmailTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-dd-sched-right</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Signing & Versioning: Left column (RequireSigningDateTime, VersionNumber) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.RequireSigningDateTime__c</fieldItem>
+                <identifier>RecordRequireSigningDateTime_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.VersionNumber__c</fieldItem>
+                <identifier>RecordVersionNumber_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-dd-signing-left</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Signing & Versioning: Right column (DisputeReason, PreviousVersion) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.DisputeReasonTxt__c</fieldItem>
+                <identifier>RecordDisputeReasonTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.PreviousVersionLookup__c</fieldItem>
+                <identifier>RecordPreviousVersionLookup_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-dd-signing-right</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
     <!-- ══ DYNAMIC FORMS: Level 2 — Column Facets ══ -->
 
     <!-- Document Info: 2 columns -->
@@ -401,6 +527,84 @@
         <type>Facet</type>
     </flexiPageRegions>
 
+    <!-- Dunning: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-dd-dunning-left</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_dunning1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-dd-dunning-right</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_dunning2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-dd-dunning-cols</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Scheduled Send: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-dd-sched-left</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_sched1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-dd-sched-right</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_sched2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-dd-sched-cols</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Signing & Versioning: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-dd-signing-left</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_signing1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-dd-signing-right</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_signing2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-dd-signing-cols</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
     <!-- ══ Detail Tab Content — Level 3 field sections ══ -->
     <flexiPageRegions>
         <itemInstances>
@@ -473,6 +677,60 @@
                 </componentInstanceProperties>
                 <componentName>flexipage:fieldSection</componentName>
                 <identifier>flexipage_fieldSection_track</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-dd-sched-cols</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Scheduled Send</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_sched</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-dd-dunning-cols</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Dunning</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_dunning</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-dd-signing-cols</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Signing &amp; Versioning</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_signing</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
