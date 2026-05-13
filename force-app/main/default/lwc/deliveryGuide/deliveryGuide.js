@@ -31,14 +31,14 @@ const SECTION_CONFIG = [
     {
         key: 'board',
         navLabel: 'Open Board',
-        navTarget: 'Delivery_Board',
+        navTarget: '%%%NAMESPACE_DOT%%%Delivery_Board',
         navType: 'tab',
         personas: ['Developer', 'Project Manager', 'Client', 'Admin']
     },
     {
         key: 'workItems',
         navLabel: 'View Work Items',
-        navTarget: 'WorkItem__c',
+        navTarget: '%%%NAMESPACE_DOT%%%WorkItem__c',
         navType: 'objectList',
         personas: ['Developer', 'Project Manager', 'Admin']
     },
@@ -52,14 +52,14 @@ const SECTION_CONFIG = [
     {
         key: 'documents',
         navLabel: 'View Documents',
-        navTarget: 'DeliveryDocument__c',
+        navTarget: '%%%NAMESPACE_DOT%%%DeliveryDocument__c',
         navType: 'objectList',
         personas: ['Project Manager', 'Client', 'Admin']
     },
     {
         key: 'activityFeed',
         navLabel: 'Open Activity Feed',
-        navTarget: 'Delivery_Activity',
+        navTarget: '%%%NAMESPACE_DOT%%%Delivery_Activity',
         navType: 'tab',
         personas: ['Developer', 'Project Manager', 'Client', 'Admin']
     },
@@ -73,7 +73,7 @@ const SECTION_CONFIG = [
     {
         key: 'sync',
         navLabel: 'View Sync Items',
-        navTarget: 'SyncItem__c',
+        navTarget: '%%%NAMESPACE_DOT%%%SyncItem__c',
         navType: 'objectList',
         personas: ['Admin']
     },
@@ -87,35 +87,35 @@ const SECTION_CONFIG = [
     {
         key: 'settings',
         navLabel: 'Open Settings',
-        navTarget: 'DeliveryHubSettings',
+        navTarget: '%%%NAMESPACE_DOT%%%DeliveryHubSettings',
         navType: 'tab',
         personas: ['Admin']
     },
     {
         key: 'timeline',
         navLabel: 'Open Timeline',
-        navTarget: 'Delivery_Timeline',
+        navTarget: '%%%NAMESPACE_DOT%%%Delivery_Timeline',
         navType: 'tab',
         personas: ['Developer', 'Project Manager', 'Admin']
     },
     {
         key: 'savedFilters',
         navLabel: 'Open Board',
-        navTarget: 'Delivery_Board',
+        navTarget: '%%%NAMESPACE_DOT%%%Delivery_Board',
         navType: 'tab',
         personas: ['Developer', 'Project Manager']
     },
     {
         key: 'docVersioning',
         navLabel: 'View Documents',
-        navTarget: 'DeliveryDocument__c',
+        navTarget: '%%%NAMESPACE_DOT%%%DeliveryDocument__c',
         navType: 'objectList',
         personas: ['Project Manager', 'Admin']
     },
     {
         key: 'invoiceApproval',
         navLabel: 'View Documents',
-        navTarget: 'DeliveryDocument__c',
+        navTarget: '%%%NAMESPACE_DOT%%%DeliveryDocument__c',
         navType: 'objectList',
         personas: ['Client', 'Admin']
     },
@@ -143,35 +143,35 @@ const SECTION_CONFIG = [
     {
         key: 'configurableSettings',
         navLabel: 'Open Settings',
-        navTarget: 'DeliveryHubSettings',
+        navTarget: '%%%NAMESPACE_DOT%%%DeliveryHubSettings',
         navType: 'tab',
         personas: ['Admin']
     },
     {
         key: 'pdfHyperlinks',
         navLabel: 'View Documents',
-        navTarget: 'DeliveryDocument__c',
+        navTarget: '%%%NAMESPACE_DOT%%%DeliveryDocument__c',
         navType: 'objectList',
         personas: ['Project Manager', 'Admin']
     },
     {
         key: 'hideEmptyColumns',
         navLabel: 'Open Board',
-        navTarget: 'Delivery_Board',
+        navTarget: '%%%NAMESPACE_DOT%%%Delivery_Board',
         navType: 'tab',
         personas: ['Developer', 'Project Manager']
     },
     {
         key: 'sla',
         navLabel: 'Open Settings',
-        navTarget: 'DeliveryHubSettings',
+        navTarget: '%%%NAMESPACE_DOT%%%DeliveryHubSettings',
         navType: 'tab',
         personas: ['Project Manager', 'Admin']
     },
     {
         key: 'escalation',
         navLabel: 'Open Settings',
-        navTarget: 'DeliveryHubSettings',
+        navTarget: '%%%NAMESPACE_DOT%%%DeliveryHubSettings',
         navType: 'tab',
         personas: ['Project Manager', 'Admin']
     },
@@ -185,7 +185,7 @@ const SECTION_CONFIG = [
     {
         key: 'rateLimiting',
         navLabel: 'Open Settings',
-        navTarget: 'DeliveryHubSettings',
+        navTarget: '%%%NAMESPACE_DOT%%%DeliveryHubSettings',
         navType: 'tab',
         personas: ['Admin']
     },
@@ -206,7 +206,7 @@ const SECTION_CONFIG = [
     {
         key: 'bounty',
         navLabel: 'View Bounties',
-        navTarget: 'BountyClaim__c',
+        navTarget: '%%%NAMESPACE_DOT%%%BountyClaim__c',
         navType: 'objectList',
         personas: ['Developer', 'Admin']
     },
