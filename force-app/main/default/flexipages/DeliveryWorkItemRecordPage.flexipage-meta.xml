@@ -401,6 +401,110 @@
         <type>Facet</type>
     </flexiPageRegions>
 
+    <!-- Recurring & Templates: Left column (RecurringEnabledDateTime, RecurrenceDayTxt, RecurrenceScheduleTxt) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.RecurringEnabledDateTime__c</fieldItem>
+                <identifier>RecordRecurringEnabledDateTime_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.RecurrenceDayTxt__c</fieldItem>
+                <identifier>RecordRecurrenceDayTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.RecurrenceScheduleTxt__c</fieldItem>
+                <identifier>RecordRecurrenceScheduleTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-wi-recur-left</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Recurring & Templates: Right column (NextRecurrenceDate, TemplateMarkedDateTime, TemplateSourceLookup) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.NextRecurrenceDate__c</fieldItem>
+                <identifier>RecordNextRecurrenceDate_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.TemplateMarkedDateTime__c</fieldItem>
+                <identifier>RecordTemplateMarkedDateTime_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.TemplateSourceLookup__c</fieldItem>
+                <identifier>RecordTemplateSourceLookup_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-wi-recur-right</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- External Integration: Left column (ExternalSourceOrgTxt) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ExternalSourceOrgTxt__c</fieldItem>
+                <identifier>RecordExternalSourceOrgTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-wi-ext-left</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- External Integration: Right column (ExternalRequesterEmail) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ExternalRequesterEmail__c</fieldItem>
+                <identifier>RecordExternalRequesterEmail_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-wi-ext-right</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
     <!-- System: Left column (CreatedById, ActivatedDateTime) -->
     <flexiPageRegions>
         <itemInstances>
@@ -575,6 +679,58 @@
         <type>Facet</type>
     </flexiPageRegions>
 
+    <!-- Recurring & Templates: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-wi-recur-left</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_recur1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-wi-recur-right</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_recur2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-wi-recur-cols</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- External Integration: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-wi-ext-left</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_ext1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-wi-ext-right</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_ext2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-wi-ext-cols</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
     <!-- System: 2 columns -->
     <flexiPageRegions>
         <itemInstances>
@@ -718,6 +874,42 @@
                 </componentInstanceProperties>
                 <componentName>flexipage:fieldSection</componentName>
                 <identifier>flexipage_fieldSection_rel</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-wi-recur-cols</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Recurring &amp; Templates</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_recur</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-wi-ext-cols</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>External Integration</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_ext</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
