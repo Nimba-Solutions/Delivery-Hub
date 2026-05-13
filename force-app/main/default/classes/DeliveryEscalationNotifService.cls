@@ -178,10 +178,12 @@ public with sharing class DeliveryEscalationNotifService {
                 return; // User hasn't opted in
             }
 
-            // Look up the custom notification type
+            // Look up the custom notification type. DeveloperName is prefixed in
+            // a managed-package install (delivery__Delivery_Hub_Alert) and bare
+            // in dev — accept both so this works in either context.
             List<CustomNotificationType> types = [
                 SELECT Id FROM CustomNotificationType
-                WHERE DeveloperName = 'Delivery_Hub_Alert'
+                WHERE DeveloperName IN ('Delivery_Hub_Alert', 'delivery__Delivery_Hub_Alert')
                 LIMIT 1
             ];
             if (types.isEmpty()) {
