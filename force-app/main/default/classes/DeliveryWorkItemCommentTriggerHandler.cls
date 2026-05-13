@@ -67,10 +67,12 @@ public inherited sharing class DeliveryWorkItemCommentTriggerHandler {
 
         Id currentUserId = UserInfo.getUserId();
 
-        // Query notification type ONCE outside the loop
+        // Query notification type ONCE outside the loop. DeveloperName is
+        // prefixed on subscriber install (delivery__Delivery_Hub_Alert) and
+        // bare in dev — accept both so the notification fires in either.
         List<CustomNotificationType> notifTypes = [
             SELECT Id FROM CustomNotificationType
-            WHERE DeveloperName = 'Delivery_Hub_Alert'
+            WHERE DeveloperName IN ('Delivery_Hub_Alert', 'delivery__Delivery_Hub_Alert')
             WITH SYSTEM_MODE
             LIMIT 1
         ];

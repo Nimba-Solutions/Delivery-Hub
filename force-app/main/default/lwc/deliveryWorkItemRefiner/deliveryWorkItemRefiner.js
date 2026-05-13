@@ -64,7 +64,7 @@ export default class DeliveryWorkItemRefiner extends NavigationMixin(LightningEl
 
     handleApplyCriteria() {
         const field = this.template.querySelector(
-            'lightning-input-field[field-name="AcceptanceCriteriaTxt__c"]'
+            'lightning-input-field[field-name="%%%NAMESPACE_DOT%%%AcceptanceCriteriaTxt__c"]'
         );
         if (field) {
             field.value = this.suggestedCriteria;

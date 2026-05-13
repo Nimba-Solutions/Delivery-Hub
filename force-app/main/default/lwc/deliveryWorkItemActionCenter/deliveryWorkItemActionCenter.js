@@ -119,33 +119,33 @@ export default class DeliveryWorkItemActionCenter extends LightningElement {
         
         // Rule: Need Pre-Approved Hours for Fast Track Analysis (Soft Gate - Info only)
         if (!approved && ['Scoping', 'Backlog', 'Ready for Sizing'].includes(stage)) {
-            this.missingFields.push({ 
-                apiName: 'ClientPreApprovedHoursNumber__c', 
-                reason: 'Define Budget to enable Fast Track' 
+            this.missingFields.push({
+                apiName: PRE_APPROVED_HOURS_FIELD.fieldApiName,
+                reason: 'Define Budget to enable Fast Track'
             });
         }
 
         // Rule: Need Estimate before Proposal/Sizing completion (Hard Gate for Proposal)
         if (!est && ['Ready for Sizing', 'Sizing Underway', 'Drafting Proposal', 'Ready for Prioritization'].includes(stage)) {
-            this.missingFields.push({ 
-                apiName: 'EstimatedHoursNumber__c', 
-                reason: 'Hours Estimate Required to Proceed' 
+            this.missingFields.push({
+                apiName: ESTIMATED_HOURS_FIELD.fieldApiName,
+                reason: 'Hours Estimate Required to Proceed'
             });
         }
 
         // Rule: Need Developer before Dev (Hard Gate)
         const devStages = ['Ready for Development', 'In Development', 'Dev Blocked', 'Dev Clarification Requested'];
         if (!dev && devStages.includes(stage)) {
-            this.missingFields.push({ 
-                apiName: 'DeveloperLookup__c', 
-                reason: 'Assign Developer to Start Work' 
+            this.missingFields.push({
+                apiName: DEVELOPER_FIELD.fieldApiName,
+                reason: 'Assign Developer to Start Work'
             });
         }
 
         // Rule: Need Acceptance Criteria before Dev
         if (!criteria && devStages.includes(stage)) {
             this.missingFields.push({
-                apiName: 'AcceptanceCriteriaTxt__c',
+                apiName: CRITERIA_FIELD.fieldApiName,
                 reason: 'Define Acceptance Criteria (Definition of Done)'
             });
         }
