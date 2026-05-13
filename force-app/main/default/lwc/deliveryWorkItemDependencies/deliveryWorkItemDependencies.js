@@ -7,6 +7,7 @@ import { LightningElement, api, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { subscribe, unsubscribe, onError } from 'lightning/empApi';
+import WORK_ITEM_OBJECT from '@salesforce/schema/WorkItem__c';
 import getDependencies from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemDependenciesController.getDependencies';
 
 // Live updates — refresh when a dependency_change PE arrives. The publisher
@@ -84,7 +85,7 @@ export default class DeliveryWorkItemDependencies extends NavigationMixin(Lightn
             type: 'standard__recordPage',
             attributes: {
                 recordId:      event.currentTarget.dataset.id,
-                objectApiName: 'WorkItem__c',
+                objectApiName: WORK_ITEM_OBJECT.objectApiName,
                 actionName:    'view'
             }
         });
