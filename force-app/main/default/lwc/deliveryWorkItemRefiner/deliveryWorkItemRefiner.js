@@ -8,7 +8,8 @@ import { getRecord, getFieldValue, createRecord } from 'lightning/uiRecordApi';
 import { NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
-// Work Item Fields to Read
+// Work Item Object & Fields to Read
+import WORK_ITEM_OBJECT from '@salesforce/schema/WorkItem__c';
 import WORK_ITEM_HOURS from '@salesforce/schema/WorkItem__c.ClientPreApprovedHoursNumber__c';
 
 // Request Object & Fields to Write
@@ -35,6 +36,10 @@ export default class DeliveryWorkItemRefiner extends NavigationMixin(LightningEl
 
     @wire(getRecord, { recordId: '$recordId', fields: FIELDS })
     workItem;
+
+    get workItemObjectApiName() {
+        return WORK_ITEM_OBJECT.objectApiName;
+    }
 
     // Called when the "Save Definition" button finishes
     handleWorkItemSave() {

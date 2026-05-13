@@ -28,7 +28,7 @@
                         <lightning-icon icon-name="utility:warning" size="xx-small"></lightning-icon>
                         <span class="ac-missing-title">Action Required to Advance</span>
                     </div>
-                    <lightning-record-edit-form record-id={recordId} object-api-name="WorkItem__c" onsuccess={handleFixSuccess}>
+                    <lightning-record-edit-form record-id={recordId} object-api-name={workItemObjectApiName} onsuccess={handleFixSuccess}>
                         <div class="ac-fields-grid">
                             <template for:each={missingFields} for:item="field">
                                 <div key={field.apiName} class="ac-field-item">
