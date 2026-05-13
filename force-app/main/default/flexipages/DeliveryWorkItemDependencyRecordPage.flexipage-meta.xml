@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
-    <!-- ── Header ── -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
@@ -35,7 +34,7 @@
 
     <!-- ══ DYNAMIC FORMS: Level 1 — Field Facets ══ -->
 
-    <!-- Time Entry: Left column fields (Name, WorkItemId, WorkDateDate) -->
+    <!-- Dependency: Left column (Name, BlockingWorkItem, BlockedWorkItem) -->
     <flexiPageRegions>
         <itemInstances>
             <fieldInstance>
@@ -53,8 +52,8 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.WorkItemLookup__c</fieldItem>
-                <identifier>RecordWorkItemId_cField</identifier>
+                <fieldItem>Record.BlockingWorkItemLookup__c</fieldItem>
+                <identifier>RecordBlockingWorkItemLookup_cField</identifier>
             </fieldInstance>
         </itemInstances>
         <itemInstances>
@@ -63,15 +62,15 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.WorkDateDate__c</fieldItem>
-                <identifier>RecordWorkDateDate_cField</identifier>
+                <fieldItem>Record.BlockedWorkItemLookup__c</fieldItem>
+                <identifier>RecordBlockedWorkItemLookup_cField</identifier>
             </fieldInstance>
         </itemInstances>
-        <name>Facet-a1b20001-0001-0001-0001-000000000001</name>
+        <name>Facet-wid-dep-left</name>
         <type>Facet</type>
     </flexiPageRegions>
 
-    <!-- Time Entry: Right column fields (StatusPk, ResourceTitle, HoursLoggedNumber, RequestId) -->
+    <!-- Dependency: Right column (TypePk, ExternalIdTxt) -->
     <flexiPageRegions>
         <itemInstances>
             <fieldInstance>
@@ -79,61 +78,25 @@
                     <name>uiBehavior</name>
                     <value>none</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.StatusPk__c</fieldItem>
-                <identifier>RecordStatusPk_cField</identifier>
+                <fieldItem>Record.TypePk__c</fieldItem>
+                <identifier>RecordTypePk_cField</identifier>
             </fieldInstance>
         </itemInstances>
         <itemInstances>
             <fieldInstance>
                 <fieldInstanceProperties>
                     <name>uiBehavior</name>
-                    <value>none</value>
+                    <value>readonly</value>
                 </fieldInstanceProperties>
-                <fieldItem>Record.ResourceTitleTxt__c</fieldItem>
-                <identifier>RecordResourceTitleTxt_cField</identifier>
+                <fieldItem>Record.ExternalIdTxt__c</fieldItem>
+                <identifier>RecordExternalIdTxt_cField</identifier>
             </fieldInstance>
         </itemInstances>
-        <itemInstances>
-            <fieldInstance>
-                <fieldInstanceProperties>
-                    <name>uiBehavior</name>
-                    <value>none</value>
-                </fieldInstanceProperties>
-                <fieldItem>Record.HoursLoggedNumber__c</fieldItem>
-                <identifier>RecordHoursLoggedNumber_cField</identifier>
-            </fieldInstance>
-        </itemInstances>
-        <itemInstances>
-            <fieldInstance>
-                <fieldInstanceProperties>
-                    <name>uiBehavior</name>
-                    <value>none</value>
-                </fieldInstanceProperties>
-                <fieldItem>Record.RequestId__c</fieldItem>
-                <identifier>RecordRequestId_cField</identifier>
-            </fieldInstance>
-        </itemInstances>
-        <name>Facet-a1b20001-0001-0001-0001-000000000002</name>
+        <name>Facet-wid-dep-right</name>
         <type>Facet</type>
     </flexiPageRegions>
 
-    <!-- Description: Single column fields (WorkDescriptionTxt) -->
-    <flexiPageRegions>
-        <itemInstances>
-            <fieldInstance>
-                <fieldInstanceProperties>
-                    <name>uiBehavior</name>
-                    <value>none</value>
-                </fieldInstanceProperties>
-                <fieldItem>Record.WorkDescriptionTxt__c</fieldItem>
-                <identifier>RecordWorkDescriptionTxt_cField</identifier>
-            </fieldInstance>
-        </itemInstances>
-        <name>Facet-a1b20001-0001-0001-0001-000000000003</name>
-        <type>Facet</type>
-    </flexiPageRegions>
-
-    <!-- System: Left column fields (CreatedById) -->
+    <!-- System: Left column (CreatedById) -->
     <flexiPageRegions>
         <itemInstances>
             <fieldInstance>
@@ -145,11 +108,11 @@
                 <identifier>RecordCreatedByIdField</identifier>
             </fieldInstance>
         </itemInstances>
-        <name>Facet-a1b20001-0001-0001-0001-000000000004</name>
+        <name>Facet-wid-sys-left</name>
         <type>Facet</type>
     </flexiPageRegions>
 
-    <!-- System: Right column fields (LastModifiedById) -->
+    <!-- System: Right column (LastModifiedById) -->
     <flexiPageRegions>
         <itemInstances>
             <fieldInstance>
@@ -161,51 +124,35 @@
                 <identifier>RecordLastModifiedByIdField</identifier>
             </fieldInstance>
         </itemInstances>
-        <name>Facet-a1b20001-0001-0001-0001-000000000005</name>
+        <name>Facet-wid-sys-right</name>
         <type>Facet</type>
     </flexiPageRegions>
 
     <!-- ══ DYNAMIC FORMS: Level 2 — Column Facets ══ -->
 
-    <!-- Time Entry: 2 columns -->
+    <!-- Dependency: 2 columns -->
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
                     <name>body</name>
-                    <value>Facet-a1b20001-0001-0001-0001-000000000001</value>
+                    <value>Facet-wid-dep-left</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:column</componentName>
-                <identifier>flexipage_column_timeEntry1</identifier>
+                <identifier>flexipage_column_dep1</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
                     <name>body</name>
-                    <value>Facet-a1b20001-0001-0001-0001-000000000002</value>
+                    <value>Facet-wid-dep-right</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:column</componentName>
-                <identifier>flexipage_column_timeEntry2</identifier>
+                <identifier>flexipage_column_dep2</identifier>
             </componentInstance>
         </itemInstances>
-        <name>Facet-a1b20001-0001-0001-0002-000000000001</name>
-        <type>Facet</type>
-    </flexiPageRegions>
-
-    <!-- Description: 1 column -->
-    <flexiPageRegions>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>body</name>
-                    <value>Facet-a1b20001-0001-0001-0001-000000000003</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:column</componentName>
-                <identifier>flexipage_column_desc1</identifier>
-            </componentInstance>
-        </itemInstances>
-        <name>Facet-a1b20001-0001-0001-0002-000000000002</name>
+        <name>Facet-wid-dep-cols</name>
         <type>Facet</type>
     </flexiPageRegions>
 
@@ -215,7 +162,7 @@
             <componentInstance>
                 <componentInstanceProperties>
                     <name>body</name>
-                    <value>Facet-a1b20001-0001-0001-0001-000000000004</value>
+                    <value>Facet-wid-sys-left</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:column</componentName>
                 <identifier>flexipage_column_sys1</identifier>
@@ -225,13 +172,13 @@
             <componentInstance>
                 <componentInstanceProperties>
                     <name>body</name>
-                    <value>Facet-a1b20001-0001-0001-0001-000000000005</value>
+                    <value>Facet-wid-sys-right</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:column</componentName>
                 <identifier>flexipage_column_sys2</identifier>
             </componentInstance>
         </itemInstances>
-        <name>Facet-a1b20001-0001-0001-0002-000000000003</name>
+        <name>Facet-wid-sys-cols</name>
         <type>Facet</type>
     </flexiPageRegions>
 
@@ -241,7 +188,7 @@
             <componentInstance>
                 <componentInstanceProperties>
                     <name>columns</name>
-                    <value>Facet-a1b20001-0001-0001-0002-000000000001</value>
+                    <value>Facet-wid-dep-cols</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>horizontalAlignment</name>
@@ -249,35 +196,17 @@
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>label</name>
-                    <value>Time Entry</value>
+                    <value>Dependency</value>
                 </componentInstanceProperties>
                 <componentName>flexipage:fieldSection</componentName>
-                <identifier>flexipage_fieldSection_timeEntry</identifier>
+                <identifier>flexipage_fieldSection_dep</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
                 <componentInstanceProperties>
                     <name>columns</name>
-                    <value>Facet-a1b20001-0001-0001-0002-000000000002</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>horizontalAlignment</name>
-                    <value>false</value>
-                </componentInstanceProperties>
-                <componentInstanceProperties>
-                    <name>label</name>
-                    <value>Description</value>
-                </componentInstanceProperties>
-                <componentName>flexipage:fieldSection</componentName>
-                <identifier>flexipage_fieldSection_desc</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentInstanceProperties>
-                    <name>columns</name>
-                    <value>Facet-a1b20001-0001-0001-0002-000000000003</value>
+                    <value>Facet-wid-sys-cols</value>
                 </componentInstanceProperties>
                 <componentInstanceProperties>
                     <name>horizontalAlignment</name>
@@ -375,16 +304,16 @@
         <type>Region</type>
     </flexiPageRegions>
 
-    <!-- ══ Sidebar (empty) ══ -->
+    <!-- Sidebar (empty) -->
     <flexiPageRegions>
         <mode>Replace</mode>
         <name>sidebar</name>
         <type>Region</type>
     </flexiPageRegions>
 
-    <masterLabel>Work Log Record Page</masterLabel>
+    <masterLabel>Work Item Dependency Record Page</masterLabel>
     <parentFlexiPage>flexipage__default_rec_L</parentFlexiPage>
-    <sobjectType>WorkLog__c</sobjectType>
+    <sobjectType>WorkItemDependency__c</sobjectType>
     <template>
         <name>flexipage:recordHomeTemplateDesktop</name>
     </template>
