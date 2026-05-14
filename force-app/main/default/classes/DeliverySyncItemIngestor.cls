@@ -9,9 +9,20 @@
 @SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ApexCRUDViolation')
 public without sharing class DeliverySyncItemIngestor {
 
+    // Cache the namespace prefix per transaction. Without this, getNamespacePrefix is
+    // called 6+ times per processInboundItem invocation, each firing a SOQL against
+    // Organization. An 8-item poll exceeded the 100-SOQL governor on the per-call cost
+    // alone before the rest of the ingestor's queries.
+    private static Boolean cachedNamespacePrefixSet = false;
+    private static String cachedNamespacePrefix;
+
     private static String getNamespacePrefix() {
-        String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
-        return String.isBlank(ns) ? '' : ns + '__';
+        if (!cachedNamespacePrefixSet) {
+            String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
+            cachedNamespacePrefix = String.isBlank(ns) ? '' : ns + '__';
+            cachedNamespacePrefixSet = true;
+        }
+        return cachedNamespacePrefix;
     }
 
     private static String stripNamespace(String apiName) {

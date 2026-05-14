@@ -41,9 +41,17 @@ global with sharing class DeliveryForecastAlertService {
     @TestVisible
     private static final Decimal MATERIAL_WORSENING_FRACTION = 0.10;
 
-    /** @description Cap on the number of WIs the daily sweep evaluates. */
+    /**
+     * @description Cap on the number of WIs the daily sweep evaluates.
+     *              evaluate() → calculateProjectForecast does ~5 SOQL per WI
+     *              (walkDescendants BFS up to ~4 levels in practice + tree pull
+     *              + weekly history). At 20 WIs × 5 SOQL = 100 SOQL, which is
+     *              the governor cap. Until the sweep is moved to a Queueable
+     *              chain or Batch Apex job, cap at 20 to stay safe.
+     *              (Audit 2026-05-13: prior cap of 200 hit governor at ~8 WIs.)
+     */
     @TestVisible
-    private static final Integer MAX_WORKITEMS_PER_SWEEP = 200;
+    private static final Integer MAX_WORKITEMS_PER_SWEEP = 20;
 
     /** @description Terminal stages — exclude from sweep. */
     private static final Set<String> TERMINAL_STAGES = new Set<String>{
@@ -172,6 +180,13 @@ global with sharing class DeliveryForecastAlertService {
             WITH SYSTEM_MODE
         ]);
 
+        // Bulk-load notification preferences for all (recipient, channel) pairs in ONE
+        // SOQL instead of per-recipient × per-channel. Previously this ran
+        // N_recipients × 2_channels SOQL inside the loop — at 50 recipients ×
+        // 2 channels = 100 SOQL just on preference checks, exceeding the governor.
+        Map<String, Boolean> prefsMap = DeliveryNotificationPreferenceService.shouldNotifyBulk(
+            recipientIds, new Set<String>{ 'Bell', 'Email' }, 'Forecast_Risk');
+
         String orgUrl = Url.getOrgDomainUrl().toExternalForm();
         List<Messaging.SingleEmailMessage> emails = new List<Messaging.SingleEmailMessage>();
         Map<String, String> slackMessages = new Map<String, String>();
@@ -190,11 +205,11 @@ global with sharing class DeliveryForecastAlertService {
                 if (!userMap.containsKey(recipientId)) {
                     continue;
                 }
-                if (shouldNotifyChannel(recipientId, 'Bell')) {
+                if (DeliveryNotificationPreferenceService.shouldNotifyFromMap(prefsMap, recipientId, 'Bell')) {
                     DeliveryEscalationNotifService.sendBellNotification(
                         wi.Id, recipientId, bellTitle, bellBody);
                 }
-                if (shouldNotifyChannel(recipientId, 'Email')) {
+                if (DeliveryNotificationPreferenceService.shouldNotifyFromMap(prefsMap, recipientId, 'Email')) {
                     String addr = userMap.get(recipientId).Email;
                     if (String.isNotBlank(addr)) {
                         emails.add(buildForecastEmail(wi, ac, addr, recordUrl, title));
@@ -250,19 +265,6 @@ global with sharing class DeliveryForecastAlertService {
             }
         }
         return ids;
-    }
-
-    /**
-     * @description Delegates to DeliveryNotificationPreferenceService.shouldNotify.
-     *              Honors per-user, per-channel opt-out for Forecast_Risk event type.
-     *              No row in NotificationPreference__c = opt-in by default.
-     */
-    private static Boolean shouldNotifyChannel(Id userId, String channel) {
-        try {
-            return DeliveryNotificationPreferenceService.shouldNotify(userId, channel, 'Forecast_Risk');
-        } catch (Exception ignored) {
-            return true;
-        }
     }
 
     private static Messaging.SingleEmailMessage buildForecastEmail(
@@ -352,7 +354,12 @@ global with sharing class DeliveryForecastAlertService {
 
     private static void stampScanComplete(DeliveryHubSettings__c settings) {
         try {
-            settings.LastForecastAlertScanDate__c = Date.today();
+            // GMT date matches the GMT-hour gate in DeliveryHubScheduler.enqueueForecastAlertsIfDue.
+            // Mixing Date.today() (user TZ) with hourGmt() flips the idempotency stamp a day early/late.
+            DateTime nowDt = DateTime.now();
+            settings.LastForecastAlertScanDate__c = Date.newInstance(
+                nowDt.yearGmt(), nowDt.monthGmt(), nowDt.dayGmt()
+            );
             Database.update(settings, AccessLevel.SYSTEM_MODE);
         } catch (Exception e) {
             System.debug(LoggingLevel.WARN,
