@@ -62,8 +62,25 @@ global with sharing class DeliveryDepthProbeService {
     /** @description Per-transaction probe-callout counter. Bounds fan-out. */
     private static Integer transactionCalloutCount = 0;
 
-    /** @description HTTP timeout for a single peer probe. */
-    private static final Integer PEER_TIMEOUT_MS = 30000;
+    /**
+     * @description HTTP timeout for a single peer probe. Lowered from 30s to 10s
+     *              (audit 2026-05-13: healthy peers respond in <2s; 30s × MAX_CALLOUTS
+     *              could blow the 600s Apex wall-clock budget even within the callout
+     *              count cap).
+     */
+    private static final Integer PEER_TIMEOUT_MS = 10000;
+
+    /**
+     * @description Wall-clock budget for the entire probe transaction. When exceeded,
+     *              further recursive callouts are short-circuited and the partial
+     *              chain is returned. Apex's hard cap is ~600s; 60s keeps the LWC
+     *              responsive while still allowing realistic peer-chain traversal.
+     */
+    @TestVisible
+    private static final Integer WALL_CLOCK_BUDGET_MS = 60000;
+
+    /** @description Start time of this transaction's probe — used by wall-clock budget. */
+    private static Long probeStartTimeMs = 0;
 
     /**
      * @description Returns this org's segment of the fulfillment chain for the
@@ -134,6 +151,9 @@ global with sharing class DeliveryDepthProbeService {
     }
 
     private static DepthChainNode buildRootSegment(Id workItemId, Integer remainingDepth, String requestId) {
+        if (probeStartTimeMs == 0) {
+            probeStartTimeMs = System.currentTimeMillis();
+        }
         DepthChainNode root = new DepthChainNode();
         Organization org = [SELECT Id, Name FROM Organization WITH SYSTEM_MODE LIMIT 1];
         root.orgId = org.Id;
@@ -186,13 +206,23 @@ global with sharing class DeliveryDepthProbeService {
 
         // Recursive probe — only when reveal is 'Full' (which is what authorizes
         // showing downstream chain + per-user attribution) and we have budget.
+        // Wall-clock budget short-circuits the recursion even when callout count is
+        // under MAX_CALLOUTS_PER_PROBE — without it, 5 slow peers × 10s timeout each
+        // can chain to 50+s with no log evidence of why the LWC stalled.
+        Boolean wallBudgetOk = probeStartTimeMs == 0
+            || (System.currentTimeMillis() - probeStartTimeMs) < WALL_CLOCK_BUDGET_MS;
         if (reveal == 'Full' && remainingDepth > 0
                 && transactionCalloutCount < MAX_CALLOUTS_PER_PROBE
+                && wallBudgetOk
                 && String.isNotBlank(req.DeliveryEntityLookup__r.IntegrationEndpointUrlTxt__c)) {
             List<DepthChainNode> children = invokePeerProbe(req, remainingDepth - 1, requestId);
             if (children != null) {
                 peer.children = children;
             }
+        } else if (reveal == 'Full' && remainingDepth > 0 && !wallBudgetOk) {
+            // Audit the short-circuit so admins can see why a chain was truncated.
+            recordAudit('wall-budget-exceeded', requestId, req.RemoteWorkItemIdTxt__c,
+                req.DeliveryEntityLookup__c, null);
         }
         return peer;
     }

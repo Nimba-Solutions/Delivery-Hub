@@ -57,10 +57,28 @@ public with sharing class DeliveryWorkItemBackfillService {
         }
         Database.SaveResult[] results = Database.update(stale, false);
         Integer succeeded = 0;
-        for (Database.SaveResult r : results) {
+        Integer failed = 0;
+        for (Integer i = 0; i < results.size(); i++) {
+            Database.SaveResult r = results[i];
             if (r.isSuccess()) {
                 succeeded++;
+            } else {
+                failed++;
+                // Surface the failure so install-handler logs show partial-DML breakage.
+                // Mirrors DeliveryWorkItemETAService.cls:316-320 pattern.
+                String reasons = '';
+                for (Database.Error err : r.getErrors()) {
+                    reasons += err.getStatusCode() + ': ' + err.getMessage() + '; ';
+                }
+                System.debug(LoggingLevel.WARN,
+                    '[DeliveryWorkItemBackfillService] Status backfill failed for '
+                    + stale[i].Id + ' — ' + reasons);
             }
+        }
+        if (failed > 0) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryWorkItemBackfillService] backfillStatusDefaults: '
+                + succeeded + ' succeeded, ' + failed + ' failed');
         }
         return succeeded;
     }

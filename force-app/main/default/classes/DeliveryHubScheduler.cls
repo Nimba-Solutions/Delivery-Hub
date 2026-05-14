@@ -272,8 +272,8 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
                 System.enqueueJob(new DeliveryInvoiceGenerationQueueable());
             }
         } catch (Exception ex) {
-            String msg = ex.getMessage();
-            msg.length(); // satisfy PMD empty-catch rule
+            System.debug(LoggingLevel.ERROR,
+                '[DeliveryHubScheduler] enqueueInvoiceGenerationIfDue failed: ' + ex.getMessage());
         }
     }
 
@@ -292,8 +292,8 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
                 System.enqueueJob(new DeliveryOverdueReminderQueueable());
             }
         } catch (Exception ex) {
-            String msg = ex.getMessage();
-            msg.length();
+            System.debug(LoggingLevel.ERROR,
+                '[DeliveryHubScheduler] enqueueOverdueRemindersIfEnabled failed: ' + ex.getMessage());
         }
     }
 
@@ -306,7 +306,8 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
      */
     private static void enqueueForecastAlertsIfDue() {
         try {
-            Integer currentHour = DateTime.now().hourGmt();
+            DateTime nowDt = DateTime.now();
+            Integer currentHour = nowDt.hourGmt();
             if (currentHour != 8) {
                 return;
             }
@@ -314,14 +315,16 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
             if (settings == null || settings.EnableForecastAlertsDateTime__c == null) {
                 return;
             }
-            Date today = Date.today();
-            if (settings.LastForecastAlertScanDate__c == today) {
+            // Use GMT date to match the GMT-hour gate above. Mixing Date.today() (user TZ)
+            // with hourGmt() causes day-boundary slips that either fire twice or skip a day.
+            Date todayGmt = Date.newInstance(nowDt.yearGmt(), nowDt.monthGmt(), nowDt.dayGmt());
+            if (settings.LastForecastAlertScanDate__c == todayGmt) {
                 return;
             }
             System.enqueueJob(new DeliveryForecastAlertQueueable());
         } catch (Exception ex) {
-            String msg = ex.getMessage();
-            msg.length();
+            System.debug(LoggingLevel.ERROR,
+                '[DeliveryHubScheduler] enqueueForecastAlertsIfDue failed: ' + ex.getMessage());
         }
     }
 
