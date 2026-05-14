@@ -48,6 +48,7 @@ public with sharing class DeliveryNotificationPreferenceService {
      * @return Map keyed by 'userId|channel' → true (notify) / false (suppressed).
      *         Missing keys default to true (opt-out model), matching shouldNotify.
      */
+    @SuppressWarnings('PMD.CyclomaticComplexity')
     public static Map<String, Boolean> shouldNotifyBulk(Set<Id> userIds, Set<String> channels, String eventType) {
         Map<String, Boolean> out = new Map<String, Boolean>();
         if (userIds == null || userIds.isEmpty() || channels == null || channels.isEmpty()
@@ -80,6 +81,10 @@ public with sharing class DeliveryNotificationPreferenceService {
     /**
      * @description Companion lookup for bulk results. Returns true when the user
      *              should be notified (no row in the map = opt-in by default).
+     * @param bulkMap Map returned by shouldNotifyBulk.
+     * @param userId  User Id to look up.
+     * @param channel Channel key (e.g. 'Bell', 'Email').
+     * @return true when the user should be notified, false when explicitly opted out.
      */
     public static Boolean shouldNotifyFromMap(Map<String, Boolean> bulkMap, Id userId, String channel) {
         if (bulkMap == null || userId == null || String.isBlank(channel)) {
