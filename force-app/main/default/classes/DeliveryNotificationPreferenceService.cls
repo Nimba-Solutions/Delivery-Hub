@@ -36,6 +36,68 @@ public with sharing class DeliveryNotificationPreferenceService {
     }
 
     /**
+     * @description Bulk variant of shouldNotify — fetches preferences for all
+     *              (userId, channel) tuples for a single eventType in ONE SOQL.
+     *              Callers that dispatch over many recipients × channels should
+     *              prefer this to avoid per-call SOQL fan-out (the forecast-alert
+     *              sweep was hitting the 100-SOQL governor at ~8 candidate WIs
+     *              before this helper existed).
+     * @param userIds   Set of User Ids to evaluate.
+     * @param channels  Set of channel keys (e.g. {'Bell','Email'}).
+     * @param eventType Event type (e.g. 'Forecast_Risk').
+     * @return Map keyed by 'userId|channel' → true (notify) / false (suppressed).
+     *         Missing keys default to true (opt-out model), matching shouldNotify.
+     */
+    @SuppressWarnings('PMD.CyclomaticComplexity')
+    public static Map<String, Boolean> shouldNotifyBulk(Set<Id> userIds, Set<String> channels, String eventType) {
+        Map<String, Boolean> out = new Map<String, Boolean>();
+        if (userIds == null || userIds.isEmpty() || channels == null || channels.isEmpty()
+                || String.isBlank(eventType)) {
+            return out;
+        }
+        Set<String> userIdStrs = new Set<String>();
+        for (Id u : userIds) {
+            if (u != null) {
+                userIdStrs.add(String.valueOf(u).left(18));
+            }
+        }
+        if (userIdStrs.isEmpty()) {
+            return out;
+        }
+        for (NotificationPreference__c pref : [
+            SELECT UserIdTxt__c, ChannelPk__c, EnabledDateTime__c
+            FROM NotificationPreference__c
+            WHERE UserIdTxt__c IN :userIdStrs
+              AND ChannelPk__c IN :channels
+              AND EventTypePk__c = :eventType
+            WITH SYSTEM_MODE
+        ]) {
+            String key = pref.UserIdTxt__c + '|' + pref.ChannelPk__c;
+            out.put(key, pref.EnabledDateTime__c != null);
+        }
+        return out;
+    }
+
+    /**
+     * @description Companion lookup for bulk results. Returns true when the user
+     *              should be notified (no row in the map = opt-in by default).
+     * @param bulkMap Map returned by shouldNotifyBulk.
+     * @param userId  User Id to look up.
+     * @param channel Channel key (e.g. 'Bell', 'Email').
+     * @return true when the user should be notified, false when explicitly opted out.
+     */
+    public static Boolean shouldNotifyFromMap(Map<String, Boolean> bulkMap, Id userId, String channel) {
+        if (bulkMap == null || userId == null || String.isBlank(channel)) {
+            return true;
+        }
+        String key = String.valueOf(userId).left(18) + '|' + channel;
+        if (!bulkMap.containsKey(key)) {
+            return true;
+        }
+        return bulkMap.get(key);
+    }
+
+    /**
      * @description Returns all notification preferences for a user.
      * @param userId The Salesforce User Id
      * @return List of NotificationPreference__c records
