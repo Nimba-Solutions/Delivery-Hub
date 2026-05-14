@@ -170,30 +170,47 @@ public with sharing class DeliveryEscalationNotifService {
      * @param title Short notification title.
      * @param body Notification body text.
      */
-    public static void sendBellNotification(Id workItemId, Id ownerId, String title, String body) {
-        try {
-            // Check user-level setting (hierarchy: user > profile > org)
-            DeliveryHubSettings__c userSettings = DeliveryHubSettings__c.getInstance(ownerId);
-            if (userSettings == null || userSettings.EnableBellNotificationsDateTime__c == null) {
-                return; // User hasn't opted in
-            }
+    // Cache the Delivery_Hub_Alert CustomNotificationType ID per transaction. Without
+    // this, every sendBellNotification call fires a SOQL — and the forecast-alert sweep
+    // dispatches per (candidate × recipient × channel), so 8 alertable WIs already
+    // burns 100+ SOQL on this lookup alone.
+    private static Boolean cachedAlertTypeLookupAttempted = false;
+    private static Id cachedDeliveryHubAlertTypeId;
 
-            // Look up the custom notification type. DeveloperName is prefixed in
-            // a managed-package install (delivery__Delivery_Hub_Alert) and bare
-            // in dev — accept both so this works in either context.
+    @TestVisible
+    private static Id getDeliveryHubAlertTypeId() {
+        if (!cachedAlertTypeLookupAttempted) {
+            // DeveloperName is prefixed in a managed-package install
+            // (delivery__Delivery_Hub_Alert) and bare in dev — accept both.
             List<CustomNotificationType> types = [
                 SELECT Id FROM CustomNotificationType
                 WHERE DeveloperName IN ('Delivery_Hub_Alert', 'delivery__Delivery_Hub_Alert')
                 LIMIT 1
             ];
-            if (types.isEmpty()) {
+            cachedDeliveryHubAlertTypeId = types.isEmpty() ? null : types[0].Id;
+            cachedAlertTypeLookupAttempted = true;
+        }
+        return cachedDeliveryHubAlertTypeId;
+    }
+
+    public static void sendBellNotification(Id workItemId, Id ownerId, String title, String body) {
+        try {
+            // Check user-level setting (hierarchy: user > profile > org).
+            // Custom-settings getInstance is hierarchical and cached by SF — no SOQL cost.
+            DeliveryHubSettings__c userSettings = DeliveryHubSettings__c.getInstance(ownerId);
+            if (userSettings == null || userSettings.EnableBellNotificationsDateTime__c == null) {
+                return; // User hasn't opted in
+            }
+
+            Id notifTypeId = getDeliveryHubAlertTypeId();
+            if (notifTypeId == null) {
                 return; // Notification type not deployed
             }
 
             Messaging.CustomNotification notification = new Messaging.CustomNotification();
             notification.setTitle(title);
             notification.setBody(body);
-            notification.setNotificationTypeId(types[0].Id);
+            notification.setNotificationTypeId(notifTypeId);
             notification.setTargetId(workItemId);
             notification.send(new Set<String>{ ownerId });
         } catch (Exception e) {
