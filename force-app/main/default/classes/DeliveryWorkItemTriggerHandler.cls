@@ -151,11 +151,16 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             return;
         }
 
-        // FIX: Swapped USER_MODE for SYSTEM_MODE to prevent packaging test failures
+        // FIX: Swapped USER_MODE for SYSTEM_MODE to prevent packaging test failures.
+        // ORDER BY CreatedDate ASC LIMIT 1 mirrors the peer fix in
+        // DeliverySyncItemIngestor.cls:393-398 — without it, SF's default order is
+        // undefined and orgs with multiple Active Vendor entities get
+        // non-deterministic auto-attach.
         List<NetworkEntity__c> vendors = [
             SELECT Id FROM NetworkEntity__c
             WHERE StatusPk__c = 'Active' AND EntityTypePk__c = 'Vendor'
             WITH SYSTEM_MODE
+            ORDER BY CreatedDate ASC
             LIMIT 1
         ];
 
