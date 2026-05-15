@@ -1,0 +1,193 @@
+<template>
+    <div class="as-modal-backdrop" onclick={handleBackdropClick}>
+        <div class="as-modal" onclick={stopPropagation} role="dialog" aria-modal="true" aria-labelledby="as-title">
+            <header class="as-header">
+                <div>
+                    <div class="as-stage-label">{stageLabel}</div>
+                    <div class="as-title" id="as-title">Auto-Schedule</div>
+                </div>
+                <lightning-button-icon
+                    icon-name="utility:close"
+                    variant="bare"
+                    alternative-text="Close"
+                    onclick={handleCancel}>
+                </lightning-button-icon>
+            </header>
+
+            <div class="as-body">
+                <template if:true={errorMessage}>
+                    <div class="as-error">{errorMessage}</div>
+                </template>
+
+                <!-- ── Stage 1: Settings ── -->
+                <template if:true={isStageSettings}>
+                    <div class="as-row">
+                        <div class="as-field">
+                            <span class="as-field-label">Scope</span>
+                            <lightning-combobox
+                                value={scope}
+                                options={scopeOptions}
+                                onchange={handleScopeChange}
+                                variant="label-hidden">
+                            </lightning-combobox>
+                            <span class="as-field-help">{scopeHelp}</span>
+                        </div>
+                        <div class="as-field">
+                            <span class="as-field-label">Schedule from</span>
+                            <lightning-input
+                                type="date"
+                                value={projectStart}
+                                onchange={handleProjectStartChange}
+                                variant="label-hidden">
+                            </lightning-input>
+                            <span class="as-field-help">Anchor date for the pass</span>
+                        </div>
+                    </div>
+
+                    <div class="as-row">
+                        <div class="as-field">
+                            <span class="as-field-label">Direction</span>
+                            <lightning-radio-group
+                                name="direction"
+                                value={direction}
+                                options={directionOptions}
+                                onchange={handleDirectionChange}
+                                type="radio"
+                                variant="label-hidden">
+                            </lightning-radio-group>
+                        </div>
+                        <div class="as-field">
+                            <span class="as-field-label">Leveling algorithm</span>
+                            <lightning-radio-group
+                                name="leveling"
+                                value={levelingAlgorithm}
+                                options={levelingOptions}
+                                onchange={handleLevelingChange}
+                                type="radio"
+                                variant="label-hidden">
+                            </lightning-radio-group>
+                            <span class="as-field-help">Serial honors priority; parallel packs forward</span>
+                        </div>
+                    </div>
+
+                    <div class="as-row">
+                        <div class="as-field">
+                            <span class="as-field-label">Hours per day (per resource)</span>
+                            <lightning-input
+                                type="number"
+                                min="1"
+                                max="24"
+                                step="0.5"
+                                value={hoursPerDay}
+                                onchange={handleHoursPerDayChange}
+                                variant="label-hidden">
+                            </lightning-input>
+                            <span class="as-field-help">Used for capacity leveling. Default 8.</span>
+                        </div>
+                        <div class="as-field">
+                            <span class="as-field-label">Lock policy</span>
+                            <lightning-input
+                                type="checkbox"
+                                label="Treat manually-edited starts as Must Start On"
+                                checked={lockManualStarts}
+                                onchange={handleLockToggle}>
+                            </lightning-input>
+                            <span class="as-field-help">Otherwise the algorithm is free to move any task</span>
+                        </div>
+                    </div>
+
+                    <div class="as-row">
+                        <div class="as-field">
+                            <span class="as-field-label">Working calendar</span>
+                            <lightning-input
+                                type="checkbox"
+                                label="Skip weekends (M-F only)"
+                                checked={mondayFridayOnly}
+                                onchange={handleCalendarToggle}>
+                            </lightning-input>
+                            <span class="as-field-help">v1 calendar bridge — holiday support in v1.1</span>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- ── Stage 2: Review ── -->
+                <template if:true={isStageReview}>
+                    <div class="as-headline">{reviewHeadline}</div>
+
+                    <template if:true={hasDeltas}>
+                        <div class="as-checklist">
+                            <template for:each={deltaRows} for:item="row">
+                                <div key={row.taskId} class={row.rowClass}>
+                                    <lightning-input
+                                        type="checkbox"
+                                        checked={row.selected}
+                                        data-task-id={row.taskId}
+                                        onchange={handleDeltaToggle}
+                                        variant="label-hidden">
+                                    </lightning-input>
+                                    <div>
+                                        <div class="as-delta-name">{row.name}</div>
+                                        <div class="as-delta-dates">{row.oldRange} → {row.newRange}</div>
+                                    </div>
+                                    <span class={row.tagClass}>{row.tagLabel}</span>
+                                    <template if:true={row.criticalPath}>
+                                        <span class="as-delta-tag" title="On critical path">CP</span>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <template if:false={hasDeltas}>
+                        <div class="as-empty">No date changes proposed — current schedule satisfies the constraints.</div>
+                    </template>
+
+                    <template if:true={hasViolations}>
+                        <div class="as-violations">
+                            <div class="as-violations-title">Violations ({violationCount})</div>
+                            <template for:each={violations} for:item="v">
+                                <div key={v.taskId} class="as-violation-row">• {v.taskId}: {v.message}</div>
+                            </template>
+                        </div>
+                    </template>
+
+                    <template if:true={hasConflicts}>
+                        <div class="as-violations">
+                            <div class="as-violations-title">Resource conflicts ({conflictCount})</div>
+                            <template for:each={conflicts} for:item="c">
+                                <div key={c.id} class="as-violation-row">• {c.label}</div>
+                            </template>
+                        </div>
+                    </template>
+                </template>
+            </div>
+
+            <footer class="as-footer">
+                <div>
+                    <template if:true={isStageReview}>
+                        <lightning-button label="Back" onclick={handleBack} variant="neutral"></lightning-button>
+                    </template>
+                </div>
+                <div>
+                    <lightning-button label="Cancel" onclick={handleCancel} class="slds-m-right_x-small"></lightning-button>
+                    <template if:true={isStageSettings}>
+                        <lightning-button
+                            label="Run Preview"
+                            variant="brand"
+                            onclick={handleRunPreview}
+                            disabled={running}>
+                        </lightning-button>
+                    </template>
+                    <template if:true={isStageReview}>
+                        <lightning-button
+                            label={applyLabel}
+                            variant="brand"
+                            onclick={handleApply}
+                            disabled={applyDisabled}>
+                        </lightning-button>
+                    </template>
+                </div>
+            </footer>
+        </div>
+    </div>
+</template>

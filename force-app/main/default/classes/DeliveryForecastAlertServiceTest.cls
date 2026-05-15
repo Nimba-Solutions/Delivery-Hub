@@ -244,8 +244,15 @@ private class DeliveryForecastAlertServiceTest {
         DeliveryForecastAlertService.runSweep();
         Test.stopTest();
 
+        // PR #778 fixed a TZ slip: stampScanComplete now stamps with GMT date
+        // (matching DeliveryHubScheduler.enqueueForecastAlertsIfDue which gates
+        // on hourGmt()=8). The test must compare against GMT too, otherwise a
+        // packaging-org run between ~04:00–08:00 ET (GMT day +1 vs user day)
+        // fails the assertion even though the stamp is correct.
+        DateTime nowDt = DateTime.now();
+        Date expectedGmt = Date.newInstance(nowDt.yearGmt(), nowDt.monthGmt(), nowDt.dayGmt());
         DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
-        System.assertEquals(Date.today(), s.LastForecastAlertScanDate__c,
+        System.assertEquals(expectedGmt, s.LastForecastAlertScanDate__c,
             'Scan-date stamps each successful sweep regardless of fire count');
     }
 }
