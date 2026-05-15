@@ -47,5 +47,15 @@
                 </template>
             </div>
         </template>
+
+        <template if:true={_showAutoScheduleModal}>
+            <c-delivery-gantt-auto-schedule-modal
+                tasks={_autoScheduleTasksSnapshot}
+                dependencies={_autoScheduleDepsSnapshot}
+                dispatcher={autoScheduleDispatcher}
+                onclose={handleAutoScheduleClose}
+                onapplied={handleAutoScheduleApplied}>
+            </c-delivery-gantt-auto-schedule-modal>
+        </template>
     </div>
 </template>
