@@ -26,6 +26,14 @@ public with sharing class WebhookSignatureVerifier {
      * @return Outcome with passed=true on success, plus a reason string for
      *         failures suitable for inclusion in the 401 response body.
      */
+    /** @description Slack signs HMAC-SHA256 over the string `v0:<timestamp>:<body>` and
+     *  prefixes the hex digest with `v0=`. The timestamp is sent in
+     *  `X-Slack-Request-Timestamp`. Replay-window protection: 5 minutes either side. */
+    @TestVisible
+    private static final String SLACK_TS_HEADER = 'X-Slack-Request-Timestamp';
+    @TestVisible
+    private static final Long SLACK_REPLAY_WINDOW_SECONDS = 300;
+
     public static Outcome verify(IntegrationProvider__mdt provider, RestRequest req, String body) {
         String algorithm = provider.SignatureAlgorithmTxt__c == null
             ? 'None'
@@ -37,6 +45,9 @@ public with sharing class WebhookSignatureVerifier {
         if (!configCheck.passed) {
             return configCheck;
         }
+        if (algorithm.equalsIgnoreCase('HmacSha256Slack')) {
+            return verifySlack(provider, req, body);
+        }
         String algoName = mapAlgorithm(algorithm);
         if (algoName == null) {
             return failOutcome('Unknown algorithm: ' + algorithm);
@@ -46,6 +57,37 @@ public with sharing class WebhookSignatureVerifier {
         return matches(headerValue, expectedHex)
             ? passOutcome()
             : failOutcome('Computed signature did not match header value');
+    }
+
+    /**
+     * @description Slack-specific signing scheme:
+     *              sig_basestring = "v0:" + timestamp + ":" + body
+     *              expected_sig   = "v0=" + hex(hmac_sha256(secret, sig_basestring))
+     *              Sent in X-Slack-Signature; timestamp in X-Slack-Request-Timestamp.
+     *              We also reject timestamps outside ±SLACK_REPLAY_WINDOW_SECONDS to
+     *              block replay attacks.
+     */
+    private static Outcome verifySlack(IntegrationProvider__mdt provider, RestRequest req, String body) {
+        String timestamp = req.headers == null ? null : req.headers.get(SLACK_TS_HEADER);
+        if (String.isBlank(timestamp)) {
+            return failOutcome('Missing header ' + SLACK_TS_HEADER);
+        }
+        Long tsLong;
+        try {
+            tsLong = Long.valueOf(timestamp);
+        } catch (Exception e) {
+            return failOutcome('Non-numeric timestamp: ' + timestamp);
+        }
+        Long nowSeconds = DateTime.now().getTime() / 1000;
+        if (Math.abs(nowSeconds - tsLong) > SLACK_REPLAY_WINDOW_SECONDS) {
+            return failOutcome('Timestamp outside replay window');
+        }
+        String sigBase = 'v0:' + timestamp + ':' + body;
+        String expectedHex = 'v0=' + computeHex('HmacSHA256', sigBase, provider.SignatureSecretTxt__c);
+        String headerValue = req.headers.get(provider.SignatureHeaderTxt__c);
+        return constantTimeEquals(headerValue.trim().toLowerCase(), expectedHex.toLowerCase())
+            ? passOutcome()
+            : failOutcome('Slack signature did not match');
     }
 
     /**
