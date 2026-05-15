@@ -113,6 +113,14 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     _refetchTimer = null;
     _viewportWriteTimer = null;
     _headerVisible = false;
+
+    // Auto-Schedule modal state. Set by _openAutoScheduleModal; cleared by
+    // handleAutoScheduleClose. Snapshots are passed to the child modal LWC
+    // as @api props so the modal works on a stable view of the data.
+    _showAutoScheduleModal = false;
+    _autoScheduleTasksSnapshot = null;
+    _autoScheduleDepsSnapshot = null;
+
     menuVisible = false;
     menuX = 0;
     menuY = 0;
@@ -442,7 +450,8 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     }
 
     // Builds the host-contributed TitleBar buttons (NG 0.185.26+
-    // titleBarButtons slot). DH contributes a Show/Hide Header toggle.
+    // titleBarButtons slot). DH contributes a Show/Hide Header toggle and
+    // an Auto-Schedule button that opens deliveryGanttAutoScheduleModal.
     // Full Screen stays owned by NG via the existing fullscreen contract.
     _buildHostTitleBarButtons() {
         return [{
@@ -450,7 +459,98 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             label: this._headerVisible ? 'Hide Header' : 'Show Header',
             pressed: this._headerVisible,
             onClick: () => this._toggleHeaderChrome(),
+        }, {
+            id: 'dh-auto-schedule',
+            label: 'Auto-Schedule',
+            onClick: () => this._openAutoScheduleModal(),
         }];
+    }
+
+    // ── Auto-Schedule modal wiring ──────────────────────────────────────────
+    // The modal is a child LWC (deliveryGanttAutoScheduleModal) that:
+    //   1. Collects scheduling direction (Stage 1)
+    //   2. Calls window.NimbusGantt.computeSchedule + optional serialLevel/parallelLevel
+    //   3. Renders a per-task delta checklist (Stage 2)
+    //   4. On Apply, calls back into our dispatcher to push each PATCH into
+    //      the NG audit-pass pendingBuffer. The existing nimbus-gantt Submit
+    //      button then drains the buffer via onAuditSubmit → commitGanttPatches.
+
+    _openAutoScheduleModal() {
+        // Snapshot current state. Prefer NG handle's view if available; fall
+        // back to local _tasks for resilience.
+        let taskSnapshot = null;
+        try {
+            if (this._mountHandle && typeof this._mountHandle.getTasks === 'function') {
+                taskSnapshot = this._mountHandle.getTasks();
+            }
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn('[deliveryProFormaTimeline] handle.getTasks failed; using local _tasks', e);
+        }
+        if (!taskSnapshot || (Array.isArray(taskSnapshot) && taskSnapshot.length === 0)) {
+            taskSnapshot = this._tasks || [];
+        }
+        this._autoScheduleTasksSnapshot = taskSnapshot;
+        this._autoScheduleDepsSnapshot = this._dependencies || [];
+        this._showAutoScheduleModal = true;
+    }
+
+    handleAutoScheduleClose() {
+        this._showAutoScheduleModal = false;
+        this._autoScheduleTasksSnapshot = null;
+        this._autoScheduleDepsSnapshot = null;
+    }
+
+    handleAutoScheduleApplied(event) {
+        const n = (event && event.detail && event.detail.appliedCount) || 0;
+        if (n > 0) {
+            this.dispatchEvent(new ShowToastEvent({
+                title: 'Auto-Schedule preview applied',
+                message: `${n} change${n === 1 ? '' : 's'} staged in the audit buffer. Click Submit to commit.`,
+                variant: 'success',
+            }));
+        }
+    }
+
+    // Bound and passed to the modal so it can push PATCHes back into the
+    // gantt's pending-edits buffer. Defensive: tries the published Redux-
+    // style dispatch first, then falls back to whatever the NG bundle
+    // exposes. Last-resort path mutates local _tasks + setData — that
+    // bypasses the audit buffer and is logged at WARN so the regression
+    // is visible.
+    autoScheduleDispatcher = ({ taskId, changes }) => {
+        if (!taskId || !changes) return;
+        try {
+            if (this._mountHandle && typeof this._mountHandle.dispatch === 'function') {
+                this._mountHandle.dispatch({ type: 'PATCH', taskId, changes });
+                return;
+            }
+            if (this._mountHandle && typeof this._mountHandle.patchTask === 'function') {
+                this._mountHandle.patchTask(taskId, changes);
+                return;
+            }
+            if (this._mountHandle && typeof this._mountHandle.updateTask === 'function') {
+                this._mountHandle.updateTask(taskId, changes);
+                return;
+            }
+        } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error('[deliveryProFormaTimeline] dispatch via handle failed', err);
+        }
+        // Last-resort: mutate local _tasks + push via setData. This does NOT
+        // route through the audit pendingBuffer, so the user would lose the
+        // staged-review safety net for these specific changes.
+        // eslint-disable-next-line no-console
+        console.warn('[deliveryProFormaTimeline] auto-schedule fell back to setData (no dispatch/patchTask/updateTask on NG handle). These PATCHes will NOT land in the audit pendingBuffer.');
+        const idx = (this._tasks || []).findIndex(t => t && t.id === taskId);
+        if (idx >= 0) {
+            this._tasks[idx] = { ...this._tasks[idx], ...changes };
+        }
+        if (this._mountHandle && typeof this._mountHandle.setData === 'function') {
+            this._mountHandle.setData(this._mapTasksForNg(this._tasks), this._dependencies);
+        } else if (this._mountHandle && typeof this._mountHandle.setTasks === 'function') {
+            this._mountHandle.setTasks(this._mapTasksForNg(this._tasks));
+        }
     }
 
     // Flips the SLDS page-header hide-CSS and re-pushes the TitleBar
