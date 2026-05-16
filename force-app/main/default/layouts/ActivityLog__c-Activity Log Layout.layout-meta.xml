@@ -32,6 +32,10 @@
                 <behavior>Edit</behavior>
                 <field>SessionIdTxt__c</field>
             </layoutItems>
+            <layoutItems>
+                <behavior>Edit</behavior>
+                <field>LegalHoldDateTime__c</field>
+            </layoutItems>
         </layoutColumns>
         <style>TwoColumnsTopToBottom</style>
     </layoutSections>

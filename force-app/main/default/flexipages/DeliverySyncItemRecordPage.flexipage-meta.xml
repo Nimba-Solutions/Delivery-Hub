@@ -77,11 +77,21 @@
                 <identifier>RecordStatusPk_cField</identifier>
             </fieldInstance>
         </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.ChangeTypeTxt__c</fieldItem>
+                <identifier>RecordChangeTypeTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
         <name>Facet-e5f60001-0001-0001-0001-000000000001</name>
         <type>Facet</type>
     </flexiPageRegions>
 
-    <!-- Sync Summary: Right column (SourceEventTimestampDateTime, GlobalSourceIdTxt, LocalRecordIdTxt, RemoteExternalIDTxt) -->
+    <!-- Sync Summary: Right column (SourceEventTimestampDateTime, GlobalSourceIdTxt, LocalRecordIdTxt, RemoteExternalIDTxt, DismissedDateTime) -->
     <flexiPageRegions>
         <itemInstances>
             <fieldInstance>
@@ -121,6 +131,16 @@
                 </fieldInstanceProperties>
                 <fieldItem>Record.RemoteExternalIDTxt__c</fieldItem>
                 <identifier>RecordRemoteExternalIDTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.DismissedDateTime__c</fieldItem>
+                <identifier>RecordDismissedDateTime_cField</identifier>
             </fieldInstance>
         </itemInstances>
         <name>Facet-e5f60001-0001-0001-0001-000000000002</name>

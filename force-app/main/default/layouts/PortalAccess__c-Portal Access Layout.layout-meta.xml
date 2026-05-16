@@ -25,6 +25,10 @@
                 <behavior>Edit</behavior>
                 <field>RolePk__c</field>
             </layoutItems>
+            <layoutItems>
+                <behavior>Edit</behavior>
+                <field>PermissionsTxt__c</field>
+            </layoutItems>
         </layoutColumns>
         <style>TwoColumnsTopToBottom</style>
     </layoutSections>
