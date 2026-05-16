@@ -11,45 +11,30 @@
 @IsTest
 private class DeliveryForecastAlertServiceTest {
 
-    private static Map<Id, Id> bridgeByWi = new Map<Id, Id>();
-
+    /**
+     * @description Thin wrapper around TestDataFactory.createWorkItem.
+     *              Factory bypasses triggers by default so this test focuses
+     *              on alert math, not auto-WR / sync side effects.
+     */
     private static WorkItem__c insertActiveRoot(String briefDesc, Decimal estimate, Date startDate, Date endDate) {
-        WorkItem__c wi = new WorkItem__c(
-            BriefDescriptionTxt__c = briefDesc,
-            EstimatedHoursNumber__c = estimate,
-            EstimatedStartDevDate__c = startDate,
-            EstimatedEndDevDate__c = endDate,
-            ActivatedDateTime__c = Datetime.now(),
-            StatusPk__c = 'Active',
-            StageNamePk__c = 'In Development'
-        );
-        DeliveryWorkItemTriggerHandler.triggerDisabled = true;
-        try {
-            insert wi;
-        } finally {
-            DeliveryWorkItemTriggerHandler.triggerDisabled = false;
-        }
-        return wi;
+        return TestDataFactory.createWorkItem(new Map<String, Object>{
+            'BriefDescriptionTxt__c' => briefDesc,
+            'EstimatedHoursNumber__c' => estimate,
+            'EstimatedStartDevDate__c' => startDate,
+            'EstimatedEndDevDate__c' => endDate,
+            'StageNamePk__c' => 'In Development'
+        });
     }
 
+    /**
+     * @description Thin wrapper around TestDataFactory.buildWorkLog — the
+     *              factory owns the per-WI WorkRequest__c bridge cache so
+     *              RequestId__c (required MD per PR #770 feedback)
+     *              auto-populates.
+     */
     private static WorkLog__c buildLog(Id wiId, Decimal hours, Date workDate) {
-        Id requestId = bridgeByWi.get(wiId);
-        if (requestId == null) {
-            WorkRequest__c bridge = new WorkRequest__c(
-                WorkItemId__c = wiId,
-                StatusPk__c = 'Active'
-            );
-            insert bridge;
-            requestId = bridge.Id;
-            bridgeByWi.put(wiId, requestId);
-        }
-        return new WorkLog__c(
-            WorkItemLookup__c = wiId,
-            RequestId__c = requestId,
-            HoursLoggedNumber__c = hours,
-            WorkDateDate__c = workDate,
-            WorkDescriptionTxt__c = 'forecast alert test'
-        );
+        return TestDataFactory.buildWorkLog(wiId, hours, workDate,
+            new Map<String, Object>{ 'WorkDescriptionTxt__c' => 'forecast alert test' });
     }
 
     private static void enableFeature(Decimal thresholdPct) {
@@ -159,20 +144,12 @@ private class DeliveryForecastAlertServiceTest {
         // projected = 40h logged at velocity 10h/wk against 5h scope → trivially
         // > 110%. Parent fires; child never enters the candidate list.
         WorkItem__c parent = insertActiveRoot('Parent', 2, null, null);
-        WorkItem__c child = new WorkItem__c(
-            BriefDescriptionTxt__c = 'child',
-            EstimatedHoursNumber__c = 3,
-            ParentWorkItemLookup__c = parent.Id,
-            ActivatedDateTime__c = Datetime.now(),
-            StatusPk__c = 'Active',
-            StageNamePk__c = 'In Development'
-        );
-        DeliveryWorkItemTriggerHandler.triggerDisabled = true;
-        try {
-            insert child;
-        } finally {
-            DeliveryWorkItemTriggerHandler.triggerDisabled = false;
-        }
+        WorkItem__c child = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'BriefDescriptionTxt__c' => 'child',
+            'EstimatedHoursNumber__c' => 3,
+            'ParentWorkItemLookup__c' => parent.Id,
+            'StageNamePk__c' => 'In Development'
+        });
         insert new List<WorkLog__c>{
             buildLog(child.Id, 10, Date.today().addDays(-21)),
             buildLog(child.Id, 10, Date.today().addDays(-14)),
