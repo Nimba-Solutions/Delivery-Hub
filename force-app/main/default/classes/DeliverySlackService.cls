@@ -60,6 +60,80 @@ global with sharing class DeliverySlackService {
     }
 
     /**
+     * @description Posts a batch of newly-inserted WorkItemComment__c records to
+     *              the configured Slack channel. Called from
+     *              DeliveryWorkItemCommentTriggerHandler.handleAfterInsert when
+     *              EnableSlackCommentSyncDateTime__c is set on org defaults.
+     *
+     *              Pure-callout, @future so the trigger isn't blocked on the
+     *              HTTP roundtrip. Re-queries the comments by Id (you can't pass
+     *              SObjects to @future) and joins the parent WI Name for the
+     *              channel-visible header line.
+     * @param commentIds Set of WorkItemComment__c Ids inserted in the same tx
+     */
+    @future(callout=true)
+    public static void postCommentBatch(Set<Id> commentIds) {
+        if (commentIds == null || commentIds.isEmpty()) {
+            return;
+        }
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        if (!isCommentSyncEnabled(settings)) {
+            return;
+        }
+        List<WorkItemComment__c> outbound = filterOutboundComments(queryCommentBatch(commentIds));
+        if (outbound.isEmpty()) {
+            return;
+        }
+        post(settings.SlackWebhookUrlTxt__c, buildCommentBatchPayload(outbound));
+    }
+
+    /**
+     * @description Three-way gate: comment-sync feature opted in AND webhook URL configured.
+     * @param settings Org-default DeliveryHubSettings__c row (may be null).
+     * @return true when postCommentBatch should proceed to the callout.
+     */
+    private static Boolean isCommentSyncEnabled(DeliveryHubSettings__c settings) {
+        return settings != null
+            && settings.EnableSlackCommentSyncDateTime__c != null
+            && String.isNotBlank(settings.SlackWebhookUrlTxt__c);
+    }
+
+    /**
+     * @description Re-query the batched comments with parent WI Name + BriefDescription
+     *              for channel rendering. @future can't accept SObjects so we requery by Id.
+     * @param commentIds Ids of comments inserted in the originating transaction.
+     * @return Hydrated comment rows; empty list when nothing matches.
+     */
+    private static List<WorkItemComment__c> queryCommentBatch(Set<Id> commentIds) {
+        return [
+            SELECT Id, BodyTxt__c, AuthorTxt__c, SourcePk__c,
+                   WorkItemId__r.Name, WorkItemId__r.BriefDescriptionTxt__c, WorkItemId__c
+            FROM WorkItemComment__c
+            WHERE Id IN :commentIds
+            WITH SYSTEM_MODE
+            LIMIT 200
+        ];
+    }
+
+    /**
+     * @description Drop mirrors-from-Slack to avoid the comment-back-to-Slack loop.
+     *              DeliverySlackInboundHandler tags inbound mirrors with AuthorTxt__c
+     *              starting "Slack" — filter those out before posting back.
+     * @param rows Hydrated comment rows from queryCommentBatch.
+     * @return Comments that did NOT originate from Slack.
+     */
+    private static List<WorkItemComment__c> filterOutboundComments(List<WorkItemComment__c> rows) {
+        List<WorkItemComment__c> outbound = new List<WorkItemComment__c>();
+        for (WorkItemComment__c c : rows) {
+            if (c.AuthorTxt__c != null && c.AuthorTxt__c.startsWithIgnoreCase('Slack')) {
+                continue;
+            }
+            outbound.add(c);
+        }
+        return outbound;
+    }
+
+    /**
      * @description Tests the provided Slack webhook by posting a confirmation message.
      *              Called directly from the settings LWC via user action (no DML context).
      * @param webhookUrl The Slack Incoming Webhook URL to test
@@ -190,6 +264,47 @@ global with sharing class DeliverySlackService {
 
         return JSON.serialize(new Map<String, Object>{
             'text' => headerText,
+            'blocks' => blocks
+        });
+    }
+
+    /**
+     * @description Builds a Slack Block Kit payload that renders a batch of new
+     *              WorkItem comments — one section per comment with the WI Name,
+     *              author, and body. Channel members see all comments from this
+     *              transaction in one message instead of fan-out.
+     * @param comments WorkItemComment__c rows with WorkItemId__r.Name resolved
+     * @return Serialised JSON string
+     */
+    private static String buildCommentBatchPayload(List<WorkItemComment__c> comments) {
+        String orgUrl = Url.getOrgDomainUrl().toExternalForm();
+        List<Object> blocks = new List<Object>();
+        blocks.add(new Map<String, Object>{
+            'type' => 'section',
+            'text' => new Map<String, Object>{
+                'type' => 'mrkdwn',
+                'text' => ':speech_balloon: *' + comments.size() + ' new comment'
+                    + (comments.size() == 1 ? '' : 's') + ' on Delivery Hub work items*'
+            }
+        });
+        for (WorkItemComment__c c : comments) {
+            String wiName = c.WorkItemId__r != null ? c.WorkItemId__r.Name : 'WorkItem';
+            String wiTitle = c.WorkItemId__r != null && String.isNotBlank(c.WorkItemId__r.BriefDescriptionTxt__c)
+                ? c.WorkItemId__r.BriefDescriptionTxt__c : wiName;
+            String author = String.isNotBlank(c.AuthorTxt__c) ? c.AuthorTxt__c : 'Unknown';
+            String body = c.BodyTxt__c == null ? '' : c.BodyTxt__c;
+            String recordUrl = orgUrl + '/lightning/r/WorkItemComment__c/' + c.Id + '/view';
+            String line = '*<' + recordUrl + '|' + wiName + '>* — ' + wiTitle
+                + '\n_' + author + '_: ' + body;
+            blocks.add(new Map<String, Object>{
+                'type' => 'section',
+                'text' => new Map<String, Object>{
+                    'type' => 'mrkdwn',
+                    'text' => line
+                }
+            });
+        }
+        return JSON.serialize(new Map<String, Object>{
             'blocks' => blocks
         });
     }
