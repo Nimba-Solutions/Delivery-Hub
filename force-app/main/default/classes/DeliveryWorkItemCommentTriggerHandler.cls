@@ -37,6 +37,47 @@ public inherited sharing class DeliveryWorkItemCommentTriggerHandler {
 
         // Notify the work item owner via bell notification (if opted in and not the commenter)
         notifyWorkItemOwners(newRecords);
+
+        // Slack outbound mirror — when the operator has stamped
+        // EnableSlackCommentSyncDateTime__c on org defaults, fan out new
+        // comments to the configured Slack channel. Skips comments whose
+        // AuthorTxt__c starts with 'Slack' to avoid the inbound→outbound→inbound
+        // loop with DeliverySlackInboundHandler. @future, runs in its own tx.
+        postCommentsToSlack(newRecords);
+    }
+
+    /**
+     * @description Fan out new comments to Slack via DeliverySlackService.postCommentBatch.
+     *              Gated by org-default EnableSlackCommentSyncDateTime__c. Looking up
+     *              the setting in the trigger context avoids the @future doing it AND
+     *              the trigger doing it — single read here, then the @future re-reads
+     *              once it acquires its own context.
+     * @param comments Newly inserted comment records.
+     */
+    private static void postCommentsToSlack(List<WorkItemComment__c> comments) {
+        if (comments == null || comments.isEmpty()) {
+            return;
+        }
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        if (settings == null || settings.EnableSlackCommentSyncDateTime__c == null) {
+            return;
+        }
+        if (String.isBlank(settings.SlackWebhookUrlTxt__c)) {
+            return;
+        }
+        // Skip the @future call entirely when every row is a Slack mirror —
+        // saves an async-job slot.
+        Set<Id> ids = new Set<Id>();
+        for (WorkItemComment__c c : comments) {
+            if (c.AuthorTxt__c != null && c.AuthorTxt__c.startsWithIgnoreCase('Slack')) {
+                continue;
+            }
+            ids.add(c.Id);
+        }
+        if (ids.isEmpty()) {
+            return;
+        }
+        DeliverySlackService.postCommentBatch(ids);
     }
 
     /**
