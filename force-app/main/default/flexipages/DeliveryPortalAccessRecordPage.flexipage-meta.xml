@@ -83,6 +83,16 @@
                 <identifier>RecordRolePk_cField</identifier>
             </fieldInstance>
         </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.PermissionsTxt__c</fieldItem>
+                <identifier>RecordPermissionsTxt_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
         <name>Facet-c3d40001-0001-0001-0001-000000000002</name>
         <type>Facet</type>
     </flexiPageRegions>

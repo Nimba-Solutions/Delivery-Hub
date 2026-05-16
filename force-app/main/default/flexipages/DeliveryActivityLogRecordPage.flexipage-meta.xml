@@ -123,6 +123,16 @@
                 <identifier>RecordSessionIdTxt_cField</identifier>
             </fieldInstance>
         </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.LegalHoldDateTime__c</fieldItem>
+                <identifier>RecordLegalHoldDateTime_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
         <name>Facet-d4e50001-0001-0001-0001-000000000002</name>
         <type>Facet</type>
     </flexiPageRegions>
