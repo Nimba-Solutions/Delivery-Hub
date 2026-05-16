@@ -77,13 +77,35 @@ global with sharing class DeliverySlackService {
             return;
         }
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        if (settings == null
-                || settings.EnableSlackCommentSyncDateTime__c == null
-                || String.isBlank(settings.SlackWebhookUrlTxt__c)) {
+        if (!isCommentSyncEnabled(settings)) {
             return;
         }
-        // Re-query with the parent WI Name + BriefDescription for channel rendering.
-        List<WorkItemComment__c> rows = [
+        List<WorkItemComment__c> outbound = filterOutboundComments(queryCommentBatch(commentIds));
+        if (outbound.isEmpty()) {
+            return;
+        }
+        post(settings.SlackWebhookUrlTxt__c, buildCommentBatchPayload(outbound));
+    }
+
+    /**
+     * @description Three-way gate: comment-sync feature opted in AND webhook URL configured.
+     * @param settings Org-default DeliveryHubSettings__c row (may be null).
+     * @return true when postCommentBatch should proceed to the callout.
+     */
+    private static Boolean isCommentSyncEnabled(DeliveryHubSettings__c settings) {
+        return settings != null
+            && settings.EnableSlackCommentSyncDateTime__c != null
+            && String.isNotBlank(settings.SlackWebhookUrlTxt__c);
+    }
+
+    /**
+     * @description Re-query the batched comments with parent WI Name + BriefDescription
+     *              for channel rendering. @future can't accept SObjects so we requery by Id.
+     * @param commentIds Ids of comments inserted in the originating transaction.
+     * @return Hydrated comment rows; empty list when nothing matches.
+     */
+    private static List<WorkItemComment__c> queryCommentBatch(Set<Id> commentIds) {
+        return [
             SELECT Id, BodyTxt__c, AuthorTxt__c, SourcePk__c,
                    WorkItemId__r.Name, WorkItemId__r.BriefDescriptionTxt__c, WorkItemId__c
             FROM WorkItemComment__c
@@ -91,12 +113,16 @@ global with sharing class DeliverySlackService {
             WITH SYSTEM_MODE
             LIMIT 200
         ];
-        if (rows.isEmpty()) {
-            return;
-        }
-        // Skip mirrors-from-Slack to avoid the comment-back-to-Slack loop.
-        // DeliverySlackInboundHandler tags inbound mirrors with AuthorTxt__c
-        // starting "Slack" — drop those.
+    }
+
+    /**
+     * @description Drop mirrors-from-Slack to avoid the comment-back-to-Slack loop.
+     *              DeliverySlackInboundHandler tags inbound mirrors with AuthorTxt__c
+     *              starting "Slack" — filter those out before posting back.
+     * @param rows Hydrated comment rows from queryCommentBatch.
+     * @return Comments that did NOT originate from Slack.
+     */
+    private static List<WorkItemComment__c> filterOutboundComments(List<WorkItemComment__c> rows) {
         List<WorkItemComment__c> outbound = new List<WorkItemComment__c>();
         for (WorkItemComment__c c : rows) {
             if (c.AuthorTxt__c != null && c.AuthorTxt__c.startsWithIgnoreCase('Slack')) {
@@ -104,10 +130,7 @@ global with sharing class DeliverySlackService {
             }
             outbound.add(c);
         }
-        if (outbound.isEmpty()) {
-            return;
-        }
-        post(settings.SlackWebhookUrlTxt__c, buildCommentBatchPayload(outbound));
+        return outbound;
     }
 
     /**

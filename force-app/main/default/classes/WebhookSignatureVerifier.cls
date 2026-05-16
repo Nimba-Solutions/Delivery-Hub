@@ -66,6 +66,11 @@ public with sharing class WebhookSignatureVerifier {
      *              Sent in X-Slack-Signature; timestamp in X-Slack-Request-Timestamp.
      *              We also reject timestamps outside ±SLACK_REPLAY_WINDOW_SECONDS to
      *              block replay attacks.
+     * @param provider The IntegrationProvider__mdt row with the Slack signing secret.
+     * @param req      The inbound REST request carrying the Slack timestamp + signature headers.
+     * @param body     The raw request body string used as the signing input.
+     * @return Outcome with passed=true on signature match, failOutcome with a
+     *         reason string for missing/expired/mismatched headers.
      */
     private static Outcome verifySlack(IntegrationProvider__mdt provider, RestRequest req, String body) {
         String timestamp = req.headers == null ? null : req.headers.get(SLACK_TS_HEADER);

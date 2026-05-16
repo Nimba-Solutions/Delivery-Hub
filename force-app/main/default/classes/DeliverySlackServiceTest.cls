@@ -15,10 +15,15 @@ private class DeliverySlackServiceTest {
 
     /**
      * @description HTTP mock that returns a configurable status code and body.
+     *              Tracks invocation count via an instance field so tests can assert
+     *              on callouts that fire from @future methods — Limits.getCallouts()
+     *              reads the test method's context, not the @future's own async
+     *              context, so it always shows 0 for async callouts.
      */
     private class SlackMock implements HttpCalloutMock {
         private final Integer statusCode;
         private final String body;
+        public Integer callCount = 0;
 
         /**
          * @description Constructs a mock with the given response values.
@@ -31,11 +36,12 @@ private class DeliverySlackServiceTest {
         }
 
         /**
-         * @description Returns the configured mock response.
+         * @description Returns the configured mock response and increments callCount.
          * @param req The outbound HttpRequest (unused)
          * @return HttpResponse configured mock response
          */
         public HttpResponse respond(HttpRequest req) {
+            this.callCount++;
             HttpResponse res = new HttpResponse();
             res.setStatusCode(statusCode);
             res.setBody(body);
@@ -194,17 +200,20 @@ private class DeliverySlackServiceTest {
         } finally {
             DeliveryWorkItemTriggerHandler.triggerDisabled = false;
         }
+        // Insert outside startTest so the trigger's own @future is discarded.
+        // The explicit call below is what we measure.
         WorkItemComment__c c = new WorkItemComment__c(
             WorkItemId__c = wi.Id, BodyTxt__c = 'Comment body', AuthorTxt__c = 'Glen'
         );
         insert c;
 
-        Test.setMock(HttpCalloutMock.class, new SlackMock(200, 'ok'));
+        SlackMock mock = new SlackMock(200, 'ok');
+        Test.setMock(HttpCalloutMock.class, mock);
         Test.startTest();
         DeliverySlackService.postCommentBatch(new Set<Id>{ c.Id });
         Test.stopTest();
-        // Callout fired once for the batched payload.
-        System.assert(Limits.getCallouts() >= 1, 'Comment batch should fire at least one callout');
+        System.assertEquals(1, mock.callCount,
+            'Comment batch should fire exactly one callout for the @future payload');
     }
 
     @IsTest
@@ -222,11 +231,12 @@ private class DeliverySlackServiceTest {
         );
         insert c;
 
-        Test.setMock(HttpCalloutMock.class, new SlackMock(200, 'ok'));
+        SlackMock mock = new SlackMock(200, 'ok');
+        Test.setMock(HttpCalloutMock.class, mock);
         Test.startTest();
         DeliverySlackService.postCommentBatch(new Set<Id>{ c.Id });
         Test.stopTest();
-        System.assertEquals(0, Limits.getCallouts(),
+        System.assertEquals(0, mock.callCount,
             'No callouts when EnableSlackCommentSyncDateTime__c is null');
     }
 
@@ -249,11 +259,12 @@ private class DeliverySlackServiceTest {
         );
         insert c;
 
-        Test.setMock(HttpCalloutMock.class, new SlackMock(200, 'ok'));
+        SlackMock mock = new SlackMock(200, 'ok');
+        Test.setMock(HttpCalloutMock.class, mock);
         Test.startTest();
         DeliverySlackService.postCommentBatch(new Set<Id>{ c.Id });
         Test.stopTest();
-        System.assertEquals(0, Limits.getCallouts(),
+        System.assertEquals(0, mock.callCount,
             'Slack-authored comments must be skipped to prevent inbound-outbound loop');
     }
 }
