@@ -38,9 +38,8 @@
  *
  * @author       Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexDoc,PMD.ExcessiveParameterList,PMD.AvoidGlobalModifier')
+@SuppressWarnings('PMD.ApexDoc,PMD.ExcessiveParameterList,PMD.AvoidGlobalModifier,PMD.CyclomaticComplexity')
 @IsTest
-@SuppressWarnings('PMD.CyclomaticComplexity')
 public class TestDataFactory {
 
     // ────────────────────────────────────────────────────────────────────
