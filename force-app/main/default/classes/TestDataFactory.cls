@@ -40,6 +40,7 @@
  */
 @SuppressWarnings('PMD.ApexDoc,PMD.ExcessiveParameterList,PMD.AvoidGlobalModifier')
 @IsTest
+@SuppressWarnings('PMD.CyclomaticComplexity')
 public class TestDataFactory {
 
     // ────────────────────────────────────────────────────────────────────
