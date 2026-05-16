@@ -70,7 +70,7 @@
         <type>Facet</type>
     </flexiPageRegions>
 
-    <!-- Entity Info: Right column (ConnectionStatusPk, DefaultHourlyRateCurrency, OwnerId) -->
+    <!-- Entity Info: Right column (ConnectionStatusPk, DefaultHourlyRateCurrency, JurisdictionTxt, OwnerId) -->
     <flexiPageRegions>
         <itemInstances>
             <fieldInstance>
@@ -90,6 +90,16 @@
                 </fieldInstanceProperties>
                 <fieldItem>Record.DefaultHourlyRateCurrency__c</fieldItem>
                 <identifier>RecordDefaultHourlyRateCurrency_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.JurisdictionTxt__c</fieldItem>
+                <identifier>RecordJurisdictionTxt_cField</identifier>
             </fieldInstance>
         </itemInstances>
         <itemInstances>
@@ -148,7 +158,7 @@
         <type>Facet</type>
     </flexiPageRegions>
 
-    <!-- Integration: Left column (IntegrationEndpointUrlTxt, OrgIdTxt, ApiKeyTxt) -->
+    <!-- Integration: Left column (IntegrationEndpointUrlTxt, OrgIdTxt, ApiKeyTxt, RevealFulfillmentDepthPk) -->
     <flexiPageRegions>
         <itemInstances>
             <fieldInstance>
@@ -180,11 +190,21 @@
                 <identifier>RecordApiKeyTxt_cField</identifier>
             </fieldInstance>
         </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.RevealFulfillmentDepthPk__c</fieldItem>
+                <identifier>RecordRevealFulfillmentDepthPk_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
         <name>Facet-ne-integ-left</name>
         <type>Facet</type>
     </flexiPageRegions>
 
-    <!-- Integration: Right column (EnableVendorPushDateTime, GithubUsernameTxt, RemoteExternalIdTxt, LastInboundSyncDateTime) -->
+    <!-- Integration: Right column (EnableVendorPushDateTime, GithubUsernameTxt, RemoteExternalIdTxt, LastInboundSyncDateTime, LastOutboundSyncDateTime) -->
     <flexiPageRegions>
         <itemInstances>
             <fieldInstance>
@@ -226,7 +246,49 @@
                 <identifier>RecordLastInboundSyncDateTime_cField</identifier>
             </fieldInstance>
         </itemInstances>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>readonly</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.LastOutboundSyncDateTime__c</fieldItem>
+                <identifier>RecordLastOutboundSyncDateTime_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
         <name>Facet-ne-integ-right</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Billing: Left column (BillingFrequencyPk) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.BillingFrequencyPk__c</fieldItem>
+                <identifier>RecordBillingFrequencyPk_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-ne-billing-left</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
+    <!-- Billing: Right column (EnableBillingDateTime) -->
+    <flexiPageRegions>
+        <itemInstances>
+            <fieldInstance>
+                <fieldInstanceProperties>
+                    <name>uiBehavior</name>
+                    <value>none</value>
+                </fieldInstanceProperties>
+                <fieldItem>Record.EnableBillingDateTime__c</fieldItem>
+                <identifier>RecordEnableBillingDateTime_cField</identifier>
+            </fieldInstance>
+        </itemInstances>
+        <name>Facet-ne-billing-right</name>
         <type>Facet</type>
     </flexiPageRegions>
 
@@ -326,6 +388,32 @@
         <type>Facet</type>
     </flexiPageRegions>
 
+    <!-- Billing: 2 columns -->
+    <flexiPageRegions>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-ne-billing-left</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_billing1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>body</name>
+                    <value>Facet-ne-billing-right</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:column</componentName>
+                <identifier>flexipage_column_billing2</identifier>
+            </componentInstance>
+        </itemInstances>
+        <name>Facet-ne-billing-cols</name>
+        <type>Facet</type>
+    </flexiPageRegions>
+
     <!-- Vendor Management: 1 column -->
     <flexiPageRegions>
         <itemInstances>
@@ -396,6 +484,24 @@
                 </componentInstanceProperties>
                 <componentName>flexipage:fieldSection</componentName>
                 <identifier>flexipage_fieldSection_integ</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentInstanceProperties>
+                    <name>columns</name>
+                    <value>Facet-ne-billing-cols</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>horizontalAlignment</name>
+                    <value>false</value>
+                </componentInstanceProperties>
+                <componentInstanceProperties>
+                    <name>label</name>
+                    <value>Billing</value>
+                </componentInstanceProperties>
+                <componentName>flexipage:fieldSection</componentName>
+                <identifier>flexipage_fieldSection_billing</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
