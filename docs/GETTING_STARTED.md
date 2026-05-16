@@ -2,7 +2,7 @@
 
 This guide walks you through installing Delivery Hub, running the setup wizard, creating your first work item, and optionally configuring cross-org sync, document signing, and external API access.
 
-**Current release**: `0.226` — see the [Changelog](CHANGELOG.md) for the full history. (CHANGELOG entries through 0.200 are PR-by-PR; later releases ship as a stream of named PRs — see the GitHub release tags `release/0.201.x` … `release/0.226.x` for the per-version manifests.)
+**Current release**: `0.239` — see the [Changelog](CHANGELOG.md) for the full history. (CHANGELOG entries through 0.200 are PR-by-PR; later releases ship as a stream of named PRs — see the GitHub release tags `release/0.201.x` … `release/0.239.x` for the per-version manifests.)
 
 ---
 
@@ -497,6 +497,34 @@ The timeline determines bar placement using a fallback chain:
 ### Interacting with Items
 
 Click any bar on the timeline to navigate directly to that work item's record page.
+
+### Auto-Schedule (release/0.239)
+
+The Gantt title bar includes an **Auto-Schedule** button (next to Show/Hide Header) that opens a two-stage modal for re-baselining the timeline using CPM and capacity leveling.
+
+**Stage 1 — Settings**:
+
+- **Scope**: All visible tasks, or the project subtree of the currently-selected task
+- **Anchor date**: defaults to today
+- **Direction**: Forward (schedule from anchor) or Backward (schedule to anchor)
+- **Lock policy**: when on, manually-edited starts are treated as **Must Start On** constraints
+- **Working calendar**: 7-day (every day works) or M-F only
+- **Hours per day**: per-resource capacity, default 8
+- **Leveling**: Serial (priority-ordered), Parallel (forward-pack), or None
+
+Click **Run Preview** — the modal computes the schedule client-side via the bundled NimbusGantt CPM + leveling functions. No server call is made until you Submit.
+
+**Stage 2 — Review**:
+
+- Headline shows project start → end, # tasks moved, # violations
+- Per-task delta checklist tagged **Schedule** / **Leveling** / **Both**, with critical-path flag, **Violations** panel, and **Resource Conflicts** panel
+- All deltas are checked by default; uncheck anything you don't want
+- **Apply Selected** pushes each row into the Gantt's audit-pass `pendingBuffer`
+- Click the existing **Submit** button on the Gantt to commit the batch atomically via `commitGanttPatches`
+
+The flow reuses the same audit-pass pipeline used by drag-to-reschedule (added in release/0.223), so every auto-scheduled change goes through the same gate as a manual edit. No new Apex endpoint, no separate audit trail.
+
+v1 ships uniform per-resource capacity and the M-F working calendar bridge. Per-User capacity overrides, full holiday calendar support, and "what-if engineer" temporary capacity adds are on the v1.5 roadmap.
 
 ---
 

@@ -4,6 +4,27 @@ All notable changes to the Delivery Hub package are documented here. Versions ma
 
 ---
 
+## [0.227 — 0.239] — 2026-05-10 → 2026-05-15 (per-PR detail not back-filled)
+
+Per-PR detail lives in the GitHub PR descriptions; the themes that shipped in this stretch:
+
+- **Auto-Schedule modal** (#779) — two-stage Gantt auto-schedule. Stage 1 collects scope (all visible / project subtree), anchor date, direction (forward/backward), lock policy ("Treat manually-edited starts as Must Start On"), working calendar (7-day vs M-F), hours/day, and leveling algorithm (Serial priority / Parallel forward-pack / None). Stage 2 renders a per-task delta checklist tagged Schedule / Leveling / Both with critical-path flag, violations, and resource-conflict panels. **Run Preview** is pure client-side via `window.NimbusGantt.computeSchedule` + `serialLevel` / `parallelLevel` — no server call. **Apply Selected** pushes each row into the gantt's audit-pass `pendingBuffer` (the existing pipeline since #749); the existing **Submit** button drains via `commitGanttPatches`. New LWC `deliveryGanttAutoScheduleModal` + titlebar button + dispatcher wired into `deliveryProFormaTimeline`. Walkthrough at [cloudnimbusllc.com/mf/auto-schedule-walkthrough](https://cloudnimbusllc.com/mf/auto-schedule-walkthrough).
+- **TZ regression fix** (#780) — `testScanDateStampedEvenWhenNoneFired` now compares against GMT date after the GMT-stamp change in #778.
+- **Runtime audit bug closeout** (#778) — 7 runtime bugs: SOQL fan-out, silent catches, TZ slip, ORDER BY gaps.
+- **Namespace-safe LWC nav** (#777) — `[WorkItem__c]` vs `[delivery__WorkItem__c]` resolved at runtime via package-namespace detection.
+- **Layout field-coverage closeout** (#776) — WorkLog / WorkItem / DeliveryDocument / DeliveryTransaction page layouts + dynamic page for `WorkItemDependency__c`.
+- **Forecast alerts + child rollup wiring** (#773, #775) — FlexiPage placement for forecast/velocity LWCs + pills + audit chain + child-WI rollup test fix.
+- **Depth-charge recursive cross-org probe** (#769, #772) — follow-on to #760: receiver handler + `WorkItemId__c` in `buildRootSegment` SELECT.
+- **Forecast burn-up + projection (Phase 3)** (#768) — velocity-based burn-up + projected completion charts on the deliveryHubWorkspace.
+- **Monthly hours LWC (Phase 2A)** (#767) — `deliveryProjectMonthlyHours` LWC + analytics controller, the Jose-friendly per-project view.
+- **NG 0.190.2 / 0.191.0 bundle bumps** (#765) — visibility sweep + core bundle bump that exports `AutoSchedulePlugin` from `core/index.ts` (the one-line gap surfaced in the 5/9 capability audit).
+- **Gantt right-click dep delete** (#766) — `depId` param + optimistic local update on dependency-arrow Delete.
+- **Hard-delete refusal on gantt-critical fields** (#763) — `handleBeforeUpdate` refuses non-null → null transitions on `EstimatedStartDevDate__c`/`EstimatedEndDevDate__c`/`SortOrderNumber__c` to stop the Joe-era WI-vanish recurrence.
+
+Per-PR detail is intentionally not back-filled — PR descriptions on GitHub stay authoritative.
+
+---
+
 ## [0.201 — 0.226] — 2026-04-23 → 2026-05-10 (per-PR detail not back-filled)
 
 The release cadence accelerated past the per-PR changelog format starting in late April 2026. The per-version manifest lives in the GitHub release tags (`release/0.201.x` … `release/0.226.x`); per-PR detail lives in `git log --oneline` and the GitHub PR descriptions. The themes that shipped in this stretch:
