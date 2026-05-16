@@ -43,6 +43,19 @@ global with sharing class DeliveryWebhookReceiverApi {
                 return;
             }
             Map<String, Object> payload = parseBody(body);
+            // Generic url-verification challenge echo: when a provider's first
+            // handshake POST includes a `challenge` key (Slack Event API, GitHub
+            // App config, and others use this pattern), respond with the
+            // challenge value verbatim instead of dispatching to a handler.
+            // The handler routing-rules JSON doesn't need a row for it.
+            if (payload.containsKey('challenge')) {
+                String challenge = String.valueOf(payload.get('challenge'));
+                res.statusCode = 200;
+                res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
+                    'challenge' => challenge
+                }));
+                return;
+            }
             WebhookHandlerResult result = DeliveryWebhookEventRouter.dispatch(provider, payload);
             respond(res, result.httpStatus, result.message, result.recordId);
         } catch (Exception e) {

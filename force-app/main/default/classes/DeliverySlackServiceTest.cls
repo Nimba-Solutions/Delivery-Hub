@@ -15,10 +15,15 @@ private class DeliverySlackServiceTest {
 
     /**
      * @description HTTP mock that returns a configurable status code and body.
+     *              Tracks invocation count via an instance field so tests can assert
+     *              on callouts that fire from @future methods — Limits.getCallouts()
+     *              reads the test method's context, not the @future's own async
+     *              context, so it always shows 0 for async callouts.
      */
     private class SlackMock implements HttpCalloutMock {
         private final Integer statusCode;
         private final String body;
+        public Integer callCount = 0;
 
         /**
          * @description Constructs a mock with the given response values.
@@ -31,11 +36,12 @@ private class DeliverySlackServiceTest {
         }
 
         /**
-         * @description Returns the configured mock response.
+         * @description Returns the configured mock response and increments callCount.
          * @param req The outbound HttpRequest (unused)
          * @return HttpResponse configured mock response
          */
         public HttpResponse respond(HttpRequest req) {
+            this.callCount++;
             HttpResponse res = new HttpResponse();
             res.setStatusCode(statusCode);
             res.setBody(body);
@@ -176,5 +182,92 @@ private class DeliverySlackServiceTest {
             Test.stopTest();
             System.assertEquals(0, Limits.getCallouts(), 'No callouts should be made when webhook URL is null');
         }
+    }
+
+    // ── postCommentBatch ─────────────────────────────────────────────────────
+
+    @IsTest
+    static void testPostCommentBatchHappyPath() {
+        // Org default settings already have SlackWebhookUrlTxt; opt into comment sync.
+        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+        s.EnableSlackCommentSyncDateTime__c = DateTime.now();
+        update s;
+
+        WorkItem__c wi = new WorkItem__c(BriefDescriptionTxt__c = 'Slack outbound seed');
+        DeliveryWorkItemTriggerHandler.triggerDisabled = true;
+        try {
+            insert wi;
+        } finally {
+            DeliveryWorkItemTriggerHandler.triggerDisabled = false;
+        }
+
+        // Tests the realistic outbound chain: comment insert →
+        // DeliveryWorkItemCommentTriggerHandler.postCommentsToSlack →
+        // DeliverySlackService.postCommentBatch (@future) → callout. Inserting
+        // inside startTest keeps the trigger's @future inside the stopTest flush
+        // window. Don't ALSO call postCommentBatch explicitly — that doubles
+        // the callout count without adding test value.
+        SlackMock mock = new SlackMock(200, 'ok');
+        Test.setMock(HttpCalloutMock.class, mock);
+        Test.startTest();
+        WorkItemComment__c c = new WorkItemComment__c(
+            WorkItemId__c = wi.Id, BodyTxt__c = 'Comment body', AuthorTxt__c = 'Glen'
+        );
+        insert c;
+        Test.stopTest();
+        System.assertEquals(1, mock.callCount,
+            'Comment insert should fan out to Slack via the trigger handler @future');
+    }
+
+    @IsTest
+    static void testPostCommentBatchOptOutNoOps() {
+        // EnableSlackCommentSyncDateTime__c is null on the seeded settings — should no-op.
+        WorkItem__c wi = new WorkItem__c(BriefDescriptionTxt__c = 'Opt-out seed');
+        DeliveryWorkItemTriggerHandler.triggerDisabled = true;
+        try {
+            insert wi;
+        } finally {
+            DeliveryWorkItemTriggerHandler.triggerDisabled = false;
+        }
+        WorkItemComment__c c = new WorkItemComment__c(
+            WorkItemId__c = wi.Id, BodyTxt__c = 'Body', AuthorTxt__c = 'Glen'
+        );
+        insert c;
+
+        SlackMock mock = new SlackMock(200, 'ok');
+        Test.setMock(HttpCalloutMock.class, mock);
+        Test.startTest();
+        DeliverySlackService.postCommentBatch(new Set<Id>{ c.Id });
+        Test.stopTest();
+        System.assertEquals(0, mock.callCount,
+            'No callouts when EnableSlackCommentSyncDateTime__c is null');
+    }
+
+    @IsTest
+    static void testPostCommentBatchSkipsSlackMirrors() {
+        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+        s.EnableSlackCommentSyncDateTime__c = DateTime.now();
+        update s;
+
+        WorkItem__c wi = new WorkItem__c(BriefDescriptionTxt__c = 'Mirror echo seed');
+        DeliveryWorkItemTriggerHandler.triggerDisabled = true;
+        try {
+            insert wi;
+        } finally {
+            DeliveryWorkItemTriggerHandler.triggerDisabled = false;
+        }
+        WorkItemComment__c c = new WorkItemComment__c(
+            WorkItemId__c = wi.Id, BodyTxt__c = 'Mirror body',
+            AuthorTxt__c = 'Slack: U12345'
+        );
+        insert c;
+
+        SlackMock mock = new SlackMock(200, 'ok');
+        Test.setMock(HttpCalloutMock.class, mock);
+        Test.startTest();
+        DeliverySlackService.postCommentBatch(new Set<Id>{ c.Id });
+        Test.stopTest();
+        System.assertEquals(0, mock.callCount,
+            'Slack-authored comments must be skipped to prevent inbound-outbound loop');
     }
 }

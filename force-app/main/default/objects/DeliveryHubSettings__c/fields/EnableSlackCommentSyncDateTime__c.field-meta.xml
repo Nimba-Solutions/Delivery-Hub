@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableSlackCommentSyncDateTime__c</fullName>
+    <description>When non-null, WorkItemComment__c inserts are posted to the configured SlackWebhookUrlTxt__c channel (outbound) and inbound Slack messages mentioning a WI Name (e.g. T-0123) create comments back. Default off — operators opt in by stamping this field. Pairs with the Slack_Webhook IntegrationProvider__mdt row.</description>
+    <externalId>false</externalId>
+    <label>Enable Slack Comment Sync</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
