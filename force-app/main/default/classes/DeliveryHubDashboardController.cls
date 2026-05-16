@@ -580,10 +580,12 @@ global with sharing class DeliveryHubDashboardController {
      */
     @AuraEnabled(cacheable=true)
     global static Boolean isAdminUser() {
+        // PSG DeveloperName is namespace-prefixed on subscriber installs
+        // (delivery__DeliveryHubAdmin) and bare in dev — accept both.
         return ![
             SELECT Id FROM PermissionSetAssignment
             WHERE AssigneeId = :UserInfo.getUserId()
-            AND PermissionSetGroup.DeveloperName = 'DeliveryHubAdmin'
+            AND PermissionSetGroup.DeveloperName IN ('DeliveryHubAdmin', 'delivery__DeliveryHubAdmin')
             WITH SYSTEM_MODE
             LIMIT 1
         ].isEmpty();

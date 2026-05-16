@@ -217,10 +217,12 @@ public with sharing class DeliverySyncDismissalService {
                 return true;
             }
         }
+        // PSG DeveloperName is namespace-prefixed on subscriber installs
+        // (delivery__DeliveryHubAdmin) and bare in dev — accept both.
         return ![
             SELECT Id FROM PermissionSetAssignment
             WHERE AssigneeId = :userId
-            AND PermissionSetGroup.DeveloperName = 'DeliveryHubAdmin'
+            AND PermissionSetGroup.DeveloperName IN ('DeliveryHubAdmin', 'delivery__DeliveryHubAdmin')
             WITH SYSTEM_MODE LIMIT 1
         ].isEmpty();
     }
