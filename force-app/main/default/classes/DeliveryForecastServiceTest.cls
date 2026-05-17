@@ -11,51 +11,30 @@
 @IsTest
 private class DeliveryForecastServiceTest {
 
+    /**
+     * @description Thin wrapper around TestDataFactory.createWorkItem. Factory
+     *              brackets the DML with triggerDisabled so this test focuses
+     *              on forecast math, not auto-WR / sync side effects.
+     */
     private static WorkItem__c insertWi(String briefDesc, Decimal estimate, Date startDate, Date endDate, Id parentId) {
-        WorkItem__c wi = new WorkItem__c(
-            BriefDescriptionTxt__c = briefDesc,
-            EstimatedHoursNumber__c = estimate,
-            EstimatedStartDevDate__c = startDate,
-            EstimatedEndDevDate__c = endDate,
-            ParentWorkItemLookup__c = parentId,
-            ActivatedDateTime__c = Datetime.now(),
-            StatusPk__c = 'Active'
-        );
-        DeliveryWorkItemTriggerHandler.triggerDisabled = true;
-        try {
-            insert wi;
-        } finally {
-            DeliveryWorkItemTriggerHandler.triggerDisabled = false;
-        }
-        return wi;
+        return TestDataFactory.createWorkItem(new Map<String, Object>{
+            'BriefDescriptionTxt__c' => briefDesc,
+            'EstimatedHoursNumber__c' => estimate,
+            'EstimatedStartDevDate__c' => startDate,
+            'EstimatedEndDevDate__c' => endDate,
+            'ParentWorkItemLookup__c' => parentId
+        });
     }
 
     /**
-     * @description WorkLog__c.RequestId__c is a Master-Detail to WorkRequest__c
-     *              and is required at insert in the packaging org. Auto-mint a
-     *              per-WorkItem bridge WorkRequest__c on first buildLog call so
-     *              callers don't have to thread it through.
+     * @description Thin wrapper around TestDataFactory.buildWorkLog — the
+     *              factory owns the per-WI WorkRequest__c bridge cache so
+     *              RequestId__c (required MD per PR #770 feedback)
+     *              auto-populates.
      */
-    private static Map<Id, Id> bridgeByWi = new Map<Id, Id>();
-
     private static WorkLog__c buildLog(Id wiId, Decimal hours, Date workDate) {
-        Id requestId = bridgeByWi.get(wiId);
-        if (requestId == null) {
-            WorkRequest__c bridge = new WorkRequest__c(
-                WorkItemId__c = wiId,
-                StatusPk__c = 'Active'
-            );
-            insert bridge;
-            requestId = bridge.Id;
-            bridgeByWi.put(wiId, requestId);
-        }
-        return new WorkLog__c(
-            WorkItemLookup__c = wiId,
-            RequestId__c = requestId,
-            HoursLoggedNumber__c = hours,
-            WorkDateDate__c = workDate,
-            WorkDescriptionTxt__c = 'forecast test log'
-        );
+        return TestDataFactory.buildWorkLog(wiId, hours, workDate,
+            new Map<String, Object>{ 'WorkDescriptionTxt__c' => 'forecast test log' });
     }
 
     @IsTest
