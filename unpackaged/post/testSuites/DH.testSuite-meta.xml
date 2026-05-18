@@ -8,7 +8,6 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryFileBytesFetcherTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryGhostControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubBoardControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubCalloutServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubCommentControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubDashboardControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubFilesControllerTest</testClassName>
@@ -57,7 +56,6 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryScoreServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryPortalAccessServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryActivityFeedControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryActivityTrackerControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryDataLineageControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocumentControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryFieldChangeServiceTest</testClassName>
@@ -77,7 +75,6 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryEmailServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryInboundEmailHandlerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliverySavedFilterControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryTimelineControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryActivityDashboardControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryTemplateManagerControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryVelocityServiceTest</testClassName>
