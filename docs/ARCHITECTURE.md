@@ -260,10 +260,6 @@ See [Sync API Guide](SYNC_API_GUIDE.md) for full documentation.
 
 | Component | Description |
 |-----------|-------------|
-| `deliveryPortalDashboard` | Portal-facing dashboard for external users |
-| `deliveryPortalWorkItemList` | Portal work item list view |
-| `deliveryPortalWorkItemDetail` | Portal work item detail view |
-| `deliveryPortalRequestForm` | Portal request submission form |
 | `deliveryStatusPage` | Public status page (no login required) |
 
 ### Setup and Configuration
@@ -278,7 +274,6 @@ See [Sync API Guide](SYNC_API_GUIDE.md) for full documentation.
 | `deliveryOpenAiSettingsCard` | OpenAI API key and model settings |
 | `deliveryKanbanOpenAiSettings` | Board-specific AI settings |
 | `deliveryKanbanSettingsContainer` | Board settings container |
-| `deliveryPartnerSettingsCard` | Partner/vendor settings |
 | `deliveryWorkflowTemplatePicker` | Workflow type selection UI |
 
 ### Operational Tools
@@ -641,7 +636,6 @@ See [DOCUMENT_ACTIONING_FEATURE.md](DOCUMENT_ACTIONING_FEATURE.md) for the full 
 | **DeliveryRateLimitService** | Per-entity request throttle for Public API (`PublicApiRateLimitNumber__c`, default 100/hr) and Sync API (`SyncApiRateLimitNumber__c`, default 60/hr). HTTP 429 + `Retry-After: 3600` on breach. Disabled when fields are `null`. |
 | **DeliveryAuditChainService** | SHA-256 hash chain on `ActivityLog__c`. Each row stores its hash and parent hash. `LegalHoldEnabledDateTime__c` on settings prevents deletion. `validateChain(batchSize)` walks the chain and returns first-mismatch metadata. |
 | **DeliveryCryptoService** | HMAC-SHA256 request signing for outbound sync. Reads `HmacSecretTxt__c` from the target `NetworkEntity__c` and adds `X-Signature` header. Receiving org validates. No secret = no signing (backward compatible). |
-| **DeliveryArchivalService** | Automated archival of completed work items and related records after a configurable retention period (`ArchivalRetentionDaysNumber__c`, default 365). Archived records excluded from board queries and API responses but remain queryable for compliance. Restore on demand. |
 
 > **Removed in PR #727:** `DeliveryApprovalChainService` and `DeliveryTeamPermissionService` were deleted along with their CMTs (`ApprovalStep__mdt`, `DeliveryTeam__mdt`) — both were unused frameworks. If you need multi-step approval or team-based row visibility, those are net-new builds, not revivals.
 
@@ -651,7 +645,6 @@ See [DOCUMENT_ACTIONING_FEATURE.md](DOCUMENT_ACTIONING_FEATURE.md) for the full 
 |-------|---------------|
 | **DeliverySLAService** | Business-hours SLA clock via `BusinessHoursId` on `SLARule__mdt`. Clocks pause outside configured business hours, weekends, and holidays. Response and resolution targets evaluated against business time, not wall-clock time. |
 | **DeliveryNotificationPreferenceService** | Per-event notification channel configuration via `NotificationPreference__c`. Channels: email, platform event, both, or none. Respected by escalation engine, digest service, and stage-change alerts. |
-| **DeliveryWorkItemQueryService** | Centralized SOQL for WorkItem queries. Eliminates duplicated SOQL across controllers. All queries run `WITH SYSTEM_MODE` for portal/sync context. |
 | **DeliveryEscalationRuleEvaluator / ActionExecutor / NotifService / Context** | Decomposed escalation engine. `DeliveryEscalationService` delegates to these four focused classes — `RuleEvaluator` picks matching rules, `ActionExecutor` runs the action, `NotifService` handles email/platform event dispatch, `Context` carries the evaluation state. No behavior change from the monolithic version; improves testability. |
 
 ### Document Service Decomposition
@@ -747,10 +740,6 @@ Filters are stored as JSON capturing the complete board filter state and scoped 
 ---
 
 ## Timeline View
-
-| Class | Responsibility |
-|-------|---------------|
-| **DeliveryTimelineController** | Returns active work items with computed date ranges grouped by NetworkEntity. Uses a fallback chain for start/end dates (CreatedDate, CalculatedETADate__c, estimated hours converted to days). |
 
 The `deliveryTimelineView` LWC renders a CSS Grid-based Gantt chart with configurable zoom levels (week/month/quarter), horizontal scroll, a today-line marker, and stage-based colors pulled from `WorkflowStage__mdt`.
 
