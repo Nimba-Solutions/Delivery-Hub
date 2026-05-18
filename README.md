@@ -176,8 +176,6 @@ A suite of opt-in enterprise features for organizations that need formal governa
 
 **Inbound Webhook Receiver:** `IntegrationProvider__mdt`-driven webhook ingest framework. Stripe payment webhook ships out of the box (PR #724) — HMAC-verified, idempotent, returns 401 on every call until admin sets `SignatureSecretTxt__c` AND `EnabledDateTime__c`. The framework is generic; add new providers by creating a CMT row and an Apex handler.
 
-**Data Archival:** `DeliveryArchivalService` moves completed work items and their related records (comments, work logs, sync items) to an archived state after a configurable retention period (`ArchivalRetentionDaysNumber__c`, default 365 days). Archived records are excluded from board queries and API responses but remain queryable for compliance. Restore on demand.
-
 **Business-Hours SLAs:** `DeliverySLAService` now supports business-hours calculations via `BusinessHoursId` on `SLARule__mdt`. SLA clocks pause outside configured business hours, weekends, and holidays. Response and resolution targets are evaluated against business time, not wall-clock time.
 
 **Notification Preferences:** `DeliveryNotificationPreferenceService` lets users configure per-event notification channels (email, platform event, both, or none) through `DeliveryHubSettings__c`. Preferences are respected by the escalation engine, digest service, and stage-change alerts.
