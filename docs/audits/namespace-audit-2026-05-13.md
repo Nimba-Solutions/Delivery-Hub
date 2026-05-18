@@ -1,13 +1,11 @@
 # Namespace Hygiene Audit (2026-05-13)
 
-> **Status as of 2026-05-16: PARTIALLY RESOLVED.** 4 of 5 confirmed bugs closed
-> by PR #777 (merged 2026-05-13, released 0.238.0.1): Bug 1 (deliveryWorkItemRefiner
-> field-name namespacing), Bug 2 (deliveryWorkItemActionCenter apiName strings),
-> Bug 3 (CustomNotificationType DeveloperName — silent bell-notification regression),
-> Bug 5 (FlexiPage dynamic-related-list parent-field refs). **Remaining: Bug 4
-> (PermissionSetGroup DeveloperName) at `DeliveryHubDashboardController.cls:586`
-> and `DeliverySyncDismissalService.cls:223` — 5-line fix, queued as a separate
-> PR.** File preserved for Bug 4 follow-on.
+> **Status as of 2026-05-18: RESOLVED.** All 5 confirmed bugs shipped.
+> Bugs 1, 2, 3, 5 closed by PR #777 (0.238.0.1, merged 2026-05-13). Bug 4
+> (PermissionSetGroup DeveloperName) closed by PR #784 (0.241.0.3, merged
+> 2026-05-16) — `IN ('DeliveryHubAdmin', 'delivery__DeliveryHubAdmin')` clause
+> at `DeliveryHubDashboardController.cls:586` and
+> `DeliverySyncDismissalService.cls:223`. File preserved as a record.
 
 Branch scanned: `fix/lwc-namespace-workitem-refs` (7 files in flight; their target patterns excluded per the PR-in-progress notice).
 

@@ -1,12 +1,29 @@
 # Dead Code / Orphan Metadata Audit (2026-05-13)
 
-> **Status as of 2026-05-16: OPEN / INFORMATIONAL.** No deletions have been
-> shipped against this audit. Findings preserved as a punch-list for a future
-> dead-code-removal pass — `DeliveryTimelineController`, `DeliveryWorkItemQueryService`,
-> `DeliveryHubCalloutService`, `DeliveryArchivalService`, Experience Cloud
-> portal LWC cluster, analytics widget cluster, Bounty marketplace cluster.
-> Confirm with Glen before deleting any class with `@RestResource` (Bounty)
-> since external HTTP traffic is not visible from the repo.
+> **Status as of 2026-05-18: MOSTLY RESOLVED.** "Definitely safe to delete"
+> cluster shipped via PR #789 (merged 2026-05-18) — 4,323 LOC removed across
+> 48 files: 5 Apex classes + tests/metas (`DeliveryTimelineController`,
+> `DeliveryWorkItemQueryService`, `DeliveryHubCalloutService`,
+> `DeliveryArchivalService`, `DeliveryActivityTrackerController`), 6 LWC
+> folders (4 Experience-Cloud portal LWCs + `deliveryPartnerSettingsCard` +
+> `deliveryActivityTracker`), plus 2 permset entries + 3 test-suite entries.
+>
+> **Audit was wrong about `DeliveryPortalController`.** The audit claimed the
+> 5 portal-bound methods (`getPortalDashboard`, `getPortalWorkItems`,
+> `getPortalWorkItemDetail`, `submitPortalRequest`, `addPortalComment`) were
+> "exclusively bound" to the 4 deleted portal LWCs. They are ALSO consumed by
+> `DeliveryPublicApiService.cls` (live `@RestResource` at `/deliveryhub/v1/api/*`,
+> serving the cloudnimbusllc.com Next.js portal) at lines 104, 128, 134, 289,
+> 297, 302. Following the audit blindly would have 500'd the public portal API.
+> `DeliveryPortalController` left intact in #789.
+>
+> **Deferred (Glen sign-off required):**
+> - `deliveryDocumentSignPortal/` — audit cited a "Coleman demo" commit reference.
+> - "Likely safe" cluster — Bounty marketplace (`@RestResource`, external HTTP
+>   traffic not visible from repo) + 7 analytics widget LWCs (need confirmation
+>   none are queued for "wire to DashboardCard__mdt" follow-on).
+>
+> File preserved as the punch-list for the "likely safe" follow-on PR.
 
 Scope: `force-app/main/default/` — 275 Apex classes, 75 LWCs, 35 objects, 29 reports, 3 report types, 6 VF pages, 2 Aura apps. Method: each class/component/field cross-referenced against every other file type in the package (cls/trigger/js/html/page/cmp/-meta.xml/permset/flexipage/layout/report), with externally-invoked entry points (`@RestResource`, `@AuraEnabled` LWC bindings, Aura `aura:application`, VF pages, tabs, app utility bars, scheduled cron via `DeliveryHubScheduler`) treated as live.
 
