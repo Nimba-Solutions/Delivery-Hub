@@ -147,11 +147,7 @@ private class DeliveryFeatureTriggerHandlerTest {
         // Verify the legacy field was mirrored.
         DeliveryHubSettings__c refreshed = DeliveryHubSettings__c.getOrgDefaults();
         Map<String, Schema.SObjectField> settingsFields =
-            Schema.getGlobalDescribe()
-                .get('DeliveryHubSettings__c')
-                .getDescribe()
-                .fields
-                .getMap();
+            DeliveryHubSettings__c.SObjectType.getDescribe().fields.getMap();
         String target = def.SettingsFieldApiNameTxt__c.toLowerCase();
         String matchedKey;
         for (String k : settingsFields.keySet()) {
