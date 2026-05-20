@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RequiresOnboardingTrackTxt__c</fullName>
+    <description>When non-blank, points to OnboardingTrack__mdt.DeveloperName that the non-admin requester must have completed (CompletedDateTime != null on their OnboardingProgress__c) before toggleFeature() will accept Enable.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Requires Onboarding Track</label>
+    <length>80</length>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
