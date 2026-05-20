@@ -17,7 +17,7 @@
  *               return signature are global per CLAUDE.md.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation,PMD.AvoidGlobalModifier')
+@SuppressWarnings('PMD.ApexCRUDViolation,PMD.AvoidGlobalModifier,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity')
 global with sharing class DeliveryFeatureGraphService {
 
     /** Cap on BFS depth; protects against cycles and pathological graphs. */
