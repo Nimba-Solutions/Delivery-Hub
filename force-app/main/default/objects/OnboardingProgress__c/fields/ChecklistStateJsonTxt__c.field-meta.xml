@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ChecklistStateJsonTxt__c</fullName>
+    <description>JSON map keyed by OnboardingChecklistItem__mdt DeveloperName, each value shaped as { "completed": true, "verifiedAt": "ISO-8601 timestamp" }. Items missing from the map are treated as not yet started.</description>
+    <externalId>false</externalId>
+    <label>Checklist State (JSON)</label>
+    <length>32768</length>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>6</visibleLines>
+</CustomField>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>UserLookup__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>The User whose onboarding progress this record represents. SetNull on user delete so historical progress rows survive a deactivation without cascading.</description>
+    <label>User</label>
+    <referenceTo>User</referenceTo>
+    <relationshipLabel>Onboarding Progress</relationshipLabel>
+    <relationshipName>OnboardingProgress</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

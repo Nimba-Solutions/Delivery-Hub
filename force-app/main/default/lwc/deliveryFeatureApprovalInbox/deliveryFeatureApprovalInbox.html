@@ -1,0 +1,84 @@
+<template>
+    <lightning-card title="Pending Approvals" icon-name="standard:approval">
+        <lightning-button-icon
+            slot="actions"
+            icon-name="utility:refresh"
+            alternative-text="Refresh"
+            title="Refresh"
+            onclick={handleRefresh}>
+        </lightning-button-icon>
+
+        <div class="slds-p-around_medium">
+            <template lwc:if={hasError}>
+                <div class="slds-text-color_error">{errorMessage}</div>
+            </template>
+
+            <template lwc:if={isEmpty}>
+                <div class="slds-text-color_weak">
+                    No approvals waiting on you. New requests will appear here.
+                </div>
+            </template>
+
+            <template lwc:if={hasRows}>
+                <ul class="slds-has-dividers_around-space">
+                    <template for:each={rows} for:item="row">
+                        <li key={row.key} class="slds-item slds-p-around_small approval-row">
+                            <div class="slds-grid slds-grid_vertical-align-center slds-grid_align-spread">
+                                <div class="slds-col">
+                                    <div class="slds-text-heading_small">{row.featureLabel}</div>
+                                    <div class="slds-m-top_xx-small">
+                                        <span class={row.actionBadgeClass}>{row.action}</span>
+                                        <span class="slds-m-left_x-small slds-text-body_small slds-text-color_weak">
+                                            Step {row.stepNumber} · requested by {row.requestedByName}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-text-align_right slds-text-body_small slds-text-color_weak">
+                                    <lightning-formatted-date-time
+                                        value={row.requestedAt}
+                                        year="numeric" month="short" day="2-digit"
+                                        hour="2-digit" minute="2-digit">
+                                    </lightning-formatted-date-time>
+                                </div>
+                            </div>
+
+                            <template lwc:if={row.hasReason}>
+                                <div class="slds-m-top_x-small slds-text-body_small">
+                                    <strong>Reason:</strong> {row.truncatedReason}
+                                </div>
+                            </template>
+
+                            <div class="slds-m-top_small">
+                                <lightning-textarea
+                                    label="Decision note (optional)"
+                                    placeholder="Add a note for the audit trail"
+                                    data-approval-id={row.approvalId}
+                                    onchange={handleNoteChange}>
+                                </lightning-textarea>
+                            </div>
+
+                            <div class="slds-m-top_small slds-grid slds-gutters_x-small">
+                                <div class="slds-col">
+                                    <lightning-button
+                                        variant="brand"
+                                        label="Approve"
+                                        data-approval-id={row.approvalId}
+                                        onclick={handleApprove}>
+                                    </lightning-button>
+                                </div>
+                                <div class="slds-col">
+                                    <lightning-button
+                                        variant="destructive-text"
+                                        label="Reject"
+                                        data-approval-id={row.approvalId}
+                                        onclick={handleReject}>
+                                    </lightning-button>
+                                </div>
+                            </div>
+                        </li>
+                    </template>
+                </ul>
+            </template>
+        </div>
+    </lightning-card>
+</template>

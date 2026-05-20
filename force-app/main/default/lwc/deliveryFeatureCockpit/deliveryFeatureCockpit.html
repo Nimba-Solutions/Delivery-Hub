@@ -68,6 +68,20 @@
                                     </template>
                                 </footer>
 
+                                <template lwc:if={canToggle}>
+                                    <div class="slds-m-top_small">
+                                        <lightning-button
+                                            label={feature.toggleLabel}
+                                            variant={feature.toggleVariant}
+                                            data-feature-id={feature.featureId}
+                                            data-feature-name={feature.name}
+                                            data-is-active={feature.isActive}
+                                            disabled={feature.toggleDisabled}
+                                            onclick={handleToggle}>
+                                        </lightning-button>
+                                    </div>
+                                </template>
+
                                 <template lwc:if={feature.hasFeatureId}>
                                     <div class="slds-m-top_x-small">
                                         <lightning-button

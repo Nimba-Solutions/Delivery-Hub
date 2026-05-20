@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__RecordPage</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__RecordPage">
+            <objects>
+                <object>Feature__c</object>
+            </objects>
+            <property
+                name="trackDeveloperName"
+                label="Onboarding Track DeveloperName"
+                type="String"
+                description="DeveloperName of the OnboardingTrack__mdt to render on this record page. Leave blank to derive from the Feature__c.FeatureDefinitionTxt__c (PR 4 wires the auto-resolve)."
+                default=""/>
+        </targetConfig>
+    </targetConfigs>
+    <masterLabel>Delivery Feature Onboarding</masterLabel>
+    <description>Checkr-style onboarding stepper — renders lessons, quiz, checklist for the configured OnboardingTrack__mdt and writes state to OnboardingProgress__c.</description>
+</LightningComponentBundle>
