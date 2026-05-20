@@ -125,14 +125,23 @@ global with sharing class DeliveryFeatureCatalogController {
      */
     @AuraEnabled
     global static void toggleFeature(Id featureId, Boolean enable) {
+        assertAdminOrThrow();
+        if (featureId == null) {
+            throw new AuraHandledException('featureId is required.');
+        }
+        Feature__c f = loadFeatureOrThrow(featureId);
+        applyToggleFields(f, enable == true);
+        persistToggle(f);
+    }
+
+    private static void assertAdminOrThrow() {
         if (!isAdmin()) {
             throw new AuraHandledException(
                 'You must be a Delivery Hub admin to toggle features.');
         }
-        if (featureId == null) {
-            throw new AuraHandledException('featureId is required.');
-        }
+    }
 
+    private static Feature__c loadFeatureOrThrow(Id featureId) {
         List<Feature__c> existing = [
             SELECT Id, EnabledDateTime__c, DisabledDateTime__c, LastToggledByUserLookup__c
             FROM Feature__c
@@ -143,15 +152,21 @@ global with sharing class DeliveryFeatureCatalogController {
         if (existing.isEmpty()) {
             throw new AuraHandledException('Feature not found.');
         }
-        Feature__c f = existing.get(0);
+        return existing.get(0);
+    }
+
+    private static void applyToggleFields(Feature__c f, Boolean enable) {
         DateTime now = DateTime.now();
-        if (enable == true) {
+        if (enable) {
             f.EnabledDateTime__c = now;
             f.DisabledDateTime__c = null;
         } else {
             f.DisabledDateTime__c = now;
         }
         f.LastToggledByUserLookup__c = UserInfo.getUserId();
+    }
+
+    private static void persistToggle(Feature__c f) {
         try {
             update f;
         } catch (Exception e) {

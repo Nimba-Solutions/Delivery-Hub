@@ -56,7 +56,7 @@ private class DeliveryFeatureSyncServiceTest {
 
         DeliveryHubSettings__c refreshed = DeliveryHubSettings__c.getOrgDefaults();
         // Resolve the local key (namespace-safe).
-        Map<String, Schema.SObjectField> map_ =
+        Map<String, Schema.SObjectField> settingsFields =
             Schema.getGlobalDescribe()
                 .get('DeliveryHubSettings__c')
                 .getDescribe()
@@ -64,8 +64,8 @@ private class DeliveryFeatureSyncServiceTest {
                 .getMap();
         String targetLocal = def.SettingsFieldApiNameTxt__c.toLowerCase();
         String matchedKey;
-        for (String k : map_.keySet()) {
-            if (map_.get(k).getDescribe().getLocalName().toLowerCase() == targetLocal) {
+        for (String k : settingsFields.keySet()) {
+            if (settingsFields.get(k).getDescribe().getLocalName().toLowerCase() == targetLocal) {
                 matchedKey = k;
                 break;
             }
@@ -101,7 +101,7 @@ private class DeliveryFeatureSyncServiceTest {
         DeliveryHubSettings__c settings = new DeliveryHubSettings__c(
             SetupOwnerId = UserInfo.getOrganizationId()
         );
-        Map<String, Schema.SObjectField> map_ =
+        Map<String, Schema.SObjectField> settingsFields =
             Schema.getGlobalDescribe()
                 .get('DeliveryHubSettings__c')
                 .getDescribe()
@@ -109,8 +109,8 @@ private class DeliveryFeatureSyncServiceTest {
                 .getMap();
         String targetLocal = def.SettingsFieldApiNameTxt__c.toLowerCase();
         String matchedKey;
-        for (String k : map_.keySet()) {
-            if (map_.get(k).getDescribe().getLocalName().toLowerCase() == targetLocal) {
+        for (String k : settingsFields.keySet()) {
+            if (settingsFields.get(k).getDescribe().getLocalName().toLowerCase() == targetLocal) {
                 matchedKey = k;
                 break;
             }
@@ -160,8 +160,8 @@ private class DeliveryFeatureSyncServiceTest {
         DeliveryFeatureSyncService.writeAuditRow(f.Id, 'ENABLED', DateTime.now(), null);
         Test.stopTest();
 
-        Integer after_ = [SELECT COUNT() FROM ActivityLog__c WHERE ActionTypePk__c = 'Feature_Toggle'];
-        System.assertEquals(before + 1, after_,
+        Integer afterCount = [SELECT COUNT() FROM ActivityLog__c WHERE ActionTypePk__c = 'Feature_Toggle'];
+        System.assertEquals(before + 1, afterCount,
             'writeAuditRow should insert exactly one ActivityLog__c row.');
 
         List<ActivityLog__c> rows = [

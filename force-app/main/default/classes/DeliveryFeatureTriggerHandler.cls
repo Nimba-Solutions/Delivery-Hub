@@ -36,32 +36,65 @@ public with sharing class DeliveryFeatureTriggerHandler {
         if (newRows == null || newRows.isEmpty()) {
             return;
         }
-
-        List<Feature__c> toggled = new List<Feature__c>();
-        for (Feature__c f : newRows) {
-            Feature__c prev = (oldMap == null) ? null : oldMap.get(f.Id);
-            DateTime priorEnabled = (prev == null) ? null : prev.EnabledDateTime__c;
-            DateTime priorDisabled = (prev == null) ? null : prev.DisabledDateTime__c;
-
-            Boolean enabledChanged = (priorEnabled != f.EnabledDateTime__c);
-            Boolean disabledChanged = (priorDisabled != f.DisabledDateTime__c);
-
-            if (!enabledChanged && !disabledChanged) {
-                continue;
-            }
-            toggled.add(f);
-
-            // Audit one row per toggle. Action is derived from the new state.
-            String action = (f.EnabledDateTime__c != null
-                                && f.DisabledDateTime__c == null) ? 'ENABLED' : 'DISABLED';
-            DeliveryFeatureSyncService.writeAuditRow(
-                f.Id, action, f.EnabledDateTime__c, priorEnabled);
-        }
-
+        List<Feature__c> toggled = collectToggledAndEmitAudit(newRows, oldMap);
         if (toggled.isEmpty()) {
             return;
         }
-
         DeliveryFeatureSyncService.syncFeaturesToSettings(toggled);
+    }
+
+    /**
+     * @description Walks the new-rows list, filters to rows that actually
+     *              flipped (Enabled or Disabled DateTime changed) and emits
+     *              an audit row per change. Returns the filtered list for
+     *              the caller to forward to the sync service.
+     * @param newRows Trigger.new.
+     * @param oldMap  Trigger.oldMap (null on insert).
+     * @return Rows that actually toggled.
+     */
+    private static List<Feature__c> collectToggledAndEmitAudit(
+        List<Feature__c> newRows,
+        Map<Id, Feature__c> oldMap
+    ) {
+        List<Feature__c> toggled = new List<Feature__c>();
+        for (Feature__c f : newRows) {
+            Feature__c prev = (oldMap == null) ? null : oldMap.get(f.Id);
+            if (!didToggle(f, prev)) {
+                continue;
+            }
+            toggled.add(f);
+            emitAuditFor(f, prev);
+        }
+        return toggled;
+    }
+
+    /**
+     * @description Whether either DateTime stamp on the feature changed
+     *              between the prior and current row state.
+     * @param f    Current row.
+     * @param prev Prior row (null on insert).
+     * @return True when EnabledDateTime__c or DisabledDateTime__c differs.
+     */
+    private static Boolean didToggle(Feature__c f, Feature__c prev) {
+        DateTime priorEnabled = (prev == null) ? null : prev.EnabledDateTime__c;
+        DateTime priorDisabled = (prev == null) ? null : prev.DisabledDateTime__c;
+        return priorEnabled != f.EnabledDateTime__c
+            || priorDisabled != f.DisabledDateTime__c;
+    }
+
+    /**
+     * @description Emits one ActivityLog__c audit row per toggle via the
+     *              sync service. Action is derived from the post-toggle
+     *              state (enabled when EnabledDateTime is populated AND
+     *              Disabled is null; otherwise disabled).
+     * @param f    Current (post-toggle) row.
+     * @param prev Prior row (null on insert).
+     */
+    private static void emitAuditFor(Feature__c f, Feature__c prev) {
+        DateTime priorEnabled = (prev == null) ? null : prev.EnabledDateTime__c;
+        Boolean nowEnabled = (f.EnabledDateTime__c != null && f.DisabledDateTime__c == null);
+        String action = nowEnabled ? 'ENABLED' : 'DISABLED';
+        DeliveryFeatureSyncService.writeAuditRow(
+            f.Id, action, f.EnabledDateTime__c, priorEnabled);
     }
 }

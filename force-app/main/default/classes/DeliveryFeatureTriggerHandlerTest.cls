@@ -41,12 +41,12 @@ private class DeliveryFeatureTriggerHandlerTest {
         update f;
         Test.stopTest();
 
-        Integer after_ = [
+        Integer afterCount = [
             SELECT COUNT() FROM ActivityLog__c
             WHERE ActionTypePk__c = 'Feature_Toggle'
               AND RecordIdTxt__c = :String.valueOf(f.Id)
         ];
-        System.assertEquals(before + 1, after_,
+        System.assertEquals(before + 1, afterCount,
             'Trigger should have produced exactly one new audit row.');
     }
 
@@ -68,12 +68,12 @@ private class DeliveryFeatureTriggerHandlerTest {
         update f;
         Test.stopTest();
 
-        Integer after_ = [
+        Integer afterCount = [
             SELECT COUNT() FROM ActivityLog__c
             WHERE ActionTypePk__c = 'Feature_Toggle'
               AND RecordIdTxt__c = :String.valueOf(f.Id)
         ];
-        System.assertEquals(before, after_,
+        System.assertEquals(before, afterCount,
             'Renaming should not trigger a feature-toggle audit row.');
     }
 
@@ -100,12 +100,12 @@ private class DeliveryFeatureTriggerHandlerTest {
         }
         Test.stopTest();
 
-        Integer after_ = [
+        Integer afterCount = [
             SELECT COUNT() FROM ActivityLog__c
             WHERE ActionTypePk__c = 'Feature_Toggle'
               AND RecordIdTxt__c = :String.valueOf(f.Id)
         ];
-        System.assertEquals(before, after_,
+        System.assertEquals(before, afterCount,
             'When the sync-context guard is true, the handler must not write audit rows.');
     }
 
@@ -146,7 +146,7 @@ private class DeliveryFeatureTriggerHandlerTest {
 
         // Verify the legacy field was mirrored.
         DeliveryHubSettings__c refreshed = DeliveryHubSettings__c.getOrgDefaults();
-        Map<String, Schema.SObjectField> map_ =
+        Map<String, Schema.SObjectField> settingsFields =
             Schema.getGlobalDescribe()
                 .get('DeliveryHubSettings__c')
                 .getDescribe()
@@ -154,8 +154,8 @@ private class DeliveryFeatureTriggerHandlerTest {
                 .getMap();
         String target = def.SettingsFieldApiNameTxt__c.toLowerCase();
         String matchedKey;
-        for (String k : map_.keySet()) {
-            if (map_.get(k).getDescribe().getLocalName().toLowerCase() == target) {
+        for (String k : settingsFields.keySet()) {
+            if (settingsFields.get(k).getDescribe().getLocalName().toLowerCase() == target) {
                 matchedKey = k;
                 break;
             }

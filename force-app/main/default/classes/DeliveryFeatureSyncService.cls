@@ -61,52 +61,111 @@ public with sharing class DeliveryFeatureSyncService {
         if (changedFeatures == null || changedFeatures.isEmpty()) {
             return;
         }
+        Map<String, DateTime> defNameToTimestamp = buildDefNameToTimestamp(changedFeatures);
+        if (defNameToTimestamp.isEmpty()) {
+            return;
+        }
+        Map<String, String> defNameToSettingsField =
+            buildDefNameToSettingsField(defNameToTimestamp.keySet());
+        if (defNameToSettingsField.isEmpty()) {
+            return;
+        }
+        Map<String, Schema.SObjectField> settingsFields = describeSettingsFields();
+        DeliveryHubSettings__c settings = loadOrInitSettings();
+        Boolean anyChanged = applyTimestampsToSettings(
+            settings, settingsFields, defNameToSettingsField, defNameToTimestamp);
+        if (!anyChanged) {
+            return;
+        }
+        commitSettingsInSyncContext(settings);
+    }
 
-        // Build a map of FeatureDefinitionTxt__c → EnabledDateTime__c value to apply.
-        Map<String, DateTime> defNameToTimestamp = new Map<String, DateTime>();
+    /**
+     * @description Builds the FeatureDefinitionTxt__c → EnabledDateTime__c
+     *              map from the changed-features input, skipping rows with
+     *              a blank definition name.
+     * @param changedFeatures Trigger-supplied subset.
+     * @return Map from def-name to the post-toggle timestamp (may be null).
+     */
+    private static Map<String, DateTime> buildDefNameToTimestamp(
+        List<Feature__c> changedFeatures
+    ) {
+        Map<String, DateTime> out = new Map<String, DateTime>();
         for (Feature__c f : changedFeatures) {
             if (String.isBlank(f.FeatureDefinitionTxt__c)) {
                 continue;
             }
-            defNameToTimestamp.put(f.FeatureDefinitionTxt__c, f.EnabledDateTime__c);
+            out.put(f.FeatureDefinitionTxt__c, f.EnabledDateTime__c);
         }
-        if (defNameToTimestamp.isEmpty()) {
-            return;
-        }
+        return out;
+    }
 
-        // Resolve the settings-field-API-name mapping from the __mdt catalog.
-        Map<String, String> defNameToSettingsField = new Map<String, String>();
+    /**
+     * @description Looks up the SettingsFieldApiNameTxt__c mapping for each
+     *              FeatureDefinition__mdt DeveloperName in the set.
+     * @param defNames DeveloperNames to resolve.
+     * @return Map from DeveloperName to the legacy settings field API name.
+     */
+    private static Map<String, String> buildDefNameToSettingsField(Set<String> defNames) {
+        Map<String, String> out = new Map<String, String>();
         for (FeatureDefinition__mdt fd : [
             SELECT DeveloperName, SettingsFieldApiNameTxt__c
             FROM FeatureDefinition__mdt
-            WHERE DeveloperName IN :defNameToTimestamp.keySet()
+            WHERE DeveloperName IN :defNames
               AND SettingsFieldApiNameTxt__c != null
             WITH SYSTEM_MODE
         ]) {
-            defNameToSettingsField.put(fd.DeveloperName, fd.SettingsFieldApiNameTxt__c);
+            out.put(fd.DeveloperName, fd.SettingsFieldApiNameTxt__c);
         }
-        if (defNameToSettingsField.isEmpty()) {
-            return;
-        }
+        return out;
+    }
 
-        // Validate target fields exist on DeliveryHubSettings__c — describe is
-        // namespace-safe via getLocalName() comparison.
-        Map<String, Schema.SObjectField> settingsFields =
-            Schema.getGlobalDescribe()
-                .get('DeliveryHubSettings__c')
-                .getDescribe()
-                .fields
-                .getMap();
+    /**
+     * @description Returns the field map for DeliveryHubSettings__c.
+     *              Namespace-safe via callers using getLocalName().
+     * @return Field map keyed by lowercased API name.
+     */
+    private static Map<String, Schema.SObjectField> describeSettingsFields() {
+        return Schema.getGlobalDescribe()
+            .get('DeliveryHubSettings__c')
+            .getDescribe()
+            .fields
+            .getMap();
+    }
 
+    /**
+     * @description Returns the org-default DeliveryHubSettings__c, freshly
+     *              initialized if none exists yet, with SetupOwnerId set.
+     * @return A row ready to receive field updates and be upserted.
+     */
+    private static DeliveryHubSettings__c loadOrInitSettings() {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         if (settings == null) {
-            settings = new DeliveryHubSettings__c(
-                SetupOwnerId = UserInfo.getOrganizationId()
-            );
-        } else if (settings.Id == null) {
+            return new DeliveryHubSettings__c(
+                SetupOwnerId = UserInfo.getOrganizationId());
+        }
+        if (settings.Id == null) {
             settings.SetupOwnerId = UserInfo.getOrganizationId();
         }
+        return settings;
+    }
 
+    /**
+     * @description Applies the per-def timestamp values onto the matching
+     *              settings fields. Logs and skips fields not present on
+     *              the describe.
+     * @param settings              Target settings row.
+     * @param settingsFields        Describe map for DeliveryHubSettings__c.
+     * @param defNameToSettingsField Map from def name to the legacy field.
+     * @param defNameToTimestamp    Map from def name to the new value.
+     * @return True if any field on `settings` was actually changed.
+     */
+    private static Boolean applyTimestampsToSettings(
+        DeliveryHubSettings__c settings,
+        Map<String, Schema.SObjectField> settingsFields,
+        Map<String, String> defNameToSettingsField,
+        Map<String, DateTime> defNameToTimestamp
+    ) {
         Boolean anyChanged = false;
         for (String defName : defNameToSettingsField.keySet()) {
             String rawApiName = defNameToSettingsField.get(defName);
@@ -120,11 +179,15 @@ public with sharing class DeliveryFeatureSyncService {
             settings.put(matchedKey, defNameToTimestamp.get(defName));
             anyChanged = true;
         }
+        return anyChanged;
+    }
 
-        if (!anyChanged) {
-            return;
-        }
-
+    /**
+     * @description Upserts the settings row inside the recursion guard so
+     *              any downstream sync trigger short-circuits.
+     * @param settings The row to upsert.
+     */
+    private static void commitSettingsInSyncContext(DeliveryHubSettings__c settings) {
         inSyncContext = true;
         try {
             upsert settings;
@@ -148,67 +211,125 @@ public with sharing class DeliveryFeatureSyncService {
         if (settings == null || settings.Id == null) {
             return;
         }
+        Map<String, FeatureDefinition__mdt> defs = loadDefinitionsWithSettingsMapping();
+        if (defs.isEmpty()) {
+            return;
+        }
+        List<Feature__c> features = loadFeaturesByDefName(defs.keySet());
+        if (features.isEmpty()) {
+            return;
+        }
+        Map<String, Schema.SObjectField> settingsFields = describeSettingsFields();
+        List<Feature__c> toUpdate =
+            buildFeatureUpdatesFromSettings(features, defs, settings, settingsFields);
+        if (toUpdate.isEmpty()) {
+            return;
+        }
+        commitFeatureUpdatesInSyncContext(toUpdate);
+    }
 
-        Map<String, FeatureDefinition__mdt> defs = new Map<String, FeatureDefinition__mdt>();
+    /**
+     * @description Loads every FeatureDefinition__mdt that maps to a
+     *              legacy settings field.
+     * @return Map keyed by DeveloperName.
+     */
+    private static Map<String, FeatureDefinition__mdt> loadDefinitionsWithSettingsMapping() {
+        Map<String, FeatureDefinition__mdt> out = new Map<String, FeatureDefinition__mdt>();
         for (FeatureDefinition__mdt fd : [
             SELECT DeveloperName, SettingsFieldApiNameTxt__c
             FROM FeatureDefinition__mdt
             WHERE SettingsFieldApiNameTxt__c != null
             WITH SYSTEM_MODE
         ]) {
-            defs.put(fd.DeveloperName, fd);
+            out.put(fd.DeveloperName, fd);
         }
-        if (defs.isEmpty()) {
-            return;
-        }
+        return out;
+    }
 
-        List<Feature__c> features = [
+    /**
+     * @description Bulk-loads Feature__c rows whose FeatureDefinitionTxt__c
+     *              is in the supplied set.
+     * @param defNames Definition names to filter by.
+     * @return Matching Feature__c rows.
+     */
+    private static List<Feature__c> loadFeaturesByDefName(Set<String> defNames) {
+        return [
             SELECT Id, FeatureDefinitionTxt__c, EnabledDateTime__c, DisabledDateTime__c
             FROM Feature__c
-            WHERE FeatureDefinitionTxt__c IN :defs.keySet()
+            WHERE FeatureDefinitionTxt__c IN :defNames
             WITH SYSTEM_MODE
         ];
-        if (features.isEmpty()) {
-            return;
-        }
+    }
 
-        Map<String, Schema.SObjectField> settingsFields =
-            Schema.getGlobalDescribe()
-                .get('DeliveryHubSettings__c')
-                .getDescribe()
-                .fields
-                .getMap();
-
+    /**
+     * @description For each loaded Feature__c, computes whether the matching
+     *              legacy settings field disagrees and returns the subset
+     *              that needs updating (with the corrected timestamps
+     *              applied in-memory).
+     * @param features        Feature__c rows to evaluate.
+     * @param defs            Definition map by DeveloperName.
+     * @param settings        Org-default settings row.
+     * @param settingsFields  Settings describe field map.
+     * @return Features whose state needs persisting.
+     */
+    private static List<Feature__c> buildFeatureUpdatesFromSettings(
+        List<Feature__c> features,
+        Map<String, FeatureDefinition__mdt> defs,
+        DeliveryHubSettings__c settings,
+        Map<String, Schema.SObjectField> settingsFields
+    ) {
         List<Feature__c> toUpdate = new List<Feature__c>();
         for (Feature__c f : features) {
-            FeatureDefinition__mdt fd = defs.get(f.FeatureDefinitionTxt__c);
-            if (fd == null) {
-                continue;
+            if (applySettingsValueToFeature(f, defs, settings, settingsFields)) {
+                toUpdate.add(f);
             }
-            String key = resolveFieldKey(settingsFields, fd.SettingsFieldApiNameTxt__c);
-            if (key == null) {
-                continue;
-            }
-            Object raw = settings.get(key);
-            DateTime settingsValue = (raw instanceof DateTime) ? (DateTime) raw : null;
-
-            if (settingsValue == f.EnabledDateTime__c) {
-                continue; // idempotent — already in sync
-            }
-            f.EnabledDateTime__c = settingsValue;
-            // Pair the disable side so the formula stays consistent.
-            if (settingsValue == null && f.DisabledDateTime__c == null) {
-                f.DisabledDateTime__c = DateTime.now();
-            } else if (settingsValue != null) {
-                f.DisabledDateTime__c = null;
-            }
-            toUpdate.add(f);
         }
+        return toUpdate;
+    }
 
-        if (toUpdate.isEmpty()) {
-            return;
+    /**
+     * @description Mutates one Feature__c so its DateTime fields agree with
+     *              the legacy settings field. Returns true when an actual
+     *              change was made.
+     * @param f               Feature row to inspect/mutate.
+     * @param defs            Definition map.
+     * @param settings        Org-default settings row.
+     * @param settingsFields  Settings describe field map.
+     * @return True when the feature row was updated in-memory.
+     */
+    private static Boolean applySettingsValueToFeature(
+        Feature__c f,
+        Map<String, FeatureDefinition__mdt> defs,
+        DeliveryHubSettings__c settings,
+        Map<String, Schema.SObjectField> settingsFields
+    ) {
+        FeatureDefinition__mdt fd = defs.get(f.FeatureDefinitionTxt__c);
+        if (fd == null) {
+            return false;
         }
+        String key = resolveFieldKey(settingsFields, fd.SettingsFieldApiNameTxt__c);
+        if (key == null) {
+            return false;
+        }
+        Object raw = settings.get(key);
+        DateTime settingsValue = (raw instanceof DateTime) ? (DateTime) raw : null;
+        if (settingsValue == f.EnabledDateTime__c) {
+            return false;
+        }
+        f.EnabledDateTime__c = settingsValue;
+        if (settingsValue == null && f.DisabledDateTime__c == null) {
+            f.DisabledDateTime__c = DateTime.now();
+        } else if (settingsValue != null) {
+            f.DisabledDateTime__c = null;
+        }
+        return true;
+    }
 
+    /**
+     * @description Persists feature updates inside the recursion guard.
+     * @param toUpdate Features to update.
+     */
+    private static void commitFeatureUpdatesInSyncContext(List<Feature__c> toUpdate) {
         inSyncContext = true;
         try {
             update toUpdate;
