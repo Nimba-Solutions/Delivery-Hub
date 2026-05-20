@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <masterLabel>Delivery Feature Cockpit</masterLabel>
+    <description>Read-only catalog of Delivery Hub features (Layer 4). PR 1 ships the scaffold; PR 2 adds enable/disable toggles wired to DeliveryHubSettings__c.</description>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__AppPage</target>
+        <target>lightning__HomePage</target>
+    </targets>
+</LightningComponentBundle>
