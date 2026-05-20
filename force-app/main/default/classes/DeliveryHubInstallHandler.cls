@@ -17,6 +17,7 @@ global class DeliveryHubInstallHandler implements InstallHandler {
      */
     global void onInstall(InstallContext context) {
         initializeDefaultSettings();
+        seedFeaturesFromDefinitions();
         scheduleSyncJobs();
         backfillUserPermissionSets();
         backfillWorkItemStatusDefaults();
@@ -44,6 +45,53 @@ global class DeliveryHubInstallHandler implements InstallHandler {
             StagesToAutoShareWithDevTeamTxt__c = 'All'
         );
         insert settings;
+    }
+
+    /**
+     * @description Seeds one Feature__c per FeatureDefinition__mdt that does not
+     *              already have a matching runtime row. Idempotent: re-running
+     *              the install never duplicates existing seeded rows. Defaults
+     *              the per-tenant EnabledDateTime__c to the catalog's
+     *              DefaultEnabledDateTime__c (which is currently null for every
+     *              shipped record — admins activate features explicitly via the
+     *              cockpit). Wrapped in try/catch — install must never fail on
+     *              seed (existing handler pattern).
+     */
+    private static void seedFeaturesFromDefinitions() {
+        try {
+            List<FeatureDefinition__mdt> defs = [
+                SELECT DeveloperName, DefaultEnabledDateTime__c
+                FROM FeatureDefinition__mdt
+            ];
+            if (defs.isEmpty()) {
+                return;
+            }
+            Set<String> existingDefNames = new Set<String>();
+            for (Feature__c existing : [
+                SELECT FeatureDefinitionTxt__c FROM Feature__c
+                WHERE FeatureDefinitionTxt__c != null
+            ]) {
+                existingDefNames.add(existing.FeatureDefinitionTxt__c);
+            }
+            List<Feature__c> toInsert = new List<Feature__c>();
+            for (FeatureDefinition__mdt fd : defs) {
+                if (existingDefNames.contains(fd.DeveloperName)) {
+                    continue;
+                }
+                toInsert.add(new Feature__c(
+                    Name = fd.DeveloperName,
+                    FeatureDefinitionTxt__c = fd.DeveloperName,
+                    EnabledDateTime__c = fd.DefaultEnabledDateTime__c
+                ));
+            }
+            if (!toInsert.isEmpty()) {
+                insert toInsert;
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryHubInstallHandler] Feature catalog seed failed: '
+                + e.getMessage());
+        }
     }
 
     /**
