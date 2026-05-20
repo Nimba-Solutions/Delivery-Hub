@@ -282,7 +282,7 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>false</editable>
-        <field>Feature__c.ActiveBooleanFormula__c</field>
+        <field>Feature__c.ActiveSinceDateTime__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

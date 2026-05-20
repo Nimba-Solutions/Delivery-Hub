@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>DocsUrlTxt__c</fullName>
+    <fullName>DocsUrl__c</fullName>
     <description>Optional external documentation URL surfaced as a "View Docs" link on the feature card.</description>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>

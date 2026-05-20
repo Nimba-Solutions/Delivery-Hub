@@ -10,5 +10,5 @@
     <values><field>SettingsFieldApiNameTxt__c</field><value xsi:type="xsd:string">EnableInvoiceGenerationDateTime__c</value></values>
     <values><field>IconNameTxt__c</field><value xsi:type="xsd:string">standard:invoice</value></values>
     <values><field>SortOrderNumber__c</field><value xsi:type="xsd:double">10</value></values>
-    <values><field>DocsUrlTxt__c</field><value xsi:nil="true"/></values>
+    <values><field>DocsUrl__c</field><value xsi:nil="true"/></values>
 </CustomMetadata>

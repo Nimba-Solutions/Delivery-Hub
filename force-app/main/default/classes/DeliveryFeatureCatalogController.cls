@@ -53,7 +53,7 @@ global with sharing class DeliveryFeatureCatalogController {
             List<FeatureDefinition__mdt> defs = [
                 SELECT DeveloperName, LabelTxt__c, DescriptionTxt__c,
                        CategoryPk__c, MaturityPk__c, IconNameTxt__c,
-                       SortOrderNumber__c, SettingsFieldApiNameTxt__c, DocsUrlTxt__c
+                       SortOrderNumber__c, SettingsFieldApiNameTxt__c, DocsUrl__c
                 FROM FeatureDefinition__mdt
                 WITH SYSTEM_MODE
                 ORDER BY SortOrderNumber__c ASC NULLS LAST, DeveloperName ASC
@@ -70,7 +70,7 @@ global with sharing class DeliveryFeatureCatalogController {
             Map<String, Feature__c> byDefName = new Map<String, Feature__c>();
             for (Feature__c f : [
                 SELECT Id, Name, FeatureDefinitionTxt__c,
-                       EnabledDateTime__c, DisabledDateTime__c, ActiveBooleanFormula__c
+                       EnabledDateTime__c, DisabledDateTime__c, ActiveSinceDateTime__c
                 FROM Feature__c
                 WHERE FeatureDefinitionTxt__c IN :defNames
                 WITH SYSTEM_MODE
@@ -88,14 +88,14 @@ global with sharing class DeliveryFeatureCatalogController {
                 dto.icon = fd.IconNameTxt__c;
                 dto.sortOrder = fd.SortOrderNumber__c;
                 dto.settingsFieldApiName = fd.SettingsFieldApiNameTxt__c;
-                dto.docsUrl = fd.DocsUrlTxt__c;
+                dto.docsUrl = fd.DocsUrl__c;
 
                 Feature__c runtime = byDefName.get(fd.DeveloperName);
                 if (runtime != null) {
                     dto.featureId = runtime.Id;
                     dto.enabledDateTime = runtime.EnabledDateTime__c;
                     dto.disabledDateTime = runtime.DisabledDateTime__c;
-                    dto.isActive = runtime.ActiveBooleanFormula__c == true;
+                    dto.isActive = runtime.ActiveSinceDateTime__c != null;
                 } else {
                     dto.isActive = false;
                 }
