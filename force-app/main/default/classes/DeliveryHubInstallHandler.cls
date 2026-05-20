@@ -18,10 +18,30 @@ global class DeliveryHubInstallHandler implements InstallHandler {
     global void onInstall(InstallContext context) {
         initializeDefaultSettings();
         seedFeaturesFromDefinitions();
+        syncLegacySettingsToFeatures();
         scheduleSyncJobs();
         backfillUserPermissionSets();
         backfillWorkItemStatusDefaults();
         enqueueInitialReconciliation();
+    }
+
+    /**
+     * @description Copies legacy DeliveryHubSettings__c.Enable*DateTime__c
+     *              values onto matching Feature__c rows after seeding. So
+     *              existing tenants whose admins already toggled features
+     *              via Setup → Custom Settings will see the cockpit
+     *              reflect that state on first render. Idempotent.
+     *              Wrapped in try/catch — install must never fail on
+     *              cosmetic mirror.
+     */
+    private static void syncLegacySettingsToFeatures() {
+        try {
+            DeliveryFeatureSyncService.syncSettingsToFeatures();
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryHubInstallHandler] Feature settings sync failed: '
+                + e.getMessage());
+        }
     }
 
     private static void initializeDefaultSettings() {

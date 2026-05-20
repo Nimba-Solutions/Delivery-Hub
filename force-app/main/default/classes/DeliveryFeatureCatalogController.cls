@@ -108,4 +108,95 @@ global with sharing class DeliveryFeatureCatalogController {
         }
         return cards;
     }
+
+    /**
+     * @description Admin-gated toggle for a single Feature__c. Sets the
+     *              enable/disable DateTime stamps + LastToggledBy lookup,
+     *              then lets the trigger handler take care of the
+     *              settings-mirror + audit-row cascade. Throws an
+     *              AuraHandledException when the calling user is not a
+     *              Delivery Hub admin (PSG-gated, namespace-safe).
+     * @param featureId  The Feature__c row whose toggle should flip.
+     * @param enable     True to enable (sets Enabled, clears Disabled).
+     *                   False to disable (sets Disabled, leaves Enabled
+     *                   in place so the historical activation stamp is
+     *                   preserved; ActiveSinceDateTime__c formula is
+     *                   re-evaluated by the platform).
+     */
+    @AuraEnabled
+    global static void toggleFeature(Id featureId, Boolean enable) {
+        assertAdminOrThrow();
+        if (featureId == null) {
+            throw new AuraHandledException('featureId is required.');
+        }
+        Feature__c f = loadFeatureOrThrow(featureId);
+        applyToggleFields(f, enable == true);
+        persistToggle(f);
+    }
+
+    private static void assertAdminOrThrow() {
+        if (!isAdmin()) {
+            throw new AuraHandledException(
+                'You must be a Delivery Hub admin to toggle features.');
+        }
+    }
+
+    private static Feature__c loadFeatureOrThrow(Id featureId) {
+        List<Feature__c> existing = [
+            SELECT Id, EnabledDateTime__c, DisabledDateTime__c, LastToggledByUserLookup__c
+            FROM Feature__c
+            WHERE Id = :featureId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (existing.isEmpty()) {
+            throw new AuraHandledException('Feature not found.');
+        }
+        return existing.get(0);
+    }
+
+    private static void applyToggleFields(Feature__c f, Boolean enable) {
+        DateTime now = DateTime.now();
+        if (enable) {
+            f.EnabledDateTime__c = now;
+            f.DisabledDateTime__c = null;
+        } else {
+            f.DisabledDateTime__c = now;
+        }
+        f.LastToggledByUserLookup__c = UserInfo.getUserId();
+    }
+
+    private static void persistToggle(Feature__c f) {
+        try {
+            update f;
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryFeatureCatalogController.toggleFeature] update failed: '
+                + e.getMessage());
+            throw new AuraHandledException('Unable to update the feature.');
+        }
+    }
+
+    /**
+     * @description Whether the calling user is a Delivery Hub admin (i.e.
+     *              has the DeliveryHubAdmin PermissionSetGroup). Used by
+     *              the cockpit LWC to gate visibility of the Enable /
+     *              Disable buttons. PSG DeveloperName is namespace-
+     *              prefixed (`delivery__DeliveryHubAdmin`) on subscriber
+     *              installs and bare (`DeliveryHubAdmin`) in dev — accept
+     *              both (same pattern as
+     *              DeliveryHubDashboardController.isAdminUser).
+     * @return True when the current user has DeliveryHubAdmin PSG.
+     */
+    @AuraEnabled(cacheable=true)
+    global static Boolean isAdmin() {
+        return ![
+            SELECT Id FROM PermissionSetAssignment
+            WHERE AssigneeId = :UserInfo.getUserId()
+              AND PermissionSetGroup.DeveloperName IN
+                  ('DeliveryHubAdmin', 'delivery__DeliveryHubAdmin')
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ].isEmpty();
+    }
 }

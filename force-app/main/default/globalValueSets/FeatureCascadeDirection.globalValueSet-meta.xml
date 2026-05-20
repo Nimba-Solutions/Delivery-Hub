@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GlobalValueSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Direction in which a FeatureDependency__c cascades during the cockpit preview. UpOnly = Disable-only. DownOnly = Enable-only. Both = visible in both flows.</description>
+    <masterLabel>Feature Cascade Direction</masterLabel>
+    <sorted>false</sorted>
+    <customValue>
+        <fullName>Both</fullName>
+        <default>true</default>
+        <label>Both</label>
+    </customValue>
+    <customValue>
+        <fullName>UpOnly</fullName>
+        <default>false</default>
+        <label>Up Only</label>
+    </customValue>
+    <customValue>
+        <fullName>DownOnly</fullName>
+        <default>false</default>
+        <label>Down Only</label>
+    </customValue>
+</GlobalValueSet>

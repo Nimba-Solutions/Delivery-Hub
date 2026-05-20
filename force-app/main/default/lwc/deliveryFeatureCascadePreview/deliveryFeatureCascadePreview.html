@@ -1,0 +1,92 @@
+<template>
+    <div class="cascade-preview">
+
+        <template lwc:if={isLoading}>
+            <div class="slds-p-around_medium slds-align_absolute-center">
+                <lightning-spinner alternative-text="Computing cascade" size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <template lwc:if={hasError}>
+            <div class="slds-notify slds-notify_alert slds-theme_alert-texture slds-theme_warning" role="alert">
+                <span class="slds-assistive-text">warning</span>
+                <h2>{errorMessage}</h2>
+            </div>
+        </template>
+
+        <template lwc:if={isLoaded}>
+
+            <template lwc:if={isStandalone}>
+                <div class="slds-p-around_small slds-text-color_weak slds-text-body_small">
+                    {actionHeadline}
+                </div>
+            </template>
+
+            <ul class="cascade-tree slds-list_vertical slds-p-around_small" role="tree">
+                <template for:each={flattenedRows} for:item="row">
+                    <li key={row.key}
+                        class={row.rowClass}
+                        style={row.indentStyle}
+                        role="treeitem"
+                        aria-level={row.ariaLevel}>
+                        <div class="slds-grid slds-grid_vertical-align-center slds-gutters_x-small">
+                            <div class="slds-col slds-no-flex">
+                                <lightning-icon
+                                    icon-name={row.iconName}
+                                    variant={row.iconVariant}
+                                    size="x-small"
+                                    alternative-text={row.iconAlt}
+                                    title={row.iconAlt}>
+                                </lightning-icon>
+                            </div>
+                            <div class="slds-col">
+                                <span class="slds-text-body_regular">
+                                    <strong>{row.label}</strong>
+                                </span>
+                                <template lwc:if={row.isCurrentRoot}>
+                                    <span class="slds-badge slds-badge_inverse slds-m-left_x-small">
+                                        Current
+                                    </span>
+                                </template>
+                                <template lwc:if={row.hasBadge}>
+                                    <span class={row.badgeClass}>
+                                        {row.badgeText}
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+                    </li>
+                </template>
+            </ul>
+
+            <div class="slds-p-around_small slds-border_top">
+                <div class="slds-text-title_caps slds-m-bottom_x-small">Summary</div>
+                <ul class="slds-list_dotted slds-text-body_small">
+                    <template for:each={depthCounts} for:item="depthRow">
+                        <li key={depthRow.depth}>{depthRow.label}</li>
+                    </template>
+                </ul>
+                <div class={summaryToneClass}>
+                    {summaryText}
+                </div>
+            </div>
+
+            <template lwc:if={showFooterButtons}>
+                <footer class="slds-p-around_small slds-border_top slds-grid slds-grid_align-end">
+                    <lightning-button
+                        label="Cancel"
+                        variant="neutral"
+                        onclick={handleCancel}>
+                    </lightning-button>
+                    <lightning-button
+                        label="Confirm"
+                        variant="brand"
+                        class="slds-m-left_x-small"
+                        onclick={handleConfirm}>
+                    </lightning-button>
+                </footer>
+            </template>
+
+        </template>
+    </div>
+</template>

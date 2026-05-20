@@ -68,6 +68,32 @@
                                     </template>
                                 </footer>
 
+                                <template lwc:if={canToggle}>
+                                    <div class="slds-m-top_small">
+                                        <lightning-button
+                                            label={feature.toggleLabel}
+                                            variant={feature.toggleVariant}
+                                            data-feature-id={feature.featureId}
+                                            data-feature-name={feature.name}
+                                            data-is-active={feature.isActive}
+                                            disabled={feature.toggleDisabled}
+                                            onclick={handleToggle}>
+                                        </lightning-button>
+                                    </div>
+                                </template>
+
+                                <template lwc:if={feature.hasFeatureId}>
+                                    <div class="slds-m-top_x-small">
+                                        <lightning-button
+                                            label="Show dependencies"
+                                            variant="neutral"
+                                            data-feature-id={feature.featureId}
+                                            data-feature-label={feature.label}
+                                            onclick={handleShowDependencies}>
+                                        </lightning-button>
+                                    </div>
+                                </template>
+
                             </article>
                         </div>
                     </template>
@@ -76,4 +102,35 @@
 
         </div>
     </lightning-card>
+
+    <template lwc:if={isCascadeModalOpen}>
+        <section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="cascade-modal-title" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                            title="Close"
+                            onclick={handleCloseCascadeModal}>
+                        <lightning-icon icon-name="utility:close" alternative-text="Close" size="small" variant="inverse"></lightning-icon>
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 id="cascade-modal-title" class="slds-modal__title slds-hyphenate">
+                        {cascadeModalTitle}
+                    </h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <c-delivery-feature-cascade-preview
+                        feature-id={cascadeFeatureId}
+                        action="Enable"
+                        hide-footer-buttons
+                        oncancel={handleCloseCascadeModal}
+                        onconfirm={handleCloseCascadeModal}>
+                    </c-delivery-feature-cascade-preview>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button label="Close" onclick={handleCloseCascadeModal}></lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
 </template>
