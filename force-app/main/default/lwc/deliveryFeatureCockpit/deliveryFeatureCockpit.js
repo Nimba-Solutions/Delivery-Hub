@@ -141,11 +141,25 @@ export default class DeliveryFeatureCockpit extends LightningElement {
                 const msg = (err && err.body && err.body.message)
                     ? err.body.message
                     : 'Toggle failed. Check the Activity Log for details.';
-                this.dispatchEvent(new ShowToastEvent({
-                    title: 'Unable to toggle feature',
-                    message: msg,
-                    variant: 'error'
-                }));
+                // PR 4: the onboarding gate throws a message containing
+                // "onboarding track" — surface a warning-flavoured toast
+                // pointing the user at the feature record page where they
+                // can launch the track.
+                const isOnboardingGate = typeof msg === 'string'
+                    && msg.toLowerCase().indexOf('onboarding track') !== -1;
+                if (isOnboardingGate) {
+                    this.dispatchEvent(new ShowToastEvent({
+                        title: 'Onboarding required',
+                        message: 'Open the feature record page to complete the track, then try again.',
+                        variant: 'warning'
+                    }));
+                } else {
+                    this.dispatchEvent(new ShowToastEvent({
+                        title: 'Unable to toggle feature',
+                        message: msg,
+                        variant: 'error'
+                    }));
+                }
             });
     }
 

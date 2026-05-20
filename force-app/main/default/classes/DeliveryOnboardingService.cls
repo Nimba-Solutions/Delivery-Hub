@@ -417,6 +417,54 @@ global with sharing class DeliveryOnboardingService {
     }
 
     // ────────────────────────────────────────────────────────────────────
+    // READ — isTrackComplete(trackName, userId) is the PR 4 gate hook.
+    // Returns true when the named user has an OnboardingProgress__c row for
+    // the track and that row's CompletedDateTime__c is populated. Blank /
+    // null trackDeveloperName means "no track required" — always true.
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description PR 4 gate hook. Returns true when the user has finished
+     *              the named onboarding track (CompletedDateTime__c != null
+     *              on their OnboardingProgress__c row). A blank track name
+     *              is treated as "no track required" and always returns true,
+     *              so callers can pipe a FeatureDefinition__mdt's
+     *              RequiresOnboardingTrackTxt__c straight in without a
+     *              null-check.
+     * @param trackDeveloperName DeveloperName of the OnboardingTrack__mdt to
+     *                           check. Blank / null = no gate required.
+     * @param userId Id of the user whose progress row to evaluate. If null
+     *               the current running user is used.
+     * @return True when no track is required OR when the user has finished it.
+     */
+    @AuraEnabled
+    global static Boolean isTrackComplete(String trackDeveloperName, Id userId) {
+        if (String.isBlank(trackDeveloperName)) {
+            return true;
+        }
+        Id effectiveUserId = userId == null ? UserInfo.getUserId() : userId;
+        try {
+            List<OnboardingProgress__c> rows = [
+                SELECT Id, CompletedDateTime__c
+                FROM OnboardingProgress__c
+                WHERE TrackTxt__c = :trackDeveloperName
+                  AND UserLookup__c = :effectiveUserId
+                WITH SYSTEM_MODE
+                ORDER BY CreatedDate DESC
+                LIMIT 1
+            ];
+            if (rows.isEmpty()) {
+                return false;
+            }
+            return rows.get(0).CompletedDateTime__c != null;
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryOnboardingService.isTrackComplete] failed: ' + e.getMessage());
+            return false;
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────────
     // INTERNAL — upsert + completion check.
     // ────────────────────────────────────────────────────────────────────
 
