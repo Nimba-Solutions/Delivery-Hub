@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Create 1 approved WorkLog under that vendor</label>
+    <protected>false</protected>
+    <values><field>TrackTxt__c</field><value xsi:type="xsd:string">Invoice_Generation_Track</value></values>
+    <values><field>SortOrderNumber__c</field><value xsi:type="xsd:double">20</value></values>
+    <values><field>LabelTxt__c</field><value xsi:type="xsd:string">Create 1 approved WorkLog under that vendor</value></values>
+    <values><field>DescriptionTxt__c</field><value xsi:type="xsd:string">Log at least one hour against a WorkItem whose vendor is the entity from step 1, then move the WorkLog ApprovedDateTime to a populated value. Without an approved log, the invoice job has nothing to bill.</value></values>
+    <values><field>VerificationMethodPk__c</field><value xsi:type="xsd:string">SoqlQuery</value></values>
+    <values><field>VerificationQueryTxt__c</field><value xsi:type="xsd:string">SELECT COUNT() FROM WorkLog__c WHERE ApprovedDateTime__c != null AND CreatedById = :userId LIMIT 1</value></values>
+    <values><field>RequiredDateTime__c</field><value xsi:type="xsd:dateTime">2020-01-01T00:00:00.000Z</value></values>
+</CustomMetadata>

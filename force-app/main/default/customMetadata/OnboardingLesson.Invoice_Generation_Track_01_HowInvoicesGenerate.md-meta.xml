@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>How DH generates invoices</label>
+    <protected>false</protected>
+    <values><field>TrackTxt__c</field><value xsi:type="xsd:string">Invoice_Generation_Track</value></values>
+    <values><field>SortOrderNumber__c</field><value xsi:type="xsd:double">10</value></values>
+    <values><field>LabelTxt__c</field><value xsi:type="xsd:string">How DH generates invoices</value></values>
+    <values><field>BodyMarkdownTxt__c</field><value xsi:type="xsd:string"># How DH generates invoices
+
+Delivery Hub generates invoices automatically on a schedule. The DeliveryInvoiceGenerationService is the entry point — it runs daily and:
+
+1. Reads org-wide DeliveryHubSettings. If EnableInvoiceGenerationDateTime is null, the job exits silently — invoice generation is opt-in per tenant.
+2. Queries every active NetworkEntity where EnableBillingDateTime is populated (the per-vendor opt-in flag).
+3. For each entity, derives the period from BillingFrequencyPk: Daily covers yesterday, Weekly covers the previous Mon–Sun, Monthly covers the previous calendar month, Quarterly covers the previous calendar quarter. An On_Demand entity is skipped entirely — you generate those manually.
+4. For non-Daily frequencies, the job checks whether today is the right day to run: Monthly runs only on the 1st, Quarterly only on Jan/Apr/Jul/Oct 1st.
+5. Confirms at least one Approved (or null-status) WorkLog exists in the period — no hours, no invoice.
+6. Delegates to DeliveryDocumentController.generateDocument, passing the period start and end. That helper picks the Invoice template for non-Daily frequencies and a Daily_Hours_Summary template for Daily.
+7. Stamps LastInvoiceGenerationDate to today on the settings record so the job will not re-run the same day.
+
+Errors on individual entities are logged and swallowed — one bad vendor cannot block the others.
+
+Read DeliveryInvoiceGenerationService.cls for the full flow.</value></values>
+    <values><field>LessonUrl__c</field><value xsi:nil="true"/></values>
+    <values><field>EstimatedDurationMinutesNumber__c</field><value xsi:type="xsd:double">5</value></values>
+</CustomMetadata>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Reading invoice exceptions</label>
+    <protected>false</protected>
+    <values><field>TrackTxt__c</field><value xsi:type="xsd:string">Invoice_Generation_Track</value></values>
+    <values><field>SortOrderNumber__c</field><value xsi:type="xsd:double">30</value></values>
+    <values><field>LabelTxt__c</field><value xsi:type="xsd:string">Reading invoice exceptions</value></values>
+    <values><field>BodyMarkdownTxt__c</field><value xsi:type="xsd:string"># Reading invoice exceptions
+
+When you expect an invoice to fire and it does not, there is a fixed list of reasons. Walk this checklist before you open a ticket:
+
+1. **Feature toggle off.** DeliveryHubSettings.EnableInvoiceGenerationDateTime is null. The job exits before it queries anything. Fix: populate the field.
+2. **LastInvoiceGenerationDate is today.** The job stamps this on every successful sweep to prevent duplicate runs. If you need to force a re-run today, clear that field.
+3. **Vendor not opted in.** NetworkEntity.EnableBillingDateTime is null. The vendor will not be on the candidate list.
+4. **Wrong frequency-day.** Monthly only fires on the 1st; Quarterly only fires on the 1st of Jan/Apr/Jul/Oct; Weekly only fires on the start of week. If you ran the job mid-month for a Monthly vendor, that is expected behavior.
+5. **No approved hours in the period.** The job requires at least one WorkLog with StatusPk Approved (or null) and a WorkDate inside the period. Drafts and Rejected logs do not count. Use the Hours by Month report to confirm there are hours where you expect them.
+6. **Period miss on a new vendor.** If you onboarded a vendor on the 5th and set Monthly frequency, no invoice will fire until the next 1st. The job has no concept of partial periods.
+7. **Already-overdue invoices.** markOverdueInvoices is a separate sweep that flips Sent or Viewed invoices to Overdue when DueDateDate is past. If you see an invoice you expected as "Sent" suddenly switch to "Overdue", check the due date — that is the system working as designed.
+
+When in doubt, open the DeliveryDocument__c list view filtered to TemplatePk = Invoice and CreatedDate = LAST_N_DAYS:7 — every invoice DH has touched recently will be there.</value></values>
+    <values><field>LessonUrl__c</field><value xsi:nil="true"/></values>
+    <values><field>EstimatedDurationMinutesNumber__c</field><value xsi:type="xsd:double">7</value></values>
+</CustomMetadata>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Invoice Generation — Operator Onboarding</label>
+    <protected>false</protected>
+    <values><field>LabelTxt__c</field><value xsi:type="xsd:string">Invoice Generation — Operator Onboarding</value></values>
+    <values><field>FeatureDefinitionTxt__c</field><value xsi:type="xsd:string">Invoice_Generation</value></values>
+    <values><field>RequiredQuizScoreNumber__c</field><value xsi:type="xsd:double">4</value></values>
+    <values><field>RequiresWalkthroughDateTime__c</field><value xsi:nil="true"/></values>
+    <values><field>EstimatedDurationMinutesNumber__c</field><value xsi:type="xsd:double">25</value></values>
+</CustomMetadata>
