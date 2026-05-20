@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GlobalValueSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customValue>
+        <fullName>Core</fullName>
+        <default>false</default>
+        <label>Core</label>
+    </customValue>
+    <customValue>
+        <fullName>Notifications</fullName>
+        <default>false</default>
+        <label>Notifications</label>
+    </customValue>
+    <customValue>
+        <fullName>AI</fullName>
+        <default>false</default>
+        <label>AI</label>
+    </customValue>
+    <customValue>
+        <fullName>Integrations</fullName>
+        <default>false</default>
+        <label>Integrations</label>
+    </customValue>
+    <customValue>
+        <fullName>Beta</fullName>
+        <default>false</default>
+        <label>Beta</label>
+    </customValue>
+    <masterLabel>FeatureCategory</masterLabel>
+    <sorted>false</sorted>
+</GlobalValueSet>

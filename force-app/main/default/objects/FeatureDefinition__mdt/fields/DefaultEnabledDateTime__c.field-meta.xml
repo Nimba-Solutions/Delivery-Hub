@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DefaultEnabledDateTime__c</fullName>
+    <description>Package-shipped default for whether this feature is enabled on a fresh tenant. If non-null and <= NOW() at install time, the seeded Feature__c will be active by default; otherwise it is created disabled.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Default Enabled</label>
+    <required>false</required>
+    <type>DateTime</type>
+</CustomField>

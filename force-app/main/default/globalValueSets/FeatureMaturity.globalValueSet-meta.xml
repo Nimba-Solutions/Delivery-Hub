@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GlobalValueSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customValue>
+        <fullName>Alpha</fullName>
+        <default>false</default>
+        <label>Alpha</label>
+    </customValue>
+    <customValue>
+        <fullName>Beta</fullName>
+        <default>false</default>
+        <label>Beta</label>
+    </customValue>
+    <customValue>
+        <fullName>GA</fullName>
+        <default>false</default>
+        <label>GA</label>
+    </customValue>
+    <customValue>
+        <fullName>Deprecated</fullName>
+        <default>false</default>
+        <label>Deprecated</label>
+    </customValue>
+    <masterLabel>FeatureMaturity</masterLabel>
+    <sorted>false</sorted>
+</GlobalValueSet>
