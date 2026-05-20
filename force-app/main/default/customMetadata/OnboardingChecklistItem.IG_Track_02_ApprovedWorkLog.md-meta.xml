@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-    <label>Create 1 approved WorkLog under that vendor</label>
+    <label>Create approved WorkLog under vendor</label>
     <protected>false</protected>
     <values><field>TrackTxt__c</field><value xsi:type="xsd:string">Invoice_Generation_Track</value></values>
     <values><field>SortOrderNumber__c</field><value xsi:type="xsd:double">20</value></values>
