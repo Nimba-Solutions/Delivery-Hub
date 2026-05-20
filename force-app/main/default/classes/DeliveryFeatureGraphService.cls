@@ -150,6 +150,7 @@ global with sharing class DeliveryFeatureGraphService {
                 ctx.visited.add(childId);
                 nextLayer.add(childId);
                 ctx.edgeByChild.put(childId, dep);
+                ctx.nodesById.put(childId, newNode(childId, 0, dep));
                 if (!ctx.childrenByParent.containsKey(parentId)) {
                     ctx.childrenByParent.put(parentId, new List<Id>());
                 }
