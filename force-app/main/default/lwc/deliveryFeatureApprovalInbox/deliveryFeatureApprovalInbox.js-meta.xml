@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <masterLabel>Delivery Feature Approval Inbox</masterLabel>
+    <description>Pending Feature__c toggle approvals assigned to the running user. PR 7 of the cockpit plan — single-step approvals. PR 8 will add multi-step + REST.</description>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__AppPage</target>
+        <target>lightning__HomePage</target>
+    </targets>
+</LightningComponentBundle>
