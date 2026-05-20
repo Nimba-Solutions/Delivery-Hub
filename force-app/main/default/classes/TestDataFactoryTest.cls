@@ -255,6 +255,50 @@ private class TestDataFactoryTest {
     }
 
     @IsTest
+    static void testCreateFeatureDefaults() {
+        Test.startTest();
+        Feature__c f = TestDataFactory.createFeature(null);
+        Test.stopTest();
+
+        Feature__c reloaded = [SELECT Id, Name, FeatureDefinitionTxt__c, EnabledDateTime__c
+                               FROM Feature__c WHERE Id = :f.Id];
+        System.assert(reloaded.Name.startsWith('TestFeature'), 'Name has TestFeature prefix');
+        System.assertEquals(reloaded.Name, reloaded.FeatureDefinitionTxt__c,
+            'FeatureDefinitionTxt__c mirrors Name by default');
+        System.assertNotEquals(null, reloaded.EnabledDateTime__c,
+            'EnabledDateTime__c defaults to Datetime.now()');
+    }
+
+    @IsTest
+    static void testCreateFeatureWithOverrides() {
+        Test.startTest();
+        Feature__c f = TestDataFactory.createFeature(new Map<String, Object>{
+            'Name' => 'OverrideFeature',
+            'FeatureDefinitionTxt__c' => 'OverrideFeature'
+        });
+        Test.stopTest();
+
+        Feature__c reloaded = [SELECT Name, FeatureDefinitionTxt__c FROM Feature__c WHERE Id = :f.Id];
+        System.assertEquals('OverrideFeature', reloaded.Name, 'Name override applied');
+        System.assertEquals('OverrideFeature', reloaded.FeatureDefinitionTxt__c, 'Def name override applied');
+    }
+
+    @IsTest
+    static void testCreateFeaturesBulkAreDistinct() {
+        Test.startTest();
+        List<Feature__c> rows = TestDataFactory.createFeatures(4, null);
+        Test.stopTest();
+
+        System.assertEquals(4, rows.size(), 'Bulk variant returns N rows');
+        Set<String> names = new Set<String>();
+        for (Feature__c f : rows) {
+            names.add(f.Name);
+        }
+        System.assertEquals(4, names.size(),
+            'Each Feature__c has a distinct uniquified Name (uniq counter advances)');
+    }
+
+    @IsTest
     static void testResetCacheClearsBridgeAndDefaults() {
         WorkItem__c wi = TestDataFactory.createWorkItem(null);
         TestDataFactory.createWorkLog(wi.Id, 1, Date.today(), null);

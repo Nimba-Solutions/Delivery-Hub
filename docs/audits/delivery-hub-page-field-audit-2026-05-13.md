@@ -1,13 +1,12 @@
 # Delivery Hub — Page Layout / Field Audit (2026-05-13)
 
-> **Status as of 2026-05-16: PARTIALLY RESOLVED.** 4 of 5 headline findings
-> closed by PR #776 (merged 2026-05-13, released 0.238.0.1 / 0.239.0.1):
-> WorkLog FlexiPage gap (ResourceTitleTxt__c surfaced), WorkItem layout-vs-FlexiPage
-> drift closed, DeliveryDocument dunning + scheduled-send cluster surfaced,
-> WorkItemDependency dynamic FlexiPage added, DeliveryTransaction reverse-drift
-> resolved. **Remaining backlog (~55 min):** small gaps on SyncItem,
-> NetworkEntity, ActivityLog, PortalAccess (admin-facing fields not on either
-> FlexiPage or layout — low operator impact). File preserved for backlog triage.
+> **Status as of 2026-05-18: RESOLVED.** Headline findings closed by PR #776
+> (0.238.0.1 / 0.239.0.1, merged 2026-05-13). Remaining ~55-min backlog closed
+> by PR #786 (0.241.0.3, merged 2026-05-16) — 9 admin fields surfaced across
+> SyncItem (2), NetworkEntity (5 incl. new Billing section), ActivityLog (1),
+> PortalAccess (1). Hidden plumbing fields (HashChainTxt, AccessTokenTxt,
+> HmacSecretTxt, UsageAnalyticsJsonTxt, ParentRefTxt) deferred per audit
+> recommendation. File preserved as a record.
 
 Scope: 11 user-facing custom objects in `force-app/main/default/objects/`. Method: parsed every `layout-meta.xml` and `flexipage-meta.xml` to extract field references, then diffed against the `fields/` directory. FlexiPage assignment confirmed via `force-app/main/default/applications/DeliveryHub.app-meta.xml` and `DeliveryHubAdmin.app-meta.xml`.
 

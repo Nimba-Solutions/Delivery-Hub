@@ -398,6 +398,52 @@ public class TestDataFactory {
     }
 
     // ────────────────────────────────────────────────────────────────────
+    // Feature__c — Layer 4 feature cockpit runtime state. No required MD;
+    // FeatureDefinitionTxt__c is just a Text/externalId that points at the
+    // matching package-shipped FeatureDefinition__mdt DeveloperName.
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Build (no DML) a Feature__c with safe defaults.
+     *              Name + FeatureDefinitionTxt__c are uniquified, EnabledDateTime__c
+     *              defaults to Datetime.now(). Override any field via the map
+     *              (in particular, callers usually pass a matching __mdt
+     *              DeveloperName via 'FeatureDefinitionTxt__c').
+     */
+    public static Feature__c buildFeature(Map<String, Object> overrides) {
+        String defName = uniq('TestFeature');
+        Feature__c f = new Feature__c(
+            Name = defName,
+            FeatureDefinitionTxt__c = defName,
+            EnabledDateTime__c = Datetime.now()
+        );
+        applyOverrides(f, overrides);
+        return f;
+    }
+
+    /** @description Build + insert a Feature__c with defaults + overrides. */
+    public static Feature__c createFeature(Map<String, Object> overrides) {
+        Feature__c f = buildFeature(overrides);
+        insert f;
+        return f;
+    }
+
+    /**
+     * @description Bulk variant. Returns N inserted Feature__c records with
+     *              unique names + FeatureDefinitionTxt__c values. Overrides
+     *              apply to every row (but Name + FeatureDefinitionTxt__c
+     *              are uniquified per row before overrides land).
+     */
+    public static List<Feature__c> createFeatures(Integer count, Map<String, Object> overrides) {
+        List<Feature__c> rows = new List<Feature__c>();
+        for (Integer i = 0; i < count; i++) {
+            rows.add(buildFeature(overrides));
+        }
+        insert rows;
+        return rows;
+    }
+
+    // ────────────────────────────────────────────────────────────────────
     // INTERNAL — apply Map<String,Object> overrides onto an SObject.
     // Skips null map. Generic enough to handle any field type the caller
     // throws at it (Decimal, Date, Datetime, Id, String, Boolean).

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Auto-Sync Network Entity</label>
+    <protected>false</protected>
+    <values><field>LabelTxt__c</field><value xsi:type="xsd:string">Auto-Sync Network Entity</value></values>
+    <values><field>DescriptionTxt__c</field><value xsi:type="xsd:string">Automatically syncs newly created NetworkEntity records across peer orgs in the federation so the contact graph stays consistent.</value></values>
+    <values><field>CategoryPk__c</field><value xsi:type="xsd:string">Integrations</value></values>
+    <values><field>MaturityPk__c</field><value xsi:type="xsd:string">GA</value></values>
+    <values><field>DefaultEnabledDateTime__c</field><value xsi:nil="true"/></values>
+    <values><field>SettingsFieldApiNameTxt__c</field><value xsi:type="xsd:string">EnableAutoSyncNetworkEntityDateTime__c</value></values>
+    <values><field>IconNameTxt__c</field><value xsi:type="xsd:string">standard:connected_apps</value></values>
+    <values><field>SortOrderNumber__c</field><value xsi:type="xsd:double">60</value></values>
+    <values><field>DocsUrl__c</field><value xsi:nil="true"/></values>
+</CustomMetadata>
