@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>FeatureDefinitionTxt__c</fullName>
+    <description>DeveloperName of the linked FeatureDefinition__mdt record. Used to join the per-tenant Feature__c runtime state to the package-shipped catalog entry. Indexed for fast lookups during catalog rendering.</description>
+    <externalId>true</externalId>
+    <label>Feature Definition</label>
+    <length>80</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

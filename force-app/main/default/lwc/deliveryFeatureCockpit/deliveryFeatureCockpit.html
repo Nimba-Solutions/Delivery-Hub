@@ -1,0 +1,79 @@
+<template>
+    <lightning-card title="Feature Cockpit" icon-name="standard:apps">
+
+        <div slot="actions">
+            <lightning-button-icon
+                icon-name="utility:refresh"
+                variant="border-filled"
+                onclick={handleRefresh}
+                alternative-text="Refresh Feature Catalog">
+            </lightning-button-icon>
+        </div>
+
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+
+            <template lwc:if={hasError}>
+                <div class="slds-notify slds-notify_alert slds-theme_alert-texture slds-theme_warning" role="alert">
+                    <span class="slds-assistive-text">warning</span>
+                    <h2>{errorMessage}</h2>
+                </div>
+            </template>
+
+            <template lwc:if={isEmpty}>
+                <div class="slds-illustration slds-illustration_small slds-p-vertical_medium">
+                    <div class="slds-text-longform slds-text-align_center">
+                        <p class="slds-text-body_regular slds-text-color_weak">
+                            No features defined yet. Install the package or seed FeatureDefinition__mdt records to populate this catalog.
+                        </p>
+                    </div>
+                </div>
+            </template>
+
+            <template lwc:if={hasFeatures}>
+                <div class="slds-grid slds-wrap slds-gutters_small feature-grid">
+                    <template for:each={features} for:item="feature">
+                        <div key={feature.key} class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-large-size_1-of-3 slds-p-bottom_small">
+                            <article class="slds-card slds-card_boundary slds-box slds-box_x-small feature-card">
+
+                                <header class="slds-grid slds-grid_vertical-align-center slds-m-bottom_x-small">
+                                    <div class="slds-media__figure slds-m-right_small">
+                                        <lightning-icon icon-name={feature.icon} size="medium"></lightning-icon>
+                                    </div>
+                                    <div class="slds-media__body">
+                                        <h3 class="slds-text-heading_small slds-truncate" title={feature.label}>
+                                            <strong>{feature.label}</strong>
+                                        </h3>
+                                        <div class="slds-grid slds-gutters_xx-small slds-m-top_xx-small">
+                                            <span class={feature.categoryBadgeClass}>{feature.category}</span>
+                                            <span class={feature.maturityBadgeClass}>{feature.maturity}</span>
+                                            <span class={feature.statusBadgeClass}>{feature.statusBadgeText}</span>
+                                        </div>
+                                    </div>
+                                </header>
+
+                                <div class="slds-text-body_small slds-text-color_weak slds-m-bottom_small feature-description" title={feature.description}>
+                                    {feature.truncatedDescription}
+                                </div>
+
+                                <footer class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                                    <template lwc:if={feature.hasSettingsField}>
+                                        <div class="slds-text-body_small slds-text-color_weak slds-truncate" title={feature.settingsFieldApiName}>
+                                            Mapped to: <code>{feature.settingsFieldApiName}</code>
+                                        </div>
+                                    </template>
+                                    <template lwc:if={feature.hasDocsUrl}>
+                                        <a href={feature.docsUrl} target="_blank" rel="noopener noreferrer" class="slds-text-body_small">
+                                            View Docs
+                                        </a>
+                                    </template>
+                                </footer>
+
+                            </article>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+        </div>
+    </lightning-card>
+</template>
