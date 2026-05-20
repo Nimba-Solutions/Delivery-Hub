@@ -19,5 +19,5 @@
         </targetConfig>
     </targetConfigs>
     <masterLabel>Delivery Feature Onboarding</masterLabel>
-    <description>Checkr-style gated onboarding LWC (Layer 5). Renders lessons, a quiz, and a checklist for the configured OnboardingTrack__mdt and writes per-user runtime state to OnboardingProgress__c. PR 4 wires the gate that refuses non-admin feature flips until the track completes.</description>
+    <description>Checkr-style onboarding stepper — renders lessons, quiz, checklist for the configured OnboardingTrack__mdt and writes state to OnboardingProgress__c.</description>
 </LightningComponentBundle>
