@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EffectiveDateTime__c</fullName>
+    <description>Optional scheduled-apply timestamp. Null means apply immediately on grant. PR 7 honors null only; the scheduled path lights up in a later PR.</description>
+    <inlineHelpText>When the toggle should take effect. Leave blank to apply as soon as all approvals are granted.</inlineHelpText>
+    <label>Effective</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

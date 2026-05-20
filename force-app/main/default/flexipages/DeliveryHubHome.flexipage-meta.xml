@@ -39,6 +39,12 @@
                 <identifier>c_deliveryFeatureCockpit_home</identifier>
             </componentInstance>
         </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryFeatureApprovalInbox</componentName>
+                <identifier>c_deliveryFeatureApprovalInbox_home</identifier>
+            </componentInstance>
+        </itemInstances>
         <name>top</name>
         <type>Region</type>
     </flexiPageRegions>

@@ -1,0 +1,7 @@
+.approval-row {
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.approval-row:last-child {
+    border-bottom: none;
+}
