@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EstimatedDurationMinutesNumber__c</fullName>
+    <description>Rough minutes to read or watch this single lesson. Summed across lessons to validate the track-level duration estimate.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Estimated Duration (Minutes)</label>
+    <precision>4</precision>
+    <scale>0</scale>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

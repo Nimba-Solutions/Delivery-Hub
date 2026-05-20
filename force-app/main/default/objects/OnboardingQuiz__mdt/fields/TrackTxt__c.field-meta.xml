@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>TrackTxt__c</fullName>
+    <description>DeveloperName of the parent OnboardingTrack__mdt this quiz belongs to. One quiz per track in the MVP shape.</description>
+    <externalId>true</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Track</label>
+    <length>80</length>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

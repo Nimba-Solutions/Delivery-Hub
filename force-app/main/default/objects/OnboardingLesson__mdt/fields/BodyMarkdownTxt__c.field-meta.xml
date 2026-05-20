@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>BodyMarkdownTxt__c</fullName>
+    <description>Lesson body, authored in Markdown. The lesson reader renders this with a minimal markdown subset (headings, lists, code, links). Keep under 32k.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Body (Markdown)</label>
+    <length>32768</length>
+    <type>LongTextArea</type>
+    <visibleLines>10</visibleLines>
+</CustomField>

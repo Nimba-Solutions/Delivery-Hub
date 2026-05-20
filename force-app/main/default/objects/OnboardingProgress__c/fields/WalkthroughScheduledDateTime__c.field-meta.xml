@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WalkthroughScheduledDateTime__c</fullName>
+    <description>Timestamp the user requested or booked a live walkthrough for this track. Only meaningful when the parent track has RequiresWalkthroughDateTime__c populated.</description>
+    <externalId>false</externalId>
+    <label>Walkthrough Scheduled</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
