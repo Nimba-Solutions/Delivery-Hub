@@ -28,7 +28,7 @@
  *               (settings → feature) on the same transaction.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity')
 public with sharing class DeliveryFeatureSyncService {
 
     /** Static recursion guard. Public-test-visible so tests can assert. */
