@@ -1,0 +1,223 @@
+<template>
+    <lightning-card title="Feature Onboarding" icon-name="standard:education">
+
+        <div slot="actions" class="slds-text-body_small slds-text-color_weak">
+            <template lwc:if={hasTrack}>
+                <span class="slds-m-right_small">{trackLabel}</span>
+                <template lwc:if={trackEstimatedDuration}>
+                    <span class="slds-badge slds-badge_lightest">~{trackEstimatedDuration} min</span>
+                </template>
+                <template lwc:if={isTrackComplete}>
+                    <span class="slds-badge slds-theme_success slds-m-left_x-small">Complete</span>
+                </template>
+            </template>
+        </div>
+
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+
+            <template lwc:if={hasError}>
+                <div class="slds-notify slds-notify_alert slds-theme_warning slds-m-bottom_small" role="alert">
+                    <h2>{errorMessage}</h2>
+                </div>
+            </template>
+
+            <template lwc:if={hasTrack}>
+
+                <!-- Stepper tabs -->
+                <ul class="slds-tabs_default__nav" role="tablist">
+                    <li class={lessonsTabClass} role="presentation"
+                        data-section="lessons" onclick={handleSectionClick}>
+                        <a class="slds-tabs_default__link" role="tab" href="javascript:void(0);">
+                            1. Lessons
+                            <span class="slds-text-body_small slds-text-color_weak slds-m-left_xx-small">
+                                ({lessonCompletionCount}/{lessonTotal})
+                            </span>
+                        </a>
+                    </li>
+                    <li class={quizTabClass} role="presentation"
+                        data-section="quiz" onclick={handleSectionClick}>
+                        <a class="slds-tabs_default__link" role="tab" href="javascript:void(0);">
+                            2. Quiz
+                            <template lwc:if={quizPriorAttempts}>
+                                <span class="slds-text-body_small slds-text-color_weak slds-m-left_xx-small">
+                                    (attempts: {quizPriorAttempts})
+                                </span>
+                            </template>
+                        </a>
+                    </li>
+                    <li class={checklistTabClass} role="presentation"
+                        data-section="checklist" onclick={handleSectionClick}>
+                        <a class="slds-tabs_default__link" role="tab" href="javascript:void(0);">
+                            3. Checklist
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- LESSONS section -->
+                <template lwc:if={isLessonsActive}>
+                    <div class="slds-p-top_medium">
+                        <template lwc:if={hasLessons}>
+                            <div class="slds-grid slds-grid_align-spread slds-m-bottom_x-small">
+                                <h3 class="slds-text-heading_small">
+                                    <strong>{currentLesson.label}</strong>
+                                </h3>
+                                <template lwc:if={currentLesson.estimatedDuration}>
+                                    <span class="slds-badge slds-badge_lightest">
+                                        ~{currentLesson.estimatedDuration} min
+                                    </span>
+                                </template>
+                            </div>
+
+                            <template lwc:if={currentLessonHasUrl}>
+                                <div class="slds-m-bottom_x-small">
+                                    <a href={currentLesson.lessonUrl} target="_blank" rel="noopener noreferrer">
+                                        Open lesson reference
+                                    </a>
+                                </div>
+                            </template>
+
+                            <div class="lesson-body slds-box slds-box_x-small slds-text-body_regular slds-m-bottom_small">
+                                <pre class="lesson-markdown">{currentLesson.bodyMarkdown}</pre>
+                            </div>
+
+                            <div class="slds-grid slds-grid_align-spread">
+                                <lightning-button
+                                    label="Previous"
+                                    onclick={handlePreviousLesson}
+                                    disabled={isWorking}>
+                                </lightning-button>
+                                <lightning-button
+                                    variant="brand"
+                                    label={markLessonButtonLabel}
+                                    onclick={handleMarkLessonComplete}
+                                    disabled={markLessonButtonDisabled}>
+                                </lightning-button>
+                            </div>
+                        </template>
+
+                        <template lwc:elseif={hasTrack}>
+                            <p class="slds-text-body_small slds-text-color_weak">
+                                No lessons configured for this track yet.
+                            </p>
+                        </template>
+                    </div>
+                </template>
+
+                <!-- QUIZ section -->
+                <template lwc:if={isQuizActive}>
+                    <div class="slds-p-top_medium">
+                        <template lwc:if={hasQuiz}>
+
+                            <template lwc:if={quizError}>
+                                <div class="slds-notify slds-notify_alert slds-theme_warning slds-m-bottom_x-small" role="alert">
+                                    <h2>{quizError}</h2>
+                                </div>
+                            </template>
+
+                            <template lwc:if={quizResultMessage}>
+                                <div class={quizResultClass} role="alert">
+                                    <h2>{quizResultMessage}</h2>
+                                </div>
+                            </template>
+
+                            <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_x-small">
+                                Pass threshold: {quizPassThreshold} of {parsedQuestions.length}
+                            </p>
+
+                            <template for:each={displayQuestions} for:item="q">
+                                <div key={q.key} class="slds-box slds-box_x-small slds-m-bottom_small">
+                                    <p class="slds-text-body_regular slds-m-bottom_x-small">
+                                        <strong>Q{q.index}.</strong> {q.question}
+                                    </p>
+                                    <template for:each={q.options} for:item="opt">
+                                        <div key={opt.key}>
+                                            <label class="slds-radio">
+                                                <input type="radio" name={q.key}
+                                                    data-question={q.key}
+                                                    value={opt.value}
+                                                    checked={opt.checked}
+                                                    onchange={handleAnswerChange}/>
+                                                <span class="slds-radio_faux"></span>
+                                                <span class="slds-form-element__label">{opt.label}</span>
+                                            </label>
+                                        </div>
+                                    </template>
+                                    <template lwc:if={q.showExplanation}>
+                                        <p class="slds-text-body_small slds-text-color_weak slds-m-top_x-small">
+                                            <em>{q.explanation}</em>
+                                        </p>
+                                    </template>
+                                </div>
+                            </template>
+
+                            <div class="slds-grid slds-grid_align-end">
+                                <lightning-button
+                                    variant="brand"
+                                    label="Submit Quiz"
+                                    onclick={handleSubmitQuiz}
+                                    disabled={quizSubmitButtonDisabled}>
+                                </lightning-button>
+                            </div>
+                        </template>
+                        <template lwc:elseif={hasTrack}>
+                            <p class="slds-text-body_small slds-text-color_weak">
+                                No quiz configured for this track yet.
+                            </p>
+                        </template>
+                    </div>
+                </template>
+
+                <!-- CHECKLIST section -->
+                <template lwc:if={isChecklistActive}>
+                    <div class="slds-p-top_medium">
+                        <template lwc:if={hasChecklist}>
+                            <template for:each={displayChecklist} for:item="item">
+                                <div key={item.key} class="slds-box slds-box_x-small slds-m-bottom_x-small">
+                                    <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                                        <div class="slds-col">
+                                            <p class="slds-text-body_regular">
+                                                <strong>{item.label}</strong>
+                                                <span class={item.badgeClass}>{item.requiredLabel}</span>
+                                            </p>
+                                            <template lwc:if={item.description}>
+                                                <p class="slds-text-body_small slds-text-color_weak">
+                                                    {item.description}
+                                                </p>
+                                            </template>
+                                        </div>
+                                        <div class="slds-col slds-no-flex">
+                                            <lightning-button
+                                                variant={item.buttonVariant}
+                                                label={item.buttonLabel}
+                                                data-item={item.developerName}
+                                                onclick={handleAttestChecklistItem}
+                                                disabled={item.buttonDisabled}>
+                                            </lightning-button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </template>
+                        <template lwc:elseif={hasTrack}>
+                            <p class="slds-text-body_small slds-text-color_weak">
+                                No checklist items configured for this track yet.
+                            </p>
+                        </template>
+                    </div>
+                </template>
+
+            </template>
+
+            <template lwc:elseif={hasError}>
+                <!-- Error already rendered above -->
+            </template>
+
+            <template lwc:else>
+                <p class="slds-text-body_small slds-text-color_weak slds-p-vertical_medium">
+                    No onboarding track configured for this feature yet.
+                </p>
+            </template>
+
+        </div>
+    </lightning-card>
+</template>

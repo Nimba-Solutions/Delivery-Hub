@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Invoice Generation Quiz</label>
+    <protected>false</protected>
+    <values><field>TrackTxt__c</field><value xsi:type="xsd:string">Invoice_Generation_Track</value></values>
+    <values><field>PassThresholdNumber__c</field><value xsi:type="xsd:double">4</value></values>
+    <values><field>AllowRetryDateTime__c</field><value xsi:type="xsd:dateTime">2020-01-01T00:00:00.000Z</value></values>
+    <values><field>QuestionsJsonTxt__c</field><value xsi:type="xsd:string">[
+  {
+    "q": "Which DeliveryHubSettings field acts as the org-wide opt-in for automatic invoice generation?",
+    "options": [
+      "EnableInvoiceGenerationDateTime__c",
+      "InvoiceEnabledCheckbox__c",
+      "BillingFrequencyPk__c",
+      "LastInvoiceGenerationDate__c"
+    ],
+    "correct": 0,
+    "explanation": "DeliveryInvoiceGenerationService.shouldRunToday checks EnableInvoiceGenerationDateTime__c != null. Per DH rules there are no Boolean fields — the DateTime stamp doubles as the opt-in flag and the activation timestamp."
+  },
+  {
+    "q": "A vendor has BillingFrequencyPk__c=Monthly. On what day of the month will DH's scheduled job generate their invoice?",
+    "options": [
+      "The day they were onboarded",
+      "The 1st of the month",
+      "The 15th of the month",
+      "Every day of the month"
+    ],
+    "correct": 1,
+    "explanation": "shouldGenerateForEntity returns true for Monthly only when Date.today().day() == 1. Quarterly additionally requires the month to be Jan/Apr/Jul/Oct."
+  },
+  {
+    "q": "Which WorkLog status counts as 'invoiceable hours' for the period check in hasApprovedHoursInPeriod?",
+    "options": [
+      "Only Approved",
+      "Approved or null",
+      "Any status except Rejected",
+      "Approved or Pending"
+    ],
+    "correct": 1,
+    "explanation": "hasApprovedHoursInPeriod queries StatusPk__c = 'Approved' OR StatusPk__c = null. Logs that have never been touched (null status) count alongside explicitly Approved ones. Rejected and Draft do not."
+  },
+  {
+    "q": "After a successful sweep, which field on DeliveryHubSettings prevents the job from running again on the same day?",
+    "options": [
+      "EnableInvoiceGenerationDateTime__c",
+      "InvoiceDueDateOffsetDays__c",
+      "LastInvoiceGenerationDate__c",
+      "BillingFrequencyPk__c"
+    ],
+    "correct": 2,
+    "explanation": "The service stamps settings.LastInvoiceGenerationDate__c = Date.today() at the end of generateScheduledDocuments, and shouldRunToday returns false when that field already equals today."
+  },
+  {
+    "q": "An On_Demand frequency vendor needs an invoice now. What is the right way to ship it?",
+    "options": [
+      "Wait for the next scheduled sweep",
+      "Set BillingFrequencyPk__c to Monthly temporarily",
+      "Use the manual invoice quick action on the vendor's record page",
+      "Clear LastInvoiceGenerationDate__c to force a re-run"
+    ],
+    "correct": 2,
+    "explanation": "The scheduled job explicitly skips On_Demand entities (continue on the frequency check). On_Demand exists precisely so you control timing through the manual quick action, not the sweep."
+  }
+]</value></values>
+</CustomMetadata>

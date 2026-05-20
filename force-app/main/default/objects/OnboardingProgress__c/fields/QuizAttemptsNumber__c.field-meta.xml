@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>QuizAttemptsNumber__c</fullName>
+    <description>Count of quiz submission attempts on this track. Incremented by the controller on every submitQuiz call regardless of pass/fail.</description>
+    <externalId>false</externalId>
+    <label>Quiz Attempts</label>
+    <precision>3</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

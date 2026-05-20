@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LessonUrl__c</fullName>
+    <description>Optional external video or doc URL surfaced as a "Watch / Read" link on the lesson card. Url field carries the type in its name per docs/FIELD_NAMING.md — no Txt suffix.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Lesson URL</label>
+    <type>Url</type>
+</CustomField>

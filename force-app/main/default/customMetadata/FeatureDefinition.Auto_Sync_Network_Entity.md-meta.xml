@@ -11,4 +11,5 @@
     <values><field>IconNameTxt__c</field><value xsi:type="xsd:string">standard:connected_apps</value></values>
     <values><field>SortOrderNumber__c</field><value xsi:type="xsd:double">60</value></values>
     <values><field>DocsUrl__c</field><value xsi:nil="true"/></values>
+    <values><field>RequiresOnboardingTrackTxt__c</field><value xsi:nil="true"/></values>
 </CustomMetadata>
