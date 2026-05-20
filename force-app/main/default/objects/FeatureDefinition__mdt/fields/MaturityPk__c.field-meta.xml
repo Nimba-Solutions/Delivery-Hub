@@ -8,6 +8,28 @@
     <type>Picklist</type>
     <valueSet>
         <restricted>true</restricted>
-        <valueSetName>FeatureMaturity</valueSetName>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Alpha</fullName>
+                <default>false</default>
+                <label>Alpha</label>
+            </value>
+            <value>
+                <fullName>Beta</fullName>
+                <default>true</default>
+                <label>Beta</label>
+            </value>
+            <value>
+                <fullName>GA</fullName>
+                <default>false</default>
+                <label>GA</label>
+            </value>
+            <value>
+                <fullName>Deprecated</fullName>
+                <default>false</default>
+                <label>Deprecated</label>
+            </value>
+        </valueSetDefinition>
     </valueSet>
 </CustomField>
