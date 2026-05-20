@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>FeatureLookup__c</fullName>
+    <description>The Feature__c this approval row gates. For single-step (PR 7) this mirrors the request's feature; for multi-step cascading approvals (PR 8) each row in the chain can target a distinct dependency node.</description>
+    <inlineHelpText>The feature this approval row gates. Usually the request's own feature.</inlineHelpText>
+    <deleteConstraint>Restrict</deleteConstraint>
+    <externalId>false</externalId>
+    <label>Feature</label>
+    <referenceTo>Feature__c</referenceTo>
+    <relationshipLabel>Approval Rows</relationshipLabel>
+    <relationshipName>ApprovalRows</relationshipName>
+    <required>true</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

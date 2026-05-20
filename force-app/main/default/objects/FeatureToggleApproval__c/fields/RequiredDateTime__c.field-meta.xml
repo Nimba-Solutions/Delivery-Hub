@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RequiredDateTime__c</fullName>
+    <description>DateTime stamp marking this approval row as required (per DH no-booleans rule). Populated = the row blocks apply until decided. Null = the row is informational / auto-satisfied. Pattern mirrors the EnabledDateTime__c convention from FIELD_NAMING.md.</description>
+    <inlineHelpText>Set this when this approval row must be decided before applying the toggle. Leave blank for informational rows.</inlineHelpText>
+    <label>Required</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

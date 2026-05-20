@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GlobalValueSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Action requested by a FeatureToggleRequest__c. Enable turns a Feature__c on (sets EnabledDateTime__c, clears DisabledDateTime__c). Disable turns it off (sets DisabledDateTime__c).</description>
+    <masterLabel>Feature Toggle Action</masterLabel>
+    <sorted>false</sorted>
+    <customValue>
+        <fullName>Enable</fullName>
+        <default>true</default>
+        <label>Enable</label>
+    </customValue>
+    <customValue>
+        <fullName>Disable</fullName>
+        <default>false</default>
+        <label>Disable</label>
+    </customValue>
+</GlobalValueSet>

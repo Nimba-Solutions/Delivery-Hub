@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GlobalValueSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Lifecycle status of a FeatureToggleRequest__c. Draft = unsubmitted. Pending = awaiting approvals. Granted = all approvals received, ready to apply. Rejected = an approver said no. Applied = the Feature__c flip has been persisted. RolledBack = a previously-Applied request was reversed.</description>
+    <masterLabel>Feature Toggle Status</masterLabel>
+    <sorted>false</sorted>
+    <customValue>
+        <fullName>Draft</fullName>
+        <default>true</default>
+        <label>Draft</label>
+    </customValue>
+    <customValue>
+        <fullName>Pending</fullName>
+        <default>false</default>
+        <label>Pending</label>
+    </customValue>
+    <customValue>
+        <fullName>Granted</fullName>
+        <default>false</default>
+        <label>Granted</label>
+    </customValue>
+    <customValue>
+        <fullName>Rejected</fullName>
+        <default>false</default>
+        <label>Rejected</label>
+    </customValue>
+    <customValue>
+        <fullName>Applied</fullName>
+        <default>false</default>
+        <label>Applied</label>
+    </customValue>
+    <customValue>
+        <fullName>RolledBack</fullName>
+        <default>false</default>
+        <label>Rolled Back</label>
+    </customValue>
+</GlobalValueSet>

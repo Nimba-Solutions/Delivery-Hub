@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RequestLookup__c</fullName>
+    <description>The FeatureToggleRequest__c this approval row participates in. Restrict-delete to preserve the audit trail.</description>
+    <inlineHelpText>The toggle request this approval row belongs to.</inlineHelpText>
+    <deleteConstraint>Restrict</deleteConstraint>
+    <externalId>false</externalId>
+    <label>Request</label>
+    <referenceTo>FeatureToggleRequest__c</referenceTo>
+    <relationshipLabel>Approvals</relationshipLabel>
+    <relationshipName>Approvals</relationshipName>
+    <required>true</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>
