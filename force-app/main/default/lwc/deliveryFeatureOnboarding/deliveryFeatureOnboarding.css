@@ -1,0 +1,17 @@
+.lesson-body {
+    background: var(--lwc-colorBackgroundAlt, #fafaf9);
+    min-height: 6rem;
+    max-height: 24rem;
+    overflow-y: auto;
+}
+
+.lesson-markdown {
+    font-family: inherit;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+}
+
+.slds-no-flex {
+    flex: 0 0 auto;
+}

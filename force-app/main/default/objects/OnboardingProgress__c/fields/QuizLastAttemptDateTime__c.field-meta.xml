@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>QuizLastAttemptDateTime__c</fullName>
+    <description>Timestamp of the most recent submitQuiz call. Useful for audit and for retry-throttle logic in PR 4+.</description>
+    <externalId>false</externalId>
+    <label>Quiz Last Attempt</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

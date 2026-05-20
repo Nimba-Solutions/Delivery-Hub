@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WalkthroughCompletedDateTime__c</fullName>
+    <description>Timestamp the live walkthrough actually happened. Stamped by an admin or the scheduling integration; required for track completion when the parent track demands a walkthrough.</description>
+    <externalId>false</externalId>
+    <label>Walkthrough Completed</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

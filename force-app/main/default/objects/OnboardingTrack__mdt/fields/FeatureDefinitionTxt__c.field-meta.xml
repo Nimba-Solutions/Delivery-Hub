@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>FeatureDefinitionTxt__c</fullName>
+    <description>DeveloperName of the gated FeatureDefinition__mdt this track unlocks. Indexed for fast joins from the feature record page to its onboarding track.</description>
+    <externalId>true</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Feature Definition</label>
+    <length>80</length>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
