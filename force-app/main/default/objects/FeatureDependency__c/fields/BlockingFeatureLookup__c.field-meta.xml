@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>BlockingFeatureLookup__c</fullName>
+    <description>Lookup to the Feature__c that blocks (must be enabled first if the other feature is to be enabled).</description>
+    <inlineHelpText>The feature that must be enabled first. The blocked feature cannot be turned on until this one is.</inlineHelpText>
+    <deleteConstraint>Restrict</deleteConstraint>
+    <externalId>false</externalId>
+    <label>Blocking Feature</label>
+    <referenceTo>Feature__c</referenceTo>
+    <relationshipLabel>Feature Dependencies (Blocking)</relationshipLabel>
+    <relationshipName>BlockingDeps</relationshipName>
+    <required>true</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

@@ -20,6 +20,10 @@ export default class DeliveryFeatureCockpit extends LightningElement {
     @track errorMessage = '';
     @track isLoaded = false;
 
+    @track isCascadeModalOpen = false;
+    @track cascadeFeatureId = null;
+    @track cascadeFeatureLabel = '';
+
     wiredResult;
 
     @wire(getCatalog)
@@ -41,6 +45,8 @@ export default class DeliveryFeatureCockpit extends LightningElement {
                     maturity: f.maturity || '',
                     icon: f.icon || 'standard:default',
                     isActive: f.isActive === true,
+                    featureId: f.featureId || null,
+                    hasFeatureId: !!f.featureId,
                     settingsFieldApiName: f.settingsFieldApiName || '',
                     docsUrl: f.docsUrl || '',
                     hasDocsUrl: !!f.docsUrl,
@@ -82,5 +88,29 @@ export default class DeliveryFeatureCockpit extends LightningElement {
         if (this.wiredResult) {
             refreshApex(this.wiredResult);
         }
+    }
+
+    get cascadeModalTitle() {
+        if (this.cascadeFeatureLabel) {
+            return `Dependencies for ${this.cascadeFeatureLabel}`;
+        }
+        return 'Feature Dependencies';
+    }
+
+    handleShowDependencies(event) {
+        const featureId = event.currentTarget.dataset.featureId,
+            featureLabel = event.currentTarget.dataset.featureLabel;
+        if (!featureId) {
+            return;
+        }
+        this.cascadeFeatureId = featureId;
+        this.cascadeFeatureLabel = featureLabel || '';
+        this.isCascadeModalOpen = true;
+    }
+
+    handleCloseCascadeModal() {
+        this.isCascadeModalOpen = false;
+        this.cascadeFeatureId = null;
+        this.cascadeFeatureLabel = '';
     }
 }
