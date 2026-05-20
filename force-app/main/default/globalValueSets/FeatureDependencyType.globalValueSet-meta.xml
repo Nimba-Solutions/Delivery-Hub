@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GlobalValueSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Strength of a FeatureDependency__c relationship. Hard = must be honored (PR 6 enforcement target). Soft = strong recommendation. Optional = informational.</description>
+    <masterLabel>Feature Dependency Type</masterLabel>
+    <sorted>false</sorted>
+    <customValue>
+        <fullName>Hard</fullName>
+        <default>true</default>
+        <label>Hard</label>
+    </customValue>
+    <customValue>
+        <fullName>Soft</fullName>
+        <default>false</default>
+        <label>Soft</label>
+    </customValue>
+    <customValue>
+        <fullName>Optional</fullName>
+        <default>false</default>
+        <label>Optional</label>
+    </customValue>
+</GlobalValueSet>

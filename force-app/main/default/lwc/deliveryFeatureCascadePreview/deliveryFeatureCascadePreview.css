@@ -1,0 +1,8 @@
+.cascade-preview {
+    min-height: 6rem;
+}
+
+.cascade-tree {
+    max-height: 24rem;
+    overflow-y: auto;
+}

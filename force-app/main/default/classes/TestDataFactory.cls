@@ -444,6 +444,40 @@ public class TestDataFactory {
     }
 
     // ────────────────────────────────────────────────────────────────────
+    // FeatureDependency__c — junction object between Feature__c records.
+    // BlockingFeatureLookup__c and BlockedFeatureLookup__c are required
+    // Lookups (deleteConstraint=Restrict). TypePk + CascadeDirectionPk are
+    // restricted GVS-backed picklists; defaults below are allowlist-safe.
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Build (no DML) a FeatureDependency__c. Both feature lookups
+     *              required. Defaults: TypePk='Hard', CascadeDirection='Both'.
+     */
+    public static FeatureDependency__c buildFeatureDependency(Id blockingId, Id blockedId, Map<String, Object> overrides) {
+        FeatureDependency__c dep = new FeatureDependency__c(
+            BlockingFeatureLookup__c = blockingId,
+            BlockedFeatureLookup__c = blockedId,
+            TypePk__c = 'Hard',
+            CascadeDirectionPk__c = 'Both'
+        );
+        applyOverrides(dep, overrides);
+        return dep;
+    }
+
+    /** @description Build + insert a FeatureDependency__c with safe defaults. */
+    public static FeatureDependency__c newFeatureDependency(Id blockingId, Id blockedId) {
+        return createFeatureDependency(blockingId, blockedId, null);
+    }
+
+    /** @description Build + insert a FeatureDependency__c with overrides. */
+    public static FeatureDependency__c createFeatureDependency(Id blockingId, Id blockedId, Map<String, Object> overrides) {
+        FeatureDependency__c dep = buildFeatureDependency(blockingId, blockedId, overrides);
+        insert dep;
+        return dep;
+    }
+
+    // ────────────────────────────────────────────────────────────────────
     // INTERNAL — apply Map<String,Object> overrides onto an SObject.
     // Skips null map. Generic enough to handle any field type the caller
     // throws at it (Decimal, Date, Datetime, Id, String, Boolean).
