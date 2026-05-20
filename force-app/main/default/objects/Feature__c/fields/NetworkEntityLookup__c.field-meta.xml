@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>NetworkEntityLookup__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Optional NetworkEntity__c scope when a feature is enabled per-tenant-peer instead of globally for the org. Null = org-wide.</description>
+    <label>Network Entity</label>
+    <referenceTo>NetworkEntity__c</referenceTo>
+    <relationshipLabel>Features</relationshipLabel>
+    <relationshipName>Features</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

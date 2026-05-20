@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Feature</label>
+    <description>Per-tenant runtime state for a Delivery Hub feature. Each record reflects whether the subscriber org has enabled the matching FeatureDefinition__mdt (which is the package-shipped catalog entry). Layer 4 of the cockpit architecture — PR 1 is read-only scaffold; PR 2 wires bidirectional sync with DeliveryHubSettings__c Enable*DateTime__c fields.</description>
+    <pluralLabel>Features</pluralLabel>
+    <nameField>
+        <label>Feature Name</label>
+        <type>Text</type>
+    </nameField>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <enableReports>true</enableReports>
+    <sharingModel>ReadWrite</sharingModel>
+</CustomObject>

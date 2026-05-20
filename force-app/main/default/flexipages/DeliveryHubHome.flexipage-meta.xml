@@ -33,6 +33,12 @@
                 <identifier>c_deliveryExecutiveDashboard</identifier>
             </componentInstance>
         </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryFeatureCockpit</componentName>
+                <identifier>c_deliveryFeatureCockpit_home</identifier>
+            </componentInstance>
+        </itemInstances>
         <name>top</name>
         <type>Region</type>
     </flexiPageRegions>

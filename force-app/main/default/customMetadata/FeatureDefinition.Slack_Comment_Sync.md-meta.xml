@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Slack Comment Sync</label>
+    <protected>false</protected>
+    <values><field>LabelTxt__c</field><value xsi:type="xsd:string">Slack Comment Sync</value></values>
+    <values><field>DescriptionTxt__c</field><value xsi:type="xsd:string">Bidirectional sync of WorkItem comments between Salesforce and the configured Slack channel via the Slack Events API.</value></values>
+    <values><field>CategoryPk__c</field><value xsi:type="xsd:string">Integrations</value></values>
+    <values><field>MaturityPk__c</field><value xsi:type="xsd:string">Beta</value></values>
+    <values><field>DefaultEnabledDateTime__c</field><value xsi:nil="true"/></values>
+    <values><field>SettingsFieldApiNameTxt__c</field><value xsi:type="xsd:string">EnableSlackCommentSyncDateTime__c</value></values>
+    <values><field>IconNameTxt__c</field><value xsi:type="xsd:string">standard:service_appointment</value></values>
+    <values><field>SortOrderNumber__c</field><value xsi:type="xsd:double">40</value></values>
+    <values><field>DocsUrl__c</field><value xsi:nil="true"/></values>
+</CustomMetadata>
