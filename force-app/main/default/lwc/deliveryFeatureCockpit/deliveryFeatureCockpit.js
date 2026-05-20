@@ -28,6 +28,10 @@ export default class DeliveryFeatureCockpit extends LightningElement {
     @track isLoaded = false;
     @track isAdminUser = false;
 
+    @track isCascadeModalOpen = false;
+    @track cascadeFeatureId = null;
+    @track cascadeFeatureLabel = '';
+
     wiredResult;
 
     @wire(isAdminApex)
@@ -61,6 +65,7 @@ export default class DeliveryFeatureCockpit extends LightningElement {
                     maturity: f.maturity || '',
                     icon: f.icon || 'standard:default',
                     isActive,
+                    hasFeatureId,
                     settingsFieldApiName: f.settingsFieldApiName || '',
                     docsUrl: f.docsUrl || '',
                     hasDocsUrl: !!f.docsUrl,
@@ -142,5 +147,29 @@ export default class DeliveryFeatureCockpit extends LightningElement {
                     variant: 'error'
                 }));
             });
+    }
+
+    get cascadeModalTitle() {
+        if (this.cascadeFeatureLabel) {
+            return `Dependencies for ${this.cascadeFeatureLabel}`;
+        }
+        return 'Feature Dependencies';
+    }
+
+    handleShowDependencies(event) {
+        const featureId = event.currentTarget.dataset.featureId,
+            featureLabel = event.currentTarget.dataset.featureLabel;
+        if (!featureId) {
+            return;
+        }
+        this.cascadeFeatureId = featureId;
+        this.cascadeFeatureLabel = featureLabel || '';
+        this.isCascadeModalOpen = true;
+    }
+
+    handleCloseCascadeModal() {
+        this.isCascadeModalOpen = false;
+        this.cascadeFeatureId = null;
+        this.cascadeFeatureLabel = '';
     }
 }
