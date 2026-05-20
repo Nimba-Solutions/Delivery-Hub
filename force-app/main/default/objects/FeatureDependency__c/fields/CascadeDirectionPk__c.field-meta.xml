@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>CascadeDirectionPk__c</fullName>
+    <description>Direction in which this dependency cascades. UpOnly = surfaces only when disabling the blocking feature. DownOnly = surfaces only when enabling the blocked feature. Both = surfaces in both flows.</description>
+    <inlineHelpText>UpOnly: visible on Disable cascade only. DownOnly: visible on Enable cascade only. Both: visible in both directions.</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Cascade Direction</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetName>FeatureCascadeDirection</valueSetName>
+    </valueSet>
+</CustomField>
