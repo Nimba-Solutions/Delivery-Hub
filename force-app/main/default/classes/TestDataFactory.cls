@@ -444,6 +444,36 @@ public class TestDataFactory {
     }
 
     // ────────────────────────────────────────────────────────────────────
+    // OnboardingProgress__c — runtime per-user per-track state (PR 3).
+    // No required Master-Detail; UserLookup__c defaults to the running user.
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Build (no DML) an OnboardingProgress__c with safe defaults.
+     *              TrackTxt__c is uniquified, UserLookup__c=running user,
+     *              StartedDateTime__c=now, QuizAttemptsNumber__c=0.
+     */
+    public static OnboardingProgress__c buildOnboardingProgress(Map<String, Object> overrides) {
+        String trackName = uniq('TDF_Track');
+        OnboardingProgress__c p = new OnboardingProgress__c(
+            Name = trackName + ' — TDF',
+            TrackTxt__c = trackName,
+            UserLookup__c = UserInfo.getUserId(),
+            StartedDateTime__c = Datetime.now(),
+            QuizAttemptsNumber__c = 0
+        );
+        applyOverrides(p, overrides);
+        return p;
+    }
+
+    /** @description Build + insert an OnboardingProgress__c. */
+    public static OnboardingProgress__c newOnboardingProgress(Map<String, Object> overrides) {
+        OnboardingProgress__c p = buildOnboardingProgress(overrides);
+        insert p;
+        return p;
+    }
+
+    // ────────────────────────────────────────────────────────────────────
     // INTERNAL — apply Map<String,Object> overrides onto an SObject.
     // Skips null map. Generic enough to handle any field type the caller
     // throws at it (Decimal, Date, Datetime, Id, String, Boolean).
