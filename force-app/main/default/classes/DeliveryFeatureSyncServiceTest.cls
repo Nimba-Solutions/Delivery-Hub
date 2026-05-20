@@ -57,11 +57,7 @@ private class DeliveryFeatureSyncServiceTest {
         DeliveryHubSettings__c refreshed = DeliveryHubSettings__c.getOrgDefaults();
         // Resolve the local key (namespace-safe).
         Map<String, Schema.SObjectField> settingsFields =
-            Schema.getGlobalDescribe()
-                .get('DeliveryHubSettings__c')
-                .getDescribe()
-                .fields
-                .getMap();
+            DeliveryHubSettings__c.SObjectType.getDescribe().fields.getMap();
         String targetLocal = def.SettingsFieldApiNameTxt__c.toLowerCase();
         String matchedKey;
         for (String k : settingsFields.keySet()) {
@@ -102,11 +98,7 @@ private class DeliveryFeatureSyncServiceTest {
             SetupOwnerId = UserInfo.getOrganizationId()
         );
         Map<String, Schema.SObjectField> settingsFields =
-            Schema.getGlobalDescribe()
-                .get('DeliveryHubSettings__c')
-                .getDescribe()
-                .fields
-                .getMap();
+            DeliveryHubSettings__c.SObjectType.getDescribe().fields.getMap();
         String targetLocal = def.SettingsFieldApiNameTxt__c.toLowerCase();
         String matchedKey;
         for (String k : settingsFields.keySet()) {
