@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LabelTxt__c</fullName>
+    <description>Display label for the onboarding track. Distinct from the record Label so we can show e.g. "Invoice Generation — Operator Onboarding" without renaming the DeveloperName.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Display Label</label>
+    <length>80</length>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

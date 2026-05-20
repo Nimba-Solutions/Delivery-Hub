@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>CompletedDateTime__c</fullName>
+    <description>Stamped when every required lesson, the quiz, and every required checklist item have been satisfied. Populated = track complete; null = still in progress. PR 4 reads this to decide whether to allow the gated feature toggle.</description>
+    <externalId>false</externalId>
+    <label>Completed</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

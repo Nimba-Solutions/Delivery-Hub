@@ -478,6 +478,107 @@ public class TestDataFactory {
     }
 
     // ────────────────────────────────────────────────────────────────────
+    // FeatureToggleRequest__c / FeatureToggleApproval__c — PR 7 approval
+    // framework. Request requires a Feature__c parent (Lookup, required).
+    // Approval requires both a request and feature parent (Lookups, required).
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Build (no DML) a FeatureToggleRequest__c with safe defaults.
+     *              ActionPk__c='Enable', StatusPk__c='Pending',
+     *              RequestedByUserLookup__c=running user,
+     *              RequestedDateTime__c=now. featureId required (Lookup).
+     * @param featureId Feature__c parent.
+     * @param overrides Optional field overrides.
+     * @return Unpersisted FeatureToggleRequest__c.
+     */
+    public static FeatureToggleRequest__c buildFeatureToggleRequest(Id featureId, Map<String, Object> overrides) {
+        FeatureToggleRequest__c req = new FeatureToggleRequest__c(
+            FeatureLookup__c = featureId,
+            ActionPk__c = 'Enable',
+            StatusPk__c = 'Pending',
+            RequestedByUserLookup__c = UserInfo.getUserId(),
+            RequestedDateTime__c = Datetime.now()
+        );
+        applyOverrides(req, overrides);
+        return req;
+    }
+
+    /**
+     * @description Build + insert a FeatureToggleRequest__c with safe defaults.
+     * @param featureId Feature__c parent.
+     * @return Inserted FeatureToggleRequest__c.
+     */
+    public static FeatureToggleRequest__c newFeatureToggleRequest(Id featureId) {
+        FeatureToggleRequest__c req = buildFeatureToggleRequest(featureId, null);
+        insert req;
+        return req;
+    }
+
+    /**
+     * @description Build (no DML) a FeatureToggleApproval__c with safe defaults.
+     *              StepNumber__c=1, StatusPk__c='Pending',
+     *              RequiredDateTime__c=now. Both parent ids required.
+     * @param requestId FeatureToggleRequest__c parent.
+     * @param featureId Feature__c referenced by the approval row.
+     * @param overrides Optional field overrides.
+     * @return Unpersisted FeatureToggleApproval__c.
+     */
+    public static FeatureToggleApproval__c buildFeatureToggleApproval(Id requestId, Id featureId, Map<String, Object> overrides) {
+        FeatureToggleApproval__c row = new FeatureToggleApproval__c(
+            RequestLookup__c = requestId,
+            FeatureLookup__c = featureId,
+            StepNumber__c = 1,
+            StatusPk__c = 'Pending',
+            RequiredDateTime__c = Datetime.now()
+        );
+        applyOverrides(row, overrides);
+        return row;
+    }
+
+    /**
+     * @description Build + insert a FeatureToggleApproval__c with safe defaults.
+     * @param requestId FeatureToggleRequest__c parent.
+     * @param featureId Feature__c referenced by the approval row.
+     * @return Inserted FeatureToggleApproval__c.
+     */
+    public static FeatureToggleApproval__c newFeatureToggleApproval(Id requestId, Id featureId) {
+        FeatureToggleApproval__c row = buildFeatureToggleApproval(requestId, featureId, null);
+        insert row;
+        return row;
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // OnboardingProgress__c — runtime per-user per-track state (PR 3).
+    // No required Master-Detail; UserLookup__c defaults to the running user.
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Build (no DML) an OnboardingProgress__c with safe defaults.
+     *              TrackTxt__c is uniquified, UserLookup__c=running user,
+     *              StartedDateTime__c=now, QuizAttemptsNumber__c=0.
+     */
+    public static OnboardingProgress__c buildOnboardingProgress(Map<String, Object> overrides) {
+        String trackName = uniq('TDF_Track');
+        OnboardingProgress__c p = new OnboardingProgress__c(
+            Name = trackName + ' — TDF',
+            TrackTxt__c = trackName,
+            UserLookup__c = UserInfo.getUserId(),
+            StartedDateTime__c = Datetime.now(),
+            QuizAttemptsNumber__c = 0
+        );
+        applyOverrides(p, overrides);
+        return p;
+    }
+
+    /** @description Build + insert an OnboardingProgress__c. */
+    public static OnboardingProgress__c newOnboardingProgress(Map<String, Object> overrides) {
+        OnboardingProgress__c p = buildOnboardingProgress(overrides);
+        insert p;
+        return p;
+    }
+
+    // ────────────────────────────────────────────────────────────────────
     // INTERNAL — apply Map<String,Object> overrides onto an SObject.
     // Skips null map. Generic enough to handle any field type the caller
     // throws at it (Decimal, Date, Datetime, Id, String, Boolean).

@@ -14,7 +14,7 @@
  *               used as return/param types must also be global`).
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation,PMD.AvoidGlobalModifier')
+@SuppressWarnings('PMD.ApexCRUDViolation,PMD.AvoidGlobalModifier,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity')
 global with sharing class DeliveryFeatureCatalogController {
 
     /**
@@ -107,5 +107,177 @@ global with sharing class DeliveryFeatureCatalogController {
             throw new AuraHandledException('Unable to load feature catalog.');
         }
         return cards;
+    }
+
+    /**
+     * @description Gated toggle for a single Feature__c. Admins can always flip.
+     *              Non-admins can flip ONLY when (a) the matching
+     *              FeatureDefinition__mdt has no RequiresOnboardingTrackTxt__c
+     *              set, OR (b) the requested operation is a disable, OR (c) the
+     *              user has finished the onboarding track for that feature. Sets
+     *              the enable/disable DateTime stamps + LastToggledBy lookup; the
+     *              trigger handler takes care of the settings-mirror + audit-row
+     *              cascade.
+     *
+     *              Disable is intentionally NOT gated on track completion — a
+     *              non-admin who can't enable a feature can still undo their
+     *              own enable. Matches the standard "you can undo your own
+     *              work but you can't unilaterally start it" pattern.
+     * @param featureId  The Feature__c row whose toggle should flip.
+     * @param enable     True to enable (sets Enabled, clears Disabled).
+     *                   False to disable (sets Disabled, leaves Enabled
+     *                   in place so the historical activation stamp is
+     *                   preserved; ActiveSinceDateTime__c formula is
+     *                   re-evaluated by the platform).
+     */
+    @AuraEnabled
+    global static void toggleFeature(Id featureId, Boolean enable) {
+        if (featureId == null) {
+            throw new AuraHandledException('featureId is required.');
+        }
+        Feature__c f = loadFeatureOrThrow(featureId);
+        assertCanToggle(f, enable == true);
+        applyToggleFields(f, enable == true);
+        persistToggle(f);
+    }
+
+    /**
+     * @description Throws AuraHandledException when the running user is not
+     *              allowed to perform the requested toggle. Admins always
+     *              pass. Non-admins pass on disable. Non-admins on enable
+     *              pass only when the linked onboarding track is complete
+     *              (or no track is required).
+     * @param f The feature row about to be toggled.
+     * @param enable True if the requested operation is enable; false for disable.
+     */
+    private static void assertCanToggle(Feature__c f, Boolean enable) {
+        if (isAdmin()) {
+            return;
+        }
+        if (!enable) {
+            // Non-admin disable is allowed — undoing a previously enabled
+            // feature does not require completing the onboarding track.
+            return;
+        }
+        FeatureDefinition__mdt def = resolveDefinitionFor(f);
+        String trackName = def == null ? null : def.RequiresOnboardingTrackTxt__c;
+        if (String.isBlank(trackName)) {
+            // No track required at the definition level — non-admins are
+            // allowed (admin-only gating already passed above). PR 5+ can
+            // tighten this further if business policy demands it.
+            return;
+        }
+        Boolean done = DeliveryOnboardingService.isTrackComplete(trackName, UserInfo.getUserId());
+        if (!done) {
+            String trackLabel = resolveTrackLabelFor(trackName);
+            throw new AuraHandledException(
+                'Complete the ' + trackLabel + ' onboarding track before enabling this feature.');
+        }
+    }
+
+    /**
+     * @description Returns the FeatureDefinition__mdt that the given
+     *              Feature__c maps to via FeatureDefinitionTxt__c, or null
+     *              when no mapping exists.
+     * @param f Feature__c row whose definition should be resolved.
+     * @return Matching FeatureDefinition__mdt row, or null when none matches.
+     */
+    private static FeatureDefinition__mdt resolveDefinitionFor(Feature__c f) {
+        if (f == null || String.isBlank(f.FeatureDefinitionTxt__c)) {
+            return null;
+        }
+        List<FeatureDefinition__mdt> defs = [
+            SELECT DeveloperName, RequiresOnboardingTrackTxt__c
+            FROM FeatureDefinition__mdt
+            WHERE DeveloperName = :f.FeatureDefinitionTxt__c
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        return defs.isEmpty() ? null : defs.get(0);
+    }
+
+    /**
+     * @description Returns the human label for the named OnboardingTrack__mdt.
+     *              Falls back to the DeveloperName when LabelTxt__c is blank
+     *              or the row is missing.
+     * @param trackDeveloperName DeveloperName of the OnboardingTrack__mdt.
+     * @return Human label (LabelTxt__c) when available, otherwise the
+     *         DeveloperName itself.
+     */
+    private static String resolveTrackLabelFor(String trackDeveloperName) {
+        if (String.isBlank(trackDeveloperName)) {
+            return '';
+        }
+        List<OnboardingTrack__mdt> tracks = [
+            SELECT DeveloperName, LabelTxt__c
+            FROM OnboardingTrack__mdt
+            WHERE DeveloperName = :trackDeveloperName
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (tracks.isEmpty()) {
+            return trackDeveloperName;
+        }
+        return String.isBlank(tracks.get(0).LabelTxt__c) ? trackDeveloperName : tracks.get(0).LabelTxt__c;
+    }
+
+    private static Feature__c loadFeatureOrThrow(Id featureId) {
+        List<Feature__c> existing = [
+            SELECT Id, FeatureDefinitionTxt__c,
+                   EnabledDateTime__c, DisabledDateTime__c, LastToggledByUserLookup__c
+            FROM Feature__c
+            WHERE Id = :featureId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (existing.isEmpty()) {
+            throw new AuraHandledException('Feature not found.');
+        }
+        return existing.get(0);
+    }
+
+    private static void applyToggleFields(Feature__c f, Boolean enable) {
+        DateTime now = DateTime.now();
+        if (enable) {
+            f.EnabledDateTime__c = now;
+            f.DisabledDateTime__c = null;
+        } else {
+            f.DisabledDateTime__c = now;
+        }
+        f.LastToggledByUserLookup__c = UserInfo.getUserId();
+    }
+
+    private static void persistToggle(Feature__c f) {
+        try {
+            update f;
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryFeatureCatalogController.toggleFeature] update failed: '
+                + e.getMessage());
+            throw new AuraHandledException('Unable to update the feature.');
+        }
+    }
+
+    /**
+     * @description Whether the calling user is a Delivery Hub admin (i.e.
+     *              has the DeliveryHubAdmin PermissionSetGroup). Used by
+     *              the cockpit LWC to gate visibility of the Enable /
+     *              Disable buttons. PSG DeveloperName is namespace-
+     *              prefixed (`delivery__DeliveryHubAdmin`) on subscriber
+     *              installs and bare (`DeliveryHubAdmin`) in dev — accept
+     *              both (same pattern as
+     *              DeliveryHubDashboardController.isAdminUser).
+     * @return True when the current user has DeliveryHubAdmin PSG.
+     */
+    @AuraEnabled(cacheable=true)
+    global static Boolean isAdmin() {
+        return ![
+            SELECT Id FROM PermissionSetAssignment
+            WHERE AssigneeId = :UserInfo.getUserId()
+              AND PermissionSetGroup.DeveloperName IN
+                  ('DeliveryHubAdmin', 'delivery__DeliveryHubAdmin')
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ].isEmpty();
     }
 }

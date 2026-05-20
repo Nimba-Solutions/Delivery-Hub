@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Configuring your billing portal</label>
+    <protected>false</protected>
+    <values><field>TrackTxt__c</field><value xsi:type="xsd:string">Invoice_Generation_Track</value></values>
+    <values><field>SortOrderNumber__c</field><value xsi:type="xsd:double">20</value></values>
+    <values><field>LabelTxt__c</field><value xsi:type="xsd:string">Configuring your billing portal</value></values>
+    <values><field>BodyMarkdownTxt__c</field><value xsi:type="xsd:string"># Configuring your billing portal
+
+Each NetworkEntity__c that you want DH to invoice needs three things:
+
+1. **EnableBillingDateTime__c populated.** This is the opt-in flag. Setting it to NOW says "DH may invoice this vendor". Clearing it (null) suspends invoicing without touching the relationship.
+2. **BillingFrequencyPk__c set.** Allowed values: Daily, Weekly, Monthly, Quarterly, On_Demand. The default is Monthly. Daily generates a Daily_Hours_Summary document instead of a full Invoice — useful for hourly contractors that need running tallies.
+3. **BillingPortalUrl__c set (optional).** If you ship invoices to an external portal (Stripe, Bill.com, Lockstep, your own customer portal), put the per-vendor target URL here. DH writes the generated DeliveryDocument__c with this URL so downstream automation can route the invoice payload to the right place. Leave it blank if you only need DH-internal invoices.
+
+Two additional knobs sit on DeliveryHubSettings__c:
+
+- **InvoiceDueDateOffsetDays__c**: how many days past the invoice date the DueDateDate__c on the generated DeliveryDocument__c lands. Default 30.
+- **EnableStripePaymentsDateTime__c**: when populated, DH attaches a Stripe payment link to the invoice before it ships.
+
+If you want to invoice a vendor manually instead of on a schedule, set BillingFrequencyPk to On_Demand and use the "Generate Invoice" quick action on the NetworkEntity record page.</value></values>
+    <values><field>LessonUrl__c</field><value xsi:nil="true"/></values>
+    <values><field>EstimatedDurationMinutesNumber__c</field><value xsi:type="xsd:double">8</value></values>
+</CustomMetadata>

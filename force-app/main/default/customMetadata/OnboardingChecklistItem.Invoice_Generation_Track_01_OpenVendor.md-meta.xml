@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Open a vendor with a billing portal URL</label>
+    <protected>false</protected>
+    <values><field>TrackTxt__c</field><value xsi:type="xsd:string">Invoice_Generation_Track</value></values>
+    <values><field>SortOrderNumber__c</field><value xsi:type="xsd:double">10</value></values>
+    <values><field>LabelTxt__c</field><value xsi:type="xsd:string">Open a vendor with a billing portal URL</value></values>
+    <values><field>DescriptionTxt__c</field><value xsi:type="xsd:string">Open any NetworkEntity__c whose BillingPortalUrl__c is populated. If none exist yet, pick a vendor you intend to invoice and fill that field in. This confirms you can find a vendor record and know where its invoices are headed.</value></values>
+    <values><field>VerificationMethodPk__c</field><value xsi:type="xsd:string">Manual</value></values>
+    <values><field>VerificationQueryTxt__c</field><value xsi:nil="true"/></values>
+    <values><field>RequiredDateTime__c</field><value xsi:type="xsd:dateTime">2020-01-01T00:00:00.000Z</value></values>
+</CustomMetadata>

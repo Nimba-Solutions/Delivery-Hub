@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PassThresholdNumber__c</fullName>
+    <description>Minimum correct-answer count for a passing quiz attempt (e.g. 4 of 5). The controller compares the submitted score against this threshold.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Pass Threshold</label>
+    <precision>2</precision>
+    <scale>0</scale>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

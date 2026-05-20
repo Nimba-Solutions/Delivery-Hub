@@ -11,4 +11,5 @@
     <values><field>IconNameTxt__c</field><value xsi:type="xsd:string">standard:einstein</value></values>
     <values><field>SortOrderNumber__c</field><value xsi:type="xsd:double">50</value></values>
     <values><field>DocsUrl__c</field><value xsi:nil="true"/></values>
+    <values><field>RequiresOnboardingTrackTxt__c</field><value xsi:nil="true"/></values>
 </CustomMetadata>

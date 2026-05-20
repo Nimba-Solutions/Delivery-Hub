@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RequestedByUserLookup__c</fullName>
+    <description>The User who submitted this request. Falls to null if that user is later deleted, preserving the request row.</description>
+    <inlineHelpText>The user who submitted this toggle request.</inlineHelpText>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <externalId>false</externalId>
+    <label>Requested By</label>
+    <referenceTo>User</referenceTo>
+    <relationshipLabel>Feature Toggle Requests (Requested By)</relationshipLabel>
+    <relationshipName>FeatureToggleRequests_RequestedBy</relationshipName>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

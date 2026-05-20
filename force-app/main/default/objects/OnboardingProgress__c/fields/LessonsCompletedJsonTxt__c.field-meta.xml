@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LessonsCompletedJsonTxt__c</fullName>
+    <description>JSON array of completed lessons, each entry shaped as { "lesson": "DeveloperName", "completedAt": "ISO-8601 timestamp" }. Append-only; ordering preserves the path the user actually took through the track.</description>
+    <externalId>false</externalId>
+    <label>Lessons Completed (JSON)</label>
+    <length>32768</length>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>6</visibleLines>
+</CustomField>

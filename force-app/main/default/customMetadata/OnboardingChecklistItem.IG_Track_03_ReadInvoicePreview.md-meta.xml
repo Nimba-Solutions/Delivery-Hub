@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Read the invoice preview successfully</label>
+    <protected>false</protected>
+    <values><field>TrackTxt__c</field><value xsi:type="xsd:string">Invoice_Generation_Track</value></values>
+    <values><field>SortOrderNumber__c</field><value xsi:type="xsd:double">30</value></values>
+    <values><field>LabelTxt__c</field><value xsi:type="xsd:string">Read the invoice preview successfully</value></values>
+    <values><field>DescriptionTxt__c</field><value xsi:type="xsd:string">Open the vendor's most recent generated DeliveryDocument__c with TemplatePk__c = Invoice and confirm the line items roll up to the hours you expect. Informational — not required to complete the track.</value></values>
+    <values><field>VerificationMethodPk__c</field><value xsi:type="xsd:string">Manual</value></values>
+    <values><field>VerificationQueryTxt__c</field><value xsi:nil="true"/></values>
+    <values><field>RequiredDateTime__c</field><value xsi:nil="true"/></values>
+</CustomMetadata>
