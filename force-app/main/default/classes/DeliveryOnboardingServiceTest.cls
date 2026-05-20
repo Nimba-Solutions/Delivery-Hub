@@ -243,4 +243,63 @@ private class DeliveryOnboardingServiceTest {
         Test.stopTest();
         System.assertEquals(null, dto, 'Blank track name should return null progress');
     }
+
+    // ────────────────────────────────────────────────────────────────────
+    // PR 4 — isTrackComplete(trackName, userId) gate hook coverage
+    // ────────────────────────────────────────────────────────────────────
+
+    @IsTest
+    static void testIsTrackCompleteReturnsTrueForCompletedTrack() {
+        OnboardingProgress__c row = TestDataFactory.newOnboardingProgress(new Map<String, Object>{
+            'TrackTxt__c' => 'Done_Track',
+            'CompletedDateTime__c' => Datetime.now().addMinutes(-1)
+        });
+
+        Test.startTest();
+        Boolean done = DeliveryOnboardingService.isTrackComplete('Done_Track', row.UserLookup__c);
+        Test.stopTest();
+
+        System.assertEquals(true, done,
+            'isTrackComplete must return true when CompletedDateTime__c is populated.');
+    }
+
+    @IsTest
+    static void testIsTrackCompleteReturnsFalseForIncompleteTrack() {
+        OnboardingProgress__c row = TestDataFactory.newOnboardingProgress(new Map<String, Object>{
+            'TrackTxt__c' => 'In_Progress_Track',
+            'CompletedDateTime__c' => null
+        });
+
+        Test.startTest();
+        Boolean done = DeliveryOnboardingService.isTrackComplete('In_Progress_Track', row.UserLookup__c);
+        Test.stopTest();
+
+        System.assertEquals(false, done,
+            'isTrackComplete must return false when CompletedDateTime__c is null.');
+    }
+
+    @IsTest
+    static void testIsTrackCompleteReturnsTrueForBlankTrackName() {
+        Test.startTest();
+        Boolean blankNull = DeliveryOnboardingService.isTrackComplete(null, UserInfo.getUserId());
+        Boolean blankEmpty = DeliveryOnboardingService.isTrackComplete('', UserInfo.getUserId());
+        Test.stopTest();
+
+        System.assertEquals(true, blankNull,
+            'Null track name means "no gate required" — must return true.');
+        System.assertEquals(true, blankEmpty,
+            'Blank track name means "no gate required" — must return true.');
+    }
+
+    @IsTest
+    static void testIsTrackCompleteReturnsFalseForMissingProgress() {
+        // No OnboardingProgress__c row exists for this synthetic track + user.
+        Test.startTest();
+        Boolean done = DeliveryOnboardingService.isTrackComplete(
+            'Missing_Track_xyz', UserInfo.getUserId());
+        Test.stopTest();
+
+        System.assertEquals(false, done,
+            'Missing progress row must return false (user has not started the track).');
+    }
 }
