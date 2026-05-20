@@ -102,4 +102,5 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryStripePaymentHandlerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubHealthServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubRepairServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureCatalogControllerTest</testClassName>
 </ApexTestSuite>

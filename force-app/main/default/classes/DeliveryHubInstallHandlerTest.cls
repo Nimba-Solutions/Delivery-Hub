@@ -84,6 +84,37 @@ private class DeliveryHubInstallHandlerTest {
     }
 
     @IsTest
+    static void testInstallSeedsFeatureCatalog() {
+        System.runAs(testUser) {
+            Integer defCount = [SELECT COUNT() FROM FeatureDefinition__mdt];
+
+            Test.testInstall(new DeliveryHubInstallHandler(), null, false);
+
+            Integer seeded = [
+                SELECT COUNT() FROM Feature__c WHERE FeatureDefinitionTxt__c != null
+            ];
+            System.assertEquals(defCount, seeded,
+                'Install should seed one Feature__c per FeatureDefinition__mdt row');
+        }
+    }
+
+    @IsTest
+    static void testInstallFeatureSeedIsIdempotent() {
+        System.runAs(testUser) {
+            Test.testInstall(new DeliveryHubInstallHandler(), null, false);
+            Integer afterFirst = [
+                SELECT COUNT() FROM Feature__c WHERE FeatureDefinitionTxt__c != null
+            ];
+            Test.testInstall(new DeliveryHubInstallHandler(), null, false);
+            Integer afterSecond = [
+                SELECT COUNT() FROM Feature__c WHERE FeatureDefinitionTxt__c != null
+            ];
+            System.assertEquals(afterFirst, afterSecond,
+                'Re-running install should not duplicate seeded Feature__c rows');
+        }
+    }
+
+    @IsTest
     static void testInstallIsIdempotentOnRepeatedScheduling() {
         System.runAs(testUser) {
             Test.testInstall(new DeliveryHubInstallHandler(), null, false);
