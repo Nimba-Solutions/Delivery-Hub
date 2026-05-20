@@ -172,7 +172,11 @@ private class DeliveryFeatureCatalogControllerTest {
             TimeZoneSidKey = 'America/New_York',
             Username = 'feature-cockpit-test-' + DateTime.now().getTime() + '@example.invalid'
         );
-        insert u;
+        // User is a setup object; isolate its DML in System.runAs() so the
+        // subsequent Feature__c insert (non-setup) doesn't trip MIXED_DML.
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            insert u;
+        }
 
         Feature__c f = TestDataFactory.createFeature(new Map<String, Object>{
             'EnabledDateTime__c' => null
