@@ -6,6 +6,6 @@
     <fieldManageability>DeveloperControlled</fieldManageability>
     <label>Verification Query</label>
     <length>1300</length>
-    <type>Text</type>
-    <unique>false</unique>
+    <type>LongTextArea</type>
+    <visibleLines>3</visibleLines>
 </CustomField>
