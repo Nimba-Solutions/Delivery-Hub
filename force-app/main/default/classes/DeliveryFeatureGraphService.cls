@@ -65,7 +65,6 @@ global with sharing class DeliveryFeatureGraphService {
         }
         String resolvedAction = (action == ACTION_DISABLE) ? ACTION_DISABLE : ACTION_ENABLE;
 
-        // Load all dependency records upfront — single SOQL, no loops
         List<FeatureDependency__c> allDeps = [
             SELECT Id, BlockingFeatureLookup__c, BlockedFeatureLookup__c,
                    TypePk__c, CascadeDirectionPk__c
@@ -73,57 +72,91 @@ global with sharing class DeliveryFeatureGraphService {
             WITH SYSTEM_MODE
             LIMIT 2000
         ];
-
-        // Build a directional adjacency for the requested action
         Map<Id, List<FeatureDependency__c>> adjacency = buildDirectionalAdjacency(allDeps, resolvedAction);
 
-        // BFS walk, collecting per-feature edge info as we go
-        Set<Id> visited = new Set<Id>{ featureId };
+        BfsContext ctx = new BfsContext();
+        ctx.visited.add(featureId);
+        ctx.nodesById.put(featureId, newNode(featureId, 0, null));
+
+        runBfs(ctx, adjacency, resolvedAction, featureId);
+        hydrateNodes(ctx.visited, ctx.nodesById, ctx.edgeByChild, featureId);
+        attachChildren(ctx.nodesById, ctx.childrenByParent);
+        return ctx.nodesById.get(featureId);
+    }
+
+    /**
+     * @description Mutable state container threaded through the BFS helpers.
+     *              Keeps computeCascade's surface narrow + flat for cyclomatic budget.
+     */
+    private class BfsContext {
+        Set<Id> visited = new Set<Id>();
         Map<Id, FeatureGraphNodeDTO> nodesById = new Map<Id, FeatureGraphNodeDTO>();
         Map<Id, List<Id>> childrenByParent = new Map<Id, List<Id>>();
         Map<Id, FeatureDependency__c> edgeByChild = new Map<Id, FeatureDependency__c>();
+    }
 
-        FeatureGraphNodeDTO root = newNode(featureId, 0, null);
-        nodesById.put(featureId, root);
-
-        List<Id> currentLayer = new List<Id>{ featureId };
+    /**
+     * @description Drives the BFS layer-by-layer until depth cap or exhaustion.
+     * @param ctx Mutable BFS state.
+     * @param adjacency Directional adjacency map produced by buildDirectionalAdjacency.
+     * @param action 'Enable' or 'Disable'.
+     * @param rootId Starting feature id (logged on depth-cap hit).
+     */
+    private static void runBfs(
+        BfsContext ctx,
+        Map<Id, List<FeatureDependency__c>> adjacency,
+        String action,
+        Id rootId
+    ) {
+        List<Id> currentLayer = new List<Id>{ rootId };
         Integer depth = 0;
         while (!currentLayer.isEmpty() && depth < MAX_DEPTH) {
-            List<Id> nextLayer = new List<Id>();
-            for (Id parentId : currentLayer) {
-                List<FeatureDependency__c> edges = adjacency.get(parentId);
-                if (edges == null) {
-                    continue;
-                }
-                for (FeatureDependency__c dep : edges) {
-                    Id childId = childIdFor(dep, resolvedAction);
-                    if (childId == null || visited.contains(childId)) {
-                        continue;
-                    }
-                    visited.add(childId);
-                    nextLayer.add(childId);
-                    edgeByChild.put(childId, dep);
-                    if (!childrenByParent.containsKey(parentId)) {
-                        childrenByParent.put(parentId, new List<Id>());
-                    }
-                    childrenByParent.get(parentId).add(childId);
-                }
-            }
+            currentLayer = expandLayer(ctx, adjacency, action, currentLayer);
             depth++;
-            currentLayer = nextLayer;
         }
         if (depth >= MAX_DEPTH && !currentLayer.isEmpty()) {
             System.debug(LoggingLevel.WARN,
-                '[DeliveryFeatureGraphService.computeCascade] depth cap hit at '
-                + MAX_DEPTH + ' for featureId=' + featureId);
+                '[DeliveryFeatureGraphService.runBfs] depth cap hit at '
+                + MAX_DEPTH + ' for rootId=' + rootId);
         }
+    }
 
-        // Hydrate node DTOs with Feature__c label/name/isActive in one bulk query
-        hydrateNodes(visited, nodesById, edgeByChild, featureId);
-
-        // Stitch children references onto each parent DTO
-        attachChildren(nodesById, childrenByParent);
-        return nodesById.get(featureId);
+    /**
+     * @description Expands one BFS layer: visits each parent's edges, records new
+     *              children in the context, and returns the next layer of ids.
+     * @param ctx Mutable BFS state.
+     * @param adjacency Directional adjacency map.
+     * @param action 'Enable' or 'Disable'.
+     * @param currentLayer Parent ids to expand.
+     * @return The newly-discovered child ids that form the next layer.
+     */
+    private static List<Id> expandLayer(
+        BfsContext ctx,
+        Map<Id, List<FeatureDependency__c>> adjacency,
+        String action,
+        List<Id> currentLayer
+    ) {
+        List<Id> nextLayer = new List<Id>();
+        for (Id parentId : currentLayer) {
+            List<FeatureDependency__c> edges = adjacency.get(parentId);
+            if (edges == null) {
+                continue;
+            }
+            for (FeatureDependency__c dep : edges) {
+                Id childId = childIdFor(dep, action);
+                if (childId == null || ctx.visited.contains(childId)) {
+                    continue;
+                }
+                ctx.visited.add(childId);
+                nextLayer.add(childId);
+                ctx.edgeByChild.put(childId, dep);
+                if (!ctx.childrenByParent.containsKey(parentId)) {
+                    ctx.childrenByParent.put(parentId, new List<Id>());
+                }
+                ctx.childrenByParent.get(parentId).add(childId);
+            }
+        }
+        return nextLayer;
     }
 
     /**
@@ -278,34 +311,4 @@ global with sharing class DeliveryFeatureGraphService {
         return true;
     }
 
-    /**
-     * @description Helper retained for potential reuse / readability — bulk fetch of
-     *              direct dependencies for a set of feature ids in one of the two
-     *              edge directions. Not used by computeCascade (which uses a single
-     *              upfront query) but exposed for callers that only need one hop.
-     * @param featureIds Parent-side feature ids to fetch edges for.
-     * @param direction 'Enable' (parent = BlockedFeatureLookup__c) or
-     *                  'Disable' (parent = BlockingFeatureLookup__c).
-     * @return All matching FeatureDependency__c rows.
-     */
-    private static List<FeatureDependency__c> getDirectDependencies(Set<Id> featureIds, String direction) {
-        if (direction == ACTION_ENABLE) {
-            return [
-                SELECT Id, BlockingFeatureLookup__c, BlockedFeatureLookup__c,
-                       TypePk__c, CascadeDirectionPk__c
-                FROM FeatureDependency__c
-                WHERE BlockedFeatureLookup__c IN :featureIds
-                WITH SYSTEM_MODE
-                LIMIT 500
-            ];
-        }
-        return [
-            SELECT Id, BlockingFeatureLookup__c, BlockedFeatureLookup__c,
-                   TypePk__c, CascadeDirectionPk__c
-            FROM FeatureDependency__c
-            WHERE BlockingFeatureLookup__c IN :featureIds
-            WITH SYSTEM_MODE
-            LIMIT 500
-        ];
-    }
 }

@@ -187,6 +187,13 @@ private class DeliveryFeatureGraphServiceTest {
      * @description Walk the tree and count how many times a given featureId appears.
      *              Used to verify the visited-guard behavior.
      */
+    /**
+     * @description Recursively counts how many nodes in a cascade subtree carry the given feature id.
+     *              Used to verify visited-set behavior on diamond/cycle test fixtures.
+     * @param node Root of the subtree to walk (null returns 0).
+     * @param targetId Feature id to match.
+     * @return Number of matching nodes in the subtree.
+     */
     private static Integer countOccurrences(DeliveryFeatureGraphService.FeatureGraphNodeDTO node, Id targetId) {
         if (node == null) {
             return 0;
