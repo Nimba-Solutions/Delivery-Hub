@@ -126,11 +126,9 @@ public with sharing class DeliveryFeatureSyncService {
      * @return Field map keyed by lowercased API name.
      */
     private static Map<String, Schema.SObjectField> describeSettingsFields() {
-        return Schema.getGlobalDescribe()
-            .get('DeliveryHubSettings__c')
-            .getDescribe()
-            .fields
-            .getMap();
+        // Typed sObject reference is namespace-safe — getGlobalDescribe().get('DeliveryHubSettings__c')
+        // returns null in the namespaced packaging context (key is delivery__DeliveryHubSettings__c).
+        return DeliveryHubSettings__c.SObjectType.getDescribe().fields.getMap();
     }
 
     /**
