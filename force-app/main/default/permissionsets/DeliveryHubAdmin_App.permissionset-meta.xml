@@ -296,16 +296,6 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
-        <field>FeatureDependency__c.BlockingFeatureLookup__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
-        <field>FeatureDependency__c.BlockedFeatureLookup__c</field>
-        <readable>true</readable>
-    </fieldPermissions>
-    <fieldPermissions>
-        <editable>true</editable>
         <field>FeatureDependency__c.TypePk__c</field>
         <readable>true</readable>
     </fieldPermissions>
