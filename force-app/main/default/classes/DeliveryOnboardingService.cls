@@ -449,6 +449,9 @@ global with sharing class DeliveryOnboardingService {
      * @description Returns true when (a) the quiz passes threshold, (b) every
      *              required lesson DeveloperName appears in LessonsCompletedJsonTxt__c,
      *              and (c) every required checklist item is verified.
+     * @param row The OnboardingProgress__c record to evaluate against the
+     *            track's quiz / lesson / checklist completion rules.
+     * @return True when all three gates pass; false otherwise.
      */
     @TestVisible
     private static Boolean isTrackComplete(OnboardingProgress__c row) {
