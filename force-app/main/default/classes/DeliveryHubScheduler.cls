@@ -29,6 +29,7 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         enqueueInvoiceGenerationIfDue();
         enqueueOverdueRemindersIfEnabled();
         enqueueForecastAlertsIfDue();
+        enqueueWatcherDigestIfDue();
         processScheduledDocumentSends();
         runReconciliation();
         recalcWorkItemETAsIfTopOfHour();
@@ -325,6 +326,45 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         } catch (Exception ex) {
             System.debug(LoggingLevel.ERROR,
                 '[DeliveryHubScheduler] enqueueForecastAlertsIfDue failed: ' + ex.getMessage());
+        }
+    }
+
+    /**
+     * @description Enqueues the Phase 2 Watcher digest queueable once per day
+     *              at the configured GMT hour (default 12 GMT = 8am ET) when
+     *              the master flag is set on org defaults. Idempotent: gated
+     *              by LastWatcherHeartbeatDateTime__c so multiple scheduler
+     *              ticks on the same GMT day (4×/hour cron) don't double-fire.
+     *              Mirrors enqueueForecastAlertsIfDue shape.
+     */
+    @TestVisible
+    private static void enqueueWatcherDigestIfDue() {
+        try {
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            if (settings == null || settings.EnableWatcherDigestDateTime__c == null) {
+                return;
+            }
+            Integer targetHour = (settings.WatcherDigestRunHourGmtNumber__c != null)
+                ? Integer.valueOf(settings.WatcherDigestRunHourGmtNumber__c)
+                : 12;
+            DateTime nowDt = DateTime.now();
+            if (nowDt.hourGmt() != targetHour) {
+                return;
+            }
+            // GMT-day idempotency. Same defence as enqueueForecastAlertsIfDue
+            // against mixing user-local Date.today() with hourGmt().
+            Date todayGmt = Date.newInstance(nowDt.yearGmt(), nowDt.monthGmt(), nowDt.dayGmt());
+            if (settings.LastWatcherHeartbeatDateTime__c != null) {
+                Datetime hb = settings.LastWatcherHeartbeatDateTime__c;
+                Date hbGmt = Date.newInstance(hb.yearGmt(), hb.monthGmt(), hb.dayGmt());
+                if (hbGmt == todayGmt) {
+                    return;
+                }
+            }
+            System.enqueueJob(new WatcherDigestRunQueueable());
+        } catch (Exception ex) {
+            System.debug(LoggingLevel.ERROR,
+                '[DeliveryHubScheduler] enqueueWatcherDigestIfDue failed: ' + ex.getMessage());
         }
     }
 

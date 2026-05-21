@@ -20,6 +20,19 @@ private class DeliveryHubInstallHandlerTest {
             System.assertNotEquals(null, settings.EnableAISuggestionsDateTime__c, 'AI suggestions should be enabled by default');
             System.assertEquals(14, settings.FailedSyncAutoDismissDaysNumber__c,
                 'FailedSyncAutoDismissDaysNumber__c should default to 14 on fresh install');
+            // Phase 2 Watcher v1 — top-3 signal flags default ON so PR-C can
+            // ship signals 2+3 without an install-handler edit. Master flag
+            // stays null — admins opt into Watcher explicitly.
+            System.assertNotEquals(null, settings.EnableWatcherSLABreachDateTime__c,
+                'Watcher SLA Breach signal default should be ON post-install');
+            System.assertNotEquals(null, settings.EnableWatcherStuckStageDateTime__c,
+                'Watcher Stuck Stage signal default should be ON post-install');
+            System.assertNotEquals(null, settings.EnableWatcherARAgingDateTime__c,
+                'Watcher AR Aging signal default should be ON post-install');
+            System.assertEquals(null, settings.EnableWatcherDigestDateTime__c,
+                'Watcher master flag must NOT default ON — admins flip this manually');
+            System.assertEquals(null, settings.WatcherDigestRecipientUserIdsTxt__c,
+                'Recipient list must NOT default — admins populate this manually');
         }
     }
 

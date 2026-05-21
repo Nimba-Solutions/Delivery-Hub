@@ -113,4 +113,12 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryOnboardingServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryDevLoopControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryDatasetControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWatcherDigestFormatterTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWatcherServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WatcherDigestRunQueueableTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WatcherFailedSyncTrendQueryServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WatcherPaymentOpsQueryServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WatcherSLABreachQueryServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WatcherUnhappySignalQueryServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WatcherUpcomingSignoffQueryServiceTest</testClassName>
 </ApexTestSuite>

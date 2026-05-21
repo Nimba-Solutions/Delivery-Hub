@@ -244,6 +244,109 @@ private class DeliveryHubSchedulerTest {
     }
 
     /**
+     * @description Watcher: scheduler tick should skip enqueue when the
+     *              master Watcher flag is null. No queueable in the job
+     *              monitor afterwards.
+     */
+    @IsTest
+    static void testWatcherSkipWhenMasterOff() {
+        System.runAs(testUser) {
+            // No Watcher flags set; only the seed settings from @TestSetup.
+            Test.startTest();
+            Test.setMock(HttpCalloutMock.class, new MockResponse());
+            new DeliveryHubScheduler().execute(null);
+            Test.stopTest();
+            List<AsyncApexJob> jobs = [
+                SELECT Id FROM AsyncApexJob
+                WHERE ApexClass.Name = 'WatcherDigestRunQueueable'
+            ];
+            System.assertEquals(0, jobs.size(),
+                'No WatcherDigestRunQueueable should be enqueued when the master flag is null');
+        }
+    }
+
+    /**
+     * @description Watcher: when master is on but the configured run hour
+     *              doesn't match the current GMT hour, the enqueue should
+     *              skip.
+     */
+    @IsTest
+    static void testWatcherSkipWhenWrongHour() {
+        System.runAs(testUser) {
+            Integer currentHourGmt = DateTime.now().hourGmt();
+            Integer nonMatchingHour = Math.mod(currentHourGmt + 12, 24);
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            s.EnableWatcherDigestDateTime__c = Datetime.now();
+            s.WatcherDigestRunHourGmtNumber__c = nonMatchingHour;
+            update s;
+
+            Test.startTest();
+            Test.setMock(HttpCalloutMock.class, new MockResponse());
+            new DeliveryHubScheduler().execute(null);
+            Test.stopTest();
+            List<AsyncApexJob> jobs = [
+                SELECT Id FROM AsyncApexJob
+                WHERE ApexClass.Name = 'WatcherDigestRunQueueable'
+            ];
+            System.assertEquals(0, jobs.size(),
+                'No WatcherDigestRunQueueable should enqueue when configured hour does not match current GMT hour');
+        }
+    }
+
+    /**
+     * @description Watcher: idempotency gate — when the heartbeat field is
+     *              already set to today's GMT date, the enqueue should
+     *              skip even if hour + flag match.
+     */
+    @IsTest
+    static void testWatcherSkipWhenAlreadyRanToday() {
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            s.EnableWatcherDigestDateTime__c = Datetime.now();
+            s.WatcherDigestRunHourGmtNumber__c = DateTime.now().hourGmt();
+            s.LastWatcherHeartbeatDateTime__c = Datetime.now();
+            update s;
+
+            Test.startTest();
+            Test.setMock(HttpCalloutMock.class, new MockResponse());
+            new DeliveryHubScheduler().execute(null);
+            Test.stopTest();
+            List<AsyncApexJob> jobs = [
+                SELECT Id FROM AsyncApexJob
+                WHERE ApexClass.Name = 'WatcherDigestRunQueueable'
+            ];
+            System.assertEquals(0, jobs.size(),
+                'No WatcherDigestRunQueueable should enqueue when heartbeat is already today');
+        }
+    }
+
+    /**
+     * @description Watcher: happy path — master on, hour matches, heartbeat
+     *              not set → enqueue fires.
+     */
+    @IsTest
+    static void testWatcherEnqueuesWhenDue() {
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            s.EnableWatcherDigestDateTime__c = Datetime.now();
+            s.WatcherDigestRunHourGmtNumber__c = DateTime.now().hourGmt();
+            // LastWatcherHeartbeatDateTime__c stays null
+            update s;
+
+            Test.startTest();
+            Test.setMock(HttpCalloutMock.class, new MockResponse());
+            new DeliveryHubScheduler().execute(null);
+            Test.stopTest();
+            List<AsyncApexJob> jobs = [
+                SELECT Id FROM AsyncApexJob
+                WHERE ApexClass.Name = 'WatcherDigestRunQueueable'
+            ];
+            System.assertEquals(1, jobs.size(),
+                'WatcherDigestRunQueueable should be enqueued when flag on, hour matches, no heartbeat today');
+        }
+    }
+
+    /**
      * @description Mock implementation for the sync handshake.
      */
     public class MockResponse implements HttpCalloutMock {
