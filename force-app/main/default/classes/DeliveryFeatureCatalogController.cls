@@ -136,9 +136,126 @@ global with sharing class DeliveryFeatureCatalogController {
             throw new AuraHandledException('featureId is required.');
         }
         Feature__c f = loadFeatureOrThrow(featureId);
-        assertCanToggle(f, enable == true);
-        applyToggleFields(f, enable == true);
+        Boolean enableFlag = enable == true;
+        assertCanToggle(f, enableFlag);
+        enforceCascadeOrThrow(featureId, enableFlag);
+        applyToggleFields(f, enableFlag);
         persistToggle(f);
+    }
+
+    /**
+     * @description Loads the cascade tree via DeliveryFeatureGraphService and
+     *              refuses the toggle when any Hard child violates the rule:
+     *                - Enable path: a Hard blocker is inactive (must be enabled first).
+     *                - Disable path: a Hard dependent is active (must be disabled first).
+     *              Soft / Optional edges are informational only — logged at INFO
+     *              and never block. No-op when no cascade tree exists.
+     * @param featureId The feature about to be toggled.
+     * @param enable    True for Enable, false for Disable.
+     */
+    private static void enforceCascadeOrThrow(Id featureId, Boolean enable) {
+        String action = enable
+            ? DeliveryFeatureGraphService.ACTION_ENABLE
+            : DeliveryFeatureGraphService.ACTION_DISABLE;
+        DeliveryFeatureGraphService.FeatureGraphNodeDTO root =
+            DeliveryFeatureGraphService.computeCascade(featureId, action);
+        if (root == null || root.children == null || root.children.isEmpty()) {
+            return;
+        }
+        List<DeliveryFeatureGraphService.FeatureGraphNodeDTO> violations =
+            collectHardViolations(root, enable);
+        if (violations.isEmpty()) {
+            return;
+        }
+        throw new AuraHandledException(formatViolationMessage(violations, enable));
+    }
+
+    /**
+     * @description Flattens the cascade tree (BFS, excluding the root) and
+     *              returns the subset of nodes that violate the Hard-dependency
+     *              rule for the requested action. Soft / Optional edges are
+     *              logged at INFO level and excluded from the returned list.
+     * @param root   Root cascade node (ignored — only its descendants are checked).
+     * @param enable True for Enable, false for Disable.
+     * @return Hard-violating descendant nodes, in BFS order.
+     */
+    private static List<DeliveryFeatureGraphService.FeatureGraphNodeDTO> collectHardViolations(
+        DeliveryFeatureGraphService.FeatureGraphNodeDTO root,
+        Boolean enable
+    ) {
+        List<DeliveryFeatureGraphService.FeatureGraphNodeDTO> violations =
+            new List<DeliveryFeatureGraphService.FeatureGraphNodeDTO>();
+        if (root == null || root.children == null) {
+            return violations;
+        }
+        List<DeliveryFeatureGraphService.FeatureGraphNodeDTO> queue =
+            new List<DeliveryFeatureGraphService.FeatureGraphNodeDTO>();
+        queue.addAll(root.children);
+        while (!queue.isEmpty()) {
+            DeliveryFeatureGraphService.FeatureGraphNodeDTO node = queue.remove(0);
+            if (node == null) {
+                continue;
+            }
+            classifyCascadeNode(node, enable, violations);
+            if (node.children != null && !node.children.isEmpty()) {
+                queue.addAll(node.children);
+            }
+        }
+        return violations;
+    }
+
+    /**
+     * @description Classifies a single cascade descendant against the Hard rule.
+     *              Hard + blocking-condition → appended to violations. Soft /
+     *              Optional → debug log only. Hard but condition satisfied → no-op.
+     * @param node       Cascade tree node (a descendant — never the root).
+     * @param enable     True for Enable, false for Disable.
+     * @param violations Out-list — appended when this node violates.
+     */
+    private static void classifyCascadeNode(
+        DeliveryFeatureGraphService.FeatureGraphNodeDTO node,
+        Boolean enable,
+        List<DeliveryFeatureGraphService.FeatureGraphNodeDTO> violations
+    ) {
+        String depType = node.dependencyType;
+        Boolean isHard = (depType == 'Hard');
+        if (!isHard) {
+            System.debug(LoggingLevel.INFO,
+                '[DeliveryFeatureCatalogController.enforceCascadeOrThrow] non-Hard edge ('
+                + depType + ') to ' + node.name + ' — informational only.');
+            return;
+        }
+        Boolean childActive = node.isActive == true;
+        // Enable path: child is a feature THIS feature depends on. Block if inactive.
+        // Disable path: child is a feature that depends on THIS feature. Block if active.
+        Boolean blocks = enable ? !childActive : childActive;
+        if (blocks) {
+            violations.add(node);
+        }
+    }
+
+    /**
+     * @description Builds the user-facing AuraHandledException message for one
+     *              or more Hard violations. Uses the first violation's label so
+     *              the user sees the concrete blocker; suffixes "(+N more)" when
+     *              multiple Hard violations surfaced in the same cascade.
+     * @param violations Non-empty list of Hard-violating cascade nodes.
+     * @param enable     True for Enable, false for Disable.
+     * @return Formatted message ready to hand to AuraHandledException.
+     */
+    private static String formatViolationMessage(
+        List<DeliveryFeatureGraphService.FeatureGraphNodeDTO> violations,
+        Boolean enable
+    ) {
+        DeliveryFeatureGraphService.FeatureGraphNodeDTO first = violations.get(0);
+        String displayName = String.isBlank(first.label) ? first.name : first.label;
+        String more = violations.size() > 1
+            ? ' (+' + (violations.size() - 1) + ' more)'
+            : '';
+        if (enable) {
+            return 'Cannot enable: depends on inactive feature "' + displayName + '" (Hard).' + more;
+        }
+        return 'Cannot disable: blocked by active dependent "' + displayName + '" (Hard).' + more;
     }
 
     /**
