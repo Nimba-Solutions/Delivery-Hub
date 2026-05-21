@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ErrorMessageTxt__c</fullName>
+    <description>Populated when StatusPk__c is Partial or Failed. Holds the exception message + stack trace from the failing signal(s) or orchestrator. Same shape as SyncItem__c.ErrorLogTxt__c. Empty on Success runs.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Exception details when a signal failed or the orchestrator errored.</inlineHelpText>
+    <label>Error Message</label>
+    <length>4096</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>5</visibleLines>
+</CustomField>

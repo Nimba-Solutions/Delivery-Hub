@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>FlaggedDocumentIdsTxt__c</fullName>
+    <description>Comma-separated DeliveryDocument__c IDs flagged by the AR-aging signal (or any future doc-centric signal). Mirrors FlaggedWorkItemIdsTxt__c shape for trend joins. A/R history at a glance: which invoices showed up day-over-day in the digest.</description>
+    <externalId>false</externalId>
+    <label>Flagged Document IDs</label>
+    <length>4096</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>3</visibleLines>
+</CustomField>

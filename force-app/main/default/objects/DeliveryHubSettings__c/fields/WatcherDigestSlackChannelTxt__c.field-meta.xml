@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WatcherDigestSlackChannelTxt__c</fullName>
+    <description>Optional Slack channel override for the Watcher digest (Block Kit channel field). When blank, defaults to the channel the configured SlackWebhookUrlTxt__c webhook lands in. Avoids forcing operators to configure a second webhook just to redirect Watcher output.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Slack channel name (with or without leading #). Blank = use the default channel of SlackWebhookUrlTxt__c.</inlineHelpText>
+    <label>Watcher Digest Slack Channel</label>
+    <length>255</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

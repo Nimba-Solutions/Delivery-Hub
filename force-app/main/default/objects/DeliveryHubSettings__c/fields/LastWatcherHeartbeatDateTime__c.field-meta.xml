@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LastWatcherHeartbeatDateTime__c</fullName>
+    <description>Stamped on each successful Watcher run (including quiet days). Mirrors the LastForecastAlertScanDate__c heartbeat pattern. Lets the 14-day stabilization gate verify the cron actually ran every day — independent of whether there was anything to say. Empty until PR-B's orchestrator is wired and the first run completes.</description>
+    <externalId>false</externalId>
+    <label>Last Watcher Heartbeat</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
