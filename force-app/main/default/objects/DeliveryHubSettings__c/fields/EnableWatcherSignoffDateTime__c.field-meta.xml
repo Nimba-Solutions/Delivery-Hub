@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableWatcherSignoffDateTime__c</fullName>
+    <description>Per-signal gate for Stub B (DeliveryDocuments awaiting signatures past RequireSigningDateTime__c without ViewedDateTime__c; or WIs entering signoff-required stages). Defaults to null — stub returns empty list until the signoff workflow data shape stabilizes.</description>
+    <externalId>false</externalId>
+    <label>Enable Watcher Signoff Signal (Stub)</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

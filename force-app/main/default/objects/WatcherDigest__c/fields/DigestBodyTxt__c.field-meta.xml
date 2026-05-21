@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DigestBodyTxt__c</fullName>
+    <description>The full markdown/plaintext body of the digest that was (or would have been) posted to Slack. Stored for audit replay — lets us reconstruct exactly what Glen saw on a given day even if Slack history rolls off. NOTE: design memo proposed DigestTextLong__c; renamed to DigestBodyTxt__c per docs/FIELD_NAMING.md (LongTextArea uses the Txt suffix, not Long).</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Plaintext fallback of the Slack Block Kit message posted for this run. Empty on quiet days.</inlineHelpText>
+    <label>Digest Body</label>
+    <length>32768</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>10</visibleLines>
+</CustomField>

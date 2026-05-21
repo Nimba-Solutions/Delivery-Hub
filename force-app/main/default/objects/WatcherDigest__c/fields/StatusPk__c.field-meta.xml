@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>StatusPk__c</fullName>
+    <description>Outcome of the run. Success = every enabled signal returned cleanly. Partial = at least one signal raised an exception but the run continued (details in ErrorMessageTxt__c). Failed = the orchestrator itself failed before any signal could run. Backed by the WatcherDigestStatus global value set per the CLAUDE.md GVS-from-day-one rule.</description>
+    <inlineHelpText>Success / Partial / Failed. Partial means at least one signal raised an exception; the run completed and other signals fired.</inlineHelpText>
+    <label>Status</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetName>WatcherDigestStatus</valueSetName>
+    </valueSet>
+</CustomField>

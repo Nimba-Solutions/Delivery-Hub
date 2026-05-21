@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Phase 2 Watcher v1 audit trail. One record per scheduled (or manual) Watcher run. Captures what signals fired, who was notified, and how long the run took. Trend-analysis source for the 14-day stabilization gate that precedes Phase 3 auto-digest. PR-A is pure scaffold (no Apex writes yet); PR-B wires DeliveryWatcherService to persist these rows.</description>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>false</enableHistory>
+    <enableReports>true</enableReports>
+    <enableSearch>false</enableSearch>
+    <enableSharing>true</enableSharing>
+    <enableStreamingApi>false</enableStreamingApi>
+    <externalSharingModel>Private</externalSharingModel>
+    <label>Watcher Digest</label>
+    <nameField>
+        <displayFormat>WD-{0000}</displayFormat>
+        <label>Watcher Digest Number</label>
+        <type>AutoNumber</type>
+    </nameField>
+    <pluralLabel>Watcher Digests</pluralLabel>
+    <sharingModel>ReadWrite</sharingModel>
+</CustomObject>

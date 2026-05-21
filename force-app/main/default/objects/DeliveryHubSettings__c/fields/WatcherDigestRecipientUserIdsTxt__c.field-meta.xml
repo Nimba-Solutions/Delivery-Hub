@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WatcherDigestRecipientUserIdsTxt__c</fullName>
+    <description>Comma-separated User IDs who receive the Watcher digest. v1 = Glen's User ID only. v2 = settings-change-only to add Mahi or other recipients. Defaults to null on install. PR-B's install handler populates Glen's User ID only when running in his org (Org ID match against a known-Glen-orgs check). Subscriber orgs see Watcher silent until this is set.</description>
+    <inlineHelpText>Comma-separated Salesforce User IDs. Blank = Watcher writes its audit record but does not Slack-post.</inlineHelpText>
+    <label>Watcher Digest Recipient User IDs</label>
+    <length>1300</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>3</visibleLines>
+</CustomField>
