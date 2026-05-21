@@ -459,34 +459,13 @@ private class DeliveryDocGenerationServiceTest {
         }
     }
 
-    /**
-     * @description Security_Audit org-wide path: null entityId is legal here,
-     *              metadata becomes the snapshot payload, and the doc still
-     *              persists with a token + hash.
-     */
-    @IsTest
-    static void testSecurityAuditAllowsNullEntity() {
-        System.runAs(runningUser) {
-            String meta = '{"auditScope":"org-wide-placeholder"}';
-
-            Test.startTest();
-            Id docId = DeliveryDocGenerationService.generateDocument(
-                null, 'Security_Audit', periodStart(), periodEnd(), meta
-            );
-            Test.stopTest();
-
-            DeliveryDocument__c persisted = [
-                SELECT NetworkEntityId__c, TemplatePk__c, SnapshotTxt__c, DocumentHashTxt__c
-                FROM DeliveryDocument__c WHERE Id = :docId WITH SYSTEM_MODE
-            ];
-            System.assertEquals(null, persisted.NetworkEntityId__c,
-                'Org-wide audit should have null entity');
-            System.assertEquals('Security_Audit', persisted.TemplatePk__c,
-                'Template should round-trip');
-            System.assert(String.isNotBlank(persisted.DocumentHashTxt__c),
-                'Document hash should still anchor the chain on org-wide audits');
-        }
-    }
+    // Note on Security_Audit + null entity: the agent's initial test assumed
+    // Security_Audit template exempted NetworkEntityId__c, but the service
+    // (DeliveryDocGenerationService.generateDocument:114) still requires a
+    // non-null entity even on Security_Audit because DeliveryDocument__c's
+    // NetworkEntityId__c is required at the schema layer. The agent's
+    // assumption was wrong; the test has been removed pending product
+    // clarification on whether Security_Audit should support org-wide docs.
 
     // ── Versioning ───────────────────────────────────────────────────────────
 
