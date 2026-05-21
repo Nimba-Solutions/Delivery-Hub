@@ -578,7 +578,6 @@ public class TestDataFactory {
         return p;
     }
 
-    // ────────────────────────────────────────────────────────────────────
     // ScratchOrgInstance__c — Layer 6 dev-loop mirror row. No required
     // Master-Detail; both Lookups (WorkItem + Feature) are optional. Name
     // defaults to the OrgIdTxt__c so tests can pick rows out without
@@ -630,6 +629,85 @@ public class TestDataFactory {
         ScratchOrgInstance__c soi = buildScratchOrgInstance(overrides);
         insert soi;
         return soi;
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // DatasetTemplate__c / DatasetTemplateAssignment__c — Layer 7 data
+    // seeding templates. DatasetTemplate__c has no required parent (Feature
+    // and NetworkEntity lookups are optional, SetNull). Assignment requires
+    // a DatasetTemplate__c parent (Lookup, required, Restrict on delete).
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Build (no DML) a DatasetTemplate__c with safe defaults.
+     *              Name uniquified, ApexScriptPathTxt__c defaults to the
+     *              legacy whole-org loader path.
+     * @param overrides Optional field overrides.
+     * @return Unpersisted DatasetTemplate__c.
+     */
+    public static DatasetTemplate__c buildDatasetTemplate(Map<String, Object> overrides) {
+        DatasetTemplate__c t = new DatasetTemplate__c(
+            Name = uniq('TDF Dataset'),
+            DescriptionTxt__c = 'TDF placeholder dataset template',
+            ApexScriptPathTxt__c = 'scripts/load-demo-data.apex',
+            RecordCountEstimateNumber__c = 10
+        );
+        applyOverrides(t, overrides);
+        return t;
+    }
+
+    /**
+     * @description Build + insert a DatasetTemplate__c with safe defaults.
+     * @return Inserted DatasetTemplate__c.
+     */
+    public static DatasetTemplate__c newDatasetTemplate() {
+        return createDatasetTemplate(null);
+    }
+
+    /**
+     * @description Build + insert a DatasetTemplate__c with overrides.
+     * @param overrides Optional field overrides.
+     * @return Inserted DatasetTemplate__c.
+     */
+    public static DatasetTemplate__c createDatasetTemplate(Map<String, Object> overrides) {
+        DatasetTemplate__c t = buildDatasetTemplate(overrides);
+        insert t;
+        return t;
+    }
+
+    /**
+     * @description Build (no DML) a DatasetTemplateAssignment__c with safe
+     *              defaults. templateId is required (Lookup, Restrict).
+     *              Defaults: LoadedDateTime__c=now,
+     *              LoadedByUserLookup__c=running user, OutcomePk__c='Success',
+     *              RecordsLoadedNumber__c=0.
+     * @param templateId DatasetTemplate__c parent.
+     * @param overrides Optional field overrides.
+     * @return Unpersisted DatasetTemplateAssignment__c.
+     */
+    public static DatasetTemplateAssignment__c buildDatasetTemplateAssignment(
+        Id templateId, Map<String, Object> overrides
+    ) {
+        DatasetTemplateAssignment__c a = new DatasetTemplateAssignment__c(
+            DatasetTemplateLookup__c = templateId,
+            LoadedDateTime__c = Datetime.now(),
+            LoadedByUserLookup__c = UserInfo.getUserId(),
+            OutcomePk__c = 'Success',
+            RecordsLoadedNumber__c = 0
+        );
+        applyOverrides(a, overrides);
+        return a;
+    }
+
+    /**
+     * @description Build + insert a DatasetTemplateAssignment__c with safe defaults.
+     * @param templateId DatasetTemplate__c parent.
+     * @return Inserted DatasetTemplateAssignment__c.
+     */
+    public static DatasetTemplateAssignment__c newDatasetTemplateAssignment(Id templateId) {
+        DatasetTemplateAssignment__c a = buildDatasetTemplateAssignment(templateId, null);
+        insert a;
+        return a;
     }
 
     // ────────────────────────────────────────────────────────────────────

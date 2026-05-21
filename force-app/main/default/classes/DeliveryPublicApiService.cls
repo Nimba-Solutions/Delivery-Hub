@@ -148,6 +148,10 @@ global without sharing class DeliveryPublicApiService {
         if (resource == 'board-summary') { getBoardSummary(); return true; }
         if (resource == 'documents') { sendSuccess(DeliveryDocumentController.getDocumentsForEntity(entityId)); return true; }
         if (resource.startsWith('documents/')) { getDocumentByToken(resource); return true; }
+        // Feature cockpit endpoints (PR 8) — org-wide, not entity-scoped. The
+        // API key still authenticates the caller via authenticateRequest(); the
+        // feature toggle registry isn't per-tenant.
+        if (resource == 'feature-toggle-requests') { getFeatureToggleRequests(); return true; }
         return false;
     }
 
@@ -289,7 +293,229 @@ global without sharing class DeliveryPublicApiService {
         else if (resource == 'log-hours') { postLogHours(jsonBody, entityId); }
         else if (resource == 'document-approve') { postDocumentApprove(jsonBody); }
         else if (resource == 'document-dispute') { postDocumentDispute(jsonBody); }
+        else if (routePostFeatureCockpit(resource, jsonBody)) { return; }
         else { sendError(404, 'Unknown resource: ' + resource); }
+    }
+
+    // ── POST Feature Cockpit Routes (PR 8) ─────────────────────────────
+
+    /**
+     * @description Routes the feature-cockpit POST endpoints. Each operates on
+     *              org-wide feature catalog state (Feature__c, FeatureToggleRequest__c,
+     *              FeatureToggleApproval__c) rather than per-tenant data, so they
+     *              don't take the entityId. Authentication still happens via X-Api-Key
+     *              in handlePost. Returns true if the path matched.
+     * @param resource Path segment after /api/.
+     * @param jsonBody The raw request body.
+     * @return true if a feature-cockpit route was matched and handled.
+     */
+    private static Boolean routePostFeatureCockpit(String resource, String jsonBody) {
+        if (resource.startsWith('features/') && resource.endsWith('/toggle')) {
+            postFeatureToggle(resource, jsonBody);
+            return true;
+        }
+        if (resource.startsWith('feature-toggle-approvals/')) {
+            if (resource.endsWith('/grant')) {
+                postFeatureApprovalDecision(resource, jsonBody, true);
+                return true;
+            }
+            if (resource.endsWith('/reject')) {
+                postFeatureApprovalDecision(resource, jsonBody, false);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @description POST /features/{name}/toggle — submits a new
+     *              FeatureToggleRequest__c. Body shape:
+     *                { "action": "Enable" | "Disable", "reason": "..." }
+     *              The {name} segment matches Feature__c.Name or
+     *              FeatureDefinitionTxt__c (case-insensitive).
+     * @param resource Path segment.
+     * @param jsonBody Raw request body.
+     */
+    private static void postFeatureToggle(String resource, String jsonBody) {
+        String featureName = resource.substringBetween('features/', '/toggle');
+        if (String.isBlank(featureName)) { sendError(400, 'Feature name is required.'); return; }
+        Map<String, Object> body = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
+        String action = (String) body.get('action');
+        String reason = (String) body.get('reason');
+        if (action != 'Enable' && action != 'Disable') {
+            sendError(400, 'action must be Enable or Disable.'); return;
+        }
+        Id featureId = resolveFeatureIdByName(featureName);
+        if (featureId == null) { sendError(404, 'Feature not found: ' + featureName); return; }
+        try {
+            Id requestId = DeliveryFeatureApprovalService.submit(featureId, action, reason);
+            sendSuccess(new Map<String, Object>{
+                'requestId' => requestId,
+                'featureId' => featureId,
+                'status' => 'Pending'
+            }, 201);
+        } catch (AuraHandledException e) {
+            sendError(400, e.getMessage());
+        }
+    }
+
+    /**
+     * @description POST /feature-toggle-approvals/{id}/grant or /reject.
+     *              Body shape: { "note": "..." }
+     * @param resource Path segment.
+     * @param jsonBody Raw request body.
+     * @param grant true for grant, false for reject.
+     */
+    private static void postFeatureApprovalDecision(String resource, String jsonBody, Boolean grant) {
+        String suffix = grant ? '/grant' : '/reject';
+        String approvalIdStr = resource.substringBetween('feature-toggle-approvals/', suffix);
+        if (String.isBlank(approvalIdStr)) { sendError(400, 'Approval Id is required.'); return; }
+        Id approvalId;
+        try { approvalId = Id.valueOf(approvalIdStr); }
+        catch (Exception e) { sendError(400, 'Invalid approval Id.'); return; }
+        Map<String, Object> body = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
+        String note = (String) body.get('note');
+        try {
+            if (grant) {
+                DeliveryFeatureApprovalService.grant(approvalId, note);
+            } else {
+                DeliveryFeatureApprovalService.reject(approvalId, note);
+            }
+            Map<String, Object> resp = describeApprovalAfterDecision(approvalId);
+            sendSuccess(resp);
+        } catch (AuraHandledException e) {
+            sendError(400, e.getMessage());
+        }
+    }
+
+    private static Map<String, Object> describeApprovalAfterDecision(Id approvalId) {
+        List<FeatureToggleApproval__c> rows = [
+            SELECT Id, StatusPk__c, RequestLookup__c, RequestLookup__r.StatusPk__c
+            FROM FeatureToggleApproval__c
+            WHERE Id = :approvalId
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        Map<String, Object> resp = new Map<String, Object>{
+            'approvalId' => approvalId
+        };
+        if (!rows.isEmpty()) {
+            FeatureToggleApproval__c row = rows[0];
+            resp.put('status', row.StatusPk__c);
+            resp.put('requestId', row.RequestLookup__c);
+            if (row.RequestLookup__r != null) {
+                resp.put('requestStatus', row.RequestLookup__r.StatusPk__c);
+            }
+        }
+        return resp;
+    }
+
+    /**
+     * @description GET /feature-toggle-requests — paginated list of
+     *              FeatureToggleRequest__c rows. Optional query params:
+     *                ?status=Pending|Granted|Applied|Rejected|RolledBack
+     *                ?feature=<name>  (matches FeatureLookup__r.Name)
+     *                ?pageOffset=N    (LIMIT/OFFSET pagination)
+     */
+    private static void getFeatureToggleRequests() {
+        String statusFilter = RestContext.request.params.get('status');
+        String featureFilter = RestContext.request.params.get('feature');
+        Integer offset = getPageOffset();
+        List<FeatureToggleRequest__c> requests = queryFeatureToggleRequests(
+            statusFilter, featureFilter, offset
+        );
+        List<Map<String, Object>> data = new List<Map<String, Object>>();
+        for (FeatureToggleRequest__c req : requests) {
+            data.add(buildFeatureRequestMap(req));
+        }
+        sendSuccess(data);
+    }
+
+    private static List<FeatureToggleRequest__c> queryFeatureToggleRequests(
+        String statusFilter, String featureFilter, Integer offset
+    ) {
+        Integer maxRows = 50;
+        Integer safeOffset = (offset == null || offset < 0) ? 0 : offset;
+        if (String.isNotBlank(statusFilter) && String.isNotBlank(featureFilter)) {
+            return [
+                SELECT Id, ActionPk__c, StatusPk__c, ReasonTxt__c, RequestedDateTime__c,
+                       FeatureLookup__c, FeatureLookup__r.Name,
+                       FeatureLookup__r.FeatureDefinitionTxt__c
+                FROM FeatureToggleRequest__c
+                WHERE StatusPk__c = :statusFilter
+                  AND FeatureLookup__r.Name = :featureFilter
+                WITH SYSTEM_MODE
+                ORDER BY RequestedDateTime__c DESC NULLS LAST
+                LIMIT :maxRows OFFSET :safeOffset
+            ];
+        }
+        if (String.isNotBlank(statusFilter)) {
+            return [
+                SELECT Id, ActionPk__c, StatusPk__c, ReasonTxt__c, RequestedDateTime__c,
+                       FeatureLookup__c, FeatureLookup__r.Name,
+                       FeatureLookup__r.FeatureDefinitionTxt__c
+                FROM FeatureToggleRequest__c
+                WHERE StatusPk__c = :statusFilter
+                WITH SYSTEM_MODE
+                ORDER BY RequestedDateTime__c DESC NULLS LAST
+                LIMIT :maxRows OFFSET :safeOffset
+            ];
+        }
+        if (String.isNotBlank(featureFilter)) {
+            return [
+                SELECT Id, ActionPk__c, StatusPk__c, ReasonTxt__c, RequestedDateTime__c,
+                       FeatureLookup__c, FeatureLookup__r.Name,
+                       FeatureLookup__r.FeatureDefinitionTxt__c
+                FROM FeatureToggleRequest__c
+                WHERE FeatureLookup__r.Name = :featureFilter
+                WITH SYSTEM_MODE
+                ORDER BY RequestedDateTime__c DESC NULLS LAST
+                LIMIT :maxRows OFFSET :safeOffset
+            ];
+        }
+        return [
+            SELECT Id, ActionPk__c, StatusPk__c, ReasonTxt__c, RequestedDateTime__c,
+                   FeatureLookup__c, FeatureLookup__r.Name,
+                   FeatureLookup__r.FeatureDefinitionTxt__c
+            FROM FeatureToggleRequest__c
+            WITH SYSTEM_MODE
+            ORDER BY RequestedDateTime__c DESC NULLS LAST
+            LIMIT :maxRows OFFSET :safeOffset
+        ];
+    }
+
+    private static Map<String, Object> buildFeatureRequestMap(FeatureToggleRequest__c req) {
+        String featureName = null;
+        if (req.FeatureLookup__r != null) {
+            featureName = String.isNotBlank(req.FeatureLookup__r.FeatureDefinitionTxt__c)
+                ? req.FeatureLookup__r.FeatureDefinitionTxt__c
+                : req.FeatureLookup__r.Name;
+        }
+        return new Map<String, Object>{
+            'id' => req.Id,
+            'featureId' => req.FeatureLookup__c,
+            'featureName' => featureName,
+            'action' => req.ActionPk__c,
+            'status' => req.StatusPk__c,
+            'reason' => req.ReasonTxt__c,
+            'requestedAt' => req.RequestedDateTime__c
+        };
+    }
+
+    /**
+     * @description Looks up a Feature__c by Name OR FeatureDefinitionTxt__c
+     *              (case-insensitive). Returns null if no match.
+     * @param featureName The {name} path segment.
+     * @return Matching Feature__c.Id, or null.
+     */
+    private static Id resolveFeatureIdByName(String featureName) {
+        if (String.isBlank(featureName)) { return null; }
+        List<Feature__c> rows = [
+            SELECT Id FROM Feature__c
+            WHERE Name = :featureName OR FeatureDefinitionTxt__c = :featureName
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        return rows.isEmpty() ? null : rows[0].Id;
     }
 
     private static void postWorkItem(String jsonBody, Id entityId) {

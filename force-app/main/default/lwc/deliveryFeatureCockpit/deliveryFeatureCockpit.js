@@ -122,6 +122,7 @@ export default class DeliveryFeatureCockpit extends LightningElement {
 
     handleToggle(event) {
         const featureId = event.currentTarget.dataset.featureId;
+        const featureLabel = event.currentTarget.dataset.featureName || '';
         const isActive = event.currentTarget.dataset.isActive === 'true';
         const enable = !isActive;
         if (!featureId) {
@@ -147,12 +148,26 @@ export default class DeliveryFeatureCockpit extends LightningElement {
                 // can launch the track.
                 const isOnboardingGate = typeof msg === 'string'
                     && msg.toLowerCase().indexOf('onboarding track') !== -1;
+                // PR 6: the cascade enforcement gate throws a message of the
+                // shape `Cannot enable: depends on inactive feature "X" (Hard).`
+                // or `Cannot disable: blocked by active dependent "X" (Hard).`
+                // — auto-open the cascade preview modal so the user can see
+                // the graph that prompted the refusal.
+                const isCascadeGate = typeof msg === 'string'
+                    && /^Cannot (enable|disable):/i.test(msg);
                 if (isOnboardingGate) {
                     this.dispatchEvent(new ShowToastEvent({
                         title: 'Onboarding required',
                         message: 'Open the feature record page to complete the track, then try again.',
                         variant: 'warning'
                     }));
+                } else if (isCascadeGate) {
+                    this.dispatchEvent(new ShowToastEvent({
+                        title: 'Dependency blocked toggle',
+                        message: msg + ' View the dependency graph for details.',
+                        variant: 'warning'
+                    }));
+                    this.openCascadeModal(featureId, featureLabel);
                 } else {
                     this.dispatchEvent(new ShowToastEvent({
                         title: 'Unable to toggle feature',
@@ -161,6 +176,15 @@ export default class DeliveryFeatureCockpit extends LightningElement {
                     }));
                 }
             });
+    }
+
+    openCascadeModal(featureId, featureLabel) {
+        if (!featureId) {
+            return;
+        }
+        this.cascadeFeatureId = featureId;
+        this.cascadeFeatureLabel = featureLabel || '';
+        this.isCascadeModalOpen = true;
     }
 
     get cascadeModalTitle() {
