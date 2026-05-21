@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>NetworkEntityLookup__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Optional NetworkEntity__c scope for per-tenant template variants. Null = template applies regardless of tenant. Populated when a single feature has different sample-data shapes per client/vendor profile.</description>
+    <inlineHelpText>Optional tenant scope. Leave blank for org-wide templates.</inlineHelpText>
+    <label>Network Entity</label>
+    <referenceTo>NetworkEntity__c</referenceTo>
+    <relationshipLabel>Dataset Templates</relationshipLabel>
+    <relationshipName>DatasetTemplates</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>
