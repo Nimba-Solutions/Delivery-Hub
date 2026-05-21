@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RequiredPermsetsTxt__c</fullName>
+    <description>Comma-separated list of PermissionSet DeveloperNames that should be auto-assigned in the scratch org. The dev-loop LWC renders these as a checklist so the developer can verify assignment.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Required Permsets</label>
+    <length>1024</length>
+    <required>false</required>
+    <type>LongTextArea</type>
+    <visibleLines>3</visibleLines>
+</CustomField>

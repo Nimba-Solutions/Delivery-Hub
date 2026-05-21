@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>FeatureCategoryTxt__c</fullName>
+    <description>FeatureDefinition__mdt.CategoryPk__c value this guide applies to. Stored as Text on the mdt to avoid GVS-on-mdt restrictions; matched against the GVS-backed Picklist on the catalog side.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Feature Category</label>
+    <length>80</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
