@@ -112,7 +112,7 @@ public with sharing class WatcherStuckStageQueryService {
             if (existing == null) {
                 result.put(rule.TriggerStageTxt__c, new RuleCluster(days, isCritical));
             } else {
-                existing.merge(days, isCritical);
+                existing.mergeRule(days, isCritical);
             }
         }
         return result;
@@ -300,7 +300,7 @@ public with sharing class WatcherStuckStageQueryService {
          * @param otherDays       Other rule's days threshold.
          * @param otherIsCritical Other rule's Critical flag.
          */
-        public void merge(Integer otherDays, Boolean otherIsCritical) {
+        public void mergeRule(Integer otherDays, Boolean otherIsCritical) {
             if (otherDays != null && otherDays < this.daysIdleThreshold) {
                 this.daysIdleThreshold = otherDays;
             }
