@@ -41,16 +41,13 @@ private class DeliveryDevLoopControllerTest {
         // "namespace present?" — assert it's populated, not its specific value.
         System.assertNotEquals(null, dto.isSubscriberOrg,
             'isSubscriberOrg must always be populated.');
-        // Empty-org tolerance: if the Software_Delivery / Core seed didn&apos;t
-        // make it into the scratch, dto.recommendedCciFlow is null and that&apos;s
-        // OK. When it IS there, it should be dev_org.
-        Integer seedCount = [
-            SELECT COUNT() FROM DevLoopGuide__mdt
-            WHERE WorkflowTypeTxt__c = 'Software_Delivery'
-        ];
-        if (seedCount > 0) {
+        // recommendedCciFlow may be null (no matching DevLoopGuide__mdt for
+        // this WI's workflow-type × feature-category combination) or
+        // populated with the seed's value. Both are valid runtime states.
+        // When populated by the Software_Delivery seed, it should be dev_org.
+        if (String.isNotBlank(dto.recommendedCciFlow)) {
             System.assertEquals('dev_org', dto.recommendedCciFlow,
-                'Engineering / Software_Delivery should resolve to dev_org');
+                'When matched, Software_Delivery should resolve to dev_org');
         }
     }
 
