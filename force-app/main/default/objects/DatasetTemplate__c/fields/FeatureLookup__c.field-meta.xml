@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>FeatureLookup__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>The Feature__c this dataset seeds. Optional so package-shipped generic templates (e.g. an "everything" loader) can live without a feature parent. SetNull on delete because templates should outlive the runtime feature row they happened to be tagged to.</description>
+    <inlineHelpText>The Delivery Hub feature this dataset primes. Leave blank for generic / multi-feature templates.</inlineHelpText>
+    <label>Feature</label>
+    <referenceTo>Feature__c</referenceTo>
+    <relationshipLabel>Dataset Templates</relationshipLabel>
+    <relationshipName>DatasetTemplates</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>
