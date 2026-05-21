@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LoadedByUserLookup__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>User who ran the loader. SetNull on delete so the audit row survives if the user record is later deactivated and purged.</description>
+    <inlineHelpText>User who ran the loader.</inlineHelpText>
+    <label>Loaded By</label>
+    <referenceTo>User</referenceTo>
+    <relationshipLabel>Dataset Loads Run</relationshipLabel>
+    <relationshipName>DatasetLoadsRun</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

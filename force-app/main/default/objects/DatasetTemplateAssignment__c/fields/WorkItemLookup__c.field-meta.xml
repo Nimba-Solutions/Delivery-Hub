@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WorkItemLookup__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Optional WorkItem__c the load was associated with — typically the WI a developer was working on when they primed the org. SetNull on delete so the audit row survives WI cleanup.</description>
+    <inlineHelpText>Optional WI the load was triggered from. Leave blank for org-level loads.</inlineHelpText>
+    <label>Work Item</label>
+    <referenceTo>WorkItem__c</referenceTo>
+    <relationshipLabel>Dataset Loads</relationshipLabel>
+    <relationshipName>DatasetLoads</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>
