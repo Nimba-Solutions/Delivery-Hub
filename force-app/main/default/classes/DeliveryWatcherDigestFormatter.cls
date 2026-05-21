@@ -17,7 +17,7 @@
  *              same Block Kit section/context shape.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity')
+@SuppressWarnings('PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity,PMD.NcssMethodCount,PMD.NcssTypeCount')
 public with sharing class DeliveryWatcherDigestFormatter {
 
     /** @description Newline used when concatenating plaintext body lines. */
@@ -42,6 +42,8 @@ public with sharing class DeliveryWatcherDigestFormatter {
         List<Object> blocks = new List<Object>();
         blocks.add(buildHeaderBlock(runDateLabel, totalItems));
         appendSlaBreachSection(blocks, result);
+        appendStuckStageSection(blocks, result);
+        appendArAgingSection(blocks, result);
         blocks.add(buildContextBlock(result));
         return new Map<String, Object>{ 'blocks' => blocks };
     }
@@ -73,6 +75,8 @@ public with sharing class DeliveryWatcherDigestFormatter {
         lines.add(totalItems + ' item' + (totalItems == 1 ? '' : 's')
             + ' need' + (totalItems == 1 ? 's' : '') + ' your eyes today.');
         appendSlaMarkdownLines(lines, result);
+        appendStuckStageMarkdownLines(lines, result);
+        appendArAgingMarkdownLines(lines, result);
         lines.add('');
         lines.add(buildCountsLine(result));
         return String.join(lines, NL);
@@ -187,6 +191,119 @@ public with sharing class DeliveryWatcherDigestFormatter {
     }
 
     /**
+     * @description Appends the Stuck Stage Block Kit section when the
+     *              signal returned entries. Mirrors the SLA section shape.
+     * @param blocks Block Kit accumulator.
+     * @param result Aggregated run result.
+     */
+    private static void appendStuckStageSection(
+        List<Object> blocks,
+        DeliveryWatcherService.WatcherRunResultDTO result
+    ) {
+        if (result.stuckSignal == null || result.stuckSignal.topEntries == null
+            || result.stuckSignal.topEntries.isEmpty()) {
+            return;
+        }
+        Integer count = safeInt(result.stuckStageCount);
+        if (count <= 0) {
+            return;
+        }
+        blocks.add(buildEntryBlock(
+            '*Stuck Stage (' + count + ')*',
+            result.stuckSignal.topEntries
+        ));
+    }
+
+    /**
+     * @description Appends Stuck Stage markdown lines into the plaintext
+     *              body when the signal surfaced entries.
+     * @param lines  Accumulator for the markdown body.
+     * @param result Aggregated run result.
+     */
+    private static void appendStuckStageMarkdownLines(
+        List<String> lines,
+        DeliveryWatcherService.WatcherRunResultDTO result
+    ) {
+        if (result.stuckSignal == null || result.stuckSignal.topEntries == null
+            || result.stuckSignal.topEntries.isEmpty()) {
+            return;
+        }
+        Integer count = safeInt(result.stuckStageCount);
+        if (count <= 0) {
+            return;
+        }
+        lines.add('');
+        lines.add('*Stuck Stage (' + count + ')*');
+        for (SignalEntryDTO e : result.stuckSignal.topEntries) {
+            lines.add(renderEntry(e));
+        }
+    }
+
+    /**
+     * @description Appends the A/R Aging Block Kit section when the signal
+     *              returned entries. Includes the total-amount summary in
+     *              the section header for an at-a-glance view of exposure.
+     * @param blocks Block Kit accumulator.
+     * @param result Aggregated run result.
+     */
+    private static void appendArAgingSection(
+        List<Object> blocks,
+        DeliveryWatcherService.WatcherRunResultDTO result
+    ) {
+        if (result.arSignal == null || result.arSignal.topEntries == null
+            || result.arSignal.topEntries.isEmpty()) {
+            return;
+        }
+        Integer count = safeInt(result.arOverdueCount);
+        if (count <= 0) {
+            return;
+        }
+        blocks.add(buildEntryBlock(
+            buildArHeader(count, safeInt(result.arOverdueAmount)),
+            result.arSignal.topEntries
+        ));
+    }
+
+    /**
+     * @description Appends A/R Aging markdown lines into the plaintext body.
+     * @param lines  Accumulator for the markdown body.
+     * @param result Aggregated run result.
+     */
+    private static void appendArAgingMarkdownLines(
+        List<String> lines,
+        DeliveryWatcherService.WatcherRunResultDTO result
+    ) {
+        if (result.arSignal == null || result.arSignal.topEntries == null
+            || result.arSignal.topEntries.isEmpty()) {
+            return;
+        }
+        Integer count = safeInt(result.arOverdueCount);
+        if (count <= 0) {
+            return;
+        }
+        lines.add('');
+        lines.add(buildArHeader(count, safeInt(result.arOverdueAmount)));
+        for (SignalEntryDTO e : result.arSignal.topEntries) {
+            lines.add(renderEntry(e));
+        }
+    }
+
+    /**
+     * @description Builds the A/R section header — e.g.
+     *              `*A/R Aging (3) · $4,300 overdue*`.
+     * @param count        Number of overdue invoices.
+     * @param totalAmount  Sum of TotalCurrency__c across the result set
+     *                     (major units, cents truncated).
+     * @return Header string for the section.
+     */
+    private static String buildArHeader(Integer count, Integer totalAmount) {
+        if (totalAmount <= 0) {
+            return '*A/R Aging (' + count + ')*';
+        }
+        return '*A/R Aging (' + count + ') · $' + totalAmount + ' overdue*';
+    }
+
+    /**
      * @description Builds a Block Kit section block bundling a header line +
      *              a bulleted list of entries.
      * @param headerLine Bold header for the section.
@@ -227,19 +344,21 @@ public with sharing class DeliveryWatcherDigestFormatter {
     }
 
     /**
-     * @description Builds the one-line `Counts: SLA=3, Stuck=1, AR=2 | 847ms`
+     * @description Builds the one-line `Counts: SLA=3, Stuck=1, AR=2 ($4300) | 847ms`
      *              footer used in both Slack context block and plaintext body.
      * @param result Aggregated run result.
      * @return Counts line string.
      */
     private static String buildCountsLine(DeliveryWatcherService.WatcherRunResultDTO result) {
         Integer slaTotal = safeInt(result.slaBreachCount) + safeInt(result.slaAtRiskCount);
+        Integer arAmount = safeInt(result.arOverdueAmount);
+        String arSuffix = arAmount > 0 ? (' ($' + arAmount + ')') : '';
         String durationPart = result.runDurationMs == null
             ? ''
             : (' | ' + result.runDurationMs + 'ms');
         return 'Counts: SLA=' + slaTotal
             + ', Stuck=' + safeInt(result.stuckStageCount)
-            + ', AR=' + safeInt(result.arOverdueCount)
+            + ', AR=' + safeInt(result.arOverdueCount) + arSuffix
             + durationPart;
     }
 
