@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableWatcherSyncTrendDateTime__c</fullName>
+    <description>Per-signal gate for Stub D (rolling 7-day trend of SyncItem__c.StatusPk__c=Failed rows that did NOT auto-recover, compared against prior 7 days). Defaults to null — stub returns empty list until 14-21 days of reconciler data exist to baseline what normal failure rate looks like.</description>
+    <externalId>false</externalId>
+    <label>Enable Watcher Sync Trend Signal (Stub)</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

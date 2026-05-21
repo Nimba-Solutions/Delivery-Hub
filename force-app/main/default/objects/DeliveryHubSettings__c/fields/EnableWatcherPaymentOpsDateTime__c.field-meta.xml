@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableWatcherPaymentOpsDateTime__c</fullName>
+    <description>Per-signal gate for Stub C (payment-ops edge cases the AR-aging signal does not cover — DeliveryTransaction__c dispute reasons, refund windows opening, Stripe webhook anomalies). Defaults to null — stub returns empty list until the DeliveryTransaction__c surface is fully wired across all orgs.</description>
+    <externalId>false</externalId>
+    <label>Enable Watcher Payment Ops Signal (Stub)</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
