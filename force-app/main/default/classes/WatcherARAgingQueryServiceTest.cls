@@ -42,11 +42,12 @@ private class WatcherARAgingQueryServiceTest {
     }
 
     /**
-     * @description Disputed invoices must be excluded by the
-     *              DisputeReasonTxt__c filter even when their status is
-     *              still Overdue (Disputed status would already exclude
-     *              them, but DisputeReasonTxt__c is the belt-and-suspenders
-     *              guard).
+     * @description Disputed invoices must be excluded by the StatusPk__c='Disputed'
+     *              picklist value — Disputed and Overdue are mutually exclusive
+     *              status values, so disputed docs never reach this signal. The
+     *              prior DisputeReasonTxt__c=NULL belt-and-suspenders predicate
+     *              was removed because LongTextArea fields can't be filtered
+     *              in SOQL (platform rejection).
      */
     @IsTest
     static void testDisputedInvoicesAreExcluded() {
@@ -54,8 +55,6 @@ private class WatcherARAgingQueryServiceTest {
         NetworkEntity__c client = TestDataFactory.defaultClient();
         // Eligible.
         seedInvoice(client.Id, Date.today().addDays(-15), 500, 'Overdue');
-        // Disputed-reason populated → excluded.
-        seedInvoiceWithDispute(client.Id, Date.today().addDays(-15), 1000);
         // Status=Disputed → excluded by status filter.
         seedInvoice(client.Id, Date.today().addDays(-15), 800, 'Disputed');
 
@@ -208,24 +207,4 @@ private class WatcherARAgingQueryServiceTest {
         return doc;
     }
 
-    /**
-     * @description Inserts an Overdue invoice with DisputeReasonTxt__c
-     *              populated to validate the dispute-exclusion filter.
-     * @param entityId NetworkEntity__c parent.
-     * @param dueDate  DueDateDate__c value.
-     * @param amount   TotalCurrency__c value.
-     * @return Inserted DeliveryDocument__c with dispute reason set.
-     */
-    private static DeliveryDocument__c seedInvoiceWithDispute(Id entityId, Date dueDate, Decimal amount) {
-        DeliveryDocument__c doc = new DeliveryDocument__c(
-            NetworkEntityId__c = entityId,
-            TemplatePk__c = 'Invoice',
-            StatusPk__c = 'Overdue',
-            DueDateDate__c = dueDate,
-            TotalCurrency__c = amount,
-            DisputeReasonTxt__c = 'Client contested line item'
-        );
-        insert doc;
-        return doc;
-    }
 }

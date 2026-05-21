@@ -13,8 +13,10 @@
  *                  AND StatusPk__c='Overdue' AND DueDateDate__c is non-null
  *                  AND DueDateDate__c &lt; (TODAY - minDaysOverdue).
  *                - Exclude disputed invoices (StatusPk__c='Disputed' is
- *                  filtered out by the equality on 'Overdue', and any rows
- *                  with DisputeReasonTxt__c populated are filtered defensively).
+ *                  mutually exclusive with 'Overdue' on the picklist —
+ *                  disputed docs never reach this signal). LongTextArea
+ *                  fields like DisputeReasonTxt__c cannot be filtered in
+ *                  SOQL, so no belt-and-suspenders predicate.
  *                - Exclude superseded versions — StatusPk__c='Superseded' is
  *                  not 'Overdue' so already excluded; PreviousVersionLookup__c
  *                  is purely informational and not a filter (the superseded
@@ -88,16 +90,20 @@ public with sharing class WatcherARAgingQueryService {
      * @return List of DeliveryDocument__c rows, capped at ROW_CAP.
      */
     private static List<DeliveryDocument__c> fetchOverdueInvoices(Date cutoff) {
+        // DisputeReasonTxt__c is LongTextArea — not filterable in SOQL
+        // (platform rejection: "field can not be filtered in a query call").
+        // StatusPk__c = 'Overdue' is mutually exclusive with 'Disputed' on the
+        // picklist, so the prior dispute-reason predicate was redundant. Disputed
+        // docs (StatusPk__c='Disputed') never reach this branch.
         return [
             SELECT Id, Name, DueDateDate__c, TotalCurrency__c,
                    StatusPk__c, TemplatePk__c, NetworkEntityId__c,
-                   NetworkEntityId__r.Name, DisputeReasonTxt__c
+                   NetworkEntityId__r.Name
             FROM DeliveryDocument__c
             WHERE TemplatePk__c = 'Invoice'
               AND StatusPk__c = 'Overdue'
               AND DueDateDate__c != NULL
               AND DueDateDate__c < :cutoff
-              AND DisputeReasonTxt__c = NULL
             WITH SYSTEM_MODE
             ORDER BY TotalCurrency__c DESC NULLS LAST, DueDateDate__c ASC NULLS LAST
             LIMIT :ROW_CAP
