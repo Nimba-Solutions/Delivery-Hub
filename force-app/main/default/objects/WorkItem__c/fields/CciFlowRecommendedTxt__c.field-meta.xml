@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>CciFlowRecommendedTxt__c</fullName>
+    <description>Recommended CumulusCI flow for this WI&apos;s WorkflowType. Returns Text — formula suffix matches return type per FIELD_NAMING.md. Engineering &#x2192; dev_org, QA &#x2192; qa_org, Sales (demo) &#x2192; demo_org, default dev_org.</description>
+    <externalId>false</externalId>
+    <formula>IF(ISBLANK(WorkflowTypeTxt__c), &quot;dev_org&quot;,
+IF(WorkflowTypeTxt__c = &quot;QA&quot;, &quot;qa_org&quot;,
+IF(WorkflowTypeTxt__c = &quot;Sales&quot;, &quot;demo_org&quot;,
+IF(WorkflowTypeTxt__c = &quot;Demo&quot;, &quot;demo_org&quot;,
+&quot;dev_org&quot;))))</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <label>CCI Flow Recommended</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

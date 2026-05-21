@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>FeatureLookup__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Optional Feature__c the scratch is exercising. Null = no specific feature focus. Used by the dev-loop guidance LWC to surface the matching DevLoopGuide__mdt checklist on the Feature record page.</description>
+    <label>Feature</label>
+    <referenceTo>Feature__c</referenceTo>
+    <relationshipLabel>Scratch Org Instances</relationshipLabel>
+    <relationshipName>ScratchOrgInstances</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>
