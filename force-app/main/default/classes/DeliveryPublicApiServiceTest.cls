@@ -1223,4 +1223,227 @@ private class DeliveryPublicApiServiceTest {
         String error = (String) body.get('error');
         System.assert(error.contains(expectedMessage), 'Error should contain: ' + expectedMessage + ', got: ' + error);
     }
+
+    // ==========================================
+    // FEATURE COCKPIT — PR 8 ROUTES
+    // ==========================================
+
+    /**
+     * @description POST /features/{name}/toggle creates a Pending request +
+     *              at least the root approval row.
+     */
+    @IsTest
+    static void testPostFeatureToggleSubmitsRequest() {
+        System.runAs(testUser) {
+            Feature__c feat = TestDataFactory.createFeature(new Map<String, Object>{
+                'EnabledDateTime__c' => null,
+                'DisabledDateTime__c' => Datetime.now()
+            });
+
+            Map<String, Object> body = new Map<String, Object>{
+                'action' => 'Enable',
+                'reason' => 'API toggle test'
+            };
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/features/' + feat.Name + '/toggle',
+                body
+            );
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
+
+            System.assertEquals(201, res.statusCode, 'Should return 201 Created');
+            Map<String, Object> responseBody = parseResponse(res);
+            System.assertEquals(true, responseBody.get('success'), 'success=true');
+            Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
+            System.assertNotEquals(null, data.get('requestId'), 'requestId returned');
+            System.assertEquals('Pending', data.get('status'), 'status=Pending');
+
+            Id requestId = (Id) data.get('requestId');
+            FeatureToggleRequest__c persisted = [
+                SELECT StatusPk__c, ActionPk__c, FeatureLookup__c
+                FROM FeatureToggleRequest__c WHERE Id = :requestId
+            ];
+            System.assertEquals('Pending', persisted.StatusPk__c, 'persisted Pending');
+            System.assertEquals('Enable', persisted.ActionPk__c, 'persisted action');
+            System.assertEquals(feat.Id, persisted.FeatureLookup__c, 'feature linked');
+
+            Integer approvalCount = [
+                SELECT COUNT() FROM FeatureToggleApproval__c WHERE RequestLookup__c = :requestId
+            ];
+            System.assertEquals(1, approvalCount, 'root approval row created');
+        }
+    }
+
+    /**
+     * @description POST /features/{name}/toggle rejects an invalid action.
+     */
+    @IsTest
+    static void testPostFeatureToggleInvalidAction() {
+        System.runAs(testUser) {
+            Feature__c feat = TestDataFactory.createFeature(null);
+            Map<String, Object> body = new Map<String, Object>{
+                'action' => 'Bogus'
+            };
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/features/' + feat.Name + '/toggle',
+                body
+            );
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
+
+            System.assertEquals(400, res.statusCode, 'invalid action returns 400');
+        }
+    }
+
+    /**
+     * @description POST /features/{name}/toggle returns 404 when feature
+     *              not found.
+     */
+    @IsTest
+    static void testPostFeatureToggleUnknownFeature() {
+        System.runAs(testUser) {
+            Map<String, Object> body = new Map<String, Object>{ 'action' => 'Enable' };
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/features/Nonexistent_Feature_xyz/toggle',
+                body
+            );
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
+
+            System.assertEquals(404, res.statusCode, 'unknown feature returns 404');
+        }
+    }
+
+    /**
+     * @description GET /feature-toggle-requests returns the seeded request,
+     *              optionally filtered by status.
+     */
+    @IsTest
+    static void testGetFeatureToggleRequests() {
+        System.runAs(testUser) {
+            Feature__c feat = TestDataFactory.createFeature(null);
+            FeatureToggleRequest__c seed = TestDataFactory.newFeatureToggleRequest(feat.Id);
+
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/feature-toggle-requests');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            req.addParameter('status', 'Pending');
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
+
+            System.assertEquals(200, res.statusCode, 'should return 200');
+            Map<String, Object> body = parseResponse(res);
+            List<Object> data = (List<Object>) body.get('data');
+            Boolean foundSeed = false;
+            for (Object entry : data) {
+                Map<String, Object> row = (Map<String, Object>) entry;
+                if (row.get('id') == seed.Id) {
+                    foundSeed = true;
+                    System.assertEquals('Pending', row.get('status'), 'status filter respected');
+                    System.assertEquals('Enable', row.get('action'), 'action surfaced');
+                }
+            }
+            System.assert(foundSeed, 'seeded request should appear in results');
+        }
+    }
+
+    /**
+     * @description POST /feature-toggle-approvals/{id}/grant flips a single
+     *              required approval to Approved + applies the request.
+     */
+    @IsTest
+    static void testPostFeatureApprovalGrant() {
+        System.runAs(testUser) {
+            Feature__c feat = TestDataFactory.createFeature(new Map<String, Object>{
+                'EnabledDateTime__c' => null,
+                'DisabledDateTime__c' => Datetime.now()
+            });
+            Id requestId = DeliveryFeatureApprovalService.submit(feat.Id, 'Enable', null);
+            FeatureToggleApproval__c approval = [
+                SELECT Id FROM FeatureToggleApproval__c WHERE RequestLookup__c = :requestId LIMIT 1
+            ];
+
+            Map<String, Object> body = new Map<String, Object>{ 'note' => 'looks good' };
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/feature-toggle-approvals/' + approval.Id + '/grant',
+                body
+            );
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
+
+            System.assertEquals(200, res.statusCode, 'should return 200');
+            Map<String, Object> responseBody = parseResponse(res);
+            Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
+            System.assertEquals('Approved', data.get('status'), 'approval marked Approved');
+            System.assertEquals('Applied', data.get('requestStatus'),
+                'request applied since only one required row');
+        }
+    }
+
+    /**
+     * @description POST /feature-toggle-approvals/{id}/reject flips the
+     *              approval Rejected and the request Rejected.
+     */
+    @IsTest
+    static void testPostFeatureApprovalReject() {
+        System.runAs(testUser) {
+            Feature__c feat = TestDataFactory.createFeature(new Map<String, Object>{
+                'EnabledDateTime__c' => null,
+                'DisabledDateTime__c' => Datetime.now()
+            });
+            Id requestId = DeliveryFeatureApprovalService.submit(feat.Id, 'Enable', null);
+            FeatureToggleApproval__c approval = [
+                SELECT Id FROM FeatureToggleApproval__c WHERE RequestLookup__c = :requestId LIMIT 1
+            ];
+
+            Map<String, Object> body = new Map<String, Object>{ 'note' => 'risky' };
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/feature-toggle-approvals/' + approval.Id + '/reject',
+                body
+            );
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
+
+            System.assertEquals(200, res.statusCode, 'should return 200');
+            Map<String, Object> responseBody = parseResponse(res);
+            Map<String, Object> data = (Map<String, Object>) responseBody.get('data');
+            System.assertEquals('Rejected', data.get('status'), 'approval rejected');
+            System.assertEquals('Rejected', data.get('requestStatus'),
+                'request marked Rejected on single dissent');
+        }
+    }
 }

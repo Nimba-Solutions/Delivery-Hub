@@ -4,8 +4,9 @@
  * @description  Approval inbox card for the Feature Cockpit (Layer 5).
  *               Lists Pending FeatureToggleApproval__c rows assigned to the
  *               running user, with inline Approve / Reject buttons + an
- *               optional decision-note field. PR 7 — single-step only.
- *               PR 8 will widen to multi-step chains + REST.
+ *               optional decision-note field. PR 8 added the multi-step
+ *               cascade approval chain — each row exposes a "Show chain"
+ *               button that opens a modal listing every step on the request.
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, wire, track } from 'lwc';
@@ -14,16 +15,29 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getInbox from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureApprovalService.getInbox';
 import grantApex from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureApprovalService.grant';
 import rejectApex from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureApprovalService.reject';
+import getApprovalChain from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureApprovalService.getApprovalChain';
 
 const REASON_TRUNCATE_AT = 160,
     ELLIPSIS = '…',
     EMPTY = 0;
+
+const STATUS_BADGE_CLASS = {
+    Approved: 'slds-badge slds-theme_success',
+    Auto: 'slds-badge slds-theme_success',
+    Rejected: 'slds-badge slds-theme_error',
+    Pending: 'slds-badge slds-theme_warning'
+};
 
 export default class DeliveryFeatureApprovalInbox extends LightningElement {
     @track rows = [];
     @track errorMessage = '';
     @track isLoaded = false;
     @track noteByApproval = {};
+    @track chainModalOpen = false;
+    @track chainRows = [];
+    @track chainError = '';
+    @track chainLoading = false;
+    @track chainRequestLabel = '';
 
     wiredResult;
 
@@ -82,6 +96,14 @@ export default class DeliveryFeatureApprovalInbox extends LightningElement {
         return this.errorMessage.length > EMPTY;
     }
 
+    get hasChainRows() {
+        return this.chainRows.length > EMPTY;
+    }
+
+    get chainHasError() {
+        return this.chainError.length > EMPTY;
+    }
+
     handleRefresh() {
         if (this.wiredResult) {
             refreshApex(this.wiredResult);
@@ -119,6 +141,59 @@ export default class DeliveryFeatureApprovalInbox extends LightningElement {
         rejectApex({ approvalId, note })
             .then(() => this.onDecisionSuccess('Rejected', approvalId))
             .catch(err => this.onDecisionError('reject', err));
+    }
+
+    handleShowChain(event) {
+        const requestId = event.currentTarget.dataset.requestId;
+        const featureLabel = event.currentTarget.dataset.featureLabel || '';
+        if (!requestId) {
+            return;
+        }
+        this.chainModalOpen = true;
+        this.chainRows = [];
+        this.chainError = '';
+        this.chainLoading = true;
+        this.chainRequestLabel = featureLabel;
+        getApprovalChain({ requestId })
+            .then(data => {
+                this.chainRows = (data || []).map((n, idx) => this.shapeChainNode(n, idx));
+                this.chainLoading = false;
+            })
+            .catch(err => {
+                this.chainError = (err && err.body && err.body.message)
+                    ? err.body.message
+                    : 'Unable to load approval chain.';
+                this.chainLoading = false;
+            });
+    }
+
+    shapeChainNode(n, idx) {
+        const status = n.status || 'Pending';
+        const stepNumber = n.stepNumber === undefined || n.stepNumber === null
+            ? idx
+            : n.stepNumber;
+        return {
+            key: n.approvalId || `chain-${idx}`,
+            approvalId: n.approvalId,
+            featureLabel: n.featureLabel || '(unnamed)',
+            stepNumber,
+            stepLabel: stepNumber === 0 ? 'Root' : `Step ${stepNumber}`,
+            status,
+            statusBadgeClass: STATUS_BADGE_CLASS[status] || 'slds-badge',
+            requiredBoolean: n.requiredBoolean === true,
+            requiredLabel: n.requiredBoolean === true ? 'Required' : 'Optional',
+            approverUserName: n.approverUserName || '—',
+            decisionDateTime: n.decisionDateTime,
+            decisionNote: n.decisionNote || '',
+            hasDecisionNote: !!(n.decisionNote && n.decisionNote.length)
+        };
+    }
+
+    handleCloseChain() {
+        this.chainModalOpen = false;
+        this.chainRows = [];
+        this.chainError = '';
+        this.chainRequestLabel = '';
     }
 
     onDecisionSuccess(label, approvalId) {

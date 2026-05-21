@@ -306,4 +306,247 @@ private class DeliveryFeatureApprovalServiceTest {
         }
         System.assert(threw, 'rollback of a Pending request should throw');
     }
+
+    // ────────────────────────────────────────────────────────────────────
+    // PR 8 — multi-step cascade chain tests
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Submit on a feature with a 2-level Hard cascade (A -> B -> C
+     *              via BlockingFeatureLookup__c, walked on Enable) produces
+     *              exactly one root approval (Step=0) plus one approval per
+     *              cascade layer. With A as the requested feature and B, C as
+     *              blockers, the BFS surfaces B at depth 1 and C at depth 2,
+     *              for a total of 3 approval rows.
+     */
+    @IsTest
+    static void testSubmitGeneratesMultiStepChainForCascade() {
+        Feature__c featA = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => Datetime.now()
+        });
+        Feature__c featB = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => Datetime.now()
+        });
+        Feature__c featC = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => Datetime.now()
+        });
+        // A depends on B (A blocked by B); B depends on C (B blocked by C).
+        TestDataFactory.createFeatureDependency(featB.Id, featA.Id, new Map<String, Object>{
+            'TypePk__c' => 'Hard',
+            'CascadeDirectionPk__c' => 'Both'
+        });
+        TestDataFactory.createFeatureDependency(featC.Id, featB.Id, new Map<String, Object>{
+            'TypePk__c' => 'Hard',
+            'CascadeDirectionPk__c' => 'Both'
+        });
+
+        Test.startTest();
+        Id requestId = DeliveryFeatureApprovalService.submit(featA.Id, 'Enable', 'cascade test');
+        Test.stopTest();
+
+        List<FeatureToggleApproval__c> approvals = [
+            SELECT Id, StepNumber__c, FeatureLookup__c, RequiredDateTime__c
+            FROM FeatureToggleApproval__c
+            WHERE RequestLookup__c = :requestId
+            ORDER BY StepNumber__c ASC
+        ];
+        System.assertEquals(3, approvals.size(),
+            'expected root + 2 cascade approvals for A -> B -> C chain');
+        System.assertEquals(0, approvals[0].StepNumber__c.intValue(),
+            'root sign-off row is StepNumber=0');
+        System.assertEquals(featA.Id, approvals[0].FeatureLookup__c,
+            'root row references the requested feature');
+        // Hard edges => RequiredDateTime__c populated.
+        for (FeatureToggleApproval__c a : approvals) {
+            System.assertNotEquals(null, a.RequiredDateTime__c,
+                'Hard cascade edges must be Required');
+        }
+    }
+
+    /**
+     * @description When a chain has 3 required approvals, granting only 2
+     *              must NOT apply. Granting the 3rd flips Apply.
+     */
+    @IsTest
+    static void testApplyIfFullyGrantedRequiresAllRequiredApprovals() {
+        Feature__c featA = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => Datetime.now()
+        });
+        Feature__c featB = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => Datetime.now()
+        });
+        TestDataFactory.createFeatureDependency(featB.Id, featA.Id, new Map<String, Object>{
+            'TypePk__c' => 'Hard',
+            'CascadeDirectionPk__c' => 'Both'
+        });
+
+        Id requestId = DeliveryFeatureApprovalService.submit(featA.Id, 'Enable', null);
+        List<FeatureToggleApproval__c> approvals = [
+            SELECT Id, StepNumber__c
+            FROM FeatureToggleApproval__c
+            WHERE RequestLookup__c = :requestId
+            ORDER BY StepNumber__c ASC
+        ];
+        System.assertEquals(2, approvals.size(),
+            'expected root + 1 cascade approval for A -> B chain');
+
+        Test.startTest();
+        // Grant only the cascade-leaf approval first. The root remains pending.
+        DeliveryFeatureApprovalService.grant(approvals[1].Id, 'leaf ok');
+
+        FeatureToggleRequest__c reqMid = [
+            SELECT StatusPk__c FROM FeatureToggleRequest__c WHERE Id = :requestId
+        ];
+        System.assertEquals('Pending', reqMid.StatusPk__c,
+            'only one required grant should not flip the request');
+
+        // Now grant the root.
+        DeliveryFeatureApprovalService.grant(approvals[0].Id, 'final sign-off');
+        Test.stopTest();
+
+        FeatureToggleRequest__c reqFinal = [
+            SELECT StatusPk__c, AppliedDateTime__c FROM FeatureToggleRequest__c WHERE Id = :requestId
+        ];
+        System.assertEquals('Applied', reqFinal.StatusPk__c,
+            'all required grants should flip to Applied');
+        System.assertNotEquals(null, reqFinal.AppliedDateTime__c,
+            'AppliedDateTime stamped on apply');
+    }
+
+    /**
+     * @description Soft (non-required) dependencies are auto-marked
+     *              Status='Auto' when all required rows resolve. Soft rows
+     *              do not block apply.
+     */
+    @IsTest
+    static void testSoftDependenciesAreAutoApproved() {
+        Feature__c featA = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => Datetime.now()
+        });
+        Feature__c featSoft = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => Datetime.now()
+        });
+        TestDataFactory.createFeatureDependency(featSoft.Id, featA.Id, new Map<String, Object>{
+            'TypePk__c' => 'Soft',
+            'CascadeDirectionPk__c' => 'Both'
+        });
+
+        Id requestId = DeliveryFeatureApprovalService.submit(featA.Id, 'Enable', null);
+        List<FeatureToggleApproval__c> approvals = [
+            SELECT Id, StepNumber__c, RequiredDateTime__c, StatusPk__c
+            FROM FeatureToggleApproval__c
+            WHERE RequestLookup__c = :requestId
+            ORDER BY StepNumber__c ASC
+        ];
+        System.assertEquals(2, approvals.size(),
+            'soft dependencies still produce an approval row');
+
+        // The Soft row (depth 1) should NOT be Required.
+        FeatureToggleApproval__c softRow;
+        FeatureToggleApproval__c rootRow;
+        for (FeatureToggleApproval__c a : approvals) {
+            if (a.StepNumber__c == 0) { rootRow = a; }
+            else { softRow = a; }
+        }
+        System.assertNotEquals(null, rootRow, 'root row created');
+        System.assertNotEquals(null, softRow, 'soft row created');
+        System.assertNotEquals(null, rootRow.RequiredDateTime__c, 'root row is required');
+        System.assertEquals(null, softRow.RequiredDateTime__c,
+            'Soft dependency row must have RequiredDateTime__c=null');
+
+        Test.startTest();
+        // Grant only the root — soft should be auto-marked on apply.
+        DeliveryFeatureApprovalService.grant(rootRow.Id, null);
+        Test.stopTest();
+
+        FeatureToggleApproval__c softAfter = [
+            SELECT StatusPk__c, DecisionDateTime__c FROM FeatureToggleApproval__c
+            WHERE Id = :softRow.Id
+        ];
+        System.assertEquals('Auto', softAfter.StatusPk__c,
+            'Soft row should be auto-marked at apply');
+        System.assertNotEquals(null, softAfter.DecisionDateTime__c,
+            'Auto row gets a DecisionDateTime stamp');
+        FeatureToggleRequest__c reqFinal = [
+            SELECT StatusPk__c FROM FeatureToggleRequest__c WHERE Id = :requestId
+        ];
+        System.assertEquals('Applied', reqFinal.StatusPk__c, 'request applied');
+    }
+
+    /**
+     * @description getApprovalChain returns one DTO per approval row, ordered
+     *              by StepNumber. Required/Optional flag derived from
+     *              RequiredDateTime__c presence.
+     */
+    @IsTest
+    static void testGetApprovalChainReturnsOrderedDtos() {
+        Feature__c featA = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => Datetime.now()
+        });
+        Feature__c featB = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => Datetime.now()
+        });
+        TestDataFactory.createFeatureDependency(featB.Id, featA.Id, new Map<String, Object>{
+            'TypePk__c' => 'Hard',
+            'CascadeDirectionPk__c' => 'Both'
+        });
+        Id requestId = DeliveryFeatureApprovalService.submit(featA.Id, 'Enable', null);
+
+        Test.startTest();
+        List<DeliveryFeatureApprovalService.ApprovalChainNodeDTO> chain =
+            DeliveryFeatureApprovalService.getApprovalChain(requestId);
+        Test.stopTest();
+
+        System.assertEquals(2, chain.size(), 'expected 2 chain entries');
+        System.assertEquals(0, chain.get(0).stepNumber,
+            'first entry is root (Step 0)');
+        System.assertEquals(true, chain.get(0).requiredBoolean,
+            'root row is required');
+        System.assertEquals(featA.Id, chain.get(0).featureId,
+            'root references the requested feature');
+        System.assertEquals(1, chain.get(1).stepNumber,
+            'second entry is the cascade row at depth 1');
+        System.assertEquals(featB.Id, chain.get(1).featureId,
+            'cascade row references the blocker feature');
+        // Both rows still pending; status DTO carries that through.
+        System.assertEquals('Pending', chain.get(0).status, 'pending status');
+    }
+
+    /**
+     * @description Optional cascade edges must NOT produce an approval row.
+     */
+    @IsTest
+    static void testOptionalDependenciesProduceNoApprovalRow() {
+        Feature__c featA = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => Datetime.now()
+        });
+        Feature__c featOpt = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => Datetime.now()
+        });
+        TestDataFactory.createFeatureDependency(featOpt.Id, featA.Id, new Map<String, Object>{
+            'TypePk__c' => 'Optional',
+            'CascadeDirectionPk__c' => 'Both'
+        });
+
+        Test.startTest();
+        Id requestId = DeliveryFeatureApprovalService.submit(featA.Id, 'Enable', null);
+        Test.stopTest();
+
+        Integer approvalCount = [
+            SELECT COUNT() FROM FeatureToggleApproval__c WHERE RequestLookup__c = :requestId
+        ];
+        System.assertEquals(1, approvalCount,
+            'Optional edges should be skipped — only the root row exists');
+    }
 }
