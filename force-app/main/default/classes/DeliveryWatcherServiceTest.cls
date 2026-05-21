@@ -140,6 +140,92 @@ private class DeliveryWatcherServiceTest {
         }
     }
 
+    /**
+     * @description Signal 2 (Stuck Stage) happy path: Watcher should
+     *              populate stuckStageCount when the gate is open and the
+     *              service surfaces entries.
+     */
+    @IsTest
+    static void testStuckStageSignalPopulatesCount() {
+        System.runAs(testUser) {
+            insertAllSignalsEnabledSettings(null);
+            // Inject a deterministic stuck-stage cluster (CMT rows aren't
+            // insertable in test context — the @TestVisible override drives
+            // the signal here).
+            WatcherStuckStageQueryService.testClusterOverride =
+                new Map<String, WatcherStuckStageQueryService.RuleCluster>{
+                    'In Development' => new WatcherStuckStageQueryService.RuleCluster(3, false)
+                };
+            for (Integer i = 0; i < 2; i++) {
+                TestDataFactory.createWorkItem(new Map<String, Object>{
+                    'BriefDescriptionTxt__c' => 'Stuck WI ' + i,
+                    'StageNamePk__c' => 'In Development',
+                    'StageEnteredDateTime__c' => Datetime.now().addDays(-6)
+                });
+            }
+            SlackMock mock = new SlackMock();
+            Test.setMock(HttpCalloutMock.class, mock);
+
+            Test.startTest();
+            DeliveryWatcherService.WatcherRunResultDTO result =
+                DeliveryWatcherService.runAndReturnSummary();
+            Test.stopTest();
+
+            System.assertEquals('Success', result.status, 'Status should be Success');
+            System.assertEquals(2, result.stuckStageCount,
+                'stuckStageCount should reflect the seeded stuck WIs (Warning weighting)');
+            List<WatcherDigest__c> rows = [
+                SELECT Id, SignalCountsTxt__c, FlaggedWorkItemIdsTxt__c FROM WatcherDigest__c
+            ];
+            System.assertEquals(1, rows.size(), 'One audit row should have been written');
+            System.assert(rows.get(0).SignalCountsTxt__c.contains('Stuck:2'),
+                'SignalCountsTxt__c should reflect Stuck:2 — got: ' + rows.get(0).SignalCountsTxt__c);
+            System.assert(String.isNotBlank(rows.get(0).FlaggedWorkItemIdsTxt__c),
+                'Stuck-stage WIs should be appended to FlaggedWorkItemIdsTxt__c');
+        }
+    }
+
+    /**
+     * @description Signal 3 (A/R Aging) happy path: Watcher should
+     *              populate arOverdueCount + arOverdueAmount + a Document Id
+     *              list when overdue invoices exist.
+     */
+    @IsTest
+    static void testArAgingSignalPopulatesCountAndAmount() {
+        System.runAs(testUser) {
+            insertAllSignalsEnabledSettings(null);
+            NetworkEntity__c client = TestDataFactory.defaultClient();
+            insert new DeliveryDocument__c(
+                NetworkEntityId__c = client.Id,
+                TemplatePk__c = 'Invoice',
+                StatusPk__c = 'Overdue',
+                DueDateDate__c = Date.today().addDays(-20),
+                TotalCurrency__c = 1500
+            );
+            SlackMock mock = new SlackMock();
+            Test.setMock(HttpCalloutMock.class, mock);
+
+            Test.startTest();
+            DeliveryWatcherService.WatcherRunResultDTO result =
+                DeliveryWatcherService.runAndReturnSummary();
+            Test.stopTest();
+
+            System.assertEquals('Success', result.status, 'Status should be Success');
+            System.assertEquals(1, result.arOverdueCount,
+                'arOverdueCount should reflect the seeded overdue invoice');
+            System.assertEquals(1500, result.arOverdueAmount,
+                'arOverdueAmount should sum the seeded $1500 invoice');
+            List<WatcherDigest__c> rows = [
+                SELECT Id, SignalCountsTxt__c, FlaggedDocumentIdsTxt__c FROM WatcherDigest__c
+            ];
+            System.assertEquals(1, rows.size(), 'One audit row should have been written');
+            System.assert(rows.get(0).SignalCountsTxt__c.contains('AR:1'),
+                'SignalCountsTxt__c should reflect AR:1 — got: ' + rows.get(0).SignalCountsTxt__c);
+            System.assert(String.isNotBlank(rows.get(0).FlaggedDocumentIdsTxt__c),
+                'AR invoices should populate FlaggedDocumentIdsTxt__c');
+        }
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**
@@ -154,6 +240,28 @@ private class DeliveryWatcherServiceTest {
             SetupOwnerId = UserInfo.getOrganizationId(),
             EnableWatcherDigestDateTime__c = now,
             EnableWatcherSLABreachDateTime__c = now,
+            SlackWebhookUrlTxt__c = 'https://hooks.slack.com/services/test',
+            WatcherDigestRecipientUserIdsTxt__c = recipientIds
+        );
+        insert s;
+    }
+
+    /**
+     * @description Inserts a DeliveryHubSettings__c row with Watcher master
+     *              + all three implemented signals (SLA / Stuck Stage /
+     *              A/R Aging) enabled. Used by PR-C signal-wiring tests.
+     * @param recipientIds Optional recipient string; null = quiet path.
+     */
+    private static void insertAllSignalsEnabledSettings(String recipientIds) {
+        Datetime now = Datetime.now();
+        DeliveryHubSettings__c s = new DeliveryHubSettings__c(
+            SetupOwnerId = UserInfo.getOrganizationId(),
+            EnableWatcherDigestDateTime__c = now,
+            EnableWatcherSLABreachDateTime__c = now,
+            EnableWatcherStuckStageDateTime__c = now,
+            EnableWatcherARAgingDateTime__c = now,
+            WatcherARAgingMinDaysOverdueNumber__c = 7,
+            WatcherStuckStageDefaultDaysNumber__c = 5,
             SlackWebhookUrlTxt__c = 'https://hooks.slack.com/services/test',
             WatcherDigestRecipientUserIdsTxt__c = recipientIds
         );
