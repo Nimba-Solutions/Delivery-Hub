@@ -44,6 +44,16 @@ global class DeliveryHubInstallHandler implements InstallHandler {
         }
     }
 
+    /**
+     * @description Initialises the org-default DeliveryHubSettings__c row on
+     *              a fresh tenant install. No-ops when settings already exist
+     *              (so re-install / upgrade never overwrites admin choices).
+     *              Includes Phase 2 Watcher v1 per-signal-on defaults for the
+     *              top 3 implemented signals (PR-B ships #1; PR-C ships #2+#3)
+     *              so admins don't have to re-toggle them when PR-C lands.
+     *              The master gate EnableWatcherDigestDateTime__c stays null
+     *              — Watcher is silent until the admin opts in explicitly.
+     */
     private static void initializeDefaultSettings() {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         if (settings.Id != null) {
@@ -61,6 +71,9 @@ global class DeliveryHubInstallHandler implements InstallHandler {
             EnableEmailNotificationsDateTime__c         = now,
             EnableActivityLoggingDateTime__c            = now,
             EnableBoardMetricsDateTime__c               = now,
+            EnableWatcherSLABreachDateTime__c           = now,
+            EnableWatcherStuckStageDateTime__c          = now,
+            EnableWatcherARAgingDateTime__c             = now,
             FailedSyncAutoDismissDaysNumber__c          = 14,
             StagesToAutoShareWithDevTeamTxt__c = 'All'
         );
