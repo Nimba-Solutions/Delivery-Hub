@@ -126,6 +126,8 @@ global with sharing class DeliveryWatcherService {
     private static WatcherRunResultDTO dispatchSignals(DeliveryHubSettings__c settings) {
         WatcherRunResultDTO result = new WatcherRunResultDTO();
         result.slaSignal = runSlaBreachSignal(settings, result);
+        result.stuckSignal = runStuckStageSignal(settings, result);
+        result.arSignal = runArAgingSignal(settings, result);
         runStubSignals(settings, result);
         mergeCounts(result);
         return result;
@@ -146,6 +148,44 @@ global with sharing class DeliveryWatcherService {
             return WatcherSLABreachQueryService.query();
         } catch (Exception e) {
             captureError(result, WatcherSLABreachQueryService.SIGNAL_NAME, e);
+            return null;
+        }
+    }
+
+    /**
+     * @description Runs Signal 2 (Stuck Stage) when its gate is open.
+     * @param settings Org-default settings row.
+     * @param result   Accumulator for any thrown exception messages.
+     * @return Populated SignalResultDTO on happy path, or null when the
+     *         signal is gate-off / errored.
+     */
+    private static SignalResultDTO runStuckStageSignal(DeliveryHubSettings__c settings, WatcherRunResultDTO result) {
+        if (settings.EnableWatcherStuckStageDateTime__c == null) {
+            return null;
+        }
+        try {
+            return WatcherStuckStageQueryService.query();
+        } catch (Exception e) {
+            captureError(result, WatcherStuckStageQueryService.SIGNAL_NAME, e);
+            return null;
+        }
+    }
+
+    /**
+     * @description Runs Signal 3 (A/R Aging) when its gate is open.
+     * @param settings Org-default settings row.
+     * @param result   Accumulator for any thrown exception messages.
+     * @return Populated SignalResultDTO on happy path, or null when the
+     *         signal is gate-off / errored.
+     */
+    private static SignalResultDTO runArAgingSignal(DeliveryHubSettings__c settings, WatcherRunResultDTO result) {
+        if (settings.EnableWatcherARAgingDateTime__c == null) {
+            return null;
+        }
+        try {
+            return WatcherARAgingQueryService.query();
+        } catch (Exception e) {
+            captureError(result, WatcherARAgingQueryService.SIGNAL_NAME, e);
             return null;
         }
     }
@@ -211,8 +251,8 @@ global with sharing class DeliveryWatcherService {
 
     /**
      * @description Maps signal DTOs into the orchestrator's flat per-signal
-     *              count fields. PR-B only wires the SLA pair; stuck-stage
-     *              and AR-overdue stay at zero until PR-C lands.
+     *              count fields. Signals 1 (SLA), 2 (Stuck Stage) and 3
+     *              (A/R Aging) all populate here. PR-C closes Watcher v1.
      * @param result Result accumulator.
      */
     private static void mergeCounts(WatcherRunResultDTO result) {
@@ -220,14 +260,19 @@ global with sharing class DeliveryWatcherService {
             ? result.slaSignal.primaryCount : 0;
         result.slaAtRiskCount = (result.slaSignal != null && result.slaSignal.secondaryCount != null)
             ? result.slaSignal.secondaryCount : 0;
-        // Signals 2 + 3 land in PR-C; leave zero placeholders for now.
-        result.stuckStageCount = 0;
-        result.arOverdueCount = 0;
+        result.stuckStageCount = (result.stuckSignal != null && result.stuckSignal.primaryCount != null)
+            ? result.stuckSignal.primaryCount : 0;
+        result.arOverdueCount = (result.arSignal != null && result.arSignal.primaryCount != null)
+            ? result.arSignal.primaryCount : 0;
+        result.arOverdueAmount = (result.arSignal != null && result.arSignal.secondaryCount != null)
+            ? result.arSignal.secondaryCount : 0;
     }
 
     /**
      * @description Computes the run-level status: Failed if every signal
      *              threw, Partial if at least one threw, Success otherwise.
+     *              A signal "succeeded" when its DTO slot is non-null
+     *              (PR-C onward: SLA / Stuck / AR each contribute).
      * @param result Aggregated result.
      * @return One of `Success`, `Partial`, `Failed` (GVS-backed).
      */
@@ -236,7 +281,9 @@ global with sharing class DeliveryWatcherService {
         if (errorCount == 0) {
             return 'Success';
         }
-        Boolean anySucceeded = (result.slaSignal != null && result.slaSignal.errorMessage == null);
+        Boolean anySucceeded = (result.slaSignal != null && result.slaSignal.errorMessage == null)
+            || (result.stuckSignal != null && result.stuckSignal.errorMessage == null)
+            || (result.arSignal != null && result.arSignal.errorMessage == null);
         return anySucceeded ? 'Partial' : 'Failed';
     }
 
@@ -277,6 +324,7 @@ global with sharing class DeliveryWatcherService {
                 DigestBodyTxt__c = truncate(result.digestBodyMarkdown, BODY_CAP),
                 SignalCountsTxt__c = buildSignalCountsTxt(result),
                 FlaggedWorkItemIdsTxt__c = buildFlaggedWorkItemIds(result),
+                FlaggedDocumentIdsTxt__c = buildFlaggedDocumentIds(result),
                 ErrorMessageTxt__c = buildErrorMessageTxt(result),
                 RecipientUserIdsTxt__c = truncate(settings.WatcherDigestRecipientUserIdsTxt__c, 255),
                 RunModePk__c = Test.isRunningTest() ? 'Test' : 'Scheduled'
@@ -306,23 +354,54 @@ global with sharing class DeliveryWatcherService {
     /**
      * @description Builds the comma-separated WI Id payload for
      *              WatcherDigest__c.FlaggedWorkItemIdsTxt__c. Pulls Ids from
-     *              the SLA signal's topEntries; PR-C signals will append to
-     *              this same list.
+     *              the SLA + Stuck-Stage signals' topEntries (both surface
+     *              WorkItem__c records); the AR signal contributes to
+     *              FlaggedDocumentIdsTxt__c separately.
      * @param result Aggregated result.
      * @return Comma-separated Id string, or empty.
      */
     private static String buildFlaggedWorkItemIds(WatcherRunResultDTO result) {
-        if (result.slaSignal == null || result.slaSignal.topEntries == null
-            || result.slaSignal.topEntries.isEmpty()) {
+        List<String> ids = new List<String>();
+        appendEntryIds(ids, result.slaSignal);
+        appendEntryIds(ids, result.stuckSignal);
+        if (ids.isEmpty()) {
             return '';
         }
+        return truncate(String.join(ids, ','), FLAGGED_WI_CAP);
+    }
+
+    /**
+     * @description Builds the comma-separated Document Id payload for
+     *              WatcherDigest__c.FlaggedDocumentIdsTxt__c. Pulls Ids
+     *              from the AR signal's topEntries (those are
+     *              DeliveryDocument__c rows).
+     * @param result Aggregated result.
+     * @return Comma-separated Id string, or empty.
+     */
+    private static String buildFlaggedDocumentIds(WatcherRunResultDTO result) {
         List<String> ids = new List<String>();
-        for (SignalEntryDTO e : result.slaSignal.topEntries) {
-            if (e != null && e.recordId != null) {
-                ids.add(String.valueOf(e.recordId));
-            }
+        appendEntryIds(ids, result.arSignal);
+        if (ids.isEmpty()) {
+            return '';
         }
         return truncate(String.join(ids, ','), FLAGGED_WI_CAP);
+    }
+
+    /**
+     * @description Appends each non-null entry Id from a signal's
+     *              topEntries onto the supplied accumulator.
+     * @param accumulator Mutable Id list.
+     * @param signal      Signal whose topEntries to walk; may be null.
+     */
+    private static void appendEntryIds(List<String> accumulator, SignalResultDTO signal) {
+        if (signal == null || signal.topEntries == null || signal.topEntries.isEmpty()) {
+            return;
+        }
+        for (SignalEntryDTO e : signal.topEntries) {
+            if (e != null && e.recordId != null) {
+                accumulator.add(String.valueOf(e.recordId));
+            }
+        }
     }
 
     /**
@@ -430,11 +509,14 @@ global with sharing class DeliveryWatcherService {
         /** @description Count of WIs in At Risk state (SLA signal). */
         @AuraEnabled public Integer slaAtRiskCount;
 
-        /** @description Stuck-stage WI count. Zero in PR-B (signal lands in PR-C). */
+        /** @description Stuck-stage weighted count (Critical-stage rows count double). */
         @AuraEnabled public Integer stuckStageCount;
 
-        /** @description AR-aging document count. Zero in PR-B (signal lands in PR-C). */
+        /** @description AR-aging document count. */
         @AuraEnabled public Integer arOverdueCount;
+
+        /** @description AR-aging sum of TotalCurrency__c across surfaced invoices (major units). */
+        @AuraEnabled public Integer arOverdueAmount;
 
         /** @description Wall-clock duration of the run in milliseconds. */
         @AuraEnabled public Long runDurationMs;
@@ -448,6 +530,12 @@ global with sharing class DeliveryWatcherService {
         /** @description SLA signal raw payload. Internal — used by the formatter; not surfaced to LWC. */
         public SignalResultDTO slaSignal;
 
+        /** @description Stuck-stage signal raw payload. Internal — used by the formatter. */
+        public SignalResultDTO stuckSignal;
+
+        /** @description A/R aging signal raw payload. Internal — used by the formatter. */
+        public SignalResultDTO arSignal;
+
         /**
          * @description Default constructor. Initialises counts to zero +
          *              errorMessages to an empty list so callers never NPE.
@@ -457,6 +545,7 @@ global with sharing class DeliveryWatcherService {
             this.slaAtRiskCount = 0;
             this.stuckStageCount = 0;
             this.arOverdueCount = 0;
+            this.arOverdueAmount = 0;
             this.runDurationMs = 0L;
             this.errorMessages = new List<String>();
         }

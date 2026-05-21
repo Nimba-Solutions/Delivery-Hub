@@ -98,4 +98,123 @@ private class DeliveryWatcherDigestFormatterTest {
         System.assert(md.contains('All clear'),
             'Null-input markdown should still reassure — got: ' + md);
     }
+
+    /**
+     * @description All-three-signals populated: SLA + Stuck Stage + A/R
+     *              Aging entries → markdown should contain headings for
+     *              every section, footer should include the AR dollar
+     *              amount in parens.
+     */
+    @IsTest
+    static void testAllThreeSignalsRenderEverySection() {
+        DeliveryWatcherService.WatcherRunResultDTO result =
+            new DeliveryWatcherService.WatcherRunResultDTO();
+        // SLA — 1 Breached + 1 At Risk.
+        SignalResultDTO sla = SignalResultDTO.emptyResult('SLABreach');
+        sla.primaryCount = 1;
+        sla.secondaryCount = 1;
+        sla.topEntries = new List<SignalEntryDTO>{
+            new SignalEntryDTO(null, 'T-0142 — Compliance gate',
+                '3 days breached · stage: In Review', null),
+            new SignalEntryDTO(null, 'T-0167 — Cashflow report',
+                '1 day to deadline · stage: Testing', null)
+        };
+        result.slaSignal = sla;
+        result.slaBreachCount = 1;
+        result.slaAtRiskCount = 1;
+        // Stuck Stage — 1 entry.
+        SignalResultDTO stuck = SignalResultDTO.emptyResult('StuckStage');
+        stuck.primaryCount = 1;
+        stuck.secondaryCount = 1;
+        stuck.topEntries = new List<SignalEntryDTO>{
+            new SignalEntryDTO(null, 'T-0151 — Slack inbound refactor',
+                '6 days in Code Review (Critical)', null)
+        };
+        result.stuckSignal = stuck;
+        result.stuckStageCount = 1;
+        // A/R Aging — 2 entries.
+        SignalResultDTO ar = SignalResultDTO.emptyResult('ARAging');
+        ar.primaryCount = 2;
+        ar.secondaryCount = 4300;
+        ar.topEntries = new List<SignalEntryDTO>{
+            new SignalEntryDTO(null, 'INV-0042 — ACME Inc',
+                '$2,800 · 45 days overdue (30+)', null),
+            new SignalEntryDTO(null, 'INV-0043 — Globex Corp',
+                '$1,500 · 20 days overdue (15-30)', null)
+        };
+        result.arSignal = ar;
+        result.arOverdueCount = 2;
+        result.arOverdueAmount = 4300;
+        result.runDurationMs = 847L;
+        result.status = 'Success';
+
+        Test.startTest();
+        Map<String, Object> blockKit = DeliveryWatcherDigestFormatter.buildBlockKit(result, '2026-05-21 08:00 ET');
+        String md = DeliveryWatcherDigestFormatter.buildMarkdown(result, '2026-05-21 08:00 ET');
+        Test.stopTest();
+
+        System.assertNotEquals(null, blockKit, 'Non-quiet day should return a Block Kit payload');
+        List<Object> blocks = (List<Object>) blockKit.get('blocks');
+        // header + SLA breach + SLA at-risk + stuck + AR + context = at least 6 blocks.
+        System.assert(blocks.size() >= 6,
+            'All-three-signal payload should include header + 4 signal sections + context — got ' + blocks.size());
+        System.assert(md.contains('SLA Breach (1)'),
+            'Markdown should include SLA Breach heading — got: ' + md);
+        System.assert(md.contains('At Risk in <48h (1)'),
+            'Markdown should include At Risk heading');
+        System.assert(md.contains('Stuck Stage (1)'),
+            'Markdown should include Stuck Stage heading — got: ' + md);
+        System.assert(md.contains('A/R Aging (2)'),
+            'Markdown should include A/R Aging heading — got: ' + md);
+        System.assert(md.contains('$4300 overdue'),
+            'A/R header should embed total amount — got: ' + md);
+        System.assert(md.contains('AR=2 ($4300)'),
+            'Footer should include AR count + dollar suffix — got: ' + md);
+    }
+
+    /**
+     * @description Signals 2 + 3 populated but SLA empty: output should
+     *              skip the SLA section entirely, leading with Stuck Stage.
+     */
+    @IsTest
+    static void testStuckAndArOnlySkipsSlaSection() {
+        DeliveryWatcherService.WatcherRunResultDTO result =
+            new DeliveryWatcherService.WatcherRunResultDTO();
+        result.slaSignal = SignalResultDTO.emptyResult('SLABreach');
+        result.slaBreachCount = 0;
+        result.slaAtRiskCount = 0;
+        SignalResultDTO stuck = SignalResultDTO.emptyResult('StuckStage');
+        stuck.primaryCount = 2;
+        stuck.secondaryCount = 2;
+        stuck.topEntries = new List<SignalEntryDTO>{
+            new SignalEntryDTO(null, 'T-0151 — Slack refactor', '6 days in Code Review', null),
+            new SignalEntryDTO(null, 'T-0152 — Login UI', '5 days in Code Review', null)
+        };
+        result.stuckSignal = stuck;
+        result.stuckStageCount = 2;
+        SignalResultDTO ar = SignalResultDTO.emptyResult('ARAging');
+        ar.primaryCount = 1;
+        ar.secondaryCount = 800;
+        ar.topEntries = new List<SignalEntryDTO>{
+            new SignalEntryDTO(null, 'INV-0050 — Initech', '$800 · 12 days overdue (8-14)', null)
+        };
+        result.arSignal = ar;
+        result.arOverdueCount = 1;
+        result.arOverdueAmount = 800;
+        result.runDurationMs = 410L;
+        result.status = 'Success';
+
+        Test.startTest();
+        String md = DeliveryWatcherDigestFormatter.buildMarkdown(result, '2026-05-21 08:00 ET');
+        Test.stopTest();
+
+        System.assert(!md.contains('SLA Breach'),
+            'No SLA section should render when both breached + at-risk counts are zero');
+        System.assert(!md.contains('At Risk in <48h'),
+            'No At Risk section should render when atRiskCount is zero');
+        System.assert(md.contains('Stuck Stage (2)'),
+            'Stuck Stage section should render — got: ' + md);
+        System.assert(md.contains('A/R Aging (1)'),
+            'A/R Aging section should render — got: ' + md);
+    }
 }

@@ -118,7 +118,9 @@
     <testClassName>%%%NAMESPACE_DOT%%%WatcherDigestRunQueueableTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%WatcherFailedSyncTrendQueryServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%WatcherPaymentOpsQueryServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WatcherARAgingQueryServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%WatcherSLABreachQueryServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WatcherStuckStageQueryServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%WatcherUnhappySignalQueryServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%WatcherUpcomingSignoffQueryServiceTest</testClassName>
 </ApexTestSuite>
