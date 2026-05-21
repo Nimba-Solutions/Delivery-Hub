@@ -104,8 +104,10 @@ private class DeliveryDatasetControllerTest {
         // PR 9 has not merged at the time this test class ships — the
         // ScratchOrgInstanceLookup__c field is not present on
         // DatasetTemplateAssignment__c, so this method must return an
-        // empty list (never throw).
-        Id fakeScratchOrgId = '001000000000000AAA'; // shape is fine; field is absent
+        // empty list (never throw). Borrow the running-user Id as a
+        // non-null Id of any sObject type — the method short-circuits
+        // on hasScratchOrgLookup() before the type is dereferenced.
+        Id fakeScratchOrgId = UserInfo.getUserId();
         Test.startTest();
         List<DeliveryDatasetController.AssignmentSummaryDTO> dtos =
             DeliveryDatasetController.getAssignmentsForScratchOrg(fakeScratchOrgId);

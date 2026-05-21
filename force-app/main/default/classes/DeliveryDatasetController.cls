@@ -116,8 +116,14 @@ global with sharing class DeliveryDatasetController {
      * @param scratchOrgId Id of the (PR 9) ScratchOrgInstance__c row.
      * @return List<AssignmentSummaryDTO> may be empty but never null.
      */
+    @SuppressWarnings('PMD.ApexSOQLInjection')
     @AuraEnabled(cacheable=true)
     global static List<AssignmentSummaryDTO> getAssignmentsForScratchOrg(Id scratchOrgId) {
+        // SOQL string concatenation here is safe: scratchOrgId is bound via
+        // :scratchOrgId, and RECENT_LIMIT is a private static final Integer
+        // constant — no user input reaches the query text. We build the SOQL
+        // dynamically only so the class compiles before PR 9 deploys the
+        // ScratchOrgInstanceLookup__c field on DatasetTemplateAssignment__c.
         List<AssignmentSummaryDTO> out = new List<AssignmentSummaryDTO>();
         if (scratchOrgId == null) {
             return out;
