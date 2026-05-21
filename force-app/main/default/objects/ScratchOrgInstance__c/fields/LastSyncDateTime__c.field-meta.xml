@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LastSyncDateTime__c</fullName>
+    <description>Last time GH Actions POSTed/PATCHed state for this org. Stale stamps (&gt;1h on an Active org) suggest the CI pipeline died without cleanly transitioning to Expired or Deleted.</description>
+    <externalId>false</externalId>
+    <label>Last Sync</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

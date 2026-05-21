@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>QA Core</label>
+    <protected>false</protected>
+    <values><field>WorkflowTypeTxt__c</field><value xsi:type="xsd:string">QA</value></values>
+    <values><field>FeatureCategoryTxt__c</field><value xsi:type="xsd:string">Core</value></values>
+    <values><field>RecommendedCciFlowTxt__c</field><value xsi:type="xsd:string">qa_org</value></values>
+    <values><field>SeedDatasetTxt__c</field><value xsi:type="xsd:string">QA_Regression_Seed</value></values>
+    <values><field>RequiredPermsetsTxt__c</field><value xsi:type="xsd:string">DeliveryHubApp</value></values>
+    <values><field>ScratchOrgConfigTxt__c</field><value xsi:type="xsd:string">orgs/qa.json</value></values>
+    <values><field>SetupChecklistJsonTxt__c</field><value xsi:type="xsd:string">[{"step":1,"label":"Provision QA scratch","command":"cci flow run qa_org --org qa"},{"step":2,"label":"Assign user permset","command":"cci task run assign_permission_sets --api_names DeliveryHubApp --org qa"},{"step":3,"label":"Run smoke suite","command":"cci task run run_tests --test_name_match DH_Smoke --org qa"}]</value></values>
+    <values><field>DocsUrl__c</field><value xsi:nil="true"/></values>
+</CustomMetadata>
