@@ -246,10 +246,18 @@ global with sharing class DeliveryFeatureApprovalService {
         return rows;
     }
 
-    /** Internal tuple — keeps flattenCascadeWithDepth's signature flat. */
+    /**
+     * @description Internal tuple — pairs a cascade node DTO with its BFS depth.
+     *              Keeps flattenCascadeWithDepth's return signature flat.
+     */
     private class CascadeNodeWithDepth {
         DeliveryFeatureGraphService.FeatureGraphNodeDTO node;
         Integer depth;
+        /**
+         * @description Constructs a node-with-depth pair.
+         * @param n Cascade node DTO from DeliveryFeatureGraphService.computeCascade.
+         * @param d BFS depth (0 = root).
+         */
         CascadeNodeWithDepth(DeliveryFeatureGraphService.FeatureGraphNodeDTO n, Integer d) {
             this.node = n;
             this.depth = d;
