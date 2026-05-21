@@ -43,6 +43,31 @@ global without sharing class DeliveryPublicApiService {
         }
     }
 
+    /**
+     * @description Handles all PATCH requests. Routes by resource path after authentication.
+     *              Currently only used by the dev-loop mirror route
+     *              (scratch-orgs/{id}) — added for PR 9 / Layer 6.
+     */
+    @HttpPatch
+    global static void handlePatch() {
+        try {
+            NetworkEntity__c entity = authenticateRequest();
+            if (entity == null) { return; }
+            String resource = extractResource(RestContext.request.requestURI);
+            String jsonBody = RestContext.request.requestBody != null ? RestContext.request.requestBody.toString() : '';
+            if (String.isBlank(jsonBody)) { sendError(400, 'Request body is required.'); return; }
+            if (resource.startsWith('scratch-orgs/')) {
+                patchScratchOrg(resource, jsonBody);
+                return;
+            }
+            sendError(404, 'Unknown resource: ' + resource);
+        } catch (AuraHandledException e) {
+            sendError(400, e.getMessage());
+        } catch (Exception e) {
+            sendError(500, e.getMessage());
+        }
+    }
+
     /** @description Handles all POST requests. Routes by resource path after authentication. */
     @HttpPost
     global static void handlePost() {
@@ -63,11 +88,18 @@ global without sharing class DeliveryPublicApiService {
                 DeliveryRateLimitService.recordRequest(entity.Id, 'PublicAPI');
             }
 
-            Id entityId = resolveEffectiveEntity(entity.Id);
-            if (entityId == null) { return; }
             String resource = extractResource(RestContext.request.requestURI);
             String jsonBody = RestContext.request.requestBody != null ? RestContext.request.requestBody.toString() : '';
             if (String.isBlank(jsonBody)) { sendError(400, 'Request body is required.'); return; }
+            // PR 9 / Layer 6 — the dev-loop mirror route is developer-tooling
+            // scoped and skips the per-entity resolver (no portal user / no
+            // entity scoping). Auth is the X-Api-Key check above.
+            if (resource == 'scratch-orgs') {
+                postScratchOrg(jsonBody);
+                return;
+            }
+            Id entityId = resolveEffectiveEntity(entity.Id);
+            if (entityId == null) { return; }
             routePost(resource, jsonBody, entityId);
         } catch (AuraHandledException e) {
             sendError(400, e.getMessage());
@@ -592,6 +624,99 @@ global without sharing class DeliveryPublicApiService {
         String reason = (String) bodyMap.get('reason');
         if (String.isBlank(token)) { sendError(400, 'token is required.'); return; }
         sendSuccess(DeliveryDocumentController.disputeDocumentByToken(token, reason));
+    }
+
+    // ── Dev-Loop Mirror (PR 9 / Layer 6) ───────────────────────────────
+
+    /**
+     * @description POST /deliveryhub/v1/api/scratch-orgs — invoked by GH
+     *              Actions after CumulusCI provisions a scratch. Body:
+     *              {branch, orgId, loginUrl, cciFlow, workItemName (opt),
+     *              expiresAt (opt ISO-8601)}. Resolves the WI by Name when
+     *              provided; otherwise leaves WorkItemLookup__c null. Returns
+     *              {id, state:&apos;Active&apos;}.
+     * @param jsonBody Raw request body.
+     */
+    private static void postScratchOrg(String jsonBody) {
+        Map<String, Object> bodyMap = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
+        String orgId = (String) bodyMap.get('orgId');
+        if (String.isBlank(orgId)) { sendError(400, 'orgId is required.'); return; }
+        ScratchOrgInstance__c soi = new ScratchOrgInstance__c();
+        soi.OrgIdTxt__c = orgId;
+        soi.Name = orgId; // Name is required (auto-name not configured); use orgId as a sane default.
+        soi.BranchTxt__c = (String) bodyMap.get('branch');
+        soi.LoginUrl__c = (String) bodyMap.get('loginUrl');
+        soi.CciFlowTxt__c = (String) bodyMap.get('cciFlow');
+        soi.StatePk__c = 'Active';
+        soi.LastSyncDateTime__c = Datetime.now();
+        String expiresAt = (String) bodyMap.get('expiresAt');
+        if (String.isNotBlank(expiresAt)) {
+            try {
+                soi.ExpiresDateTime__c = (DateTime) JSON.deserialize('"' + expiresAt + '"', DateTime.class);
+            } catch (Exception e) {
+                System.debug(LoggingLevel.WARN,
+                    '[DeliveryPublicApiService.POST /scratch-orgs] Bad expiresAt timestamp "'
+                    + expiresAt + '" — falling back to null. ' + e.getMessage());
+            }
+        }
+        String workItemName = (String) bodyMap.get('workItemName');
+        if (String.isNotBlank(workItemName)) {
+            List<WorkItem__c> matches = [
+                SELECT Id FROM WorkItem__c WHERE Name = :workItemName
+                WITH SYSTEM_MODE LIMIT 1
+            ];
+            if (!matches.isEmpty()) {
+                soi.WorkItemLookup__c = matches.get(0).Id;
+            }
+        }
+        Database.SaveResult sr = Database.insert(soi, false, AccessLevel.SYSTEM_MODE);
+        if (!sr.isSuccess()) {
+            sendError(500, 'Insert failed: ' + sr.getErrors().get(0).getMessage());
+            return;
+        }
+        sendSuccess(new Map<String, Object>{
+            'id' => sr.getId(),
+            'state' => 'Active'
+        }, 201);
+    }
+
+    /**
+     * @description PATCH /deliveryhub/v1/api/scratch-orgs/{id} — invoked by
+     *              GH Actions during teardown / state transitions. Body:
+     *              {state, lastSyncAt (opt)}. State must be one of the
+     *              ScratchOrgState GVS values; anything else returns 400.
+     * @param resource Full resource path including the id segment.
+     * @param jsonBody Raw request body.
+     */
+    private static void patchScratchOrg(String resource, String jsonBody) {
+        String soiId = resource.substringAfter('scratch-orgs/');
+        if (String.isBlank(soiId)) { sendError(400, 'Scratch org id is required.'); return; }
+        Map<String, Object> bodyMap = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
+        String state = (String) bodyMap.get('state');
+        if (String.isBlank(state)) { sendError(400, 'state is required.'); return; }
+        List<ScratchOrgInstance__c> existing = [
+            SELECT Id FROM ScratchOrgInstance__c WHERE Id = :soiId
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        if (existing.isEmpty()) { sendError(404, 'Scratch org not found.'); return; }
+        ScratchOrgInstance__c row = existing.get(0);
+        row.StatePk__c = state;
+        String lastSyncAt = (String) bodyMap.get('lastSyncAt');
+        if (String.isNotBlank(lastSyncAt)) {
+            try { row.LastSyncDateTime__c = (DateTime) JSON.deserialize('"' + lastSyncAt + '"', DateTime.class); }
+            catch (Exception e) { row.LastSyncDateTime__c = Datetime.now(); }
+        } else {
+            row.LastSyncDateTime__c = Datetime.now();
+        }
+        Database.SaveResult sr = Database.update(row, false, AccessLevel.SYSTEM_MODE);
+        if (!sr.isSuccess()) {
+            sendError(400, 'Update failed: ' + sr.getErrors().get(0).getMessage());
+            return;
+        }
+        sendSuccess(new Map<String, Object>{
+            'id' => row.Id,
+            'state' => row.StatePk__c
+        });
     }
 
     // ── Auth + Resolution ──────────────────────────────────────────────

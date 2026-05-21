@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>BranchTxt__c</fullName>
+    <description>Git branch the scratch org was provisioned against. Set by GH Actions during the dev_org / qa_org / demo_org flow.</description>
+    <externalId>false</externalId>
+    <label>Branch</label>
+    <length>255</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

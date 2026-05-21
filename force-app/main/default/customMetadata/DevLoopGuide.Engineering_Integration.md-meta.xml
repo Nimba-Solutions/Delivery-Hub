@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Engineering Integration</label>
+    <protected>false</protected>
+    <values><field>WorkflowTypeTxt__c</field><value xsi:type="xsd:string">Software_Delivery</value></values>
+    <values><field>FeatureCategoryTxt__c</field><value xsi:type="xsd:string">Integrations</value></values>
+    <values><field>RecommendedCciFlowTxt__c</field><value xsi:type="xsd:string">dev_org</value></values>
+    <values><field>SeedDatasetTxt__c</field><value xsi:type="xsd:string">Integration_Seed</value></values>
+    <values><field>RequiredPermsetsTxt__c</field><value xsi:type="xsd:string">DeliveryHubApp,DeliveryHubAdmin_App</value></values>
+    <values><field>ScratchOrgConfigTxt__c</field><value xsi:type="xsd:string">orgs/dev.json</value></values>
+    <values><field>SetupChecklistJsonTxt__c</field><value xsi:type="xsd:string">[{"step":1,"label":"Provision dev scratch","command":"cci flow run dev_org --org dev"},{"step":2,"label":"Configure remote site settings","command":"cci task run deploy --org dev"},{"step":3,"label":"Seed sample webhook secrets","command":"cci task run execute_anon --apex \"DeliveryWebhookConfigService.seedTestSecrets();\" --org dev"}]</value></values>
+    <values><field>DocsUrl__c</field><value xsi:nil="true"/></values>
+</CustomMetadata>

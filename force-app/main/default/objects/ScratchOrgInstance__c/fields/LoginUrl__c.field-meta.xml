@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>LoginUrl__c</fullName>
+    <description>One-shot auth URL for the scratch org (sfdx force:org:open --url-only equivalent). Per FIELD_NAMING.md URL fields drop the Txt suffix. Tokens embedded in this URL are short-lived; no long-term credentials are stored here.</description>
+    <externalId>false</externalId>
+    <label>Login URL</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Url</type>
+</CustomField>

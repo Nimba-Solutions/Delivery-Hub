@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>StatePk__c</fullName>
+    <description>Lifecycle state of the scratch (Provisioning, Active, Expired, Deleted). Backed by the ScratchOrgState global value set so subscribers cannot drift.</description>
+    <externalId>false</externalId>
+    <label>State</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetName>ScratchOrgState</valueSetName>
+    </valueSet>
+</CustomField>
