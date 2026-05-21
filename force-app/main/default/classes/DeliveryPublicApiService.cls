@@ -425,8 +425,13 @@ global without sharing class DeliveryPublicApiService {
         soi.LastSyncDateTime__c = Datetime.now();
         String expiresAt = (String) bodyMap.get('expiresAt');
         if (String.isNotBlank(expiresAt)) {
-            try { soi.ExpiresDateTime__c = (DateTime) JSON.deserialize('"' + expiresAt + '"', DateTime.class); }
-            catch (Exception e) { /* swallow — bad timestamp falls back to null */ }
+            try {
+                soi.ExpiresDateTime__c = (DateTime) JSON.deserialize('"' + expiresAt + '"', DateTime.class);
+            } catch (Exception e) {
+                System.debug(LoggingLevel.WARN,
+                    '[DeliveryPublicApiService.POST /scratch-orgs] Bad expiresAt timestamp "'
+                    + expiresAt + '" — falling back to null. ' + e.getMessage());
+            }
         }
         String workItemName = (String) bodyMap.get('workItemName');
         if (String.isNotBlank(workItemName)) {
