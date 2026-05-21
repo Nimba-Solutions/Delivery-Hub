@@ -421,6 +421,177 @@ private class DeliveryFeatureCatalogControllerTest {
             'Non-admin must always be able to disable a feature (no gate on disable).');
     }
 
+    // ────────────────────────────────────────────────────────────────────
+    // PR 6 — cascade enforcement on toggleFeature() coverage
+    //
+    // Strategy: all PR-6 tests use synthetic FeatureDefinitionTxt__c values
+    // (no matching FeatureDefinition__mdt row) so the onboarding-track gate
+    // returns early — the cascade-enforcement path then runs deterministically
+    // for both admin and non-admin running users. EnabledDateTime__c controls
+    // activity via the ActiveSinceDateTime__c formula (active when
+    // EnabledDateTime__c <= NOW() AND DisabledDateTime__c is null/future).
+    // ────────────────────────────────────────────────────────────────────
+
+    @IsTest
+    static void testToggleFeatureRefusesEnableWhenHardBlockerInactive() {
+        // Feature A depends on Feature B (Hard, Both). B inactive → enable A must fail.
+        Feature__c featA = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => null
+        });
+        Feature__c featB = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => null
+        });
+        TestDataFactory.createFeatureDependency(featB.Id, featA.Id,
+            new Map<String, Object>{ 'TypePk__c' => 'Hard', 'CascadeDirectionPk__c' => 'Both' });
+
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryFeatureCatalogController.toggleFeature(featA.Id, true);
+        } catch (AuraHandledException e) {
+            threw = true;
+        } catch (Exception e) {
+            threw = true;
+        }
+        Test.stopTest();
+        System.assertEquals(true, threw,
+            'Enable must be refused when a Hard blocker is inactive.');
+        Feature__c refreshed = [
+            SELECT EnabledDateTime__c FROM Feature__c WHERE Id = :featA.Id LIMIT 1
+        ];
+        System.assertEquals(null, refreshed.EnabledDateTime__c,
+            'EnabledDateTime__c must remain unset when the cascade gate rejects.');
+    }
+
+    @IsTest
+    static void testToggleFeatureAllowsEnableWhenHardBlockerActive() {
+        // Same shape but B is active → enable A must succeed.
+        Feature__c featA = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => null
+        });
+        Feature__c featB = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => Datetime.now().addMinutes(-5),
+            'DisabledDateTime__c' => null
+        });
+        TestDataFactory.createFeatureDependency(featB.Id, featA.Id,
+            new Map<String, Object>{ 'TypePk__c' => 'Hard', 'CascadeDirectionPk__c' => 'Both' });
+
+        Test.startTest();
+        try {
+            DeliveryFeatureCatalogController.toggleFeature(featA.Id, true);
+            Feature__c refreshed = [
+                SELECT EnabledDateTime__c FROM Feature__c WHERE Id = :featA.Id LIMIT 1
+            ];
+            System.assertNotEquals(null, refreshed.EnabledDateTime__c,
+                'Enable must succeed when the Hard blocker is active.');
+        } catch (AuraHandledException e) {
+            // CI running user without admin PSG would have been caught by the
+            // onboarding-track gate (the synthetic def name dodges that path),
+            // so any throw here is a real cascade-enforcement failure.
+            System.assert(false,
+                'Cascade should not have blocked when the blocker is active: ' + e.getMessage());
+        }
+        Test.stopTest();
+    }
+
+    @IsTest
+    static void testToggleFeatureRefusesDisableWhenHardDependentActive() {
+        // A is active; B depends on A (Hard); B is also active.
+        // Disable A → must be refused because the active dependent B still needs it.
+        Feature__c featA = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => Datetime.now().addMinutes(-10),
+            'DisabledDateTime__c' => null
+        });
+        Feature__c featB = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => Datetime.now().addMinutes(-5),
+            'DisabledDateTime__c' => null
+        });
+        // A blocks B (B is the blocked one, A is the blocker → walking Disable
+        // from A surfaces B as a dependent).
+        TestDataFactory.createFeatureDependency(featA.Id, featB.Id,
+            new Map<String, Object>{ 'TypePk__c' => 'Hard', 'CascadeDirectionPk__c' => 'Both' });
+
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryFeatureCatalogController.toggleFeature(featA.Id, false);
+        } catch (AuraHandledException e) {
+            threw = true;
+        } catch (Exception e) {
+            threw = true;
+        }
+        Test.stopTest();
+        System.assertEquals(true, threw,
+            'Disable must be refused when a Hard dependent is still active.');
+        Feature__c refreshed = [
+            SELECT DisabledDateTime__c FROM Feature__c WHERE Id = :featA.Id LIMIT 1
+        ];
+        System.assertEquals(null, refreshed.DisabledDateTime__c,
+            'DisabledDateTime__c must remain unset when the cascade gate rejects disable.');
+    }
+
+    @IsTest
+    static void testToggleFeatureAllowsDisableWhenDependentsInactive() {
+        // Same shape but B is inactive → disable A must succeed.
+        Feature__c featA = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => Datetime.now().addMinutes(-10),
+            'DisabledDateTime__c' => null
+        });
+        Feature__c featB = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => null
+        });
+        TestDataFactory.createFeatureDependency(featA.Id, featB.Id,
+            new Map<String, Object>{ 'TypePk__c' => 'Hard', 'CascadeDirectionPk__c' => 'Both' });
+
+        Test.startTest();
+        try {
+            DeliveryFeatureCatalogController.toggleFeature(featA.Id, false);
+            Feature__c refreshed = [
+                SELECT DisabledDateTime__c FROM Feature__c WHERE Id = :featA.Id LIMIT 1
+            ];
+            System.assertNotEquals(null, refreshed.DisabledDateTime__c,
+                'Disable must succeed when all Hard dependents are inactive.');
+        } catch (AuraHandledException e) {
+            System.assert(false,
+                'Cascade should not have blocked when dependents are inactive: ' + e.getMessage());
+        }
+        Test.stopTest();
+    }
+
+    @IsTest
+    static void testToggleFeatureIgnoresSoftDependencies() {
+        // Feature A depends on Feature B with Soft type. B inactive →
+        // enable A must STILL succeed because Soft does not block.
+        Feature__c featA = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => null
+        });
+        Feature__c featB = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => null
+        });
+        TestDataFactory.createFeatureDependency(featB.Id, featA.Id,
+            new Map<String, Object>{ 'TypePk__c' => 'Soft', 'CascadeDirectionPk__c' => 'Both' });
+
+        Test.startTest();
+        try {
+            DeliveryFeatureCatalogController.toggleFeature(featA.Id, true);
+            Feature__c refreshed = [
+                SELECT EnabledDateTime__c FROM Feature__c WHERE Id = :featA.Id LIMIT 1
+            ];
+            System.assertNotEquals(null, refreshed.EnabledDateTime__c,
+                'Soft dependency must not block enable.');
+        } catch (AuraHandledException e) {
+            System.assert(false,
+                'Soft dependency must not block enable: ' + e.getMessage());
+        }
+        Test.stopTest();
+    }
+
     @IsTest
     static void testToggleFeatureNoTrackRequiredAllowsNonAdmin() {
         // Pick any FeatureDefinition__mdt whose RequiresOnboardingTrackTxt__c is blank.
