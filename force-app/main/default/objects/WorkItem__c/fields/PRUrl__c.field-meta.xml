@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PRUrl__c</fullName>
+    <description>GitHub pull request URL associated with this WI. Per FIELD_NAMING.md URL fields drop the Txt suffix.</description>
+    <externalId>false</externalId>
+    <label>PR URL</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <type>Url</type>
+</CustomField>

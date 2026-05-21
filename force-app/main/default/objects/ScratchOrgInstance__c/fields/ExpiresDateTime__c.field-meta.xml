@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ExpiresDateTime__c</fullName>
+    <description>When the scratch org is scheduled to expire (CumulusCI default is 7 days). After this stamp passes the row should be auto-transitioned to Expired by a follow-on scheduler.</description>
+    <externalId>false</externalId>
+    <label>Expires</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

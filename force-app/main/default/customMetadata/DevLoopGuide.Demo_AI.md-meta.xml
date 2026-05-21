@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Demo AI</label>
+    <protected>false</protected>
+    <values><field>WorkflowTypeTxt__c</field><value xsi:type="xsd:string">Sales</value></values>
+    <values><field>FeatureCategoryTxt__c</field><value xsi:type="xsd:string">AI</value></values>
+    <values><field>RecommendedCciFlowTxt__c</field><value xsi:type="xsd:string">demo_org</value></values>
+    <values><field>SeedDatasetTxt__c</field><value xsi:type="xsd:string">Demo_AI_Seed</value></values>
+    <values><field>RequiredPermsetsTxt__c</field><value xsi:type="xsd:string">DeliveryHubAdmin_App</value></values>
+    <values><field>ScratchOrgConfigTxt__c</field><value xsi:type="xsd:string">orgs/demo.json</value></values>
+    <values><field>SetupChecklistJsonTxt__c</field><value xsi:type="xsd:string">[{"step":1,"label":"Provision demo scratch","command":"cci flow run demo_org --org demo"},{"step":2,"label":"Load demo dataset","command":"cci task run load_dataset --name Demo_AI_Seed --org demo"},{"step":3,"label":"Configure OpenAI key","command":"cci task run execute_anon --apex \"DeliveryHubSettingsService.setApiKey(&apos;OpenAi&apos;,&apos;sk-demo&apos;);\" --org demo"}]</value></values>
+    <values><field>DocsUrl__c</field><value xsi:nil="true"/></values>
+</CustomMetadata>

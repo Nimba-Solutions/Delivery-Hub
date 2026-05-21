@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RecommendedCciFlowTxt__c</fullName>
+    <description>CumulusCI flow name to recommend for matching WIs — e.g. dev_org, qa_org, demo_org. The LWC surfaces this as a one-click copy-to-clipboard command.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Recommended CCI Flow</label>
+    <length>80</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
