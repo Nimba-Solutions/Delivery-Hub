@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GlobalValueSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Run-mode classification for WatcherDigest__c rows. Scheduled = produced by the daily cron tick. Manual = invoked ad-hoc by an admin (Glen-triggered replay or smoke test). Test = produced inside an @IsTest context so reporting can filter it out of production trend data.</description>
+    <masterLabel>Watcher Digest Run Mode</masterLabel>
+    <sorted>false</sorted>
+    <customValue>
+        <fullName>Scheduled</fullName>
+        <default>true</default>
+        <label>Scheduled</label>
+    </customValue>
+    <customValue>
+        <fullName>Manual</fullName>
+        <default>false</default>
+        <label>Manual</label>
+    </customValue>
+    <customValue>
+        <fullName>Test</fullName>
+        <default>false</default>
+        <label>Test</label>
+    </customValue>
+</GlobalValueSet>

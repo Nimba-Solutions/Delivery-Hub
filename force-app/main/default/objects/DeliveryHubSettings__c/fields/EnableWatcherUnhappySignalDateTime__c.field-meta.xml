@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableWatcherUnhappySignalDateTime__c</fullName>
+    <description>Per-signal gate for Stub A (WIs whose WorkItemComment__c sentiment trend has tipped negative). Defaults to null — stub returns empty list until NLP classifier is built and baselined. Flip to non-null only after the stub class is replaced with a real implementation.</description>
+    <externalId>false</externalId>
+    <label>Enable Watcher Unhappy Signal (Stub)</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

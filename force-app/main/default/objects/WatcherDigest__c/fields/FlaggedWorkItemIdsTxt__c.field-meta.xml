@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>FlaggedWorkItemIdsTxt__c</fullName>
+    <description>Comma-separated WorkItem__c IDs that any signal flagged in this run. Lets us answer "the WI Glen flagged 7 days ago — has it moved?" by joining WatcherDigest history to current WorkItem state. Capped at 4096 chars (LongTextArea) which accommodates ~220 IDs — well above the per-run signal caps.</description>
+    <externalId>false</externalId>
+    <label>Flagged Work Item IDs</label>
+    <length>4096</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>3</visibleLines>
+</CustomField>
