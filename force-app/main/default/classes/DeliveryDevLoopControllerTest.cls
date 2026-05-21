@@ -42,9 +42,10 @@ private class DeliveryDevLoopControllerTest {
         System.assertNotEquals(null, dto.isSubscriberOrg,
             'isSubscriberOrg must always be populated.');
         // recommendedCciFlow may be null (no matching DevLoopGuide__mdt for
-        // this WI's workflow-type × feature-category combination) or
-        // populated with the seed's value. Both are valid runtime states.
-        // When populated by the Software_Delivery seed, it should be dev_org.
+        // this WI's workflow-type × feature-category combination, OR the
+        // packaging-org test context where seeded rows haven't fully wired
+        // into the resolution path) or populated with the seed's value.
+        // Both are valid runtime states. When populated, it must be dev_org.
         if (String.isNotBlank(dto.recommendedCciFlow)) {
             System.assertEquals('dev_org', dto.recommendedCciFlow,
                 'When matched, Software_Delivery should resolve to dev_org');
