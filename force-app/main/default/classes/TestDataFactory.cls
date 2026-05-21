@@ -594,7 +594,9 @@ public class TestDataFactory {
      * @return Unpersisted ScratchOrgInstance__c.
      */
     public static ScratchOrgInstance__c buildScratchOrgInstance(Map<String, Object> overrides) {
-        String orgId = uniq('00DT0').substring(0, 15);
+        // uniq() may return a shorter string than 15 chars (counter-only suffix).
+        // Pad before truncating so substring never throws StringException.
+        String orgId = (uniq('00DT0') + '000000000000000').substring(0, 15);
         ScratchOrgInstance__c soi = new ScratchOrgInstance__c(
             Name = orgId,
             OrgIdTxt__c = orgId,
