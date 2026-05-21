@@ -243,6 +243,68 @@ private class DeliverySlackServiceTest {
             'No callouts when EnableSlackCommentSyncDateTime__c is null');
     }
 
+    // ── postWatcherDigest ────────────────────────────────────────────────────
+
+    /**
+     * @description postWatcherDigest happy path — when the webhook URL is
+     *              configured and payload is non-blank, exactly one callout
+     *              fires.
+     */
+    @IsTest
+    static void testPostWatcherDigestPostsWhenConfigured() {
+        String payload = JSON.serialize(new Map<String, Object>{
+            'blocks' => new List<Object>{
+                new Map<String, Object>{
+                    'type' => 'section',
+                    'text' => new Map<String, Object>{ 'type' => 'mrkdwn', 'text' => 'test' }
+                }
+            }
+        });
+        SlackMock mock = new SlackMock(200, 'ok');
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        DeliverySlackService.postWatcherDigest(payload);
+        Test.stopTest();
+        System.assertEquals(1, mock.callCount,
+            'postWatcherDigest should fire one callout when the webhook URL is configured');
+    }
+
+    /**
+     * @description postWatcherDigest no-ops silently when the webhook URL is
+     *              blank.
+     */
+    @IsTest
+    static void testPostWatcherDigestNoopsWithoutWebhook() {
+        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+        s.SlackWebhookUrlTxt__c = null;
+        update s;
+
+        SlackMock mock = new SlackMock(200, 'ok');
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        DeliverySlackService.postWatcherDigest('{"blocks":[]}');
+        Test.stopTest();
+        System.assertEquals(0, mock.callCount,
+            'No callout should fire when SlackWebhookUrlTxt__c is null');
+    }
+
+    /**
+     * @description postWatcherDigest no-ops on a blank payload string.
+     */
+    @IsTest
+    static void testPostWatcherDigestNoopsWithBlankPayload() {
+        SlackMock mock = new SlackMock(200, 'ok');
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        DeliverySlackService.postWatcherDigest('');
+        Test.stopTest();
+        System.assertEquals(0, mock.callCount,
+            'Blank payload should short-circuit before the callout');
+    }
+
     @IsTest
     static void testPostCommentBatchSkipsSlackMirrors() {
         DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
