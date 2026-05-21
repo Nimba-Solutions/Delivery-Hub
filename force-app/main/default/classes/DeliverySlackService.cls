@@ -134,6 +134,28 @@ global with sharing class DeliverySlackService {
     }
 
     /**
+     * @description Asynchronously posts the Watcher v1 daily digest to Slack.
+     *              Reuses the SlackWebhookUrlTxt__c webhook. Payload is the
+     *              JSON-serialised Block Kit map produced by
+     *              DeliveryWatcherDigestFormatter.buildBlockKit — pre-injected
+     *              with `channel` when WatcherDigestSlackChannelTxt__c is set
+     *              on org defaults. No-ops silently when Slack isn't
+     *              configured (mirrors postStageChanges).
+     * @param payloadJson Pre-serialised Block Kit JSON.
+     */
+    @future(callout=true)
+    public static void postWatcherDigest(String payloadJson) {
+        if (String.isBlank(payloadJson)) {
+            return;
+        }
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        if (settings == null || String.isBlank(settings.SlackWebhookUrlTxt__c)) {
+            return;
+        }
+        post(settings.SlackWebhookUrlTxt__c, payloadJson);
+    }
+
+    /**
      * @description Tests the provided Slack webhook by posting a confirmation message.
      *              Called directly from the settings LWC via user action (no DML context).
      * @param webhookUrl The Slack Incoming Webhook URL to test
