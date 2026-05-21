@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ApexScriptPathTxt__c</fullName>
+    <defaultValue>"scripts/load-demo-data.apex"</defaultValue>
+    <description>Repo-relative path to the anonymous-Apex loader script that primes this dataset. The cumulusci.yml task load_feature_data executes this via AnonymousApexTask. Default is the legacy whole-org demo loader; per-feature scripts live under scripts/feature-data/.</description>
+    <inlineHelpText>Repo-relative path to the anonymous-Apex loader (e.g. scripts/feature-data/invoice_generation.apex).</inlineHelpText>
+    <label>Apex Script Path</label>
+    <length>255</length>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

@@ -1,0 +1,107 @@
+<template>
+    <lightning-card title={cardTitle} icon-name="standard:dataset">
+
+        <div slot="actions">
+            <lightning-button-icon
+                icon-name="utility:refresh"
+                variant="border-filled"
+                onclick={handleRefresh}
+                alternative-text="Refresh dataset templates">
+            </lightning-button-icon>
+        </div>
+
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+
+            <template lwc:if={hasError}>
+                <div class="slds-notify slds-notify_alert slds-theme_alert-texture slds-theme_warning" role="alert">
+                    <span class="slds-assistive-text">warning</span>
+                    <h2>{errorMessage}</h2>
+                </div>
+            </template>
+
+            <template lwc:if={isEmpty}>
+                <div class="slds-illustration slds-illustration_small slds-p-vertical_medium">
+                    <div class="slds-text-longform slds-text-align_center">
+                        <p class="slds-text-body_regular slds-text-color_weak">
+                            {emptyMessage}
+                        </p>
+                    </div>
+                </div>
+            </template>
+
+            <template lwc:if={hasTemplates}>
+                <ul class="slds-has-dividers_bottom-space dataset-list">
+                    <template for:each={templates} for:item="t">
+                        <li key={t.key} class="slds-item slds-p-vertical_x-small dataset-row">
+                            <div class="slds-grid slds-grid_vertical-align-center slds-grid_align-spread">
+                                <div class="slds-col">
+                                    <strong>{t.name}</strong>
+                                    <template lwc:if={t.hasRecordCountEstimate}>
+                                        <span class="slds-badge slds-badge_lightest slds-m-left_x-small">
+                                            ~{t.recordCountEstimate} records
+                                        </span>
+                                    </template>
+                                </div>
+                                <div class="slds-col slds-no-flex">
+                                    <lightning-button
+                                        label="Copy Load Command"
+                                        variant="brand"
+                                        icon-name="utility:copy"
+                                        data-template-id={t.templateId}
+                                        onclick={handleCopyCommand}>
+                                    </lightning-button>
+                                    <lightning-button
+                                        label="Recent Loads"
+                                        variant="neutral"
+                                        class="slds-m-left_x-small"
+                                        data-template-id={t.templateId}
+                                        onclick={handleSelectTemplate}>
+                                    </lightning-button>
+                                </div>
+                            </div>
+
+                            <template lwc:if={t.hasDescription}>
+                                <div class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                                    {t.description}
+                                </div>
+                            </template>
+
+                            <template lwc:if={t.hasApexScriptPath}>
+                                <div class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                                    Loader: <code>{t.apexScriptPath}</code>
+                                </div>
+                            </template>
+                        </li>
+                    </template>
+                </ul>
+            </template>
+
+            <template lwc:if={hasRecent}>
+                <div class="slds-m-top_medium slds-border_top slds-p-top_small">
+                    <h3 class="slds-text-title_caps slds-m-bottom_x-small">Recent Loads</h3>
+                    <ul class="slds-has-dividers_bottom-space">
+                        <template for:each={recent} for:item="a">
+                            <li key={a.key} class="slds-item slds-p-vertical_xx-small">
+                                <div class="slds-grid slds-grid_align-spread">
+                                    <div class="slds-col slds-truncate">
+                                        <span class="slds-text-body_small">{a.templateName}</span>
+                                    </div>
+                                    <div class="slds-col slds-no-flex">
+                                        <span class={a.outcomeBadgeClass}>{a.outcome}</span>
+                                        <lightning-formatted-date-time
+                                            value={a.loadedAt}
+                                            year="numeric" month="short" day="2-digit"
+                                            hour="2-digit" minute="2-digit"
+                                            class="slds-m-left_x-small slds-text-body_small slds-text-color_weak">
+                                        </lightning-formatted-date-time>
+                                    </div>
+                                </div>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </template>
+
+        </div>
+    </lightning-card>
+</template>
