@@ -146,6 +146,7 @@ public with sharing class WatcherStuckStageQueryService {
      * @param clusters Stage -> RuleCluster mapping built earlier.
      * @return Deduped map of WorkItem Id -> WorkItem__c.
      */
+    @SuppressWarnings('PMD.OperationWithLimitsInLoop')
     private static Map<Id, WorkItem__c> fetchStuckWorkItems(Map<String, RuleCluster> clusters) {
         Map<Id, WorkItem__c> deduped = new Map<Id, WorkItem__c>();
         Datetime nowTs = Datetime.now();
