@@ -1195,6 +1195,76 @@ private class DeliveryPublicApiServiceTest {
     }
 
     // ==========================================
+    // PR 9 — LAYER 6 DEV-LOOP MIRROR ROUTES
+    // ==========================================
+
+    @IsTest
+    static void testPostScratchOrgCreatesRecord() {
+        System.runAs(testUser) {
+            WorkItem__c wi = [SELECT Id, Name FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'API Active Item' LIMIT 1];
+            Map<String, Object> body = new Map<String, Object>{
+                'orgId' => '00DTDF000001abc',
+                'branch' => 'feature/devloop-route',
+                'loginUrl' => 'https://scratch.example.test/login?token=abc',
+                'cciFlow' => 'dev_org',
+                'workItemName' => wi.Name
+            };
+            RestRequest req = buildPostRequest('/services/apexrest/delivery/deliveryhub/v1/api/scratch-orgs', body);
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
+
+            System.assertEquals(201, res.statusCode, 'Scratch-org POST returns 201');
+            Map<String, Object> parsed = parseResponse(res);
+            System.assertEquals(true, parsed.get('success'), 'Success flag set');
+            Map<String, Object> data = (Map<String, Object>) parsed.get('data');
+            System.assertNotEquals(null, data.get('id'), 'Returned new id');
+
+            List<ScratchOrgInstance__c> rows = [
+                SELECT Id, OrgIdTxt__c, StatePk__c, WorkItemLookup__c
+                FROM ScratchOrgInstance__c
+                WHERE OrgIdTxt__c = '00DTDF000001abc'
+            ];
+            System.assertEquals(1, rows.size(), 'Row was inserted');
+            System.assertEquals('Active', rows.get(0).StatePk__c, 'Default state is Active');
+            System.assertEquals(wi.Id, rows.get(0).WorkItemLookup__c, 'WI lookup resolved by Name');
+        }
+    }
+
+    @IsTest
+    static void testPatchScratchOrgUpdatesState() {
+        System.runAs(testUser) {
+            ScratchOrgInstance__c soi = TestDataFactory.createScratchOrgInstance(new Map<String, Object>{
+                'StatePk__c' => 'Active'
+            });
+            Map<String, Object> body = new Map<String, Object>{ 'state' => 'Deleted' };
+            RestRequest req = buildPatchRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/scratch-orgs/' + soi.Id, body);
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handlePatch();
+            Test.stopTest();
+
+            System.assertEquals(200, res.statusCode, 'PATCH returns 200');
+            ScratchOrgInstance__c reloaded = [
+                SELECT StatePk__c, LastSyncDateTime__c
+                FROM ScratchOrgInstance__c WHERE Id = :soi.Id
+            ];
+            System.assertEquals('Deleted', reloaded.StatePk__c, 'State updated');
+            System.assertNotEquals(null, reloaded.LastSyncDateTime__c, 'Sync stamp set');
+        }
+    }
+
+    // ==========================================
     // HELPERS
     // ==========================================
 
@@ -1209,6 +1279,14 @@ private class DeliveryPublicApiServiceTest {
         RestRequest req = new RestRequest();
         req.requestURI = uri;
         req.httpMethod = 'POST';
+        req.requestBody = Blob.valueOf(JSON.serialize(body));
+        return req;
+    }
+
+    private static RestRequest buildPatchRequest(String uri, Map<String, Object> body) {
+        RestRequest req = new RestRequest();
+        req.requestURI = uri;
+        req.httpMethod = 'PATCH';
         req.requestBody = Blob.valueOf(JSON.serialize(body));
         return req;
     }

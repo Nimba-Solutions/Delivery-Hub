@@ -109,4 +109,5 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureApprovalServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%FeatureToggleRequestTriggerHandlerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryOnboardingServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDevLoopControllerTest</testClassName>
 </ApexTestSuite>

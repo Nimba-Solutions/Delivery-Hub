@@ -579,6 +579,58 @@ public class TestDataFactory {
     }
 
     // ────────────────────────────────────────────────────────────────────
+    // ScratchOrgInstance__c — Layer 6 dev-loop mirror row. No required
+    // Master-Detail; both Lookups (WorkItem + Feature) are optional. Name
+    // defaults to the OrgIdTxt__c so tests can pick rows out without
+    // knowing the SF id.
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Build (no DML) a ScratchOrgInstance__c with safe defaults.
+     *              OrgIdTxt__c + Name are uniquified, StatePk__c='Active',
+     *              CciFlowTxt__c='dev_org', LastSyncDateTime__c=now,
+     *              ExpiresDateTime__c=now+7d, LoginUrl__c=https://example.test.
+     * @param overrides Optional field overrides.
+     * @return Unpersisted ScratchOrgInstance__c.
+     */
+    public static ScratchOrgInstance__c buildScratchOrgInstance(Map<String, Object> overrides) {
+        String orgId = uniq('00DT0').substring(0, 15);
+        ScratchOrgInstance__c soi = new ScratchOrgInstance__c(
+            Name = orgId,
+            OrgIdTxt__c = orgId,
+            BranchTxt__c = uniq('feature/tdf'),
+            LoginUrl__c = 'https://example.test/login',
+            StatePk__c = 'Active',
+            CciFlowTxt__c = 'dev_org',
+            LastSyncDateTime__c = Datetime.now(),
+            ExpiresDateTime__c = Datetime.now().addDays(7)
+        );
+        applyOverrides(soi, overrides);
+        return soi;
+    }
+
+    /**
+     * @description Build + insert a ScratchOrgInstance__c with safe defaults.
+     * @return Inserted row.
+     */
+    public static ScratchOrgInstance__c newScratchOrgInstance() {
+        ScratchOrgInstance__c soi = buildScratchOrgInstance(null);
+        insert soi;
+        return soi;
+    }
+
+    /**
+     * @description Build + insert a ScratchOrgInstance__c with overrides.
+     * @param overrides Field overrides applied on top of defaults.
+     * @return Inserted row.
+     */
+    public static ScratchOrgInstance__c createScratchOrgInstance(Map<String, Object> overrides) {
+        ScratchOrgInstance__c soi = buildScratchOrgInstance(overrides);
+        insert soi;
+        return soi;
+    }
+
+    // ────────────────────────────────────────────────────────────────────
     // INTERNAL — apply Map<String,Object> overrides onto an SObject.
     // Skips null map. Generic enough to handle any field type the caller
     // throws at it (Decimal, Date, Datetime, Id, String, Boolean).
