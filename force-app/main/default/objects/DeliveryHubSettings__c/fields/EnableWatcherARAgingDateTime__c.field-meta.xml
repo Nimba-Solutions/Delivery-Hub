@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableWatcherARAgingDateTime__c</fullName>
+    <description>Per-signal gate for Signal 3 (overdue invoices aged past WatcherARAgingMinDaysOverdueNumber__c, grouped by 1-7/8-14/15-30/30+ aging bands). When non-null AND master gate is non-null, WatcherARAgingQueryService runs on each digest tick. PR-B's install handler sets this on install for top-3 implemented signals.</description>
+    <externalId>false</externalId>
+    <label>Enable Watcher AR Aging Signal</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

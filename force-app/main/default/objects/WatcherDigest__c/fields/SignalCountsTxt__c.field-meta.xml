@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SignalCountsTxt__c</fullName>
+    <description>Compact per-signal hit summary, e.g. SLA:3,Stuck:1,AR:2,UnhappyStub:0,SignoffStub:0,PaymentStub:0,SyncTrendStub:0. Lets reports + dashboards trend signal volume over time without parsing DigestBodyTxt__c.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Compact per-signal hit counts, comma-separated.</inlineHelpText>
+    <label>Signal Counts</label>
+    <length>255</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

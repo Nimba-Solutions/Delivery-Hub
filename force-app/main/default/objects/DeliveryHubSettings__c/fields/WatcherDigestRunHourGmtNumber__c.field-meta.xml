@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>WatcherDigestRunHourGmtNumber__c</fullName>
+    <description>GMT hour at which the daily Watcher digest tick fires. Default 12 GMT = 8am ET / 5am PT / 1pm UTC+1 — brackets Glen's morning standup window. PR-B's enqueueWatcherDigestIfDue gates on this value. Tunable per org.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>0-23. Default 12 GMT = 8am ET.</inlineHelpText>
+    <label>Watcher Digest Run Hour (GMT)</label>
+    <precision>2</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

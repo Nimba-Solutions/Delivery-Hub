@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RunDateTime__c</fullName>
+    <description>When the Watcher run started. Required. Used to anchor trend analysis (one row per day expected from the scheduled cron). PR-B's orchestrator stamps this at run start before the first signal query fires.</description>
+    <externalId>false</externalId>
+    <label>Run Date Time</label>
+    <required>true</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
