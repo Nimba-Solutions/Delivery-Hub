@@ -23,6 +23,12 @@ private class DeliveryWatcherServiceTest {
      */
     private class SlackMock implements HttpCalloutMock {
         public Integer callCount = 0;
+        /**
+         * @description Records each invocation + returns a canned 200 OK so the
+         *              @future callout path executes end-to-end in test context.
+         * @param req Inbound HttpRequest from DeliverySlackService.postWatcherDigest.
+         * @return Canned HttpResponse (status 200, body "ok").
+         */
         public HttpResponse respond(HttpRequest req) {
             this.callCount++;
             HttpResponse res = new HttpResponse();

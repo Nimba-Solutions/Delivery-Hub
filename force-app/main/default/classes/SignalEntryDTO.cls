@@ -28,12 +28,6 @@ global virtual class SignalEntryDTO {
     @AuraEnabled public String url;
 
     /**
-     * @description Default constructor. All fields null on construction.
-     */
-    global SignalEntryDTO() {
-    }
-
-    /**
      * @description Convenience constructor.
      * @param recordId  Surfaced record Id.
      * @param label     Human-readable title.
