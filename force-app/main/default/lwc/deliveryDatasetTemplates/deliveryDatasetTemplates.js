@@ -22,6 +22,7 @@ import getTemplatesForFeature from '@salesforce/apex/%%%NAMESPACE_DOT%%%Delivery
 import getTemplatesForWorkItem from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.getTemplatesForWorkItem';
 import getRecentAssignmentsForTemplate from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.getRecentAssignmentsForTemplate';
 import formatCciCommand from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.formatCciCommand';
+import isSubscriberOrgApex from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.isSubscriberOrg';
 
 const FEATURE_OBJECT = 'Feature__c',
     WORK_ITEM_OBJECT = 'WorkItem__c',
@@ -38,9 +39,19 @@ export default class DeliveryDatasetTemplates extends LightningElement {
     @track errorMessage = '';
     @track isLoaded = false;
     @track selectedTemplateId = null;
+    @track isSubscriberOrg = false;
 
     wiredTemplatesResult;
     wiredRecentResult;
+
+    @wire(isSubscriberOrgApex)
+    wiredIsSubscriberOrg({ data }) {
+        // Failure path intentionally degrades to non-subscriber rendering —
+        // matches the Apex method's defensive `return false` on probe failure.
+        if (data === true || data === false) {
+            this.isSubscriberOrg = data;
+        }
+    }
 
     @wire(getTemplatesForFeature, { featureId: '$featureIdForWire' })
     wiredFeatureTemplates(result) {
