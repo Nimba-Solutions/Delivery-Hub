@@ -218,6 +218,10 @@
     <tabs>WorkItemComment__c</tabs>
     <tabs>SyncItem__c</tabs>
     <tabs>ActivityLog__c</tabs>
+    <tabs>Feature__c</tabs>
+    <tabs>FeatureToggleRequest__c</tabs>
+    <tabs>WatcherDigest__c</tabs>
+    <tabs>ScratchOrgInstance__c</tabs>
     <tabs>Delivery_Permission_Analyzer</tabs>
     <tabs>DeliveryHubSettings</tabs>
     <tabs>Delivery_Guide</tabs>
