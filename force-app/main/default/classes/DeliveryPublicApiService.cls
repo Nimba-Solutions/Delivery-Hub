@@ -11,6 +11,9 @@
 @RestResource(urlMapping='/deliveryhub/v1/api/*')
 global without sharing class DeliveryPublicApiService {
 
+    /** @description Page size for paginated list endpoints (LIMIT cap). */
+    private static final Integer FEATURE_TOGGLE_PAGE_SIZE = 50;
+
     /** @description Handles all GET requests. Routes by resource path after authentication. */
     @HttpGet
     global static void handleGet() {
@@ -19,17 +22,7 @@ global without sharing class DeliveryPublicApiService {
             if (entity == null) { return; }
 
             // Rate limiting (opt-in — only active when PublicApiRateLimitNumber__c is set)
-            DeliveryHubSettings__c rlSettings = DeliveryHubSettings__c.getOrgDefaults();
-            if (rlSettings != null && rlSettings.PublicApiRateLimitNumber__c != null) {
-                Integer publicApiLimit = (Integer) rlSettings.PublicApiRateLimitNumber__c;
-                if (DeliveryRateLimitService.isRateLimited(entity.Id, 'PublicAPI', publicApiLimit, 1)) {
-                    RestContext.response.statusCode = 429;
-                    RestContext.response.addHeader('Retry-After', '3600');
-                    RestContext.response.responseBody = Blob.valueOf('{"error":"Rate limit exceeded"}');
-                    return;
-                }
-                DeliveryRateLimitService.recordRequest(entity.Id, 'PublicAPI');
-            }
+            if (!enforceRateLimit(entity.Id)) { return; }
 
             String resource = extractResource(RestContext.request.requestURI);
             if (handlePreEntityRoutes(resource)) { return; }
@@ -53,6 +46,14 @@ global without sharing class DeliveryPublicApiService {
         try {
             NetworkEntity__c entity = authenticateRequest();
             if (entity == null) { return; }
+
+            // Rate limiting (opt-in — only active when PublicApiRateLimitNumber__c is set).
+            // Mirrors the gate in handleGet / handlePost; the PATCH path was previously
+            // ungated, letting an attacker with a valid X-Api-Key issue unlimited state-
+            // mutation calls on /scratch-orgs/{id}. Audit:
+            // docs/audits/rest-api-surface-review-2026-05-21.md §3.
+            if (!enforceRateLimit(entity.Id)) { return; }
+
             String resource = extractResource(RestContext.request.requestURI);
             String jsonBody = RestContext.request.requestBody != null ? RestContext.request.requestBody.toString() : '';
             if (String.isBlank(jsonBody)) { sendError(400, 'Request body is required.'); return; }
@@ -76,17 +77,7 @@ global without sharing class DeliveryPublicApiService {
             if (entity == null) { return; }
 
             // Rate limiting (opt-in — only active when PublicApiRateLimitNumber__c is set)
-            DeliveryHubSettings__c rlSettings2 = DeliveryHubSettings__c.getOrgDefaults();
-            if (rlSettings2 != null && rlSettings2.PublicApiRateLimitNumber__c != null) {
-                Integer publicApiLimit = (Integer) rlSettings2.PublicApiRateLimitNumber__c;
-                if (DeliveryRateLimitService.isRateLimited(entity.Id, 'PublicAPI', publicApiLimit, 1)) {
-                    RestContext.response.statusCode = 429;
-                    RestContext.response.addHeader('Retry-After', '3600');
-                    RestContext.response.responseBody = Blob.valueOf('{"error":"Rate limit exceeded"}');
-                    return;
-                }
-                DeliveryRateLimitService.recordRequest(entity.Id, 'PublicAPI');
-            }
+            if (!enforceRateLimit(entity.Id)) { return; }
 
             String resource = extractResource(RestContext.request.requestURI);
             String jsonBody = RestContext.request.requestBody != null ? RestContext.request.requestBody.toString() : '';
@@ -347,6 +338,27 @@ global without sharing class DeliveryPublicApiService {
         }
         Id featureId = resolveFeatureIdByName(featureName);
         if (featureId == null) { sendError(404, 'Feature not found: ' + featureName); return; }
+
+        // Idempotency guard — if a Pending or Granted request for the same
+        // (feature, action) already exists, return its id rather than inserting
+        // a duplicate row. Closes the duplicate-Pending-on-network-retry hole
+        // noted in the 2026-05-21 REST surface review §6.
+        List<FeatureToggleRequest__c> existing = [
+            SELECT Id FROM FeatureToggleRequest__c
+            WHERE FeatureLookup__c = :featureId
+              AND ActionPk__c = :action
+              AND StatusPk__c IN ('Pending', 'Granted')
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        if (!existing.isEmpty()) {
+            sendSuccess(new Map<String, Object>{
+                'requestId' => existing[0].Id,
+                'featureId' => featureId,
+                'status' => 'Pending'
+            });
+            return;
+        }
+
         try {
             Id requestId = DeliveryFeatureApprovalService.submit(featureId, action, reason);
             sendSuccess(new Map<String, Object>{
@@ -427,13 +439,23 @@ global without sharing class DeliveryPublicApiService {
         for (FeatureToggleRequest__c req : requests) {
             data.add(buildFeatureRequestMap(req));
         }
-        sendSuccess(data);
+        // Pagination envelope — `hasMore` is a heuristic (true when the LIMIT
+        // was filled); accurate enough for client UX without a second SOQL.
+        // See docs/audits/rest-api-surface-review-2026-05-21.md §8.
+        Integer maxRows = FEATURE_TOGGLE_PAGE_SIZE;
+        Map<String, Object> resp = new Map<String, Object>{
+            'data'     => data,
+            'offset'   => offset,
+            'pageSize' => maxRows,
+            'hasMore'  => data.size() >= maxRows
+        };
+        sendSuccess(resp);
     }
 
     private static List<FeatureToggleRequest__c> queryFeatureToggleRequests(
         String statusFilter, String featureFilter, Integer offset
     ) {
-        Integer maxRows = 50;
+        Integer maxRows = FEATURE_TOGGLE_PAGE_SIZE;
         Integer safeOffset = (offset == null || offset < 0) ? 0 : offset;
         if (String.isNotBlank(statusFilter) && String.isNotBlank(featureFilter)) {
             return [
@@ -720,6 +742,34 @@ global without sharing class DeliveryPublicApiService {
     }
 
     // ── Auth + Resolution ──────────────────────────────────────────────
+
+    /**
+     * @description Applies the public-API rate-limit gate (opt-in via the
+     *              `PublicApiRateLimitNumber__c` org-default setting). Returns
+     *              true when the request should proceed and false when the
+     *              caller has been rate-limited (response already populated
+     *              with 429 + Retry-After). Shared across handleGet,
+     *              handlePost, and handlePatch — closes the PATCH gap noted
+     *              in the 2026-05-21 REST surface review.
+     * @param entityId The authenticated NetworkEntity__c.Id used as the rate-
+     *                 limit bucket key.
+     * @return true if the request may proceed, false if 429 was returned.
+     */
+    private static Boolean enforceRateLimit(Id entityId) {
+        DeliveryHubSettings__c rlSettings = DeliveryHubSettings__c.getOrgDefaults();
+        if (rlSettings == null || rlSettings.PublicApiRateLimitNumber__c == null) {
+            return true;
+        }
+        Integer publicApiLimit = (Integer) rlSettings.PublicApiRateLimitNumber__c;
+        if (DeliveryRateLimitService.isRateLimited(entityId, 'PublicAPI', publicApiLimit, 1)) {
+            RestContext.response.statusCode = 429;
+            RestContext.response.addHeader('Retry-After', '3600');
+            RestContext.response.responseBody = Blob.valueOf('{"error":"Rate limit exceeded"}');
+            return false;
+        }
+        DeliveryRateLimitService.recordRequest(entityId, 'PublicAPI');
+        return true;
+    }
 
     private static NetworkEntity__c authenticateRequest() {
         String apiKey = RestContext.request.headers.get('X-Api-Key');
