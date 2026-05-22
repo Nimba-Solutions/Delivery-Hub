@@ -28,6 +28,37 @@ global with sharing class DeliveryDatasetController {
     /** Max audit rows surfaced on the cockpit "recent loads" panel. */
     private static final Integer RECENT_LIMIT = 10;
 
+    /** Internal hint — the running install's namespace prefix. Blank in dev orgs, "delivery" on subscriber installs. */
+    private static final String PUBLISHER_NAMESPACE = 'delivery';
+
+    /**
+     * @description Detects whether this is a subscriber install by checking
+     *              the running org's namespace prefix against the publisher
+     *              namespace literal "delivery". Mirrors the same probe used
+     *              by DeliveryDevLoopController so the dataset-templates LWC
+     *              can render a consistent "for package developers" badge
+     *              on managed-package installs without relying on the
+     *              empty-state copy fallback alone.
+     *
+     *              Defensive: any failure of the Organization probe degrades
+     *              to `false` so the LWC never blocks rendering of the
+     *              template list over a metadata read.
+     * @return True on subscriber installs, false in unpackaged dev orgs.
+     */
+    @AuraEnabled(cacheable=true)
+    global static Boolean isSubscriberOrg() {
+        try {
+            List<Organization> orgs = [SELECT NamespacePrefix FROM Organization WITH SYSTEM_MODE LIMIT 1];
+            if (orgs.isEmpty()) {
+                return false;
+            }
+            String prefix = orgs.get(0).NamespacePrefix;
+            return String.isNotBlank(prefix) && prefix.equalsIgnoreCase(PUBLISHER_NAMESPACE);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /**
      * @description Card payload for a single DatasetTemplate__c. Mirrors the
      *              fields the LWC renders without leaking the full SObject.
