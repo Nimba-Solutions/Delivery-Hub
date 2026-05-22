@@ -19,6 +19,14 @@
                 </div>
             </template>
 
+            <template lwc:if={isSubscriberOrg}>
+                <div class="slds-box slds-theme_shade slds-text-body_small slds-m-bottom_small">
+                    Dataset templates are for package developers &mdash;
+                    install scratch org tooling locally (CumulusCI + sfdx)
+                    to load sample data.
+                </div>
+            </template>
+
             <template lwc:if={isEmpty}>
                 <div class="slds-illustration slds-illustration_small slds-p-vertical_medium">
                     <div class="slds-text-longform slds-text-align_center">
