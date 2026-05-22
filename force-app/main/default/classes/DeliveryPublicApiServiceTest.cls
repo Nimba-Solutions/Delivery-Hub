@@ -1433,7 +1433,9 @@ private class DeliveryPublicApiServiceTest {
 
             System.assertEquals(200, res.statusCode, 'should return 200');
             Map<String, Object> body = parseResponse(res);
-            List<Object> data = (List<Object>) body.get('data');
+            // Pagination envelope (audit fix 3) — list is nested under `data.data`.
+            Map<String, Object> envelope = (Map<String, Object>) body.get('data');
+            List<Object> data = (List<Object>) envelope.get('data');
             Boolean foundSeed = false;
             for (Object entry : data) {
                 Map<String, Object> row = (Map<String, Object>) entry;
@@ -1522,6 +1524,164 @@ private class DeliveryPublicApiServiceTest {
             System.assertEquals('Rejected', data.get('status'), 'approval rejected');
             System.assertEquals('Rejected', data.get('requestStatus'),
                 'request marked Rejected on single dissent');
+        }
+    }
+
+    // ==========================================
+    // REST API HARDENING — 2026-05-21 AUDIT FIXES
+    // ==========================================
+
+    /**
+     * @description Audit fix 1 — PATCH /scratch-orgs/{id} now runs the same
+     *              rate-limit gate as GET/POST. Pre-fix the PATCH path was
+     *              ungated, so a valid X-Api-Key could mutate state
+     *              indefinitely. Setting the limit to 1 + pre-recording a
+     *              request exhausts the bucket, forcing the second PATCH to
+     *              return 429.
+     */
+    @IsTest
+    static void testPatchScratchOrgRateLimited() {
+        System.runAs(testUser) {
+            // Opt-in: configure the limit at 1/hour and pre-record one hit so
+            // the next call trips the gate.
+            DeliveryHubSettings__c rl = DeliveryHubSettings__c.getOrgDefaults();
+            if (rl == null) { rl = new DeliveryHubSettings__c(); }
+            rl.PublicApiRateLimitNumber__c = 1;
+            upsert rl;
+
+            NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c WHERE Name = 'API Client Corp' LIMIT 1];
+            DeliveryRateLimitService.recordRequest(entity.Id, 'PublicAPI');
+
+            ScratchOrgInstance__c soi = TestDataFactory.createScratchOrgInstance(new Map<String, Object>{
+                'StatePk__c' => 'Active'
+            });
+            Map<String, Object> body = new Map<String, Object>{ 'state' => 'Deleted' };
+            RestRequest req = buildPatchRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/scratch-orgs/' + soi.Id, body);
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handlePatch();
+            Test.stopTest();
+
+            System.assertEquals(429, res.statusCode, 'PATCH should be rate-limited');
+            System.assertEquals('3600', res.headers.get('Retry-After'), 'Retry-After header set');
+
+            // State must not have flipped since the gate fired before patchScratchOrg.
+            ScratchOrgInstance__c reloaded = [SELECT StatePk__c FROM ScratchOrgInstance__c WHERE Id = :soi.Id];
+            System.assertEquals('Active', reloaded.StatePk__c, 'State not mutated when rate-limited');
+        }
+    }
+
+    /**
+     * @description Audit fix 2 — duplicate POST /features/{name}/toggle for
+     *              the same (feature, action) returns the existing Pending
+     *              request id, never a freshly-inserted row. Closes the
+     *              network-retry duplicate-row hole.
+     */
+    @IsTest
+    static void testPostFeatureToggleIdempotent() {
+        System.runAs(testUser) {
+            Feature__c feat = TestDataFactory.createFeature(new Map<String, Object>{
+                'EnabledDateTime__c' => null,
+                'DisabledDateTime__c' => Datetime.now()
+            });
+
+            Map<String, Object> body = new Map<String, Object>{
+                'action' => 'Enable',
+                'reason' => 'first submission'
+            };
+
+            // First submission — creates the Pending row.
+            RestRequest req1 = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/features/' + feat.Name + '/toggle',
+                body
+            );
+            req1.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res1 = new RestResponse();
+            RestContext.request = req1;
+            RestContext.response = res1;
+
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+
+            System.assertEquals(201, res1.statusCode, 'First submission returns 201 Created');
+            Map<String, Object> data1 = (Map<String, Object>) parseResponse(res1).get('data');
+            Id firstRequestId = (Id) data1.get('requestId');
+
+            // Second submission (same feature + action) — must NOT create a new row.
+            RestRequest req2 = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/features/' + feat.Name + '/toggle',
+                new Map<String, Object>{ 'action' => 'Enable', 'reason' => 'duplicate retry' }
+            );
+            req2.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res2 = new RestResponse();
+            RestContext.request = req2;
+            RestContext.response = res2;
+
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
+
+            System.assertEquals(200, res2.statusCode, 'Duplicate returns 200 (not 201)');
+            Map<String, Object> data2 = (Map<String, Object>) parseResponse(res2).get('data');
+            System.assertEquals(firstRequestId, (Id) data2.get('requestId'),
+                'Duplicate must return the same requestId — no new row');
+
+            Integer rowCount = [
+                SELECT COUNT() FROM FeatureToggleRequest__c
+                WHERE FeatureLookup__c = :feat.Id AND ActionPk__c = 'Enable'
+            ];
+            System.assertEquals(1, rowCount, 'Only one FeatureToggleRequest__c row exists');
+        }
+    }
+
+    /**
+     * @description Audit fix 3 — GET /feature-toggle-requests now wraps the
+     *              list in a pagination envelope with `data`, `offset`,
+     *              `pageSize`, and `hasMore` so clients can drive a
+     *              next-page button without a separate count call.
+     */
+    @IsTest
+    static void testGetFeatureToggleRequestsPaginationEnvelope() {
+        System.runAs(testUser) {
+            Feature__c feat = TestDataFactory.createFeature(null);
+            TestDataFactory.newFeatureToggleRequest(feat.Id);
+
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/feature-toggle-requests');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
+
+            System.assertEquals(200, res.statusCode, 'Should return 200');
+            Map<String, Object> body = parseResponse(res);
+            Map<String, Object> envelope = (Map<String, Object>) body.get('data');
+
+            System.assert(envelope.containsKey('data'),
+                'Envelope must include `data`');
+            System.assert(envelope.containsKey('offset'),
+                'Envelope must include `offset`');
+            System.assert(envelope.containsKey('pageSize'),
+                'Envelope must include `pageSize`');
+            System.assert(envelope.containsKey('hasMore'),
+                'Envelope must include `hasMore`');
+
+            System.assertEquals(0, (Integer) envelope.get('offset'),
+                'Offset defaults to 0 when no pageOffset param');
+            System.assertEquals(50, (Integer) envelope.get('pageSize'),
+                'Page size matches LIMIT');
+            System.assertEquals(false, (Boolean) envelope.get('hasMore'),
+                'Single seeded row → hasMore=false');
+
+            List<Object> data = (List<Object>) envelope.get('data');
+            System.assert(data.size() >= 1, 'Seeded request returned in envelope.data');
         }
     }
 }
