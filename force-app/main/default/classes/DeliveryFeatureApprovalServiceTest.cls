@@ -61,6 +61,7 @@ private class DeliveryFeatureApprovalServiceTest {
         FeatureToggleApproval__c approval = [
             SELECT Id FROM FeatureToggleApproval__c WHERE RequestLookup__c = :requestId LIMIT 1
         ];
+        assignApproverToRunningUser(new List<Id>{ approval.Id });
 
         Test.startTest();
         DeliveryFeatureApprovalService.grant(approval.Id, 'looks good');
@@ -103,6 +104,7 @@ private class DeliveryFeatureApprovalServiceTest {
             WHERE RequestLookup__c = :requestId
             ORDER BY CreatedDate ASC LIMIT 1
         ];
+        assignApproverToRunningUser(new List<Id>{ first.Id });
 
         Test.startTest();
         DeliveryFeatureApprovalService.grant(first.Id, null);
@@ -129,6 +131,7 @@ private class DeliveryFeatureApprovalServiceTest {
         FeatureToggleApproval__c approval = [
             SELECT Id FROM FeatureToggleApproval__c WHERE RequestLookup__c = :requestId LIMIT 1
         ];
+        assignApproverToRunningUser(new List<Id>{ approval.Id });
 
         Test.startTest();
         DeliveryFeatureApprovalService.reject(approval.Id, 'risky');
@@ -163,6 +166,7 @@ private class DeliveryFeatureApprovalServiceTest {
         FeatureToggleApproval__c approval = [
             SELECT Id FROM FeatureToggleApproval__c WHERE RequestLookup__c = :requestId LIMIT 1
         ];
+        assignApproverToRunningUser(new List<Id>{ approval.Id });
 
         Test.startTest();
         DeliveryFeatureApprovalService.grant(approval.Id, null);
@@ -190,6 +194,7 @@ private class DeliveryFeatureApprovalServiceTest {
         FeatureToggleApproval__c approval = [
             SELECT Id FROM FeatureToggleApproval__c WHERE RequestLookup__c = :requestId LIMIT 1
         ];
+        assignApproverToRunningUser(new List<Id>{ approval.Id });
         DeliveryFeatureApprovalService.grant(approval.Id, null);
 
         Test.startTest();
@@ -224,6 +229,7 @@ private class DeliveryFeatureApprovalServiceTest {
         FeatureToggleApproval__c approval = [
             SELECT Id FROM FeatureToggleApproval__c WHERE RequestLookup__c = :requestId LIMIT 1
         ];
+        assignApproverToRunningUser(new List<Id>{ approval.Id });
 
         Test.startTest();
         DeliveryFeatureApprovalService.grant(approval.Id, null);
@@ -394,6 +400,7 @@ private class DeliveryFeatureApprovalServiceTest {
         ];
         System.assertEquals(2, approvals.size(),
             'expected root + 1 cascade approval for A -> B chain');
+        assignApproverToRunningUser(new List<Id>{ approvals[0].Id, approvals[1].Id });
 
         Test.startTest();
         // Grant only the cascade-leaf approval first. The root remains pending.
@@ -460,6 +467,7 @@ private class DeliveryFeatureApprovalServiceTest {
         System.assertNotEquals(null, rootRow.RequiredDateTime__c, 'root row is required');
         System.assertEquals(null, softRow.RequiredDateTime__c,
             'Soft dependency row must have RequiredDateTime__c=null');
+        assignApproverToRunningUser(new List<Id>{ rootRow.Id });
 
         Test.startTest();
         // Grant only the root — soft should be auto-marked on apply.
@@ -519,6 +527,198 @@ private class DeliveryFeatureApprovalServiceTest {
             'cascade row references the blocker feature');
         // Both rows still pending; status DTO carries that through.
         System.assertEquals('Pending', chain.get(0).status, 'pending status');
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // Caller-is-approver guard (security-review-2026-05-21 §7)
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Callers other than the assigned approver must be rejected
+     *              by grant(). Closes medium-severity finding in
+     *              docs/audits/security-review-2026-05-21.md §7 — without
+     *              this guard any authenticated DH user could call grant()
+     *              on any approval id.
+     */
+    @IsTest
+    static void testGrantRejectsNonApproverCaller() {
+        Feature__c feat = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => Datetime.now()
+        });
+        Id requestId = DeliveryFeatureApprovalService.submit(feat.Id, 'Enable', null);
+        FeatureToggleApproval__c approval = [
+            SELECT Id FROM FeatureToggleApproval__c WHERE RequestLookup__c = :requestId LIMIT 1
+        ];
+        // Pin approver to a fabricated user id (not the running user) so the
+        // guard fires on the null-vs-mismatch second branch. User is a setup
+        // object — isolate its DML in System.runAs() to avoid MIXED_DML.
+        User other = buildOtherStandardUser();
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            insert other;
+        }
+        approval.ApproverUserLookup__c = other.Id;
+        update approval;
+
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryFeatureApprovalService.grant(approval.Id, 'sneaky');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+
+        System.assert(threw,
+            'grant() must throw when caller is not the assigned approver');
+        FeatureToggleApproval__c after = [
+            SELECT StatusPk__c FROM FeatureToggleApproval__c WHERE Id = :approval.Id
+        ];
+        System.assertEquals('Pending', after.StatusPk__c,
+            'approval row must remain Pending after a blocked grant');
+    }
+
+    /**
+     * @description When ApproverUserLookup__c is null, grant() must refuse —
+     *              an unassigned approval row is otherwise reachable by any
+     *              authenticated user.
+     */
+    @IsTest
+    static void testGrantRejectsNullApprover() {
+        Feature__c feat = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => Datetime.now()
+        });
+        Id requestId = DeliveryFeatureApprovalService.submit(feat.Id, 'Enable', null);
+        FeatureToggleApproval__c approval = [
+            SELECT Id, ApproverUserLookup__c FROM FeatureToggleApproval__c
+            WHERE RequestLookup__c = :requestId LIMIT 1
+        ];
+        System.assertEquals(null, approval.ApproverUserLookup__c,
+            'precondition: submit() leaves approver null until admin assignment');
+
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryFeatureApprovalService.grant(approval.Id, null);
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+
+        System.assert(threw,
+            'grant() must throw when ApproverUserLookup__c is null');
+    }
+
+    /**
+     * @description When ApproverUserLookup__c matches the running user, the
+     *              guard lets grant() through. (Happy path also exercised
+     *              by testGrantAppliesWhenLastApprovalGranted; this asserts
+     *              the guard specifically does not regress that path.)
+     */
+    @IsTest
+    static void testGrantSucceedsWhenCallerIsApprover() {
+        Feature__c feat = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => Datetime.now()
+        });
+        Id requestId = DeliveryFeatureApprovalService.submit(feat.Id, 'Enable', null);
+        FeatureToggleApproval__c approval = [
+            SELECT Id FROM FeatureToggleApproval__c WHERE RequestLookup__c = :requestId LIMIT 1
+        ];
+        assignApproverToRunningUser(new List<Id>{ approval.Id });
+
+        Test.startTest();
+        DeliveryFeatureApprovalService.grant(approval.Id, 'ok');
+        Test.stopTest();
+
+        FeatureToggleRequest__c req = [
+            SELECT StatusPk__c FROM FeatureToggleRequest__c WHERE Id = :requestId
+        ];
+        System.assertEquals('Applied', req.StatusPk__c,
+            'request should apply when running user is the assigned approver');
+    }
+
+    /**
+     * @description reject() must also enforce the caller-is-approver guard.
+     */
+    @IsTest
+    static void testRejectRejectsNonApproverCaller() {
+        Feature__c feat = TestDataFactory.createFeature(new Map<String, Object>{
+            'EnabledDateTime__c' => null,
+            'DisabledDateTime__c' => Datetime.now()
+        });
+        Id requestId = DeliveryFeatureApprovalService.submit(feat.Id, 'Enable', null);
+        FeatureToggleApproval__c approval = [
+            SELECT Id FROM FeatureToggleApproval__c WHERE RequestLookup__c = :requestId LIMIT 1
+        ];
+        User other = buildOtherStandardUser();
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            insert other;
+        }
+        approval.ApproverUserLookup__c = other.Id;
+        update approval;
+
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryFeatureApprovalService.reject(approval.Id, 'no');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+
+        System.assert(threw,
+            'reject() must throw when caller is not the assigned approver');
+        FeatureToggleRequest__c req = [
+            SELECT StatusPk__c FROM FeatureToggleRequest__c WHERE Id = :requestId
+        ];
+        System.assertEquals('Pending', req.StatusPk__c,
+            'request must remain Pending after a blocked reject');
+    }
+
+    /**
+     * @description Test helper — assigns ApproverUserLookup__c=UserInfo.getUserId()
+     *              on the given approval rows so existing happy-path tests still
+     *              pass through the new caller-is-approver guard.
+     * @param approvalIds FeatureToggleApproval__c ids to flip approver on.
+     */
+    private static void assignApproverToRunningUser(List<Id> approvalIds) {
+        if (approvalIds == null || approvalIds.isEmpty()) {
+            return;
+        }
+        List<FeatureToggleApproval__c> rows = new List<FeatureToggleApproval__c>();
+        Id me = UserInfo.getUserId();
+        for (Id a : approvalIds) {
+            rows.add(new FeatureToggleApproval__c(
+                Id = a,
+                ApproverUserLookup__c = me
+            ));
+        }
+        update rows;
+    }
+
+    /**
+     * @description Test helper — builds (but does not insert) a Standard User
+     *              with a unique username, for negative-path tests that need
+     *              an approver id different from UserInfo.getUserId().
+     * @return An unpersisted User on the Standard User profile.
+     */
+    private static User buildOtherStandardUser() {
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        String uniq = String.valueOf(DateTime.now().getTime());
+        return new User(
+            FirstName = 'Other',
+            LastName = 'Approver',
+            Email = 'other.approver+' + uniq + '@example.invalid',
+            Username = 'other.approver+' + uniq + '@example.invalid.test',
+            Alias = 'oappr',
+            ProfileId = p.Id,
+            TimeZoneSidKey = 'America/Los_Angeles',
+            LocaleSidKey = 'en_US',
+            EmailEncodingKey = 'UTF-8',
+            LanguageLocaleKey = 'en_US'
+        );
     }
 
     /**
