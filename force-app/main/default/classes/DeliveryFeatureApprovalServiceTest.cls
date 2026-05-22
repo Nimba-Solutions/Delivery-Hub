@@ -681,6 +681,7 @@ private class DeliveryFeatureApprovalServiceTest {
      * @description Test helper — assigns ApproverUserLookup__c=UserInfo.getUserId()
      *              on the given approval rows so existing happy-path tests still
      *              pass through the new caller-is-approver guard.
+     * @param approvalIds FeatureToggleApproval__c ids to flip approver on.
      */
     private static void assignApproverToRunningUser(List<Id> approvalIds) {
         if (approvalIds == null || approvalIds.isEmpty()) {
@@ -701,6 +702,7 @@ private class DeliveryFeatureApprovalServiceTest {
      * @description Test helper — builds (but does not insert) a Standard User
      *              with a unique username, for negative-path tests that need
      *              an approver id different from UserInfo.getUserId().
+     * @return An unpersisted User on the Standard User profile.
      */
     private static User buildOtherStandardUser() {
         Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
