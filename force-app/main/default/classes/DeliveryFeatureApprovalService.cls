@@ -317,6 +317,7 @@ global with sharing class DeliveryFeatureApprovalService {
     @AuraEnabled
     global static void grant(Id approvalId, String note) {
         FeatureToggleApproval__c row = loadApprovalForDecision(approvalId);
+        assertCallerIsApprover(row);
         stampDecision(row, APPROVAL_APPROVED, note);
         applyIfFullyGranted(row.RequestLookup__c);
     }
@@ -331,8 +332,29 @@ global with sharing class DeliveryFeatureApprovalService {
     @AuraEnabled
     global static void reject(Id approvalId, String note) {
         FeatureToggleApproval__c row = loadApprovalForDecision(approvalId);
+        assertCallerIsApprover(row);
         stampDecision(row, APPROVAL_REJECTED, note);
         markRequestRejected(row.RequestLookup__c);
+    }
+
+    /**
+     * @description Caller-is-approver guard. Rejects callers other than the
+     *              assigned approver and rejects rows that have no approver
+     *              assigned. Without this gate, any authenticated user could
+     *              call grant/reject directly (the LWC filters by approver,
+     *              but the @AuraEnabled surface is reachable independently).
+     *              Severity Medium per docs/audits/security-review-2026-05-21.md §7.
+     * @param row The loaded approval row.
+     */
+    private static void assertCallerIsApprover(FeatureToggleApproval__c row) {
+        if (row.ApproverUserLookup__c == null) {
+            throw new AuraHandledException(
+                'Approval has no assigned approver — cannot decide.');
+        }
+        if (row.ApproverUserLookup__c != UserInfo.getUserId()) {
+            throw new AuraHandledException(
+                'You are not the assigned approver for this row.');
+        }
     }
 
     private static FeatureToggleApproval__c loadApprovalForDecision(Id approvalId) {
