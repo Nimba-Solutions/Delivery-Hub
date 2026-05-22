@@ -1462,6 +1462,9 @@ private class DeliveryPublicApiServiceTest {
             FeatureToggleApproval__c approval = [
                 SELECT Id FROM FeatureToggleApproval__c WHERE RequestLookup__c = :requestId LIMIT 1
             ];
+            // Caller-is-approver guard (security-review-2026-05-21 §7).
+            approval.ApproverUserLookup__c = UserInfo.getUserId();
+            update approval;
 
             Map<String, Object> body = new Map<String, Object>{ 'note' => 'looks good' };
             RestRequest req = buildPostRequest(
@@ -1501,6 +1504,9 @@ private class DeliveryPublicApiServiceTest {
             FeatureToggleApproval__c approval = [
                 SELECT Id FROM FeatureToggleApproval__c WHERE RequestLookup__c = :requestId LIMIT 1
             ];
+            // Caller-is-approver guard (security-review-2026-05-21 §7).
+            approval.ApproverUserLookup__c = UserInfo.getUserId();
+            update approval;
 
             Map<String, Object> body = new Map<String, Object>{ 'note' => 'risky' };
             RestRequest req = buildPostRequest(

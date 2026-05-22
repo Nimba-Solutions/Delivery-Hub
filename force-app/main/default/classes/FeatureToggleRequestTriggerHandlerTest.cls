@@ -89,6 +89,10 @@ private class FeatureToggleRequestTriggerHandlerTest {
         FeatureToggleApproval__c approval = [
             SELECT Id FROM FeatureToggleApproval__c WHERE RequestLookup__c = :requestId LIMIT 1
         ];
+        // Caller-is-approver guard (security-review-2026-05-21 §7) requires
+        // ApproverUserLookup__c to match UserInfo.getUserId() before grant().
+        approval.ApproverUserLookup__c = UserInfo.getUserId();
+        update approval;
 
         Test.startTest();
         DeliveryFeatureApprovalService.grant(approval.Id, null);
