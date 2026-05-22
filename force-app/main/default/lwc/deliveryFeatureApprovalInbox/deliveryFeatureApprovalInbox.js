@@ -196,6 +196,15 @@ export default class DeliveryFeatureApprovalInbox extends LightningElement {
         this.chainRequestLabel = '';
     }
 
+    handleModalKeydown(event) {
+        // Explicit ESC handler — SLDS modals typically dismiss via backdrop
+        // interaction, but wiring `Escape` directly is more robust and
+        // matches WCAG 2.1 keyboard-trap expectations for dialogs.
+        if (event && event.key === 'Escape') {
+            this.handleCloseChain();
+        }
+    }
+
     onDecisionSuccess(label, approvalId) {
         this.dispatchEvent(new ShowToastEvent({
             title: `${label}`,
