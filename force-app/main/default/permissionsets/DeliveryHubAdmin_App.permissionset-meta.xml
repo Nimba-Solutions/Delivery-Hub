@@ -1445,11 +1445,27 @@
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>
+        <tab>FeatureToggleRequest__c</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
+        <tab>Feature__c</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
         <tab>NetworkEntity__c</tab>
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>
+        <tab>ScratchOrgInstance__c</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
         <tab>SyncItem__c</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
+        <tab>WatcherDigest__c</tab>
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>
