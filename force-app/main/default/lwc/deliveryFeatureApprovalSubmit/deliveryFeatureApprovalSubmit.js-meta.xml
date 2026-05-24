@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <masterLabel>Delivery Feature Approval Submit</masterLabel>
+    <description>Form for non-admin users to request an Enable/Disable on a Feature__c. Wraps DeliveryFeatureApprovalService.submit(). Closes the Flow 4 submission-UI gap surfaced in the 2026-05-21 e2e walkthrough audit.</description>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__AppPage</target>
+        <target>lightning__HomePage</target>
+        <target>lightning__RecordPage</target>
+    </targets>
+</LightningComponentBundle>
