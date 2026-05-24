@@ -69,7 +69,7 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
-        <apexClass>DeliveryFeatureDependencyEditorController</apexClass>
+        <apexClass>DeliveryFeatureDepEditorController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>

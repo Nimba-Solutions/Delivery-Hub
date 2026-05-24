@@ -1,7 +1,7 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @description  Tests for DeliveryFeatureDependencyEditorController.
+ * @description  Tests for DeliveryFeatureDepEditorController.
  *               Covers:
  *                 - getDependencies() filters on the BLOCKED side and returns rows
  *                 - getDependencies() with null parentId returns an empty list
@@ -24,7 +24,7 @@
  * @author       Cloud Nimbus LLC
  */
 @IsTest
-private class DeliveryFeatureDependencyEditorControllerTest {
+private class DeliveryFeatureDepEditorControllerTest {
 
     /**
      * @description Builds a standard (non-admin) test user. Used to assert the
@@ -56,7 +56,7 @@ private class DeliveryFeatureDependencyEditorControllerTest {
 
         Test.startTest();
         List<FeatureDependency__c> rows =
-            DeliveryFeatureDependencyEditorController.getDependencies(parent.Id);
+            DeliveryFeatureDepEditorController.getDependencies(parent.Id);
         Test.stopTest();
 
         System.assertEquals(1, rows.size(),
@@ -71,7 +71,7 @@ private class DeliveryFeatureDependencyEditorControllerTest {
     static void testGetDependenciesWithNullParentReturnsEmptyList() {
         Test.startTest();
         List<FeatureDependency__c> rows =
-            DeliveryFeatureDependencyEditorController.getDependencies(null);
+            DeliveryFeatureDepEditorController.getDependencies(null);
         Test.stopTest();
 
         System.assertNotEquals(null, rows, 'Should never return null.');
@@ -89,9 +89,9 @@ private class DeliveryFeatureDependencyEditorControllerTest {
 
         Test.startTest();
         List<FeatureDependency__c> rowsForA =
-            DeliveryFeatureDependencyEditorController.getDependencies(parentA.Id);
+            DeliveryFeatureDepEditorController.getDependencies(parentA.Id);
         List<FeatureDependency__c> rowsForB =
-            DeliveryFeatureDependencyEditorController.getDependencies(parentB.Id);
+            DeliveryFeatureDepEditorController.getDependencies(parentB.Id);
         Test.stopTest();
 
         System.assertEquals(1, rowsForA.size(), 'Parent A has one dep wired.');
@@ -105,7 +105,7 @@ private class DeliveryFeatureDependencyEditorControllerTest {
         Feature__c child = TestDataFactory.createFeature(null);
 
         Test.startTest();
-        FeatureDependency__c created = DeliveryFeatureDependencyEditorController.createDependency(
+        FeatureDependency__c created = DeliveryFeatureDepEditorController.createDependency(
             parent.Id, child.Id, 'Soft', 'unit-test notes'
         );
         Test.stopTest();
@@ -136,7 +136,7 @@ private class DeliveryFeatureDependencyEditorControllerTest {
         Feature__c child = TestDataFactory.createFeature(null);
 
         Test.startTest();
-        FeatureDependency__c created = DeliveryFeatureDependencyEditorController.createDependency(
+        FeatureDependency__c created = DeliveryFeatureDepEditorController.createDependency(
             parent.Id, child.Id, null, null
         );
         Test.stopTest();
@@ -155,7 +155,7 @@ private class DeliveryFeatureDependencyEditorControllerTest {
         Boolean threw = false;
         Test.startTest();
         try {
-            DeliveryFeatureDependencyEditorController.createDependency(
+            DeliveryFeatureDepEditorController.createDependency(
                 f.Id, f.Id, 'Hard', null
             );
         } catch (AuraHandledException e) {
@@ -171,14 +171,14 @@ private class DeliveryFeatureDependencyEditorControllerTest {
     static void testCreateDependencyRejectsDuplicate() {
         Feature__c parent = TestDataFactory.createFeature(null);
         Feature__c child = TestDataFactory.createFeature(null);
-        DeliveryFeatureDependencyEditorController.createDependency(
+        DeliveryFeatureDepEditorController.createDependency(
             parent.Id, child.Id, 'Hard', null
         );
 
         Boolean threw = false;
         Test.startTest();
         try {
-            DeliveryFeatureDependencyEditorController.createDependency(
+            DeliveryFeatureDepEditorController.createDependency(
                 parent.Id, child.Id, 'Soft', 'second insert'
             );
         } catch (AuraHandledException e) {
@@ -198,7 +198,7 @@ private class DeliveryFeatureDependencyEditorControllerTest {
         Boolean threw = false;
         Test.startTest();
         try {
-            DeliveryFeatureDependencyEditorController.createDependency(
+            DeliveryFeatureDepEditorController.createDependency(
                 parent.Id, child.Id, 'Bogus', null
             );
         } catch (AuraHandledException e) {
@@ -217,7 +217,7 @@ private class DeliveryFeatureDependencyEditorControllerTest {
         Boolean threw = false;
         Test.startTest();
         try {
-            DeliveryFeatureDependencyEditorController.createDependency(
+            DeliveryFeatureDepEditorController.createDependency(
                 null, child.Id, 'Hard', null
             );
         } catch (AuraHandledException e) {
@@ -235,7 +235,7 @@ private class DeliveryFeatureDependencyEditorControllerTest {
         Boolean threw = false;
         Test.startTest();
         try {
-            DeliveryFeatureDependencyEditorController.createDependency(
+            DeliveryFeatureDepEditorController.createDependency(
                 parent.Id, null, 'Hard', null
             );
         } catch (AuraHandledException e) {
@@ -256,7 +256,7 @@ private class DeliveryFeatureDependencyEditorControllerTest {
         Test.startTest();
         System.runAs(standard) {
             try {
-                DeliveryFeatureDependencyEditorController.createDependency(
+                DeliveryFeatureDepEditorController.createDependency(
                     parent.Id, child.Id, 'Hard', null
                 );
             } catch (AuraHandledException e) {
@@ -276,7 +276,7 @@ private class DeliveryFeatureDependencyEditorControllerTest {
         FeatureDependency__c dep = TestDataFactory.newFeatureDependency(child.Id, parent.Id);
 
         Test.startTest();
-        DeliveryFeatureDependencyEditorController.deleteDependency(dep.Id);
+        DeliveryFeatureDepEditorController.deleteDependency(dep.Id);
         Test.stopTest();
 
         Integer remaining = [
@@ -290,7 +290,7 @@ private class DeliveryFeatureDependencyEditorControllerTest {
         Boolean threw = false;
         Test.startTest();
         try {
-            DeliveryFeatureDependencyEditorController.deleteDependency(null);
+            DeliveryFeatureDepEditorController.deleteDependency(null);
         } catch (AuraHandledException e) {
             threw = true;
         }
@@ -310,7 +310,7 @@ private class DeliveryFeatureDependencyEditorControllerTest {
         Test.startTest();
         System.runAs(standard) {
             try {
-                DeliveryFeatureDependencyEditorController.deleteDependency(dep.Id);
+                DeliveryFeatureDepEditorController.deleteDependency(dep.Id);
             } catch (AuraHandledException e) {
                 threw = true;
             }

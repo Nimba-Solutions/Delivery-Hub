@@ -1,8 +1,8 @@
 import { createElement } from 'lwc';
 import DeliveryFeatureDependencyEditor from 'c/deliveryFeatureDependencyEditor';
-import getDependencies from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureDependencyEditorController.getDependencies';
-import createDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureDependencyEditorController.createDependency';
-import deleteDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureDependencyEditorController.deleteDependency';
+import getDependencies from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureDepEditorController.getDependencies';
+import createDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureDepEditorController.createDependency';
+import deleteDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureDepEditorController.deleteDependency';
 import isAdminApex from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureCatalogController.isAdmin';
 
 // Apex methods auto-mocked via force-app/test/jest-mocks/apex/.

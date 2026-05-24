@@ -106,7 +106,7 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryDashboardCardControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryPermissionAnalyzerControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureCatalogControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureDependencyEditorControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureDepEditorControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureSyncServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureTriggerHandlerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureGraphServiceTest</testClassName>

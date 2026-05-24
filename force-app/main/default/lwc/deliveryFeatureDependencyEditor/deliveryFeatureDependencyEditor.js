@@ -9,7 +9,7 @@
  *
  *               Two sections:
  *                 1. Existing dependencies — lightning-datatable bound to
- *                    DeliveryFeatureDependencyEditorController.getDependencies,
+ *                    DeliveryFeatureDepEditorController.getDependencies,
  *                    one row per FeatureDependency__c that has THIS feature as
  *                    the BlockedFeatureLookup__c (i.e. the things this feature
  *                    depends on). Delete is the only inline row action.
@@ -29,9 +29,9 @@
 import { LightningElement, api, wire, track } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import getDependencies from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureDependencyEditorController.getDependencies';
-import createDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureDependencyEditorController.createDependency';
-import deleteDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureDependencyEditorController.deleteDependency';
+import getDependencies from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureDepEditorController.getDependencies';
+import createDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureDepEditorController.createDependency';
+import deleteDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureDepEditorController.deleteDependency';
 import isAdminApex from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureCatalogController.isAdmin';
 
 const TYPE_OPTIONS = [

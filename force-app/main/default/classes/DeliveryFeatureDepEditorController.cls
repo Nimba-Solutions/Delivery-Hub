@@ -26,7 +26,7 @@
  * @author       Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation,PMD.AvoidGlobalModifier,PMD.CyclomaticComplexity')
-public with sharing class DeliveryFeatureDependencyEditorController {
+public with sharing class DeliveryFeatureDepEditorController {
 
     /** Hard-coded GVS-backed picklist values mirrored from FeatureDependencyType. */
     private static final Set<String> ALLOWED_DEP_TYPES = new Set<String>{
@@ -67,7 +67,7 @@ public with sharing class DeliveryFeatureDependencyEditorController {
             ];
         } catch (Exception e) {
             System.debug(LoggingLevel.WARN,
-                '[DeliveryFeatureDependencyEditorController.getDependencies] failed: '
+                '[DeliveryFeatureDepEditorController.getDependencies] failed: '
                 + e.getMessage());
             throw new AuraHandledException('Unable to load dependencies.');
         }
@@ -112,7 +112,7 @@ public with sharing class DeliveryFeatureDependencyEditorController {
             insert dep;
         } catch (Exception e) {
             System.debug(LoggingLevel.WARN,
-                '[DeliveryFeatureDependencyEditorController.createDependency] insert failed: '
+                '[DeliveryFeatureDepEditorController.createDependency] insert failed: '
                 + e.getMessage());
             throw new AuraHandledException('Unable to create dependency.');
         }
@@ -143,7 +143,7 @@ public with sharing class DeliveryFeatureDependencyEditorController {
             delete existing;
         } catch (Exception e) {
             System.debug(LoggingLevel.WARN,
-                '[DeliveryFeatureDependencyEditorController.deleteDependency] delete failed: '
+                '[DeliveryFeatureDepEditorController.deleteDependency] delete failed: '
                 + e.getMessage());
             throw new AuraHandledException('Unable to delete dependency.');
         }

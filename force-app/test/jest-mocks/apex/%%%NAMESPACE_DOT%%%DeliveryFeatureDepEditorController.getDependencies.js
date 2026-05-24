@@ -1,5 +1,5 @@
 /**
- * Mock for DeliveryFeatureDependencyEditorController.getDependencies (wire).
+ * Mock for DeliveryFeatureDepEditorController.getDependencies (wire).
  */
 const { createApexTestWireAdapter } = require('@salesforce/sfdx-lwc-jest');
 
