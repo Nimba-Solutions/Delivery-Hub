@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <masterLabel>Delivery Feature Dependency Editor</masterLabel>
+    <description>Inline FeatureDependency__c editor for the Feature__c record page. Admins can add and remove dependencies without leaving the record (closes Flow 5 gap from the 2026-05-21 E2E audit). Read-only for non-admins.</description>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__RecordPage</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__RecordPage">
+            <objects>
+                <object>Feature__c</object>
+            </objects>
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>
