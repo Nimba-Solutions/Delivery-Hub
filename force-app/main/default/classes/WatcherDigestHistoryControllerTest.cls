@@ -9,7 +9,7 @@
  * @author       Cloud Nimbus LLC
  */
 @IsTest
-private class DeliveryWatcherDigestHistoryControllerTest {
+private class WatcherDigestHistoryControllerTest {
 
     private static User runningUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
 
