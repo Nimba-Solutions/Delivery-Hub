@@ -1,0 +1,37 @@
+<template>
+    <lightning-card title={headerLabel} icon-name="standard:log_a_call">
+        <lightning-button-icon
+            slot="actions"
+            icon-name="utility:refresh"
+            alternative-text="Refresh activity log"
+            title="Refresh"
+            onclick={handleRefresh}>
+        </lightning-button-icon>
+
+        <div class="slds-var-p-horizontal_medium">
+            <template lwc:if={hasError}>
+                <div class="slds-notify slds-notify_alert slds-theme_error" role="alert">
+                    <span>{errorMessage}</span>
+                </div>
+            </template>
+
+            <template lwc:if={hasRows}>
+                <lightning-datatable
+                    key-field="id"
+                    data={rows}
+                    columns={columns}
+                    hide-checkbox-column="true"
+                    sorted-by={sortedBy}
+                    sorted-direction={sortedDirection}
+                    onsort={handleSort}>
+                </lightning-datatable>
+            </template>
+
+            <template lwc:if={isEmpty}>
+                <p class="slds-text-body_regular slds-text-color_weak slds-var-p-vertical_medium">
+                    No activity recorded yet.
+                </p>
+            </template>
+        </div>
+    </lightning-card>
+</template>
