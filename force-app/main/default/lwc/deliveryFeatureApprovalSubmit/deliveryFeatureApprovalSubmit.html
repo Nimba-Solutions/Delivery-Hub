@@ -1,0 +1,97 @@
+<template>
+    <lightning-card title="Request feature toggle" icon-name="standard:approval">
+        <div slot="actions">
+            <lightning-button-icon
+                icon-name="utility:refresh"
+                variant="border-filled"
+                onclick={handleRefresh}
+                alternative-text="Refresh feature list">
+            </lightning-button-icon>
+        </div>
+
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium submit-form">
+            <template lwc:if={hasLoadError}>
+                <div class="slds-notify slds-notify_alert slds-theme_warning" role="alert">
+                    <h2>{loadErrorMessage}</h2>
+                </div>
+            </template>
+
+            <template lwc:if={isReady}>
+                <p class="slds-text-body_regular slds-m-bottom_small">
+                    Pick a feature, choose Enable or Disable, and explain why.
+                    Your request will route through the approval inbox for an admin to act on.
+                </p>
+
+                <lightning-combobox
+                    name="feature"
+                    label="Feature"
+                    placeholder="Select a feature"
+                    options={featureOptions}
+                    value={selectedFeatureId}
+                    required
+                    onchange={handleFeatureChange}
+                    class="slds-m-bottom_small">
+                </lightning-combobox>
+
+                <lightning-combobox
+                    name="action"
+                    label="Action"
+                    placeholder="Select an action"
+                    options={actionOptions}
+                    value={selectedAction}
+                    required
+                    onchange={handleActionChange}
+                    class="slds-m-bottom_small">
+                </lightning-combobox>
+
+                <lightning-textarea
+                    name="justification"
+                    label="Justification"
+                    placeholder="Why is this toggle needed? (10-2000 characters)"
+                    value={justification}
+                    required
+                    min-length={justificationMin}
+                    max-length={justificationMax}
+                    onchange={handleJustificationChange}
+                    onblur={handleJustificationBlur}
+                    field-level-help="Captured on the audit row. Be specific — the approver may not have context."
+                    class="slds-m-bottom_x-small">
+                </lightning-textarea>
+                <div class="slds-text-body_small slds-text-color_weak justification-help">
+                    {justificationCounter}
+                </div>
+
+                <template lwc:if={hasSubmitError}>
+                    <div class="slds-m-top_small slds-text-color_error" role="alert">
+                        {submitErrorMessage}
+                    </div>
+                </template>
+
+                <div class="slds-m-top_medium slds-grid slds-grid_align-end slds-gutters_x-small">
+                    <div class="slds-col slds-no-flex">
+                        <lightning-button
+                            label="Reset"
+                            variant="neutral"
+                            onclick={handleReset}
+                            disabled={isSubmitting}>
+                        </lightning-button>
+                    </div>
+                    <div class="slds-col slds-no-flex">
+                        <lightning-button
+                            label={submitLabel}
+                            variant="brand"
+                            onclick={handleSubmit}
+                            disabled={submitDisabled}>
+                        </lightning-button>
+                    </div>
+                </div>
+
+                <template lwc:if={isSubmitting}>
+                    <div class="slds-m-top_small slds-text-body_small slds-text-color_weak" aria-live="polite">
+                        Submitting&hellip;
+                    </div>
+                </template>
+            </template>
+        </div>
+    </lightning-card>
+</template>
