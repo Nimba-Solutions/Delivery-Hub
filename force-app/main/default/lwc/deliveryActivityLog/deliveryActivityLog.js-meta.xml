@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <masterLabel>Delivery Activity Log</masterLabel>
+    <description>Read-only audit-trail viewer for ActivityLog__c. Org-wide on App Pages, record-scoped on Record Pages. Closes the audit-trail-surfaces gap in the e2e walkthrough audit.</description>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__AppPage</target>
+        <target>lightning__HomePage</target>
+        <target>lightning__RecordPage</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__AppPage,lightning__HomePage,lightning__RecordPage">
+            <property name="recordLimit" type="Integer" label="Max Rows" default="50" description="Maximum rows to fetch (1–200)."/>
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

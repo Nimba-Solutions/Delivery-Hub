@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <masterLabel>Delivery Watcher Digest History</masterLabel>
+    <description>Read-only audit-trail viewer for WatcherDigest__c. One row per scheduled or manual Watcher run, with signal counts, Slack-delivered proxy, and digest body.</description>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__AppPage</target>
+        <target>lightning__HomePage</target>
+        <target>lightning__RecordPage</target>
+    </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__AppPage,lightning__HomePage,lightning__RecordPage">
+            <property name="recordLimit" type="Integer" label="Max Rows" default="50" description="Maximum rows to fetch (1–200)."/>
+        </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>
