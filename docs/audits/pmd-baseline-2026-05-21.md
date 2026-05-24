@@ -40,7 +40,7 @@ The cockpit-plan PRs did **not** regress baseline quality. Every new class passe
 
 | Class | Debt | Dominant rules | Risk | Recommendation |
 |---|---|---|---|---|
-| `DeliveryDocumentController` | 40 | `ApexDoc` only | Low | **Priority 1.** Javadoc sweep on 40 public methods — 1-2h, kills 11% of baseline debt |
+| ~~`DeliveryDocumentController`~~ | ~~40~~ | `ApexDoc` | — | **CLOSED in PR #791 (2026-05-18)** — audit was stale on this row when written 2026-05-21. 88 ApexDoc-tag lines across 25 methods now present. Net 40 findings removed. |
 | `DeliverySlackInboundHandler` | 6 | `StdCyclomaticComplexity` ×2, `ApexDoc` ×2, `CyclomaticComplexity`, `NcssMethodCount` | High (`handle()` cyc=13) | **Priority 2.** Extract event-type branches into 3 helpers — 45min, drops cyc 13→~4 |
 | `DeliveryFeatureApprovalService` | 5 | Cyclomatic ×2 + others | Medium | Monitor; intentional additive-signature design. Defer refactor |
 | `DeliveryOnboardingService` | 5 | Cyclomatic + `ExcessivePublicCount` ×2 | Medium | Monitor; same pattern. Defer |
@@ -66,4 +66,4 @@ Net codebase quality is **the same** as 5/15 plus 10 new well-tested classes wit
 | 5 | `ApexCRUDViolation` triage on `DeliveryWorkItemController` (5 findings) | 2h | 1.4% | Validates security controls |
 | 6 | Suppress monoliths with TODO (`DeliveryGanttController`, `DeliverySyncItemIngestor`) | 30min | Reduces noise | Documentation-only |
 
-**Recommended next-session bundle:** #1 + #2 = ~2.5h, kills 15% of baseline debt, low risk. Ship as a single cleanup PR.
+**Recommended next-session bundle:** #2 + (#5 partial) ≈ 2-3h. Sweep #1 was already closed by PR #791 — the audit referenced it as if pending because the original PMD scan was copy-forwarded from the May-15 baseline without re-verifying this row. **Lesson for future audits:** the agent doing repo-wide PMD baselines must actually run `npx sfdx scanner:run` or grep current ApexDoc state per-class, not paste-forward findings from the prior baseline.
