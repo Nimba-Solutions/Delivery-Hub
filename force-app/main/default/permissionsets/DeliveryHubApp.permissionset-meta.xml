@@ -13,6 +13,10 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
+        <apexClass>DeliveryActivityLogController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>DeliveryActivityTimelineController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
@@ -74,6 +78,10 @@
     </classAccesses>
     <classAccesses>
         <apexClass>DeliveryFeatureGraphService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>DeliveryOnboardingHistoryController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
@@ -222,6 +230,10 @@
     </classAccesses>
     <classAccesses>
         <apexClass>DeliveryWatcherDigestFormatter</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>DeliveryWatcherDigestHistoryController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
