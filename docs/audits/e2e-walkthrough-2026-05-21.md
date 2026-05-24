@@ -1,8 +1,9 @@
 # E2E Business-Logic Walkthrough — 2026-05-21
 
-> Two factual corrections to the original walkthrough are inline below:
+> Three factual corrections to the original walkthrough are inline below:
 > 1. **Watcher v1 IS merged to main** (PRs #807 / #809 / #810). The agent claimed it was on unmerged feature branches; it's in `release/0.246.0.4` LIVE.
 > 2. **`POST /scratch-orgs` and `PATCH /scratch-orgs/{id}` REST routes DO exist** (PR #804). The agent claimed they were unshipped. Verified in `DeliveryPublicApiService.cls`.
+> 3. **Flow 3 #2 quiz-retry-gate claim is wrong** (verified 2026-05-22 during follow-on UX-gap fan-out). `AllowRetryDateTime__c` lives on `OnboardingQuiz__mdt` (a static catalog flag, populated = retries allowed), NOT on `OnboardingProgress__c` as a runtime cooldown. The service does not "set" it; it only reads it. The LWC at `deliveryFeatureOnboarding.js:169` (`quizSubmitButtonDisabled` getter) already honors this flag: `if (this.quizSubmitted && !this.quizAllowsRetry) { return true; }`. The retry gate IS honored. No-op PR.
 >
 > All other findings hold and are serious.
 
@@ -38,7 +39,7 @@ Lessons → 4/5 quiz pass → Manual checklist → toggle works.
 
 **Gaps:**
 1. **Error toast doesn't link to the feature record page.** User must navigate manually.
-2. **Quiz retry gate not honored in UI.** `AllowRetryDateTime__c` is set by the service but `deliveryFeatureOnboarding.js` doesn't check it before showing the retake button.
+2. ~~**Quiz retry gate not honored in UI.** `AllowRetryDateTime__c` is set by the service but `deliveryFeatureOnboarding.js` doesn't check it before showing the retake button.~~ **STALE (verified 2026-05-22).** `AllowRetryDateTime__c` is on `OnboardingQuiz__mdt` (catalog config, not runtime state). `deliveryFeatureOnboarding.js:169` already honors `quizAllowsRetry` (derived from `AllowRetryDateTime__c != null`) in `quizSubmitButtonDisabled`. Audit got both location and semantics wrong. **Adjacent polish opportunity** (deferred — not load-bearing): show explanatory message under the disabled Submit button when retries are blocked, and change button label "Submit Quiz" → "Retry Quiz" when `quizSubmitted && quizAllowsRetry`.
 3. **External checklist evaluators (SoqlQuery / RestCall / WebhookReceived) are PR 4 stubs** — only `Manual` attestation actually verifies. Items render but always fail eval.
 4. **No completion notification.** User has to manually navigate back to the cockpit to discover the gate has lifted.
 
