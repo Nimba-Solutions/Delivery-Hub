@@ -32,6 +32,11 @@ export default class DeliveryFeatureCockpit extends LightningElement {
     @track cascadeFeatureId = null;
     @track cascadeFeatureLabel = '';
 
+    // PR closing Flow 4 gap (audit 2026-05-21): a submission-UI modal
+    // hosting deliveryFeatureApprovalSubmit. Open via "Request approval"
+    // on any card; closes on submit success or cancel.
+    @track isApprovalSubmitModalOpen = false;
+
     wiredResult;
 
     @wire(isAdminApex)
@@ -209,5 +214,24 @@ export default class DeliveryFeatureCockpit extends LightningElement {
         this.isCascadeModalOpen = false;
         this.cascadeFeatureId = null;
         this.cascadeFeatureLabel = '';
+    }
+
+    // ── Approval-submit modal (closes Flow 4 audit gap) ─────────────────
+
+    handleOpenApprovalSubmit() {
+        this.isApprovalSubmitModalOpen = true;
+    }
+
+    handleCloseApprovalSubmit() {
+        this.isApprovalSubmitModalOpen = false;
+    }
+
+    handleApprovalSubmitted() {
+        // Submission service refreshes its own state — refresh the catalog
+        // so the user sees the latest status badges, then close the modal.
+        this.isApprovalSubmitModalOpen = false;
+        if (this.wiredResult) {
+            refreshApex(this.wiredResult);
+        }
     }
 }

@@ -75,6 +75,12 @@ MORNING_GAPS_REPORT.md
 /GAPS_*.md
 /REPORT_*.md
 
+# Windows-path-mangled audit scripts (audit agents occasionally write
+# "C:\temp\foo.ps1" from a Linux-path context, which Git for Windows
+# encodes as `C<U+E03A>temp...` and surfaces at repo root).
+/C?temp*.ps1
+/C?temp*.sh
+
 # Temp dump directories from CLI tooling
 /mfp-dump/
 /scripts/mfp-check/

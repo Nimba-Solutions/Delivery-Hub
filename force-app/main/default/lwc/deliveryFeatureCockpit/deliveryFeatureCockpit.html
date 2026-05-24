@@ -2,6 +2,13 @@
     <lightning-card title="Feature Cockpit" icon-name="standard:apps">
 
         <div slot="actions">
+            <lightning-button
+                label="Request approval to toggle"
+                icon-name="utility:approval"
+                variant="neutral"
+                onclick={handleOpenApprovalSubmit}
+                class="slds-m-right_x-small">
+            </lightning-button>
             <lightning-button-icon
                 icon-name="utility:refresh"
                 variant="border-filled"
@@ -102,6 +109,35 @@
 
         </div>
     </lightning-card>
+
+    <template lwc:if={isApprovalSubmitModalOpen}>
+        <section role="dialog" tabindex="-1" aria-modal="true"
+                 aria-labelledby="approval-submit-modal-title"
+                 class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                            title="Close" onclick={handleCloseApprovalSubmit}>
+                        <lightning-icon icon-name="utility:close" alternative-text="Close" size="small" variant="inverse"></lightning-icon>
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 id="approval-submit-modal-title" class="slds-modal__title slds-hyphenate">
+                        Request feature toggle
+                    </h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <c-delivery-feature-approval-submit
+                        onsubmitted={handleApprovalSubmitted}
+                        oncancel={handleCloseApprovalSubmit}>
+                    </c-delivery-feature-approval-submit>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button label="Close" onclick={handleCloseApprovalSubmit}></lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
 
     <template lwc:if={isCascadeModalOpen}>
         <section role="dialog" tabindex="-1" aria-modal="true" aria-labelledby="cascade-modal-title" class="slds-modal slds-fade-in-open">
