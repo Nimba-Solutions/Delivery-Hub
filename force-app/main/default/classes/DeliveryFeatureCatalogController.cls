@@ -141,6 +141,12 @@ global with sharing class DeliveryFeatureCatalogController {
         enforceCascadeOrThrow(featureId, enableFlag);
         applyToggleFields(f, enableFlag);
         persistToggle(f);
+        // Fan out an in-app bell notification to every Delivery Hub admin so
+        // watchers don't have to poll the cockpit. Notification dispatch is
+        // queueable + try/catch wrapped — a notification failure never breaks
+        // the toggle. Closes the cross-flow notifications gap in
+        // docs/audits/e2e-walkthrough-2026-05-21.md.
+        DeliveryNotificationService.notifyFeatureToggled(featureId, enableFlag);
     }
 
     /**

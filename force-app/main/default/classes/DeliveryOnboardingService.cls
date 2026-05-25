@@ -487,10 +487,20 @@ global with sharing class DeliveryOnboardingService {
     }
 
     private static void updateAndCheckComplete(OnboardingProgress__c row) {
+        Boolean justCompleted = false;
         if (row.CompletedDateTime__c == null && isTrackComplete(row)) {
             row.CompletedDateTime__c = Datetime.now();
+            justCompleted = true;
         }
         update row;
+        // Fire the cross-flow notification only on the FIRST completion stamp,
+        // not on subsequent post-completion writes (lesson re-marks, checklist
+        // edits, etc.). Notification dispatch is queueable + try/catch wrapped —
+        // a failure cannot break the upsert. Closes the cross-flow notifications
+        // gap in docs/audits/e2e-walkthrough-2026-05-21.md.
+        if (justCompleted) {
+            DeliveryNotificationService.notifyOnboardingCompleted(row.Id);
+        }
     }
 
     /**
