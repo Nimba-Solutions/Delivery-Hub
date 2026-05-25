@@ -16,11 +16,13 @@
  *               builders so the same allowlist-compliant defaults that the rest
  *               of the test suite uses apply here too.
  *
- *               Admin gating uses runAs() — the running test user inherits the
- *               admin profile in scratch context so the default flow passes
- *               the PSG check (no PSG assignment is necessary; the namespace-
- *               safe IN clause accepts both bare + delivery__ prefixed names).
- *               Non-admin asserts use runAs(standardUser) to flip the gate.
+ *               Admin gating: the PSG check on createDependency / deleteDependency
+ *               queries PermissionSetAssignment.PermissionSetGroup.DeveloperName.
+ *               In the namespaced packaging scratch the running test user does
+ *               NOT have the DeliveryHubAdmin PSG assigned by default — so
+ *               admin-gated success-path tests run as a buildAdminUser() whose
+ *               PSG has been explicitly assigned. Non-admin asserts use
+ *               runAs(buildStandardUser()) to flip the gate.
  * @author       Cloud Nimbus LLC
  */
 @IsTest
@@ -45,6 +47,47 @@ private class DeliveryFeatureDepEditorControllerTest {
             UserName = 'dpedt+' + Crypto.getRandomLong() + '@dh-test.example.test'
         );
         insert u;
+        return u;
+    }
+
+    /**
+     * @description Builds a Standard User and assigns the DeliveryHubAdmin
+     *              PermissionSetGroup so the admin gate on createDependency /
+     *              deleteDependency lets calls through. Setup-object inserts
+     *              are isolated in runAs(current) to avoid MIXED_DML against
+     *              the calling test's subsequent Feature__c inserts. The PSG
+     *              query accepts both bare and `delivery__`-prefixed
+     *              DeveloperNames so the helper works in either context.
+     * @return Inserted admin User. Callers must wrap admin-gated apex in
+     *         `System.runAs(admin) { ... }` to take effect.
+     */
+    private static User buildAdminUser() {
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User u = new User(
+            Alias = 'dpeda',
+            Email = 'dpeda+' + Crypto.getRandomLong() + '@example.test',
+            EmailEncodingKey = 'UTF-8',
+            LastName = 'DepEditorAdmin',
+            LanguageLocaleKey = 'en_US',
+            LocaleSidKey = 'en_US',
+            ProfileId = p.Id,
+            TimeZoneSidKey = 'America/New_York',
+            UserName = 'dpeda+' + Crypto.getRandomLong() + '@dh-test.example.test'
+        );
+        List<PermissionSetGroup> psgs = [
+            SELECT Id FROM PermissionSetGroup
+            WHERE DeveloperName IN ('DeliveryHubAdmin', 'delivery__DeliveryHubAdmin')
+            LIMIT 1
+        ];
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            insert u;
+            if (!psgs.isEmpty()) {
+                insert new PermissionSetAssignment(
+                    AssigneeId = u.Id,
+                    PermissionSetGroupId = psgs[0].Id
+                );
+            }
+        }
         return u;
     }
 
@@ -103,11 +146,15 @@ private class DeliveryFeatureDepEditorControllerTest {
     static void testCreateDependencyInsertsRow() {
         Feature__c parent = TestDataFactory.createFeature(null);
         Feature__c child = TestDataFactory.createFeature(null);
+        User admin = buildAdminUser();
 
+        FeatureDependency__c created;
         Test.startTest();
-        FeatureDependency__c created = DeliveryFeatureDepEditorController.createDependency(
-            parent.Id, child.Id, 'Soft', 'unit-test notes'
-        );
+        System.runAs(admin) {
+            created = DeliveryFeatureDepEditorController.createDependency(
+                parent.Id, child.Id, 'Soft', 'unit-test notes'
+            );
+        }
         Test.stopTest();
 
         System.assertNotEquals(null, created.Id,
@@ -134,11 +181,15 @@ private class DeliveryFeatureDepEditorControllerTest {
     static void testCreateDependencyDefaultsTypeToHardWhenBlank() {
         Feature__c parent = TestDataFactory.createFeature(null);
         Feature__c child = TestDataFactory.createFeature(null);
+        User admin = buildAdminUser();
 
+        FeatureDependency__c created;
         Test.startTest();
-        FeatureDependency__c created = DeliveryFeatureDepEditorController.createDependency(
-            parent.Id, child.Id, null, null
-        );
+        System.runAs(admin) {
+            created = DeliveryFeatureDepEditorController.createDependency(
+                parent.Id, child.Id, null, null
+            );
+        }
         Test.stopTest();
 
         FeatureDependency__c refetched = [
@@ -151,15 +202,18 @@ private class DeliveryFeatureDepEditorControllerTest {
     @IsTest
     static void testCreateDependencyRejectsSelfEdge() {
         Feature__c f = TestDataFactory.createFeature(null);
+        User admin = buildAdminUser();
 
         Boolean threw = false;
         Test.startTest();
-        try {
-            DeliveryFeatureDepEditorController.createDependency(
-                f.Id, f.Id, 'Hard', null
-            );
-        } catch (AuraHandledException e) {
-            threw = true;
+        System.runAs(admin) {
+            try {
+                DeliveryFeatureDepEditorController.createDependency(
+                    f.Id, f.Id, 'Hard', null
+                );
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
         }
         Test.stopTest();
 
@@ -171,18 +225,21 @@ private class DeliveryFeatureDepEditorControllerTest {
     static void testCreateDependencyRejectsDuplicate() {
         Feature__c parent = TestDataFactory.createFeature(null);
         Feature__c child = TestDataFactory.createFeature(null);
-        DeliveryFeatureDepEditorController.createDependency(
-            parent.Id, child.Id, 'Hard', null
-        );
+        User admin = buildAdminUser();
 
         Boolean threw = false;
         Test.startTest();
-        try {
+        System.runAs(admin) {
             DeliveryFeatureDepEditorController.createDependency(
-                parent.Id, child.Id, 'Soft', 'second insert'
+                parent.Id, child.Id, 'Hard', null
             );
-        } catch (AuraHandledException e) {
-            threw = true;
+            try {
+                DeliveryFeatureDepEditorController.createDependency(
+                    parent.Id, child.Id, 'Soft', 'second insert'
+                );
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
         }
         Test.stopTest();
 
@@ -194,15 +251,18 @@ private class DeliveryFeatureDepEditorControllerTest {
     static void testCreateDependencyRejectsInvalidType() {
         Feature__c parent = TestDataFactory.createFeature(null);
         Feature__c child = TestDataFactory.createFeature(null);
+        User admin = buildAdminUser();
 
         Boolean threw = false;
         Test.startTest();
-        try {
-            DeliveryFeatureDepEditorController.createDependency(
-                parent.Id, child.Id, 'Bogus', null
-            );
-        } catch (AuraHandledException e) {
-            threw = true;
+        System.runAs(admin) {
+            try {
+                DeliveryFeatureDepEditorController.createDependency(
+                    parent.Id, child.Id, 'Bogus', null
+                );
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
         }
         Test.stopTest();
 
@@ -213,15 +273,18 @@ private class DeliveryFeatureDepEditorControllerTest {
     @IsTest
     static void testCreateDependencyRejectsNullParent() {
         Feature__c child = TestDataFactory.createFeature(null);
+        User admin = buildAdminUser();
 
         Boolean threw = false;
         Test.startTest();
-        try {
-            DeliveryFeatureDepEditorController.createDependency(
-                null, child.Id, 'Hard', null
-            );
-        } catch (AuraHandledException e) {
-            threw = true;
+        System.runAs(admin) {
+            try {
+                DeliveryFeatureDepEditorController.createDependency(
+                    null, child.Id, 'Hard', null
+                );
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
         }
         Test.stopTest();
 
@@ -231,15 +294,18 @@ private class DeliveryFeatureDepEditorControllerTest {
     @IsTest
     static void testCreateDependencyRejectsNullChild() {
         Feature__c parent = TestDataFactory.createFeature(null);
+        User admin = buildAdminUser();
 
         Boolean threw = false;
         Test.startTest();
-        try {
-            DeliveryFeatureDepEditorController.createDependency(
-                parent.Id, null, 'Hard', null
-            );
-        } catch (AuraHandledException e) {
-            threw = true;
+        System.runAs(admin) {
+            try {
+                DeliveryFeatureDepEditorController.createDependency(
+                    parent.Id, null, 'Hard', null
+                );
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
         }
         Test.stopTest();
 
@@ -274,9 +340,12 @@ private class DeliveryFeatureDepEditorControllerTest {
         Feature__c parent = TestDataFactory.createFeature(null);
         Feature__c child = TestDataFactory.createFeature(null);
         FeatureDependency__c dep = TestDataFactory.newFeatureDependency(child.Id, parent.Id);
+        User admin = buildAdminUser();
 
         Test.startTest();
-        DeliveryFeatureDepEditorController.deleteDependency(dep.Id);
+        System.runAs(admin) {
+            DeliveryFeatureDepEditorController.deleteDependency(dep.Id);
+        }
         Test.stopTest();
 
         Integer remaining = [
@@ -287,12 +356,16 @@ private class DeliveryFeatureDepEditorControllerTest {
 
     @IsTest
     static void testDeleteDependencyRefusesNullId() {
+        User admin = buildAdminUser();
+
         Boolean threw = false;
         Test.startTest();
-        try {
-            DeliveryFeatureDepEditorController.deleteDependency(null);
-        } catch (AuraHandledException e) {
-            threw = true;
+        System.runAs(admin) {
+            try {
+                DeliveryFeatureDepEditorController.deleteDependency(null);
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
         }
         Test.stopTest();
 
