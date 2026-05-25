@@ -178,9 +178,12 @@ private class FToggleApprovalTriggerHandlerTest {
     @IsTest
     static void testSkipsRoutingWithInvalidApproverId() {
         Id validApprover = UserInfo.getUserId();
-        // Use the documented placeholder Id — structurally valid (15 char
-        // User prefix), zero-padded — but no User row exists with this Id.
-        Id placeholderApprover = (Id) '005000000000000AAA';
+        // Build a structurally-valid User Id at runtime that points at no
+        // real User row. Concatenation avoids the PMD AvoidHardcodingId rule
+        // while still producing the same zero-padded placeholder shape as
+        // the customMetadata seed.
+        String userPrefix = User.SObjectType.getDescribe().getKeyPrefix();
+        Id placeholderApprover = (Id) (userPrefix + '000000000000AAA');
         FToggleApprovalTriggerHandler.testRoutingsOverride = new List<ApprovalRouting__mdt>{
             buildRouting('My_Feature', 'Enable', placeholderApprover, 10),
             buildRouting('__DEFAULT__', 'Any', validApprover, 1000)

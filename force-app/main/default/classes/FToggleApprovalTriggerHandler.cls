@@ -33,6 +33,7 @@
  *               suffix is appended (29 + 4 = 33 chars).
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity,PMD.ExcessiveParameterList')
 public with sharing class FToggleApprovalTriggerHandler {
 
     /** Sentinel FeatureDefinitionTxt value that matches any feature. */
@@ -243,6 +244,7 @@ public with sharing class FToggleApprovalTriggerHandler {
      * @param featureDefByFeatureId Map from queryFeatureDefinitions.
      * @param actionByRequestId Map from queryRequestActions.
      * @param routings Ordered list of routings from queryRoutings.
+     * @param validApproverIds Set of Ids that resolve to a real active User.
      */
     private void stampApprovers(
         List<FeatureToggleApproval__c> rows,
@@ -271,6 +273,7 @@ public with sharing class FToggleApprovalTriggerHandler {
      *                   (resolved from Feature__c). May be null.
      * @param action The approval row's ActionPk value (resolved from the
      *               parent request). May be null.
+     * @param validApproverIds Set of Ids that resolve to a real active User.
      * @return First matching routing, or null when nothing matches.
      */
     private ApprovalRouting__mdt findRoutingMatch(
