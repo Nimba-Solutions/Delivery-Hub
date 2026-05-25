@@ -155,6 +155,17 @@ global with sharing class DeliveryFeatureApprovalService {
                 '[DeliveryFeatureApprovalService.submit] insert approvals failed: ' + e.getMessage());
             throw new AuraHandledException('Unable to create approval rows.');
         }
+        // Notify any pre-assigned approvers that an approval row landed in
+        // their inbox. PR 8 leaves ApproverUserLookup__c null at submit time
+        // (admins assign approvers out-of-band), so in practice most submit
+        // calls will dispatch zero notifications — but we still filter in
+        // memory FIRST so we don't burn a SOQL/queueable slot per cascade
+        // node when the typical cascade has 0 assigned approvers.
+        for (FeatureToggleApproval__c approval : approvals) {
+            if (approval.Id != null && approval.ApproverUserLookup__c != null) {
+                DeliveryNotificationService.notifyApprovalSubmitted(approval.Id);
+            }
+        }
         return req.Id;
     }
 
@@ -320,6 +331,10 @@ global with sharing class DeliveryFeatureApprovalService {
         assertCallerIsApprover(row);
         stampDecision(row, APPROVAL_APPROVED, note);
         applyIfFullyGranted(row.RequestLookup__c);
+        // Notify the requester that an approver just granted their row. This
+        // fires on every grant in a multi-step chain, not only the last —
+        // requesters appreciate the progress signal even before final apply.
+        DeliveryNotificationService.notifyApprovalGranted(approvalId);
     }
 
     /**
@@ -335,6 +350,10 @@ global with sharing class DeliveryFeatureApprovalService {
         assertCallerIsApprover(row);
         stampDecision(row, APPROVAL_REJECTED, note);
         markRequestRejected(row.RequestLookup__c);
+        // Notify the requester that the approver halted the chain. A reject
+        // on any single row stops the whole request — requester needs to know
+        // immediately so they can retry / escalate.
+        DeliveryNotificationService.notifyApprovalRejected(approvalId);
     }
 
     /**
