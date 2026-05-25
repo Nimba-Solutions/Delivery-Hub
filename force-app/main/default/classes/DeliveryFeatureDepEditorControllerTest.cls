@@ -82,6 +82,12 @@ private class DeliveryFeatureDepEditorControllerTest {
         System.runAs(new User(Id = UserInfo.getUserId())) {
             insert u;
             if (!psgs.isEmpty()) {
+                // PSGs land in "Outdated" status after package install — the
+                // packaging-org test context REQUIRES recalculation before a
+                // PermissionSetAssignment can target the group. The non-namespaced
+                // PR-level scratch happens to leave PSGs Updated already, which
+                // is why this only fails on upload-beta.
+                Test.calculatePermissionSetGroup(psgs[0].Id);
                 insert new PermissionSetAssignment(
                     AssigneeId = u.Id,
                     PermissionSetGroupId = psgs[0].Id
