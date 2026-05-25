@@ -93,6 +93,14 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
+        <apexClass>DeliveryNotificationQueueable</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>DeliveryNotificationService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>DeliveryFieldChangeService</apexClass>
         <enabled>true</enabled>
     </classAccesses>
@@ -280,6 +288,10 @@
         <apexClass>WatcherUpcomingSignoffQueryService</apexClass>
         <enabled>true</enabled>
     </classAccesses>
+    <customNotificationTypeAccesses>
+        <enabled>true</enabled>
+        <name>Delivery_Hub_Alert</name>
+    </customNotificationTypeAccesses>
     <description>This permission set provides access to the &quot;Delivery Hub&quot; Lightning App</description>
     <fieldPermissions>
         <editable>false</editable>
