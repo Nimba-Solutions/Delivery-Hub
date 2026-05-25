@@ -128,4 +128,5 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryActivityLogControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%WatcherDigestHistoryControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryOnboardingHistoryControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryNotificationServiceTest</testClassName>
 </ApexTestSuite>
