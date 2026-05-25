@@ -1,0 +1,4 @@
+/* Match the cascade-preview card density so the two components feel like one bundle. */
+:host {
+    display: block;
+}

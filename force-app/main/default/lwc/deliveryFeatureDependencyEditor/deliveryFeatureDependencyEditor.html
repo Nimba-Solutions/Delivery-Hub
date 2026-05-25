@@ -1,0 +1,134 @@
+<template>
+    <lightning-card title="Feature Dependencies" icon-name="standard:dependency">
+
+        <div class="slds-p-around_medium">
+
+            <template lwc:if={hasError}>
+                <div class="slds-notify slds-notify_alert slds-theme_alert-texture slds-theme_warning" role="alert">
+                    <span class="slds-assistive-text">warning</span>
+                    <h2>{errorMessage}</h2>
+                </div>
+            </template>
+
+            <template lwc:if={showAdminGateNotice}>
+                <div class="slds-box slds-box_xx-small slds-theme_shade slds-text-body_small slds-m-bottom_small">
+                    {adminGateMessage}
+                </div>
+            </template>
+
+            <!-- Existing dependencies -->
+            <section class="slds-m-bottom_medium">
+                <h3 class="slds-text-heading_small slds-m-bottom_x-small">
+                    Current dependencies
+                </h3>
+
+                <template lwc:if={hasRows}>
+                    <lightning-datatable
+                        key-field="id"
+                        data={dependencyRows}
+                        columns={columns}
+                        hide-checkbox-column
+                        onrowaction={handleRowAction}
+                        wrap-text-max-lines="3">
+                    </lightning-datatable>
+                </template>
+
+                <template lwc:if={isEmpty}>
+                    <p class="slds-text-body_small slds-text-color_weak slds-p-vertical_small">
+                        This feature has no dependencies. Add one below to wire it into the cascade preview.
+                    </p>
+                </template>
+            </section>
+
+            <!-- Add new -->
+            <section class="slds-border_top slds-p-top_medium">
+                <h3 class="slds-text-heading_small slds-m-bottom_x-small">
+                    Add a dependency
+                </h3>
+
+                <div class="slds-grid slds-wrap slds-gutters_small">
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-p-bottom_x-small">
+                        <lightning-record-picker
+                            label="Depends on (feature)"
+                            object-api-name="%%%NAMESPACE_DOT%%%Feature__c"
+                            placeholder="Search features…"
+                            matching-info={childPickerMatchingInfo}
+                            display-info={childPickerDisplayInfo}
+                            filter={childPickerFilter}
+                            disabled={formDisabled}
+                            onchange={handleChildChange}>
+                        </lightning-record-picker>
+                    </div>
+
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-p-bottom_x-small">
+                        <lightning-combobox
+                            label="Type"
+                            value={selectedType}
+                            options={typeOptions}
+                            disabled={formDisabled}
+                            onchange={handleTypeChange}>
+                        </lightning-combobox>
+                    </div>
+
+                    <div class="slds-col slds-size_1-of-1 slds-p-bottom_x-small">
+                        <lightning-textarea
+                            label="Notes (optional)"
+                            value={notesValue}
+                            max-length="1024"
+                            disabled={formDisabled}
+                            onchange={handleNotesChange}>
+                        </lightning-textarea>
+                    </div>
+                </div>
+
+                <div class="slds-m-top_small slds-grid slds-grid_align-end">
+                    <lightning-button
+                        label="Add dependency"
+                        variant="brand"
+                        disabled={addDisabled}
+                        onclick={handleAdd}>
+                    </lightning-button>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- Delete confirmation modal -->
+        <template lwc:if={isConfirmDeleteOpen}>
+            <section role="dialog" tabindex="-1" aria-modal="true"
+                     aria-labelledby="dep-editor-delete-title"
+                     class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                                title="Close"
+                                onclick={handleCancelDelete}>
+                            <lightning-icon icon-name="utility:close" alternative-text="Close" size="small" variant="inverse"></lightning-icon>
+                            <span class="slds-assistive-text">Close</span>
+                        </button>
+                        <h2 id="dep-editor-delete-title" class="slds-modal__title slds-hyphenate">
+                            Remove dependency
+                        </h2>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium">
+                        <p class="slds-text-body_regular">{pendingDeletePromptText}</p>
+                        <p class="slds-text-body_small slds-text-color_weak slds-m-top_x-small">
+                            This will permanently delete the FeatureDependency__c row. It will no longer appear in the cascade preview.
+                        </p>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning-button label="Cancel" onclick={handleCancelDelete}></lightning-button>
+                        <lightning-button
+                            label="Remove"
+                            variant="destructive"
+                            class="slds-m-left_x-small"
+                            onclick={handleConfirmDelete}>
+                        </lightning-button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+    </lightning-card>
+</template>
