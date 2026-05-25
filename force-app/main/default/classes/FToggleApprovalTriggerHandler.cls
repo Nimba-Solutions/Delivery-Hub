@@ -106,10 +106,9 @@ public with sharing class FToggleApprovalTriggerHandler {
             } catch (System.StringException ignored) {
                 // Mal-formed Id string — skip silently. The placeholder
                 // 005000000000000AAA is structurally valid so it parses;
-                // free-text values that aren't valid Ids land here.
-                System.debug(LoggingLevel.WARN,
-                    '[FToggleApprovalTriggerHandler] non-Id ApproverUserIdTxt: '
-                    + r.DeveloperName);
+                // free-text values that aren't valid Ids land here. The
+                // handler leaves ApproverUserLookup__c unassigned and the
+                // admin reassigns manually — same fallback as no-rule-match.
             }
         }
         if (candidates.isEmpty()) {
