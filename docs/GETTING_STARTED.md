@@ -2,7 +2,7 @@
 
 This guide walks you through installing Delivery Hub, running the setup wizard, creating your first work item, and optionally configuring cross-org sync, document signing, and external API access.
 
-**Current release**: `0.239` — see the [Changelog](CHANGELOG.md) for the full history. (CHANGELOG entries through 0.200 are PR-by-PR; later releases ship as a stream of named PRs — see the GitHub release tags `release/0.201.x` … `release/0.239.x` for the per-version manifests.)
+**Current release**: `release/0.248.0.3` (production-promoted 2026-05-25). See [GitHub Releases](https://github.com/Nimba-Solutions/Delivery-Hub/releases) for the full version history (CHANGELOG entries through 0.200 are PR-by-PR; later releases ship as named PRs tagged in GitHub Releases). For the install + smoke-test runbook, see [SETUP.md](SETUP.md). For the cockpit-era 8-layer architecture, see [COCKPIT.md](COCKPIT.md).
 
 ---
 

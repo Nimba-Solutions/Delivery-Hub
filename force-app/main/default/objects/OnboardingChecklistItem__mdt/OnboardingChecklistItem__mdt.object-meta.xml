@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>One step in an onboarding track's checklist (Layer 5). Each row defines a verification method (Manual attestation, SOQL query, REST call, or webhook receipt — the latter three are stubs as of release/0.248.x) plus the prompt and the query/URL to evaluate. Bound to a parent OnboardingTrack__mdt via TrackTxt__c.</description>
     <label>Onboarding Checklist Item</label>
     <pluralLabel>Onboarding Checklist Items</pluralLabel>
     <visibility>Public</visibility>
