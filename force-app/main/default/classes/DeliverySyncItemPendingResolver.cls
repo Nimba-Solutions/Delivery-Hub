@@ -273,7 +273,8 @@ global inherited sharing class DeliverySyncItemPendingResolver implements Queuea
         // 3. Ref may itself be a local Id (same-org test scenarios)
         try {
             Id castId = (Id) remoteRef;
-            if (castId.getSobjectType().getDescribe().getName().endsWithIgnoreCase('WorkItem__c')) {
+            // getLocalName() (not getName()) — endsWithIgnoreCase works either way.
+            if (castId.getSobjectType().getDescribe().getLocalName().endsWithIgnoreCase('WorkItem__c')) {
                 return castId;
             }
         } catch (Exception e) {
