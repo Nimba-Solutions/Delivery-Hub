@@ -5,7 +5,7 @@
  *               Reads DashboardCard__mdt records and resolves data for each card.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexDoc')
+@SuppressWarnings('PMD.ApexDoc, PMD.AvoidGlobalModifier')
 global with sharing class DeliveryDashboardCardController {
 
     @AuraEnabled(cacheable=true)

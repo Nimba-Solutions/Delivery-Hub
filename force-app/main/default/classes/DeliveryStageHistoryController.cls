@@ -6,6 +6,7 @@
  *               chronological stage transition timeline for a Work Item.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryStageHistoryController {
 
     /**

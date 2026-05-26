@@ -6,6 +6,7 @@
  * breakdown to help managers identify overloaded developers and unassigned items.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryWorkloadController {
 
     /**

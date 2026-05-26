@@ -6,7 +6,7 @@
  *               Backlog Health, Priority Balance, and Activity.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ExcessivePublicCount, PMD.ApexDoc')
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ExcessivePublicCount, PMD.ApexDoc, PMD.AvoidGlobalModifier')
 global with sharing class DeliveryScoreService {
 
     // -------------------------------------------------------------------------

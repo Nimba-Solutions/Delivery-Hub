@@ -5,7 +5,7 @@
  *               create, and clone work item templates.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.AvoidGlobalModifier')
 global with sharing class DeliveryTemplateManagerController {
 
     /**
