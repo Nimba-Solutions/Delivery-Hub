@@ -325,19 +325,19 @@ private class DeliveryOnboardingServiceTest {
         // The currently-shipped SoqlQuery row (IG_Track_02_ApprovedWorkLog)
         // expects an approved WorkLog__c authored by the running user. Build
         // one through TestDataFactory so the evaluator sees a non-empty result.
-        Boolean needsWorkLog = false;
+        Set<String> names = new Set<String>();
         for (OnboardingChecklistItem__mdt c : items) {
-            List<OnboardingChecklistItem__mdt> full = [
-                SELECT VerificationMethodPk__c, VerificationQueryTxt__c
-                FROM OnboardingChecklistItem__mdt
-                WHERE DeveloperName = :c.DeveloperName
-                LIMIT 1
-            ];
-            if (full.isEmpty()) {
-                continue;
-            }
-            String method = full.get(0).VerificationMethodPk__c;
-            String query = full.get(0).VerificationQueryTxt__c;
+            names.add(c.DeveloperName);
+        }
+        List<OnboardingChecklistItem__mdt> fullRows = [
+            SELECT DeveloperName, VerificationMethodPk__c, VerificationQueryTxt__c
+            FROM OnboardingChecklistItem__mdt
+            WHERE DeveloperName IN :names
+        ];
+        Boolean needsWorkLog = false;
+        for (OnboardingChecklistItem__mdt full : fullRows) {
+            String method = full.VerificationMethodPk__c;
+            String query = full.VerificationQueryTxt__c;
             if (method == 'SoqlQuery' && query != null && query.contains('WorkLog__c')) {
                 needsWorkLog = true;
             }
