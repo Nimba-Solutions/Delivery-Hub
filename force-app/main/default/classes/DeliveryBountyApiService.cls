@@ -7,9 +7,8 @@
  *               URL Pattern: /services/apexrest/delivery/deliveryhub/v1/bounties/{resource}
  * @author       Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.AvoidGlobalModifier')
 @RestResource(urlMapping='/deliveryhub/v1/bounties/*')
-@SuppressWarnings('PMD.AvoidGlobalModifier')
 global without sharing class DeliveryBountyApiService {
 
     // ── GET: Public Bounty Browsing ──────────────────────────────────────

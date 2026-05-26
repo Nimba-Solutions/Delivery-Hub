@@ -7,9 +7,8 @@
  * sanitization to prevent abuse.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.AvoidGlobalModifier')
 @RestResource(urlMapping='/deliveryhub/v1/submit')
-@SuppressWarnings('PMD.AvoidGlobalModifier')
 global without sharing class DeliveryPublicSubmissionService {
 
     /** Maximum submissions allowed per email address within the rate limit window. */

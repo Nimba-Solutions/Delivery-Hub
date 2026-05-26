@@ -6,9 +6,8 @@
  * V2 Architecture: Supports DAG routing and multi-tenant data segregation.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.StdCyclomaticComplexity')
+@SuppressWarnings('PMD.StdCyclomaticComplexity, PMD.AvoidGlobalModifier')
 @RestResource(urlMapping='/deliveryhub/v1/sync/*')
-@SuppressWarnings('PMD.AvoidGlobalModifier')
 global without sharing class DeliveryHubSyncService {
 
     /**
