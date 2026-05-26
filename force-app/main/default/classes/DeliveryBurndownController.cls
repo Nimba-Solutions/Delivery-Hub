@@ -6,6 +6,7 @@
  *              totals of created, completed, and open items over a 12-week window.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryBurndownController {
 
     /** @description Number of weeks of history to return. */

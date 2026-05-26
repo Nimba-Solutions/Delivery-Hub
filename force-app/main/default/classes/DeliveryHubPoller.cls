@@ -7,6 +7,7 @@
  * V3: Polls all active vendors, not just the first one.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global without sharing class DeliveryHubPoller {
 
     /**

@@ -5,7 +5,7 @@
  *               for WorkflowType, WorkflowStage, and WorkflowPersonaView custom metadata.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation,PMD.CyclomaticComplexity')
+@SuppressWarnings('PMD.ApexCRUDViolation,PMD.CyclomaticComplexity,PMD.AvoidGlobalModifier')
 global with sharing class DeliveryWorkflowBuilderController {
 
     // ── Query Methods ────────────────────────────────────────────────────

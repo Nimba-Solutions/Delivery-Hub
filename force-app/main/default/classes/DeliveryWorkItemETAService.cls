@@ -9,6 +9,7 @@
  * @author Mahipal Jat
  * @date July 22, 2025
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryWorkItemETAService {
 
     // #################################################################################

@@ -6,6 +6,7 @@
  * returns structured data for formatted release notes display.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryReleaseNotesController {
 
     /** @description Default workflow type when none is specified. */

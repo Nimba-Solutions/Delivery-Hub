@@ -5,6 +5,7 @@
  * Handles scheduled creation of recurring items and on-demand cloning from templates.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryRecurringItemService {
 
     // Fields to copy when cloning a work item (descriptive / config fields only)
