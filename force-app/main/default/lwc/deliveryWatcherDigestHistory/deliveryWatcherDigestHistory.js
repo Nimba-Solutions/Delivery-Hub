@@ -31,6 +31,7 @@ const COLUMNS = [
     { label: 'Signal Counts', fieldName: 'signalCounts', type: 'text', initialWidth: 260 },
     { label: 'Duration (ms)', fieldName: 'runDurationMs', type: 'number', sortable: true, initialWidth: 130 },
     { label: 'Slack Delivered', fieldName: 'slackDelivered', type: 'boolean', initialWidth: 140 },
+    { label: 'Slack Response', fieldName: 'slackResponse', type: 'text', wrapText: true, initialWidth: 220 },
     { label: 'Notes', fieldName: 'notes', type: 'text', wrapText: true }
 ];
 

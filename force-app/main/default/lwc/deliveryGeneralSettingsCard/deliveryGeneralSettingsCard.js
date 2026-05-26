@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Admin settings card for core feature toggles — notifications, board metrics,
+ *               activity logging, field-history tracking, bell notifications, weekly digest,
+ *               status page, auto-create work requests, and the Slack webhook URL + test.
+ *               Composed into deliverySettingsContainer (not exposed standalone). Persists
+ *               DeliveryHubSettings__c via DeliveryHubSettingsController save endpoints.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';

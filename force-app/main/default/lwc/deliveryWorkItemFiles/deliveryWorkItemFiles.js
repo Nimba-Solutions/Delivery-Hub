@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  File attachments viewer for the WorkItem__c record page. Wires
+ *               DeliveryHubFilesController.getWorkItemFiles and renders each linked
+ *               ContentDocument with an extension-aware doctype icon (pdf, word, excel,
+ *               image, video, etc.). Read-only listing — upload + preview are handled by
+ *               the standard Files-related list elsewhere on the page.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, wire, track } from 'lwc';
 import { refreshApex } from '@salesforce/apex';

@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Per-WorkItem traffic-light pills showing On-Schedule (days remaining vs
+ *               CalculatedETADate / EstimatedEndDevDate) and On-Budget (estimated vs total
+ *               logged hours). Mirrors the Project_Health_Pills dashboard card. Mounts on the
+ *               WorkItem__c record page; reads via lightning/uiRecordApi (no Apex round-trip).
+ *               Suppresses itself for terminal stages (Done / Cancelled / Closed / Rejected).
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, wire } from "lwc";
 import { getRecord } from "lightning/uiRecordApi";

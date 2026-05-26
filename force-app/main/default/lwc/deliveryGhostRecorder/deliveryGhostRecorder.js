@@ -1,7 +1,13 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Universal "Ghost Recorder" utility — logs user navigation activity in the
+ *               background (debounced) and exposes a one-click Quick Request form with
+ *               automatic context capture (current URL, record ID, browser) plus voice-to-text
+ *               via the Web Speech API. Mounts on UtilityBar / HomePage / AppPage / RecordPage.
+ *               Optional Alt+B keyboard shortcut. Feeds DeliveryActivityDashboard analytics
+ *               via DeliveryGhostController.logUserActivity.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, track, wire } from 'lwc';
 import { CurrentPageReference, NavigationMixin } from 'lightning/navigation';
