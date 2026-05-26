@@ -5,6 +5,7 @@
  * Logs user activity to ActivityLog__c and creates quick work items.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryGhostController {
 
     /**

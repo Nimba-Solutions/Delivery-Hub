@@ -6,6 +6,7 @@
  *               representation of the sync chain.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryDataLineageController {
 
     /**

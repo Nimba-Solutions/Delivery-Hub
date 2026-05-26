@@ -5,6 +5,7 @@
  * time data for completed work items and current stage age breakdowns for active items.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryCycleTimeController {
 
     /** @description Number of days to look back for completed work items */

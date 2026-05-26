@@ -5,6 +5,7 @@
  * Returns all files linked to a Work Item and its related Comments and Requests.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryHubFilesController {
 
     /** @description Represents a single file attachment linked to a work item or its related records. */

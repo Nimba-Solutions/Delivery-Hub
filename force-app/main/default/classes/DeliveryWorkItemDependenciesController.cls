@@ -5,6 +5,7 @@
  *              Returns blocking and blocked-by work item relationships for a given work item.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryWorkItemDependenciesController {
 
     /** @description Summary of a related work item shown in the dependency view. */

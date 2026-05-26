@@ -5,7 +5,7 @@
  * Returns System Pulse metrics and client-facing dashboard data.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.AvoidGlobalModifier')
 global with sharing class DeliveryHubDashboardController {
 
     /** @description Wrapper for a work item summary row used in the client dashboard. */

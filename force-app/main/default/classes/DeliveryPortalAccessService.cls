@@ -6,7 +6,7 @@
  * to a given NetworkEntity__c, and returns the list of entities they can access.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.AvoidGlobalModifier')
 global without sharing class DeliveryPortalAccessService {
 
     /**

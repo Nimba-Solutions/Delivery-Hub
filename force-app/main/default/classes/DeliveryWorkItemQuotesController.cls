@@ -5,7 +5,7 @@
  *              Returns all WorkRequest__c quotes linked to a work item and supports bid acceptance.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation,PMD.AvoidGlobalModifier')
 global with sharing class DeliveryWorkItemQuotesController {
 
     /** @description Represents a single vendor quote (WorkRequest__c) on a work item. */

@@ -2,6 +2,7 @@
  * @description Controller for the Delivery Guide component.
  * Provides org context and Ghost Recorder installation detection.
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryGuideController {
 
     private static final Set<String> GHOST_RECORDER_APP_NAMES = new Set<String>{
