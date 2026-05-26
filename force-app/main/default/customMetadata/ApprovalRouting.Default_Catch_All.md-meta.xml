@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Default Catch All</label>
+    <protected>false</protected>
+    <values><field>FeatureDefinitionTxt__c</field><value xsi:type="xsd:string">__DEFAULT__</value></values>
+    <values><field>ActionPk__c</field><value xsi:type="xsd:string">Any</value></values>
+    <values><field>ApproverUserIdTxt__c</field><value xsi:type="xsd:string">005000000000000AAA</value></values>
+    <values><field>SortOrderNumber__c</field><value xsi:type="xsd:double">1000</value></values>
+    <values><field>DescriptionTxt__c</field><value xsi:type="xsd:string">PLACEHOLDER user Id — replace with a real default-approver User Id before going live. Catch-all routing for any Feature/Action combination not matched by a specific rule.</value></values>
+</CustomMetadata>
