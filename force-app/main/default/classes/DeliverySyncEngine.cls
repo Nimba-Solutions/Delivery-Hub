@@ -354,7 +354,9 @@ public without sharing class DeliverySyncEngine {
     }
 
     private static Id getWorkItemId(SObject rec) {
-        String name = rec.getSObjectType().getDescribe().getName();
+        // getLocalName() (not getName()) — returned name is compared via
+        // endsWithIgnoreCase below, which works regardless of namespace.
+        String name = rec.getSObjectType().getDescribe().getLocalName();
         if (name.endsWithIgnoreCase('WorkItem__c') && !name.endsWithIgnoreCase('WorkItemComment__c') && !name.endsWithIgnoreCase('WorkItemDependency__c')) {
             return rec.Id;
         }
@@ -391,9 +393,11 @@ public without sharing class DeliverySyncEngine {
         // every 15-min tick — see PR #742 reconciler namespace bug post-mortem
         // for the cascade pattern). Refuse cleanly with a WARN log.
         if (allowedFields == null || allowedFields.isEmpty()) {
+            // getLocalName() (not getName()) — debug log; bare name reads
+            // cleaner than 'delivery__Foo__c' in the diagnostic line.
             System.debug(LoggingLevel.WARN,
                 '[DeliverySyncEngine] Skipping outbound SyncItem — allowedFields empty for '
-                + rec.getSObjectType().getDescribe().getName() + ' ' + rec.Id);
+                + rec.getSObjectType().getDescribe().getLocalName() + ' ' + rec.Id);
             return null;
         }
 
@@ -405,7 +409,10 @@ public without sharing class DeliverySyncEngine {
         item.LocalRecordIdTxt__c = (String)rec.Id;
         item.WorkItemLookup__c = getWorkItemId(rec); // MANDATORY: Required for Vendor's SOQL Security Filtering
 
-        String fullApiName = rec.getSObjectType().getDescribe().getName();
+        // getLocalName() (not getName()) — returns the bare form directly,
+        // which is what ObjectTypePk__c stores. The .replace('delivery__', '')
+        // below is now a no-op safety net (kept for defense in depth).
+        String fullApiName = rec.getSObjectType().getDescribe().getLocalName();
         String cleanName = fullApiName.replace('delivery__', '');
         item.ObjectTypePk__c = cleanName;
 
