@@ -106,12 +106,12 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryDashboardCardControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryPermissionAnalyzerControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureCatalogControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureDepEditorControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureSyncServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureTriggerHandlerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureGraphServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureApprovalServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%FeatureToggleRequestTriggerHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%FToggleApprovalTriggerHandlerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryOnboardingServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryDevLoopControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryDatasetControllerTest</testClassName>
