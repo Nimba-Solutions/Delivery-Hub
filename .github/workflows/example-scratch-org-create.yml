@@ -1,0 +1,97 @@
+# Example: call POST /scratch-orgs on the Delivery Hub from a subscriber's repo.
+#
+# Copy this file into YOUR OWN repo (not into the Delivery Hub repo). Then:
+#   1. Add the two secrets listed below to that repo.
+#   2. Remove the `if: false` safety guard on each job.
+#   3. Drop the `branches: ['__never-matches__']` filter (or change it to your
+#      real branch patterns) so the trigger actually fires.
+#
+# When a subscriber dev opens / pushes a PR, this workflow:
+#   - On `opened` / `synchronize` — provisions a CumulusCI scratch org and
+#     POSTs a ScratchOrgInstance__c row into the DH org via the public REST
+#     API. The DH cockpit's `deliveryDevLoopGuide` LWC then shows the org
+#     alongside the matching WorkItem__c (matched by branch name).
+#   - On `closed` — PATCHes the row to state=Decommissioned so the cockpit
+#     can hide / clean it up. See `example-scratch-org-decommission.yml`
+#     in this same directory for the teardown half.
+#
+# Endpoint contract (source of truth: force-app/main/default/classes/DeliveryPublicApiService.cls):
+#   URL:   POST {DH_BASE_URL}/services/apexrest/delivery/deliveryhub/v1/api/scratch-orgs
+#   Auth:  X-Api-Key header — value comes from NetworkEntity__c.ApiKeyTxt__c on
+#          the DH side. (NOT a Salesforce session/Bearer token. NOT OAuth.)
+#   Body:  { "orgId":           "<required — Salesforce 15/18-char org id>",
+#            "branch":          "<optional — git branch name>",
+#            "loginUrl":        "<optional — scratch login URL from cci org info>",
+#            "cciFlow":         "<optional — cumulusci flow that built the org>",
+#            "workItemName":    "<optional — WorkItem__c.Name to link the row to>",
+#            "expiresAt":       "<optional — ISO-8601 timestamp, e.g. 2026-06-02T00:00:00Z>" }
+#   Resp:  201 { "success": true, "data": { "id": "<soi-id>", "state": "Active" } }
+#          400/500 { "success": false, "error": "<message>" }
+
+name: Example - Create Scratch Org on PR
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    # Safety filter — remove (or change to your real branch patterns) when you
+    # adopt this workflow. While present, the trigger never fires.
+    branches: ['__never-matches__']
+
+jobs:
+  create-scratch-org:
+    runs-on: ubuntu-latest
+    # Safety guard — remove when you adopt this workflow.
+    if: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Replace this stub with however you provision your scratch org.
+      # The example below assumes you use CumulusCI and have stored the
+      # resulting `cci org info` JSON for the new org. The three values
+      # you must capture for the POST body are:
+      #   - the org id           -> orgId
+      #   - the login URL        -> loginUrl
+      #   - the flow you ran     -> cciFlow
+      - name: Provision scratch org (stub — replace with your tooling)
+        id: provision
+        run: |
+          # Example placeholders — wire to your own provisioning step.
+          echo "org_id=00DXX0000000000XXX" >> "$GITHUB_OUTPUT"
+          echo "login_url=https://example-scratch.my.salesforce.com" >> "$GITHUB_OUTPUT"
+          echo "cci_flow=ci_feature" >> "$GITHUB_OUTPUT"
+
+      - name: POST /scratch-orgs on the Delivery Hub
+        env:
+          DH_BASE_URL:    ${{ secrets.DH_BASE_URL }}    # e.g. https://my-dh-instance.my.salesforce.com
+          DH_API_KEY:     ${{ secrets.DH_API_KEY }}     # NetworkEntity__c.ApiKeyTxt__c value from your DH org
+          ORG_ID:         ${{ steps.provision.outputs.org_id }}
+          LOGIN_URL:      ${{ steps.provision.outputs.login_url }}
+          CCI_FLOW:       ${{ steps.provision.outputs.cci_flow }}
+          BRANCH_NAME:    ${{ github.head_ref }}
+          # Convention: name your WorkItem__c records after the branch (or
+          # whatever scheme you use) so DH can link the scratch row to the WI.
+          # Pass null / omit the field if you don't want auto-linking.
+          WORK_ITEM_NAME: ${{ github.head_ref }}
+        run: |
+          # 7-day expiry as ISO-8601 (matches default scratch lifetime).
+          EXPIRES_AT="$(date -u -d '+7 days' +'%Y-%m-%dT%H:%M:%SZ')"
+
+          # Build JSON body with jq so branch names with quotes/specials are safe.
+          BODY="$(jq -n \
+            --arg orgId        "$ORG_ID" \
+            --arg branch       "$BRANCH_NAME" \
+            --arg loginUrl     "$LOGIN_URL" \
+            --arg cciFlow      "$CCI_FLOW" \
+            --arg workItemName "$WORK_ITEM_NAME" \
+            --arg expiresAt    "$EXPIRES_AT" \
+            '{orgId: $orgId, branch: $branch, loginUrl: $loginUrl,
+              cciFlow: $cciFlow, workItemName: $workItemName,
+              expiresAt: $expiresAt}')"
+
+          curl --fail-with-body -sS -X POST \
+            -H "X-Api-Key: $DH_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" \
+            "$DH_BASE_URL/services/apexrest/delivery/deliveryhub/v1/api/scratch-orgs"
