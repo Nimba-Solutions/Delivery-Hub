@@ -175,13 +175,14 @@ private class FToggleApprovalTriggerHandlerTest {
      *              handler falls through to the next-lowest-sort rule whose
      *              approver IS valid.
      */
+    @SuppressWarnings('PMD.AvoidHardcodingId')
     @IsTest
     static void testSkipsRoutingWithInvalidApproverId() {
         Id validApprover = UserInfo.getUserId();
         // Build a structurally-valid User Id at runtime that points at no
-        // real User row. Concatenation avoids the PMD AvoidHardcodingId rule
-        // while still producing the same zero-padded placeholder shape as
-        // the customMetadata seed.
+        // real User row. Even the dynamic concatenation trips PMD's
+        // AvoidHardcodingId (the trailing 'AAA' is read as an Id checksum),
+        // so the method-level suppression above is intentional.
         String userPrefix = User.SObjectType.getDescribe().getKeyPrefix();
         Id placeholderApprover = (Id) (userPrefix + '000000000000AAA');
         FToggleApprovalTriggerHandler.testRoutingsOverride = new List<ApprovalRouting__mdt>{
