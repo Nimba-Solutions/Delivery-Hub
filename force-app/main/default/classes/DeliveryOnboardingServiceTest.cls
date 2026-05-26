@@ -190,6 +190,10 @@ private class DeliveryOnboardingServiceTest {
         for (OnboardingLesson__mdt l : lessons) {
             dto = DeliveryOnboardingService.markLessonComplete(INVOICE_TRACK, l.DeveloperName);
         }
+        // PR 4: SoqlQuery + RestCall checklist items now actually evaluate
+        // their VerificationQueryTxt__c. Seed the data each required item
+        // queries for so they pass; Manual items still short-circuit.
+        seedDataForChecklistItems(requiredItems);
         // Verify every required checklist item.
         for (OnboardingChecklistItem__mdt c : requiredItems) {
             dto = DeliveryOnboardingService.verifyChecklistItem(INVOICE_TRACK, c.DeveloperName);
@@ -301,5 +305,301 @@ private class DeliveryOnboardingServiceTest {
 
         System.assertEquals(false, done,
             'Missing progress row must return false (user has not started the track).');
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // PR 4 — external verification evaluator coverage
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Walks the required checklist items for a track and seeds
+     *              whatever each evaluator queries for. Today only SoqlQuery
+     *              items seeded by the Invoice_Generation_Track shipped seed
+     *              need extra data (a creator-owned approved WorkLog__c).
+     *              Manual items short-circuit; RestCall items would need a
+     *              setMock and are not in the shipped seed; WebhookReceived
+     *              items are not yet supported.
+     * @param items Required OnboardingChecklistItem__mdt rows for the track.
+     */
+    private static void seedDataForChecklistItems(List<OnboardingChecklistItem__mdt> items) {
+        // The currently-shipped SoqlQuery row (IG_Track_02_ApprovedWorkLog)
+        // expects an approved WorkLog__c authored by the running user. Build
+        // one through TestDataFactory so the evaluator sees a non-empty result.
+        Set<String> names = new Set<String>();
+        for (OnboardingChecklistItem__mdt c : items) {
+            names.add(c.DeveloperName);
+        }
+        List<OnboardingChecklistItem__mdt> fullRows = [
+            SELECT DeveloperName, VerificationMethodPk__c, VerificationQueryTxt__c
+            FROM OnboardingChecklistItem__mdt
+            WHERE DeveloperName IN :names
+        ];
+        Boolean needsWorkLog = false;
+        for (OnboardingChecklistItem__mdt full : fullRows) {
+            String method = full.VerificationMethodPk__c;
+            String query = full.VerificationQueryTxt__c;
+            if (method == 'SoqlQuery' && query != null && query.contains('WorkLog__c')) {
+                needsWorkLog = true;
+            }
+        }
+        if (needsWorkLog) {
+            WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{});
+            TestDataFactory.createWorkLog(
+                wi.Id, 1, Date.today(),
+                new Map<String, Object>{ 'StatusPk__c' => 'Approved' }
+            );
+        }
+    }
+
+    @IsTest
+    static void testVerifyChecklistItemSoqlQueryPasses() {
+        // Seed a row the evaluator's query will return.
+        WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{});
+        WorkLog__c log = TestDataFactory.createWorkLog(
+            wi.Id, 1, Date.today(),
+            new Map<String, Object>{ 'StatusPk__c' => 'Approved' }
+        );
+
+        // Evaluate the canonical SoqlQuery branch via the public dispatch.
+        // The Invoice_Generation_Track seed ships an IG_Track_02_ApprovedWorkLog
+        // row whose query selects WorkLog__c where CreatedById = :currentUserId.
+        Integer rows = [SELECT COUNT() FROM OnboardingChecklistItem__mdt
+                        WHERE DeveloperName = 'IG_Track_02_ApprovedWorkLog'];
+        if (rows == 0) {
+            return; // Empty-org tolerance.
+        }
+        // Sanity check: the row we just inserted matches the seeded query.
+        List<WorkLog__c> backing = [
+            SELECT Id FROM WorkLog__c
+            WHERE StatusPk__c = 'Approved' AND CreatedById = :UserInfo.getUserId()
+            LIMIT 1
+        ];
+        System.assertEquals(1, backing.size(), 'Test setup should have inserted exactly one matching WorkLog__c');
+        System.assertNotEquals(null, log.Id, 'Inserted log should have an Id');
+
+        Test.startTest();
+        DeliveryOnboardingService.ProgressDTO dto = DeliveryOnboardingService.verifyChecklistItem(
+            'Invoice_Generation_Track', 'IG_Track_02_ApprovedWorkLog');
+        Test.stopTest();
+
+        System.assertNotEquals(null, dto.checklistStateJson,
+            'Checklist JSON should be populated after a successful SoqlQuery eval');
+        System.assert(dto.checklistStateJson.contains('IG_Track_02_ApprovedWorkLog'),
+            'Item DeveloperName must appear in JSON: ' + dto.checklistStateJson);
+        System.assert(dto.checklistStateJson.contains('SoqlQuery'),
+            'JSON should record which method ran: ' + dto.checklistStateJson);
+    }
+
+    @IsTest
+    static void testVerifyChecklistItemSoqlQueryFailsWhenNoRows() {
+        // Do NOT seed any WorkLog__c. The seeded query returns 0 rows.
+        Integer rows = [SELECT COUNT() FROM OnboardingChecklistItem__mdt
+                        WHERE DeveloperName = 'IG_Track_02_ApprovedWorkLog'];
+        if (rows == 0) {
+            return; // Empty-org tolerance.
+        }
+
+        Boolean threw = false;
+        String message = null;
+        Test.startTest();
+        try {
+            DeliveryOnboardingService.verifyChecklistItem(
+                'Invoice_Generation_Track', 'IG_Track_02_ApprovedWorkLog');
+        } catch (AuraHandledException ahe) {
+            threw = true;
+            message = ahe.getMessage();
+        }
+        Test.stopTest();
+
+        System.assertEquals(true, threw,
+            'Empty SOQL result must throw AuraHandledException');
+        System.assertNotEquals(null, message, 'AuraHandledException must carry a message');
+    }
+
+    @IsTest
+    static void testEvaluateSoqlQueryHandlesQueryException() {
+        // Direct unit test of the evaluator with a broken query. Goes around
+        // the public dispatcher so we don't need a real mdt row with a bad query.
+        DeliveryOnboardingService.EvaluatorOutcome outcome =
+            DeliveryOnboardingService.evaluateSoqlQuery(
+                'SELECT NoSuchField__c FROM NoSuchObject__c LIMIT 1');
+        System.assertEquals(false, outcome.passed, 'Broken SOQL must fail');
+        System.assertEquals('SoqlQuery', outcome.method, 'Method should still be SoqlQuery');
+        System.assertNotEquals(null, outcome.message,
+            'Outcome must carry a friendly message');
+    }
+
+    @IsTest
+    static void testEvaluateSoqlQueryRejectsBlankTemplate() {
+        DeliveryOnboardingService.EvaluatorOutcome outcomeNull =
+            DeliveryOnboardingService.evaluateSoqlQuery(null);
+        DeliveryOnboardingService.EvaluatorOutcome outcomeEmpty =
+            DeliveryOnboardingService.evaluateSoqlQuery('   ');
+        System.assertEquals(false, outcomeNull.passed, 'Null query must fail');
+        System.assertEquals(false, outcomeEmpty.passed, 'Blank query must fail');
+    }
+
+    @IsTest
+    static void testEvaluateSoqlQuerySubstitutesCurrentUserTokens() {
+        // {currentUserId} token substitution path — admins can use literal
+        // substitution as an alternative to native :currentUserId bind syntax.
+        // The query selects User WHERE Id = literal-substituted current user id.
+        DeliveryOnboardingService.EvaluatorOutcome outcome =
+            DeliveryOnboardingService.evaluateSoqlQuery(
+                'SELECT Id FROM User WHERE Id = \'{currentUserId}\' LIMIT 1');
+        System.assertEquals(true, outcome.passed,
+            'Literal {currentUserId} substitution must resolve to the running user');
+    }
+
+    // ── RestCall evaluator ───────────────────────────────────────────────
+
+    /**
+     * @description HttpCalloutMock that returns a configurable status code +
+     *              body and counts invocations. Mirrors the SlackMock pattern.
+     */
+    private class RestMock implements HttpCalloutMock {
+        private final Integer statusCode;
+        private final String body;
+        /** @description Count of mock invocations across the test's callouts. */
+        public Integer callCount = 0;
+        /**
+         * @description Construct a mock with the response values.
+         * @param statusCodeIn HTTP status code to return.
+         * @param bodyIn Response body string.
+         */
+        RestMock(Integer statusCodeIn, String bodyIn) {
+            this.statusCode = statusCodeIn;
+            this.body = bodyIn;
+        }
+        /**
+         * @description Returns the configured mock response.
+         * @param req The outbound HttpRequest (unused).
+         * @return The configured HttpResponse.
+         */
+        public HttpResponse respond(HttpRequest req) {
+            this.callCount++;
+            HttpResponse res = new HttpResponse();
+            res.setStatusCode(statusCode);
+            res.setBody(body);
+            return res;
+        }
+    }
+
+    /**
+     * @description HttpCalloutMock that throws CalloutException to simulate
+     *              network failure / DNS error / Named-Credential misconfig.
+     */
+    private class FailingRestMock implements HttpCalloutMock {
+        /**
+         * @description Always throws CalloutException so the evaluator's
+         *              try/catch path is exercised.
+         * @param req The outbound HttpRequest (unused).
+         * @return Never returns — always throws.
+         */
+        public HttpResponse respond(HttpRequest req) {
+            throw new CalloutException('Simulated network error');
+        }
+    }
+
+    @IsTest
+    static void testEvaluateRestCallPassesOnHttp2xx() {
+        Test.setMock(HttpCalloutMock.class, new RestMock(200, '{"ok":true}'));
+        Test.startTest();
+        DeliveryOnboardingService.EvaluatorOutcome outcome =
+            DeliveryOnboardingService.evaluateRestCall('https://example.test/api/status');
+        Test.stopTest();
+        System.assertEquals(true, outcome.passed, 'HTTP 200 must pass');
+        System.assertEquals('RestCall', outcome.method);
+    }
+
+    @IsTest
+    static void testEvaluateRestCallFailsOnHttp4xx() {
+        Test.setMock(HttpCalloutMock.class, new RestMock(404, 'not found'));
+        Test.startTest();
+        DeliveryOnboardingService.EvaluatorOutcome outcome =
+            DeliveryOnboardingService.evaluateRestCall('https://example.test/api/missing');
+        Test.stopTest();
+        System.assertEquals(false, outcome.passed, 'HTTP 404 must fail');
+        System.assert(outcome.message != null && outcome.message.contains('404'),
+            'Failure message should mention the status code: ' + outcome.message);
+    }
+
+    @IsTest
+    static void testEvaluateRestCallHandlesCalloutException() {
+        Test.setMock(HttpCalloutMock.class, new FailingRestMock());
+        Test.startTest();
+        DeliveryOnboardingService.EvaluatorOutcome outcome =
+            DeliveryOnboardingService.evaluateRestCall('https://example.test/api/down');
+        Test.stopTest();
+        System.assertEquals(false, outcome.passed,
+            'CalloutException must fail gracefully (no leaked stack)');
+        System.assertNotEquals(null, outcome.message,
+            'Friendly message must be present');
+    }
+
+    @IsTest
+    static void testEvaluateRestCallRejectsBlankUrl() {
+        DeliveryOnboardingService.EvaluatorOutcome outcomeNull =
+            DeliveryOnboardingService.evaluateRestCall(null);
+        DeliveryOnboardingService.EvaluatorOutcome outcomeEmpty =
+            DeliveryOnboardingService.evaluateRestCall('   ');
+        System.assertEquals(false, outcomeNull.passed, 'Null URL must fail');
+        System.assertEquals(false, outcomeEmpty.passed, 'Blank URL must fail');
+    }
+
+    // ── WebhookReceived evaluator ────────────────────────────────────────
+
+    @IsTest
+    static void testEvaluateWebhookReceivedReturnsDocumentedLimitation() {
+        DeliveryOnboardingService.EvaluatorOutcome outcome =
+            DeliveryOnboardingService.evaluateWebhookReceived('any-channel');
+        System.assertEquals(false, outcome.passed,
+            'WebhookReceived must fail until Phase 3 webhook event log ships');
+        System.assertEquals('WebhookReceived', outcome.method);
+        System.assert(outcome.message != null && outcome.message.contains('not yet supported'),
+            'Message should call out the documented limitation: ' + outcome.message);
+    }
+
+    // ── Dispatcher coverage ──────────────────────────────────────────────
+
+    @IsTest
+    static void testEvaluateChecklistItemFallsBackToManualWhenCatalogMissing() {
+        // Null catalog row → Manual short-circuit → pass.
+        DeliveryOnboardingService.EvaluatorOutcome outcome =
+            DeliveryOnboardingService.evaluateChecklistItem(null);
+        System.assertEquals(true, outcome.passed,
+            'Missing catalog row must fall back to Manual (LWC-only items keep working)');
+        System.assertEquals('Manual', outcome.method);
+    }
+
+    @IsTest
+    static void testEvaluateChecklistItemUnknownMethodFailsSafe() {
+        // Synthesise an mdt row with an unsupported value.
+        OnboardingChecklistItem__mdt row = new OnboardingChecklistItem__mdt(
+            DeveloperName = 'Test_Item',
+            VerificationMethodPk__c = 'Bogus',
+            VerificationQueryTxt__c = null
+        );
+        DeliveryOnboardingService.EvaluatorOutcome outcome =
+            DeliveryOnboardingService.evaluateChecklistItem(row);
+        System.assertEquals(false, outcome.passed,
+            'Unknown method must fail safe, not silently pass');
+    }
+
+    @IsTest
+    static void testVerifyChecklistItemFallsBackToManualForMissingCatalogRow() {
+        // Confirms the dispatcher fall-back via the public verifyChecklistItem
+        // surface (not just the evaluator unit-test). Synthetic item name has
+        // no OnboardingChecklistItem__mdt row → Manual short-circuit → pass.
+        Test.startTest();
+        DeliveryOnboardingService.ProgressDTO dto =
+            DeliveryOnboardingService.verifyChecklistItem('Some_Track', 'no_such_item_xyz');
+        Test.stopTest();
+        System.assertNotEquals(null, dto,
+            'Missing-catalog dispatch must fall back to Manual + return a DTO');
+        System.assert(dto.checklistStateJson != null && dto.checklistStateJson.contains('no_such_item_xyz'),
+            'Manual fallback should still write the item to JSON');
+        System.assert(dto.checklistStateJson.contains('Manual'),
+            'JSON should record method=Manual for the fall-back: ' + dto.checklistStateJson);
     }
 }
