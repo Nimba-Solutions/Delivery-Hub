@@ -11,9 +11,10 @@
  *               and DeliveryOnboardingHistoryController.
  *
  *               The viewer presents Run Date Time, Status, Signal Counts,
- *               Recipient User Ids (used as a Slack-delivered proxy until
- *               PR 3 of the Watcher plan adds a real DeliveredDateTime__c
- *               field), Run Mode, and the body notes.
+ *               Recipient User Ids, Slack delivery (derived from
+ *               StatusPk__c — `Slack_Failed` indicates the post 4xx/5xx'd or
+ *               threw; see fix/watcher-slack-delivery-status-2026-05-26),
+ *               Run Mode, and the body notes.
  * @author       Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
@@ -25,9 +26,10 @@ public with sharing class DeliveryWatcherDigestHistoryController {
 
     /**
      * @description Flat row shape for lightning-datatable. Slack delivery is
-     *              inferred from whether RecipientUserIdsTxt__c is populated;
-     *              there is no per-run DeliveredDateTime__c yet, so this is
-     *              the best proxy we can offer the viewer.
+     *              now derived from StatusPk__c: a recipient list was
+     *              configured AND the StatusPk__c is NOT `Slack_Failed`.
+     *              `slackResponse` exposes the captured response text on
+     *              failure rows (empty otherwise) for debugging.
      */
     public class DigestRow {
         @AuraEnabled public Id id;
@@ -39,6 +41,7 @@ public with sharing class DeliveryWatcherDigestHistoryController {
         @AuraEnabled public Decimal runDurationMs;
         @AuraEnabled public String recipientUserIds;
         @AuraEnabled public Boolean slackDelivered;
+        @AuraEnabled public String slackResponse;
         @AuraEnabled public String notes;
         @AuraEnabled public String errorMessage;
     }
@@ -67,7 +70,8 @@ public with sharing class DeliveryWatcherDigestHistoryController {
         List<WatcherDigest__c> rows = [
             SELECT Id, Name, RunDateTime__c, StatusPk__c, RunModePk__c,
                    SignalCountsTxt__c, RunDurationMsNumber__c,
-                   RecipientUserIdsTxt__c, DigestBodyTxt__c, ErrorMessageTxt__c
+                   RecipientUserIdsTxt__c, DigestBodyTxt__c, ErrorMessageTxt__c,
+                   SlackResponseTxt__c
             FROM WatcherDigest__c
             WITH SYSTEM_MODE
             ORDER BY RunDateTime__c DESC NULLS LAST
@@ -85,7 +89,9 @@ public with sharing class DeliveryWatcherDigestHistoryController {
             r.signalCounts = w.SignalCountsTxt__c;
             r.runDurationMs = w.RunDurationMsNumber__c;
             r.recipientUserIds = w.RecipientUserIdsTxt__c;
-            r.slackDelivered = String.isNotBlank(w.RecipientUserIdsTxt__c);
+            r.slackDelivered = String.isNotBlank(w.RecipientUserIdsTxt__c)
+                && w.StatusPk__c != 'Slack_Failed';
+            r.slackResponse = w.SlackResponseTxt__c;
             r.notes = truncate(w.DigestBodyTxt__c, BODY_TRUNCATE);
             r.errorMessage = w.ErrorMessageTxt__c;
             out.add(r);

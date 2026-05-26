@@ -3,9 +3,11 @@
  * @license      BSL 1.1 — See LICENSE.md
  * @description  Tests for DeliveryWatcherDigestHistoryController — the
  *               read-only audit-trail viewer for WatcherDigest__c. Covers
- *               ordering, the recordLimit guardrails, the slackDelivered
- *               proxy (RecipientUserIdsTxt__c populated -> true), notes
- *               truncation, and that contextId is ignored without erroring.
+ *               ordering, the recordLimit guardrails, slackDelivered
+ *               derivation (true when recipients populated AND status NOT
+ *               Slack_Failed; false otherwise), slackResponse surfacing on
+ *               failure rows, notes truncation, and that contextId is
+ *               ignored without erroring.
  * @author       Cloud Nimbus LLC
  */
 @IsTest
@@ -63,6 +65,36 @@ private class WatcherDigestHistoryControllerTest {
 
             System.assertEquals(1, out.size(), 'Should return the one row');
             System.assertEquals(false, out[0].slackDelivered, 'slackDelivered=false when recipient list is blank');
+        }
+    }
+
+    /**
+     * @description When a recipient list was configured AND the digest row's
+     *              StatusPk__c is `Slack_Failed`, slackDelivered must read
+     *              false and slackResponse must expose the captured response
+     *              for debugging (closes Flow 8 #3 audit gap derivative).
+     */
+    @IsTest
+    static void slackDeliveredFalseAndResponseSurfacedWhenSlackFailed() {
+        System.runAs(runningUser) {
+            insert new WatcherDigest__c(
+                RunDateTime__c = Datetime.now(),
+                StatusPk__c = 'Slack_Failed',
+                RunModePk__c = 'Test',
+                RecipientUserIdsTxt__c = UserInfo.getUserId(),
+                SlackResponseTxt__c = 'HTTP 503 Service Unavailable | try later'
+            );
+
+            Test.startTest();
+            List<DeliveryWatcherDigestHistoryController.DigestRow> out =
+                DeliveryWatcherDigestHistoryController.recent(50, null);
+            Test.stopTest();
+
+            System.assertEquals(1, out.size(), 'Should return the one row');
+            System.assertEquals(false, out[0].slackDelivered,
+                'slackDelivered=false when StatusPk__c is Slack_Failed, even with recipients');
+            System.assertEquals('HTTP 503 Service Unavailable | try later', out[0].slackResponse,
+                'slackResponse should round-trip the captured Slack response text');
         }
     }
 
