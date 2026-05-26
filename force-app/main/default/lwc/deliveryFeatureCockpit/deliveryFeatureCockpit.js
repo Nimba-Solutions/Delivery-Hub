@@ -12,6 +12,7 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, wire, track } from 'lwc';
+import { NavigationMixin } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getCatalog from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureCatalogController.getCatalog';
@@ -22,7 +23,7 @@ const DESCRIPTION_TRUNCATE_AT = 140,
     ELLIPSIS = '…',
     EMPTY = 0;
 
-export default class DeliveryFeatureCockpit extends LightningElement {
+export default class DeliveryFeatureCockpit extends NavigationMixin(LightningElement) {
     @track features = [];
     @track errorMessage = '';
     @track isLoaded = false;
@@ -161,11 +162,11 @@ export default class DeliveryFeatureCockpit extends LightningElement {
                 const isCascadeGate = typeof msg === 'string'
                     && /^Cannot (enable|disable):/i.test(msg);
                 if (isOnboardingGate) {
-                    this.dispatchEvent(new ShowToastEvent({
-                        title: 'Onboarding required',
-                        message: 'Open the feature record page to complete the track, then try again.',
-                        variant: 'warning'
-                    }));
+                    // Closes Flow 3 #1 gap (audit 2026-05-21): the toast now
+                    // carries an action link to the Feature__c record page
+                    // (where the onboarding LWC mounts) so the user can jump
+                    // straight to the track instead of navigating manually.
+                    this.fireOnboardingGateToast(featureId, featureLabel);
                 } else if (isCascadeGate) {
                     this.dispatchEvent(new ShowToastEvent({
                         title: 'Dependency blocked toggle',
@@ -181,6 +182,69 @@ export default class DeliveryFeatureCockpit extends LightningElement {
                     }));
                 }
             });
+    }
+
+    // Builds and dispatches the onboarding-gate toast with a {url} action
+    // link to the Feature__c record page. NavigationMixin.GenerateUrl is
+    // async; we fall back to a link-less toast if URL generation fails
+    // (e.g. tests without the mixin installed) so the user still sees the
+    // refusal message.
+    fireOnboardingGateToast(featureId, featureLabel) {
+        const labelSuffix = featureLabel ? ` for "${featureLabel}"` : '';
+        const fallback = () => {
+            this.dispatchEvent(new ShowToastEvent({
+                title: 'Onboarding required',
+                message: `Open the feature record page${labelSuffix} to complete the track, then try again.`,
+                variant: 'warning'
+            }));
+        };
+        try {
+            this[NavigationMixin.GenerateUrl]({
+                type: 'standard__recordPage',
+                attributes: {
+                    recordId: featureId,
+                    objectApiName: '%%%NAMESPACE_DOT%%%Feature__c',
+                    actionName: 'view'
+                }
+            })
+                .then((url) => {
+                    if (!url) {
+                        fallback();
+                        return;
+                    }
+                    this.dispatchEvent(new ShowToastEvent({
+                        title: 'Onboarding required',
+                        message: `Complete the onboarding track${labelSuffix}, then try again. {0}`,
+                        messageData: [
+                            { url, label: 'Open feature record page' }
+                        ],
+                        variant: 'warning',
+                        mode: 'sticky'
+                    }));
+                })
+                .catch(() => fallback());
+        } catch (e) {
+            fallback();
+        }
+    }
+
+    // Closes Flow 1 gap (audit 2026-05-21): catalog cards now expose a
+    // "View record" affordance that navigates to the Feature__c record
+    // page. Skipped (button hidden via getter) when no featureId — mdt-only
+    // rows have nothing to navigate to.
+    handleViewRecord(event) {
+        const featureId = event.currentTarget.dataset.featureId;
+        if (!featureId) {
+            return;
+        }
+        this[NavigationMixin.Navigate]({
+            type: 'standard__recordPage',
+            attributes: {
+                recordId: featureId,
+                objectApiName: '%%%NAMESPACE_DOT%%%Feature__c',
+                actionName: 'view'
+            }
+        });
     }
 
     openCascadeModal(featureId, featureLabel) {

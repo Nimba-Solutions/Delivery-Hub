@@ -844,6 +844,11 @@ public with sharing class DeliveryGanttController {
                 WorkItem__c.SObjectType.getDescribe().fields.getMap();
             // Comprehensive 3-form index: map key, getLocalName(), getName()
             // — all lowercased. Lookup by any of those forms finds the token.
+            // getName() (not getLocalName()) — INTENTIONALLY kept here as the
+            // third index form. Per [[get-local-name-vs-get-name-nuance]]
+            // memory, this is an INTENTIONAL 3-form index designed to accept
+            // bare, namespaced, AND map-key inputs from LWC callers. Removing
+            // getName() narrows the accepted-input set.
             Map<String, Schema.SObjectField> byAnyName =
                 new Map<String, Schema.SObjectField>();
             for (String mapKey : fieldMap.keySet()) {
