@@ -68,6 +68,8 @@ Error responses:
 
 ## Endpoints
 
+### Portal & work items
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/dashboard` | Portal dashboard with counts and phase distribution |
@@ -76,18 +78,56 @@ Error responses:
 | POST | `/api/work-items` | Create a new work item request |
 | POST | `/api/work-items/{id}/comments` | Add a comment to a work item |
 | GET | `/api/activity-feed` | Unified timeline of comments, work logs, and changes |
-| GET | `/api/work-logs` | All work logs for the authenticated entity |
+| GET | `/api/conversations` | Comment threads for entity work items |
+| GET | `/api/work-logs` | All work logs for the authenticated entity (filter: `?workItemId=`) |
 | POST | `/api/log-hours` | Create a new work log entry |
 | GET | `/api/pending-approvals` | Draft work logs awaiting approval |
 | POST | `/api/approve-worklogs` | Batch approve draft work logs |
 | POST | `/api/reject-worklogs` | Batch reject draft work logs |
-| GET | `/api/board-summary` | AI-generated board summary |
+| GET | `/api/board-summary` | AI-generated board summary (returns `summary: null` when AI is not configured or no data) |
 | GET | `/api/files` | Files attached to the entity's work items |
+
+### Portal-user (multi-entity) headers
+
+| Header | Description |
+|--------|-------------|
+| `X-Portal-User` | Email of the portal user (validated against `PortalAccess__c`) |
+| `?entityId=<id>` query param | When `X-Portal-User` is present, selects which of the user's entities the request is scoped to |
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/my-entities` | Entities accessible by the portal user (requires `X-Portal-User`) |
+| GET | `/api/portal-users` | Portal users for the active entity (requires `X-Portal-User`) |
+
+### Documents & signing
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
 | GET | `/api/documents` | Generated documents (invoices, statements) for the entity |
 | GET | `/api/documents/{token}` | Document detail by public token — includes `signingRequired`, `signingComplete`, `signingSlots[]`, `hashChainVerified` for signing-required templates |
 | POST | `/api/document-approve` | Approve a document by public token |
 | POST | `/api/document-dispute` | Dispute a document with reason by public token |
-| POST | `/sign/{signerToken}` | Public signing endpoint — accepts `Text` or `Image` (base64 PNG) signatures. No `X-Api-Key` required; signer token is the credential. |
+| POST | `/sign/{signerToken}` | Public signing endpoint — accepts `Text` or `Image` (base64 PNG) signatures. No `X-Api-Key` required; signer token is the credential. See [DOCUMENT_ACTIONING_FEATURE.md](DOCUMENT_ACTIONING_FEATURE.md). |
+
+### Feature cockpit (Layer 8 — approvals)
+
+These routes are **org-wide, not entity-scoped**. Any caller with a valid `X-Api-Key` can read/submit feature requests; entity-scoping is not currently applied. Per-tenant feature scoping is on the v2 roadmap.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/features/{name}/toggle` | Submit a `FeatureToggleRequest__c`. Body: `{ "action": "Enable" \| "Disable", "reason": "..." }`. **Idempotent** (PR #813) — submitting the same `(feature, action)` while a Pending or Granted row exists returns the existing requestId rather than inserting a duplicate. |
+| GET | `/api/feature-toggle-requests` | Paginated list. Filters: `?status=Pending\|Granted\|Applied\|Rejected\|RolledBack`, `?feature=<name>`, `?pageOffset=<n>`. Returns `{data, offset, pageSize, hasMore}` envelope (PR #813). |
+| POST | `/api/feature-toggle-approvals/{id}/grant` | Approver grants an approval step. Body: `{ "note": "..." }`. Caller is asserted to be the assigned approver (PR #815). |
+| POST | `/api/feature-toggle-approvals/{id}/reject` | Approver rejects an approval step. Body: `{ "note": "..." }`. Caller-is-approver enforced. |
+
+### Dev-loop mirror (Layer 6)
+
+These routes are intentionally **tenant-less** (no portal-entity scoping). They're invoked by CI / GitHub Actions to record scratch-org provenance. The X-Api-Key check still authenticates the caller.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/scratch-orgs` | Insert a `ScratchOrgInstance__c` row. Body: `{branch, orgId, loginUrl, cciFlow, workItemName (opt), expiresAt (opt ISO-8601)}`. Returns `{id, state: "Active"}`. |
+| PATCH | `/api/scratch-orgs/{id}` | Update state on teardown. Body: `{state, lastSyncAt (opt)}`. State must match a `ScratchOrgState` GVS value. **Rate-limited** since PR #813 (previously bypassed the gate). |
 
 ---
 
@@ -1205,6 +1245,250 @@ On dispute:
 
 ---
 
+### POST /api/features/{name}/toggle
+
+Submits a `FeatureToggleRequest__c` requesting that a feature be enabled or disabled. The `{name}` segment matches `Feature__c.Name` or `FeatureDefinitionTxt__c` (case-insensitive). Org-wide route — no per-tenant scoping.
+
+**Idempotent (PR #813):** if a Pending or Granted request for the same `(feature, action)` already exists, the existing request is returned with HTTP 200 rather than inserting a duplicate. New requests return HTTP 201.
+
+**Request**:
+
+```bash
+curl -s -X POST \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "Enable",
+    "reason": "Need invoice generation for the May billing cycle."
+  }' \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/features/Invoice_Generation/toggle"
+```
+
+**Request body**:
+
+| Field | Required | Type | Description |
+|-------|----------|------|-------------|
+| `action` | Yes | String | `Enable` or `Disable` |
+| `reason` | No | String | Free-text rationale, surfaced in approval UI |
+
+**Response** (201 — new request, or 200 — idempotent return):
+
+```json
+{
+    "success": true,
+    "data": {
+        "requestId": "a0bxx0000000001AAA",
+        "featureId": "a0axx0000000001AAA",
+        "status": "Pending"
+    }
+}
+```
+
+**Errors**:
+
+| Code | Condition |
+|------|-----------|
+| 400 | Missing/blank `action`, or value not in {Enable, Disable} |
+| 400 | Service-side validation failure (e.g., cascade Hard-dependency violation) |
+| 404 | No feature found matching `{name}` |
+
+---
+
+### GET /api/feature-toggle-requests
+
+Paginated list of `FeatureToggleRequest__c` rows. Returns an envelope (PR #813) with `hasMore` so clients can page through.
+
+**Query parameters**:
+
+| Parameter | Required | Values | Description |
+|-----------|----------|--------|-------------|
+| `status` | No | `Pending`, `Granted`, `Applied`, `Rejected`, `RolledBack` | Filter by request status |
+| `feature` | No | Feature name | Filter by `Feature__c.Name` |
+| `pageOffset` | No | Integer ≥ 0 | LIMIT/OFFSET pagination cursor (page size = 50) |
+
+**Request**:
+
+```bash
+curl -s \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/feature-toggle-requests?status=Pending&pageOffset=0"
+```
+
+**Response** (200):
+
+```json
+{
+    "success": true,
+    "data": {
+        "data": [
+            {
+                "id": "a0bxx0000000001AAA",
+                "featureId": "a0axx0000000001AAA",
+                "featureName": "Invoice_Generation",
+                "action": "Enable",
+                "status": "Pending",
+                "reason": "Need invoice generation for the May billing cycle.",
+                "requestedAt": "2026-05-26T12:34:56.000Z"
+            }
+        ],
+        "offset": 0,
+        "pageSize": 50,
+        "hasMore": false
+    }
+}
+```
+
+The `hasMore` field is a heuristic (true when the LIMIT was filled). To page through, increment `pageOffset` by `pageSize` until `hasMore` is false.
+
+---
+
+### POST /api/feature-toggle-approvals/{id}/grant
+
+Grants an individual approval step in the multi-step cascading chain. The `{id}` is the `FeatureToggleApproval__c.Id`. **Caller is asserted to be the assigned approver** (`ApproverUserLookup__c`) since PR #815 — non-approvers receive a 400.
+
+**Request**:
+
+```bash
+curl -s -X POST \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "note": "Approved — billing window is locked." }' \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/feature-toggle-approvals/a0cxx0000000001AAA/grant"
+```
+
+**Response** (200):
+
+```json
+{
+    "success": true,
+    "data": {
+        "approvalId": "a0cxx0000000001AAA",
+        "status": "Granted",
+        "requestId": "a0bxx0000000001AAA",
+        "requestStatus": "Granted"
+    }
+}
+```
+
+When the final approval step in the chain grants, the parent `FeatureToggleRequest__c.StatusPk__c` advances to `Granted` (then `Applied` once the toggle apply queueable runs).
+
+---
+
+### POST /api/feature-toggle-approvals/{id}/reject
+
+Rejects an approval step. Same caller-is-approver enforcement as `grant`. Rejecting any step in the chain rolls the parent request to `Rejected`.
+
+**Request**:
+
+```bash
+curl -s -X POST \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "note": "Wait for the security review before enabling this." }' \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/feature-toggle-approvals/a0cxx0000000001AAA/reject"
+```
+
+**Response** (200): same shape as `/grant` with `status: "Rejected"`.
+
+---
+
+### POST /api/scratch-orgs
+
+**Dev-loop mirror — Layer 6.** Invoked by CumulusCI / GitHub Actions after a scratch org is provisioned, to record provenance in `ScratchOrgInstance__c`. Tenant-less by design (no per-portal-entity scoping) — auth is the X-Api-Key check only.
+
+**Request**:
+
+```bash
+curl -s -X POST \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "orgId": "00DSB000005xY1z",
+    "branch": "feature/cockpit-pr8",
+    "loginUrl": "https://scratch-org-12345.my.salesforce.com",
+    "cciFlow": "ci_feature",
+    "workItemName": "WI-0123",
+    "expiresAt": "2026-06-05T00:00:00Z"
+  }' \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/scratch-orgs"
+```
+
+**Request body**:
+
+| Field | Required | Type | Description |
+|-------|----------|------|-------------|
+| `orgId` | Yes | String | The 15- or 18-char Salesforce Org ID. Also used as `Name` for the inserted row. |
+| `branch` | No | String | Source-control branch the scratch was built from |
+| `loginUrl` | No | URL | Scratch org's login URL |
+| `cciFlow` | No | String | CCI flow used to build (e.g., `ci_feature`, `dev_org`) |
+| `workItemName` | No | String | If matches an existing `WorkItem__c.Name`, links the scratch to that WI |
+| `expiresAt` | No | ISO-8601 DateTime | Scratch expiry; malformed values fall back to null |
+
+**Response** (201):
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": "a0dxx0000000001AAA",
+        "state": "Active"
+    }
+}
+```
+
+**Note:** `OrgIdTxt__c` is not unique-constrained — submitting the same orgId twice creates two rows. On-retry idempotency is on the v2 roadmap. If GitHub Actions is the only caller, the network-retry surface is small.
+
+---
+
+### PATCH /api/scratch-orgs/{id}
+
+Updates a `ScratchOrgInstance__c` row's state (typically on teardown). **Rate-limited since PR #813** (previously the PATCH path bypassed the rate-limit gate).
+
+**Request**:
+
+```bash
+curl -s -X PATCH \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Api-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "state": "Deleted", "lastSyncAt": "2026-05-26T15:00:00Z" }' \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/scratch-orgs/a0dxx0000000001AAA"
+```
+
+**Request body**:
+
+| Field | Required | Type | Description |
+|-------|----------|------|-------------|
+| `state` | Yes | String | Must match a `ScratchOrgState` GVS value (`Active`, `Deleted`, `Expired`, etc.) |
+| `lastSyncAt` | No | ISO-8601 DateTime | When the state transition was observed. Defaults to `Datetime.now()` when blank. |
+
+**Response** (200):
+
+```json
+{
+    "success": true,
+    "data": {
+        "id": "a0dxx0000000001AAA",
+        "state": "Deleted"
+    }
+}
+```
+
+**Errors**:
+
+| Code | Condition |
+|------|-----------|
+| 400 | Missing/blank `state` or unparseable `lastSyncAt` |
+| 404 | No scratch-org row with the given id |
+| 500 | DML failure |
+
+---
+
 ## Authentication
 
 ### How It Works
@@ -1275,6 +1559,8 @@ All data is scoped to the authenticated NetworkEntity. The API key determines wh
 ## Rate Limiting
 
 The Public API supports opt-in rate limiting to protect org resources. When enabled, each NetworkEntity is limited to a configurable number of requests per hour.
+
+**Coverage:** GET, POST, **and PATCH** all run through the rate-limit gate. The PATCH gap was closed in PR #813 (previously `PATCH /api/scratch-orgs/{id}` bypassed throttling — a caller with a valid X-Api-Key could submit unlimited PATCH calls). See [docs/audits/rest-api-surface-review-2026-05-21.md](audits/rest-api-surface-review-2026-05-21.md) §3 for the audit finding.
 
 ### Configuration
 
