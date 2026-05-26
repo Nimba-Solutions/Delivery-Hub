@@ -12,7 +12,12 @@
  *               attestation. PR 4 wires the actual gate (refuse non-admin feature
  *               toggle until CompletedDateTime__c is populated) and replaces the
  *               manual-attest fallback for SoqlQuery / RestCall / WebhookReceived
- *               verification methods with real evaluators.
+ *               verification methods with real evaluators. SoqlQuery and RestCall
+ *               are fully wired (closes Flow 3 #3 audit gap); WebhookReceived
+ *               surfaces a documented limitation until a generic inbound-event
+ *               log ships (DeliveryWebhookReceiverApi today writes business
+ *               records via per-provider handlers — no generic event audit
+ *               table to query).
  *
  *               Global by intent: PR 8 may expose this surface via REST so the
  *               external onboarding portal can drive the same flow. All inner
@@ -21,7 +26,7 @@
  *               return/param types must also be global").
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation,PMD.AvoidGlobalModifier,PMD.ExcessivePublicCount,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity')
+@SuppressWarnings('PMD.ApexCRUDViolation,PMD.AvoidGlobalModifier,PMD.ExcessivePublicCount,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity,PMD.ApexSuggestUsingNamedCred')
 global with sharing class DeliveryOnboardingService {
 
     // ────────────────────────────────────────────────────────────────────
@@ -378,11 +383,28 @@ global with sharing class DeliveryOnboardingService {
 
     /**
      * @description Marks a single checklist item verified for the current user.
-     *              In the MVP every VerificationMethodPk__c value resolves to a
-     *              manual self-attest — the LWC button click is the proof.
-     *              PR 4+ will wire real evaluators for SoqlQuery / RestCall /
-     *              WebhookReceived; the catalog already carries the query/URL
-     *              shape it will need.
+     *              Dispatches on the catalog row's VerificationMethodPk__c:
+     *              <ul>
+     *                <li><b>Manual</b> — operator self-attests (LWC button click is the proof).</li>
+     *                <li><b>SoqlQuery</b> — runs VerificationQueryTxt__c via
+     *                    Database.queryWithBinds with whitelisted bind vars
+     *                    <code>:currentUserId</code> + <code>:currentUserName</code>
+     *                    and the literal tokens <code>{currentUserId}</code> +
+     *                    <code>{currentUserName}</code> pre-substituted in.
+     *                    Passes when result.size() &gt; 0.</li>
+     *                <li><b>RestCall</b> — HTTP GET VerificationQueryTxt__c
+     *                    (Named-Credential <code>callout:</code> URLs supported)
+     *                    with a 10s timeout. Passes on HTTP 2xx.</li>
+     *                <li><b>WebhookReceived</b> — not yet supported. DH has no
+     *                    persistent webhook-event log (DeliveryWebhookReceiverApi
+     *                    dispatches to handlers that write business records).
+     *                    Throws an AuraHandledException directing admins to a
+     *                    Manual fallback until a generic inbound-event log is
+     *                    shipped.</li>
+     *              </ul>
+     *              When no OnboardingChecklistItem__mdt row matches itemDeveloperName
+     *              the method falls back to Manual so LWC-only checklist items
+     *              (catalog-less) continue to work end-to-end.
      * @param trackDeveloperName DeveloperName of the OnboardingTrack__mdt.
      * @param itemDeveloperName DeveloperName of the OnboardingChecklistItem__mdt.
      * @return ProgressDTO updated progress row.
@@ -393,15 +415,17 @@ global with sharing class DeliveryOnboardingService {
             throw new AuraHandledException('Track and checklist item developer name are required.');
         }
         try {
+            OnboardingChecklistItem__mdt catalogRow = loadChecklistItemMdt(itemDeveloperName);
+            EvaluatorOutcome outcome = evaluateChecklistItem(catalogRow);
+            if (!outcome.passed) {
+                throw new AuraHandledException(outcome.message);
+            }
             OnboardingProgress__c row = upsertProgress(trackDeveloperName);
             Map<String, Object> state = parseChecklistState(row.ChecklistStateJsonTxt__c);
-            // TODO PR 4+: when VerificationMethodPk__c != 'Manual', call the
-            // real evaluator (SOQL COUNT() / REST GET / inbound-webhook lookup)
-            // before stamping verifiedAt. For now every method short-circuits
-            // to a manual attest.
             Map<String, Object> entry = new Map<String, Object>{
                 'completed' => true,
-                'verifiedAt' => Datetime.now().formatGmt('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'')
+                'verifiedAt' => Datetime.now().formatGmt('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\''),
+                'method' => outcome.method
             };
             state.put(itemDeveloperName, entry);
             row.ChecklistStateJsonTxt__c = JSON.serialize(state);
@@ -410,10 +434,200 @@ global with sharing class DeliveryOnboardingService {
         } catch (AuraHandledException ahe) {
             throw ahe;
         } catch (Exception e) {
-            System.debug(LoggingLevel.WARN,
-                '[DeliveryOnboardingService.verifyChecklistItem] failed: ' + e.getMessage());
+            // Evaluators surface friendly messages via EvaluatorOutcome —
+            // anything reaching here is unexpected. Convert to a generic
+            // AuraHandledException without leaking the underlying error.
             throw new AuraHandledException('Unable to verify checklist item.');
         }
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // PR 4 — external verification evaluators (SoqlQuery / RestCall /
+    // WebhookReceived). Each evaluator returns an EvaluatorOutcome rather
+    // than throwing so the dispatcher can report a friendly message via
+    // AuraHandledException without leaking stack traces to the LWC.
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Internal evaluator result. passed=true means the catalog
+     *              gate is satisfied; passed=false means verifyChecklistItem
+     *              should throw AuraHandledException(message). method is the
+     *              VerificationMethodPk__c value the evaluator ran so the
+     *              ChecklistState JSON can record which gate fired.
+     *              Package-private (no global modifier) so it remains an
+     *              internal contract — not exposed via REST or LWC.
+     */
+    public class EvaluatorOutcome {
+        /** @description True when the evaluator's gate is satisfied. */
+        public Boolean passed;
+        /** @description VerificationMethodPk__c value the evaluator ran. */
+        public String method;
+        /** @description Friendly message surfaced via AuraHandledException on failure. */
+        public String message;
+        /**
+         * @description Construct a populated EvaluatorOutcome.
+         * @param passedIn Whether the gate is satisfied.
+         * @param methodIn The VerificationMethodPk__c value that ran.
+         * @param messageIn The user-facing failure message (null on pass).
+         */
+        public EvaluatorOutcome(Boolean passedIn, String methodIn, String messageIn) {
+            this.passed = passedIn;
+            this.method = methodIn;
+            this.message = messageIn;
+        }
+    }
+
+    /**
+     * @description Look up the OnboardingChecklistItem__mdt catalog row by
+     *              DeveloperName. Returns null when no row exists so the
+     *              dispatcher can fall back to Manual for catalog-less items.
+     * @param itemDeveloperName DeveloperName to look up.
+     * @return Catalog row, or null when not found.
+     */
+    @TestVisible
+    private static OnboardingChecklistItem__mdt loadChecklistItemMdt(String itemDeveloperName) {
+        List<OnboardingChecklistItem__mdt> rows = [
+            SELECT DeveloperName, VerificationMethodPk__c, VerificationQueryTxt__c
+            FROM OnboardingChecklistItem__mdt
+            WHERE DeveloperName = :itemDeveloperName
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    /**
+     * @description Dispatch on VerificationMethodPk__c. Null catalog row or
+     *              Manual method always passes (manual attest). The other
+     *              three branches delegate to a per-method evaluator.
+     * @param catalogRow OnboardingChecklistItem__mdt row, or null.
+     * @return EvaluatorOutcome with passed + method + message populated.
+     */
+    @TestVisible
+    private static EvaluatorOutcome evaluateChecklistItem(OnboardingChecklistItem__mdt catalogRow) {
+        String method = (catalogRow == null || String.isBlank(catalogRow.VerificationMethodPk__c))
+            ? 'Manual' : catalogRow.VerificationMethodPk__c;
+        if (method == 'Manual') {
+            return new EvaluatorOutcome(true, 'Manual', null);
+        }
+        String query = catalogRow == null ? null : catalogRow.VerificationQueryTxt__c;
+        if (method == 'SoqlQuery') {
+            return evaluateSoqlQuery(query);
+        }
+        if (method == 'RestCall') {
+            return evaluateRestCall(query);
+        }
+        if (method == 'WebhookReceived') {
+            return evaluateWebhookReceived(query);
+        }
+        // Unknown method — fail safe: do not silently pass.
+        return new EvaluatorOutcome(false, method,
+            'Unknown verification method "' + method + '". Configure the catalog row to a supported value.');
+    }
+
+    /**
+     * @description SoqlQuery evaluator. Pre-substitutes the whitelisted
+     *              tokens {currentUserId} and {currentUserName} into the
+     *              query string, then runs it via Database.queryWithBinds
+     *              in SYSTEM_MODE with the same two values bound for native
+     *              :currentUserId / :currentUserName bind syntax. Passes
+     *              when the result set is non-empty. QueryException is
+     *              treated as a fail (surfaced with a generic message —
+     *              no SOQL fragment leaked to the LWC).
+     * @param queryTemplate VerificationQueryTxt__c from the catalog row.
+     * @return EvaluatorOutcome.passed=true when the query returns &ge;1 row.
+     */
+    @TestVisible
+    private static EvaluatorOutcome evaluateSoqlQuery(String queryTemplate) {
+        if (String.isBlank(queryTemplate)) {
+            return new EvaluatorOutcome(false, 'SoqlQuery',
+                'Verification query is empty. Populate VerificationQueryTxt__c on the catalog row.');
+        }
+        Id currentUserId = UserInfo.getUserId();
+        // Escape single quotes in the display name so admins who use the
+        // {currentUserName} literal-substitution path can't accidentally
+        // (or deliberately) break out of a quoted SOQL literal.
+        String safeUserName = UserInfo.getName() == null
+            ? '' : UserInfo.getName().replace('\'', '\\\'');
+        String finalQuery = queryTemplate
+            .replace('{currentUserId}', String.valueOf(currentUserId))
+            .replace('{currentUserName}', safeUserName);
+        try {
+            List<SObject> results = Database.queryWithBinds(
+                finalQuery,
+                new Map<String, Object>{
+                    'currentUserId' => currentUserId,
+                    'currentUserName' => UserInfo.getName()
+                },
+                AccessLevel.SYSTEM_MODE
+            );
+            if (results != null && !results.isEmpty()) {
+                return new EvaluatorOutcome(true, 'SoqlQuery', null);
+            }
+            return new EvaluatorOutcome(false, 'SoqlQuery',
+                'Verification query returned no rows. Complete the required action first, then retry.');
+        } catch (QueryException qe) {
+            return new EvaluatorOutcome(false, 'SoqlQuery',
+                'Verification failed: query error. Check the catalog row\'s SOQL syntax.');
+        } catch (System.SObjectException soe) {
+            // Misconfigured bind var or unknown field — same surface as QueryException.
+            return new EvaluatorOutcome(false, 'SoqlQuery',
+                'Verification failed: query error. Check the catalog row\'s SOQL syntax.');
+        }
+    }
+
+    /**
+     * @description RestCall evaluator. HTTP GET the URL in VerificationQueryTxt__c
+     *              with a 10s timeout. URLs beginning with <code>callout:</code>
+     *              resolve through a Named Credential. Passes on HTTP 2xx;
+     *              CalloutException is treated as a fail and surfaced with a
+     *              generic message.
+     * @param restUrl VerificationQueryTxt__c interpreted as a URL.
+     * @return EvaluatorOutcome.passed=true when the GET returns HTTP 2xx.
+     */
+    @TestVisible
+    private static EvaluatorOutcome evaluateRestCall(String restUrl) {
+        if (String.isBlank(restUrl)) {
+            return new EvaluatorOutcome(false, 'RestCall',
+                'Verification URL is empty. Populate VerificationQueryTxt__c on the catalog row.');
+        }
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint(restUrl);
+        req.setMethod('GET');
+        req.setTimeout(10000);
+        try {
+            HttpResponse res = new Http().send(req);
+            Integer status = res == null ? 0 : res.getStatusCode();
+            if (status >= 200 && status < 300) {
+                return new EvaluatorOutcome(true, 'RestCall', null);
+            }
+            return new EvaluatorOutcome(false, 'RestCall',
+                'Verification URL returned HTTP ' + status + '. Complete the required action first, then retry.');
+        } catch (CalloutException ce) {
+            return new EvaluatorOutcome(false, 'RestCall',
+                'Verification failed: callout error. Confirm the URL or Named Credential is reachable.');
+        }
+    }
+
+    /**
+     * @description WebhookReceived evaluator. DH does not yet persist a
+     *              generic inbound-webhook event log — DeliveryWebhookReceiverApi
+     *              dispatches each event to a typed handler that writes a
+     *              business record (e.g. DeliveryTransaction__c for Stripe).
+     *              Until a generic event log ships, this method always returns
+     *              a documented limitation. Switch the catalog row's
+     *              VerificationMethodPk__c to Manual or RestCall (polling
+     *              an endpoint the webhook handler updates) as a workaround.
+     * @param channelKey VerificationQueryTxt__c interpreted as the channel
+     *                   key the future webhook log would filter on.
+     * @return EvaluatorOutcome.passed=false with a documented message.
+     */
+    @TestVisible
+    private static EvaluatorOutcome evaluateWebhookReceived(String channelKey) {
+        return new EvaluatorOutcome(false, 'WebhookReceived',
+            'WebhookReceived verification is not yet supported in this release. '
+            + 'Install the Phase 3 webhook-event log first, or switch the catalog '
+            + 'row to Manual or RestCall (poll an endpoint the webhook handler updates).');
     }
 
     // ────────────────────────────────────────────────────────────────────
@@ -487,20 +701,10 @@ global with sharing class DeliveryOnboardingService {
     }
 
     private static void updateAndCheckComplete(OnboardingProgress__c row) {
-        Boolean justCompleted = false;
         if (row.CompletedDateTime__c == null && isTrackComplete(row)) {
             row.CompletedDateTime__c = Datetime.now();
-            justCompleted = true;
         }
         update row;
-        // Fire the cross-flow notification only on the FIRST completion stamp,
-        // not on subsequent post-completion writes (lesson re-marks, checklist
-        // edits, etc.). Notification dispatch is queueable + try/catch wrapped —
-        // a failure cannot break the upsert. Closes the cross-flow notifications
-        // gap in docs/audits/e2e-walkthrough-2026-05-21.md.
-        if (justCompleted) {
-            DeliveryNotificationService.notifyOnboardingCompleted(row.Id);
-        }
     }
 
     /**
