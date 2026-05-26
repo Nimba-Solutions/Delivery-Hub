@@ -198,6 +198,7 @@ private class DeliveryWatcherSetupCtrlTest {
             'enabledSince must be stamped on enable.');
     }
 
+    @SuppressWarnings('PMD.EmptyCatchBlock,PMD.AvoidHardcodingId')
     @IsTest
     static void testSaveSettingsRejectsInvalidRecipientIds() {
         User admin = buildAdminUser();
@@ -267,6 +268,7 @@ private class DeliveryWatcherSetupCtrlTest {
         }
     }
 
+    @SuppressWarnings('PMD.EmptyCatchBlock')
     @IsTest
     static void testSaveSettingsPreservesExistingSlackWebhookWhenBlank() {
         // Seed an existing webhook so we can assert blank input doesn't wipe it.

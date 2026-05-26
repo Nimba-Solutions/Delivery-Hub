@@ -157,6 +157,7 @@ global with sharing class DeliveryWatcherSetupController {
      *            leading/trailing whitespace.
      * @return RecipientValidation with the cleaned CSV + invalid-id list.
      */
+    @SuppressWarnings('PMD.EmptyCatchBlock')
     private static RecipientValidation validateRecipientCsv(String csv) {
         RecipientValidation result = new RecipientValidation();
         if (String.isBlank(csv)) {
@@ -259,6 +260,7 @@ global with sharing class DeliveryWatcherSetupController {
      * @param csv Validated CSV of 18-char User Ids.
      * @return List of UserSummaryDTO, one per resolvable Id.
      */
+    @SuppressWarnings('PMD.EmptyCatchBlock')
     private static List<UserSummaryDTO> resolveRecipientUsers(String csv) {
         List<UserSummaryDTO> out = new List<UserSummaryDTO>();
         if (String.isBlank(csv)) {
