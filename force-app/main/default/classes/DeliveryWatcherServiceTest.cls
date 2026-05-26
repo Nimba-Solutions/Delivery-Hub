@@ -34,8 +34,12 @@ private class DeliveryWatcherServiceTest {
         public String body = 'ok';
         public String statusText = 'OK';
 
-        /** @description Default constructor — 200 OK. */
-        public SlackMock() {}
+        /** @description Default constructor — 200 OK. Body intentionally
+         *               empty; defaults live in the field initializers. */
+        @SuppressWarnings('PMD.EmptyStatementBlock')
+        public SlackMock() {
+            // Defaults from field initializers; no override needed.
+        }
 
         /**
          * @description Configurable constructor for the new Slack-delivery-
