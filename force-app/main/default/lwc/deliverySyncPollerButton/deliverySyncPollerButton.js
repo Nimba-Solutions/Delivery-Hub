@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Self-triggering sync poller button. On mount, fires
+ *               DeliveryHubPollerController.triggerPoll automatically (silent auto-sync);
+ *               also exposes a manual click handler for forced re-polls. Dispatches the
+ *               standard lightning/refresh RefreshEvent on success so neighboring record-page
+ *               components requery. Mounts on RecordPage / AppPage / HomePage.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';

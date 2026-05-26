@@ -1,3 +1,14 @@
+/**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
+ * @description  CMT-driven Executive Dashboard — renders dashboard cards configured in
+ *               DashboardCard__mdt for a given @api pageKey (default "home", matches
+ *               DashboardCard__mdt.PageKeyTxt__c). Each card pulls its display value via
+ *               DeliveryDashboardCardController.getCardData and supports threshold-based
+ *               critical / warning color states. Mounts on HomePage / AppPage / RecordPage.
+ *               Pure read view — admins author cards as Custom Metadata.
+ * @author       Cloud Nimbus LLC
+ */
 import { LightningElement, api, track } from 'lwc';
 import getCardsForPage from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDashboardCardController.getCardsForPage';
 import getCardData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDashboardCardController.getCardData';

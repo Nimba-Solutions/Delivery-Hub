@@ -1,7 +1,13 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Primary Kanban / list board for WorkItem__c — the central workspace surface.
+ *               Mounts on AppPage / HomePage / RecordPage / Tab. Subscribes to the
+ *               DeliveryWorkItemChange__e platform event for live refresh, supports drag/drop
+ *               reorder + dependency creation, AI-enhanced detail views, and ETA recalculation
+ *               (DeliveryWorkItemETAService). Optional @api networkEntityId scopes the board
+ *               to a single entity; leave blank for admin "all entities" view.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, track, wire } from "lwc";
 import { refreshApex } from "@salesforce/apex";

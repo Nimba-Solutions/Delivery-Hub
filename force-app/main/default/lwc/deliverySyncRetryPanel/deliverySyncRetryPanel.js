@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Sync health + retry admin panel. Wires
+ *               DeliverySyncRetryController.getSyncHealth for failed-count + recent-error
+ *               lists, and exposes Retry / Dismiss / Restore actions against failed sync
+ *               items. Mounts on HomePage / AppPage. Optional include-dismissed toggle
+ *               surfaces previously dismissed failures for re-triage.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, wire, track } from 'lwc';
 import { refreshApex } from '@salesforce/apex';

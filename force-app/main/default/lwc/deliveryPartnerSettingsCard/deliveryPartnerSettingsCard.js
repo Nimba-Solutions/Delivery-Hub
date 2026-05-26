@@ -1,7 +1,13 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Partner / inbound-intake configuration card. Lets an admin toggle a
+ *               partner connection (Cloud Nimbus official or a custom URL) and surfaces
+ *               the local org's inbound apexrest intake URL for the partner to call.
+ *               Not exposed standalone (isExposed=false) — composed by a parent settings
+ *               container. Pure client-side state at present; persistence wiring is
+ *               composed-in by the parent.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';

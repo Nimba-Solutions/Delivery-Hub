@@ -1,3 +1,12 @@
+/**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
+ * @description  Cycle-time analytics chart — weekly average cycle time bars (12 weeks back)
+ *               plus current per-stage age tiles color-coded by amber/red day thresholds.
+ *               Wires DeliveryCycleTimeController.getCycleTimeData + getCurrentStageAges.
+ *               Mounts on AppPage / HomePage. Read-only — no DML.
+ * @author       Cloud Nimbus LLC
+ */
 import { LightningElement, wire } from 'lwc';
 import getCurrentStageAges from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryCycleTimeController.getCurrentStageAges';
 import getCycleTimeData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryCycleTimeController.getCycleTimeData';

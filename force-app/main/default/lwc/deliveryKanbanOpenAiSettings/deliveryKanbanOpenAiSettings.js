@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Child OpenAI configuration form used by deliveryKanbanSettingsContainer.
+ *               Receives the settings object via @api from its parent and emits change events;
+ *               does not persist directly (parent batches the save). Exposes a "Test Connection"
+ *               button that round-trips DeliveryHubSettingsController.testOpenAIConnection.
+ *               Not exposed standalone (isExposed=false).
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, track } from "lwc";
 import testOpenAIConnection from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.testOpenAIConnection";

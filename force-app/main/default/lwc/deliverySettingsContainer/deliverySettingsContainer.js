@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Top-level Application Settings container with a three-tab interface —
+ *               General (deliveryGeneralSettingsCard), AI Features (deliveryAiSettingsCard),
+ *               and OpenAI (deliveryOpenAiSettingsCard). Mounts on AppPage / HomePage /
+ *               RecordPage / Tab. Pure layout — each child card owns its own
+ *               DeliveryHubSettings__c read/write lifecycle.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, track } from 'lwc';
 

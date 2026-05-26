@@ -1,7 +1,13 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Tabbed settings container scoped to the Kanban board AI configuration.
+ *               Mounts on AppPage / RecordPage / HomePage / Tab. Wires
+ *               DeliveryHubSettingsController.getSettings, distributes the snapshot to child
+ *               cards (AI features + OpenAI), and batches a single saveAllAiSettings round-trip
+ *               on Save. Use this when AI config needs to be edited outside the global
+ *               deliverySettingsContainer (e.g. on a board-focused admin page).
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, track, wire } from 'lwc';
 import getSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.getSettings';

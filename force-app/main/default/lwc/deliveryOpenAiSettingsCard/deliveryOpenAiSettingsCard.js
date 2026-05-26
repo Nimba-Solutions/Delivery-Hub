@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Admin OpenAI configuration card — API key entry (masked), model selection,
+ *               and "Test Connection" round-trip. Composed into deliverySettingsContainer
+ *               (not exposed standalone). Persists via DeliveryHubSettingsController.saveOpenAISettings.
+ *               Stamps DeliveryHubSettings__c.OpenAiApiTestedDateTime__c so dependent AI
+ *               toggles (deliveryAiSettingsCard) know whether to allow enablement.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';

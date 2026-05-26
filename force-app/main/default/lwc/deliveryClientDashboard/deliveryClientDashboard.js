@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Client-facing HomePage dashboard. Renders a greeting + four toggleable
+ *               sections (Needs Your Attention, This Week at a Glance, What's In Flight,
+ *               Recently Updated). Wires DeliveryHubDashboardController.getClientDashboard
+ *               plus the CMT-driven phase order from DeliveryWorkflowConfigService.getWorkflowConfig.
+ *               Each section is hideable via @api Boolean props on the FlexiPage.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';

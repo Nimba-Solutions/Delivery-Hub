@@ -1,7 +1,13 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Invisible UtilityBar component that silently logs page-navigation events
+ *               to ActivityLog__c via DeliveryActivityTrackerController.logActivity.
+ *               Debounces duplicates within 5 seconds, persists a session ID in
+ *               sessionStorage, and is fire-and-forget — any logging failure is swallowed
+ *               so the user experience is never disrupted. Feeds deliveryActivityDashboard
+ *               + deliveryPermissionAnalyzer downstream.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, wire } from 'lwc';
 import { CurrentPageReference } from 'lightning/navigation';

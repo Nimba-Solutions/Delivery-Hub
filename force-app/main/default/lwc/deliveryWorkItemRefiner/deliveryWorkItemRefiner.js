@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  WorkItem__c refinement card — AI-suggests acceptance criteria via
+ *               DeliveryAiController.suggestAcceptanceCriteria and spawns a linked
+ *               WorkRequest__c with pre-approved hours copied across (via createRecord LDS).
+ *               Mounts on the WorkItem__c record page. NavigationMixin deep-links to the
+ *               new request once created.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, track, wire } from 'lwc';
 import { getRecord, getFieldValue, createRecord } from 'lightning/uiRecordApi';

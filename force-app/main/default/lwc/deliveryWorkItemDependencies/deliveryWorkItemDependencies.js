@@ -1,7 +1,14 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Blocking / blocked-by dependency list on the WorkItem__c record page.
+ *               Wires DeliveryWorkItemDependenciesController.getDependencies and subscribes
+ *               to the DeliveryWorkItemChange__e platform event for dependency_change
+ *               refresh signals (emitted by DeliveryDependencyTriggerHandler for both
+ *               endpoints of a dependency, so this LWC refreshes regardless of which side
+ *               the current record sits on). NavigationMixin enables click-through to
+ *               related WorkItems.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';

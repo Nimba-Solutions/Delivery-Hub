@@ -1,7 +1,13 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Vendor-handoff action panel on the WorkRequest__c record page. Exposes
+ *               "Send to Vendor" and "Check Status" buttons that round-trip
+ *               DeliveryRequestManagerController.sendRequestToVendor / checkRequestStatus.
+ *               Reads StatusPk__c + RemoteWorkItemIdTxt__c via lightning/uiRecordApi so the
+ *               UI flips between Send and Check based on whether the request is already
+ *               linked to a remote work item.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, wire, track } from 'lwc';
 import { getRecord, getFieldValue } from 'lightning/uiRecordApi';

@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Admin workflow / stage designer. Wires
+ *               DeliveryWorkflowBuilderController.getWorkflowTypes + getWorkflowStages for
+ *               the canvas, lets the admin author per-stage phase + color metadata, and
+ *               calls deployWorkflow to persist the resulting workflow + stages back to
+ *               the CMT-driven workflow config. Mounts on AppPage / HomePage / Tab.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, track, wire } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
