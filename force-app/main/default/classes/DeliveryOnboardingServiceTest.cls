@@ -346,7 +346,7 @@ private class DeliveryOnboardingServiceTest {
             WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{});
             TestDataFactory.createWorkLog(
                 wi.Id, 1, Date.today(),
-                new Map<String, Object>{ 'ApprovedDateTime__c' => Datetime.now() }
+                new Map<String, Object>{ 'ApprovedByTxt__c' => 'Test Admin' }
             );
         }
     }
@@ -357,7 +357,7 @@ private class DeliveryOnboardingServiceTest {
         WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{});
         WorkLog__c log = TestDataFactory.createWorkLog(
             wi.Id, 1, Date.today(),
-            new Map<String, Object>{ 'ApprovedDateTime__c' => Datetime.now() }
+            new Map<String, Object>{ 'ApprovedByTxt__c' => 'Test Admin' }
         );
 
         // Evaluate the canonical SoqlQuery branch via the public dispatch.
@@ -371,7 +371,7 @@ private class DeliveryOnboardingServiceTest {
         // Sanity check: the row we just inserted matches the seeded query.
         List<WorkLog__c> backing = [
             SELECT Id FROM WorkLog__c
-            WHERE ApprovedDateTime__c != null AND CreatedById = :UserInfo.getUserId()
+            WHERE ApprovedByTxt__c != null AND CreatedById = :UserInfo.getUserId()
             LIMIT 1
         ];
         System.assertEquals(1, backing.size(), 'Test setup should have inserted exactly one matching WorkLog__c');
