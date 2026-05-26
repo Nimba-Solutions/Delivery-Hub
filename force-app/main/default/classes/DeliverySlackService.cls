@@ -134,25 +134,54 @@ global with sharing class DeliverySlackService {
     }
 
     /**
-     * @description Asynchronously posts the Watcher v1 daily digest to Slack.
+     * @description Synchronously posts the Watcher v1 daily digest to Slack
+     *              and returns the delivery outcome so the orchestrator can
+     *              reflect Slack delivery status on the WatcherDigest__c
+     *              audit row (StatusPk__c + SlackResponseTxt__c).
+     *
+     *              Synchronous (not @future) because the orchestrator runs
+     *              from a Queueable that implements Database.AllowsCallouts
+     *              (WatcherDigestRunQueueable) or from an AuraEnabled entry
+     *              point — both contexts permit a synchronous HTTP callout.
+     *              The trade-off (a few-hundred-ms blocking call once per
+     *              day) is worth the data integrity win — subscribers no
+     *              longer see false `Success` status when Slack 4xx/5xx'd.
+     *
      *              Reuses the SlackWebhookUrlTxt__c webhook. Payload is the
      *              JSON-serialised Block Kit map produced by
-     *              DeliveryWatcherDigestFormatter.buildBlockKit — pre-injected
-     *              with `channel` when WatcherDigestSlackChannelTxt__c is set
-     *              on org defaults. No-ops silently when Slack isn't
-     *              configured (mirrors postStageChanges).
+     *              DeliveryWatcherDigestFormatter.buildBlockKit — pre-
+     *              injected with `channel` when WatcherDigestSlackChannelTxt__c
+     *              is set on org defaults.
      * @param payloadJson Pre-serialised Block Kit JSON.
+     * @return SlackPostResultDTO describing whether a post was attempted,
+     *         whether it was delivered (2xx), the HTTP status code, and a
+     *         255-char preview of the response (or exception message).
      */
-    @future(callout=true)
-    public static void postWatcherDigest(String payloadJson) {
+    public static SlackPostResultDTO postWatcherDigest(String payloadJson) {
+        SlackPostResultDTO outcome = new SlackPostResultDTO();
         if (String.isBlank(payloadJson)) {
-            return;
+            return outcome;
         }
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         if (settings == null || String.isBlank(settings.SlackWebhookUrlTxt__c)) {
-            return;
+            return outcome;
         }
-        post(settings.SlackWebhookUrlTxt__c, payloadJson);
+        outcome.attempted = true;
+        try {
+            HttpResponse res = postRaw(settings.SlackWebhookUrlTxt__c, payloadJson);
+            outcome.statusCode = res.getStatusCode();
+            outcome.delivered = (outcome.statusCode >= 200 && outcome.statusCode < 300);
+            outcome.responseText = buildResponsePreview(res);
+        } catch (CalloutException ce) {
+            outcome.statusCode = 0;
+            outcome.delivered = false;
+            outcome.responseText = clipForField('CalloutException: ' + ce.getMessage());
+        } catch (Exception e) {
+            outcome.statusCode = 0;
+            outcome.delivered = false;
+            outcome.responseText = clipForField(e.getTypeName() + ': ' + e.getMessage());
+        }
+        return outcome;
     }
 
     /**
@@ -181,23 +210,72 @@ global with sharing class DeliverySlackService {
 
     /**
      * @description Sends a JSON payload to the given Slack Incoming Webhook URL.
+     *              Swallows exceptions so the caller (legacy @future paths)
+     *              doesn't crash on a Slack outage. New callers that need
+     *              response visibility should use postRaw() instead.
      * @param url  The Slack webhook endpoint
      * @param body The serialised JSON payload
      * @return HttpResponse or null if the callout threw
      */
     private static HttpResponse post(String url, String body) {
+        try {
+            return postRaw(url, body);
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN, '[DeliverySlackService] callout failed: ' + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * @description Sends a JSON payload to the given Slack Incoming Webhook URL
+     *              and lets exceptions propagate. Used by postWatcherDigest so
+     *              the orchestrator can distinguish 4xx/5xx from CalloutException
+     *              and persist both onto WatcherDigest__c.SlackResponseTxt__c.
+     * @param url  The Slack webhook endpoint
+     * @param body The serialised JSON payload
+     * @return HttpResponse from Slack (may be non-2xx)
+     */
+    private static HttpResponse postRaw(String url, String body) {
         HttpRequest req = new HttpRequest();
         req.setEndpoint(url);
         req.setMethod('POST');
         req.setHeader('Content-Type', 'application/json');
         req.setBody(body);
         req.setTimeout(10000);
-        try {
-            return new Http().send(req);
-        } catch (Exception e) {
-            System.debug(LoggingLevel.WARN, '[DeliverySlackService] callout failed: ' + e.getMessage());
-            return null;
+        return new Http().send(req);
+    }
+
+    /** @description Field cap for SlackResponseTxt__c (Text(255)). */
+    private static final Integer SLACK_RESPONSE_FIELD_LEN = 255;
+
+    /**
+     * @description Builds the 255-char Slack response preview persisted on
+     *              WatcherDigest__c.SlackResponseTxt__c. Format:
+     *              `HTTP {code} {status} | {body}`, clipped to the field cap.
+     * @param res HttpResponse from Slack.
+     * @return Compact response preview, never null.
+     */
+    private static String buildResponsePreview(HttpResponse res) {
+        if (res == null) {
+            return clipForField('HTTP <no response>');
         }
+        String status = res.getStatus() == null ? '' : res.getStatus();
+        String body = res.getBody() == null ? '' : res.getBody();
+        String bodyClip = body.length() > 500 ? body.substring(0, 500) : body;
+        return clipForField('HTTP ' + res.getStatusCode() + ' ' + status + ' | ' + bodyClip);
+    }
+
+    /**
+     * @description Null-tolerant string clip for the SlackResponseTxt__c field
+     *              cap. Returns empty string when the input is null.
+     * @param value Value to clip.
+     * @return Trimmed value, never null.
+     */
+    private static String clipForField(String value) {
+        if (value == null) {
+            return '';
+        }
+        return value.length() <= SLACK_RESPONSE_FIELD_LEN ? value : value.substring(0, SLACK_RESPONSE_FIELD_LEN);
     }
 
     /**
@@ -388,5 +466,36 @@ global with sharing class DeliverySlackService {
             'text' => headerText,
             'blocks' => blocks
         });
+    }
+
+    // ── Inner DTOs ───────────────────────────────────────────────────────────
+
+    /**
+     * @description Outcome of a Slack webhook post. Returned by
+     *              postWatcherDigest so callers can reflect Slack delivery
+     *              status onto WatcherDigest__c (StatusPk__c +
+     *              SlackResponseTxt__c).
+     */
+    public class SlackPostResultDTO {
+
+        /** @description True when an HTTP request was actually sent (false on blank payload / no webhook). */
+        public Boolean attempted;
+
+        /** @description True when Slack responded with a 2xx status code. */
+        public Boolean delivered;
+
+        /** @description HTTP status code returned by Slack, or 0 when the callout threw. */
+        public Integer statusCode;
+
+        /** @description Preview of the Slack response (HTTP code + status + truncated body) or exception text. */
+        public String responseText;
+
+        /** @description Default constructor — outcome defaults to "not attempted, not delivered". */
+        public SlackPostResultDTO() {
+            this.attempted = false;
+            this.delivered = false;
+            this.statusCode = 0;
+            this.responseText = '';
+        }
     }
 }

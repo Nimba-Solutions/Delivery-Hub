@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Visual stage-progress connector for the WorkItem__c record page. Reads
+ *               StageNamePk__c via lightning/uiRecordApi and the CMT-driven stage list
+ *               via DeliveryWorkflowConfigService.getWorkflowConfig (Software_Delivery
+ *               workflow), then renders a step-connector showing past / current / future
+ *               stages. Pure read view — no DML.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, wire } from 'lwc';
 import { getRecord, getFieldValue } from 'lightning/uiRecordApi';

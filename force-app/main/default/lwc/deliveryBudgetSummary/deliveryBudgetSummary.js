@@ -2,7 +2,13 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Budget / Connection Health summary card — month-over-month hours, active
+ *               request count, and sync success/failure counters. Wires
+ *               DeliveryHubDashboardController.getBudgetMetrics and deep-links to pre-built
+ *               reports via getReportIds + NavigationMixin. Mounts on HomePage / RecordPage /
+ *               AppPage. The Connection Health progress bar is hideable via the @api
+ *               hideConnectionHealth Boolean (set on client-facing pages).
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, track, wire } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';

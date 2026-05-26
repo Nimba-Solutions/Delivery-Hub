@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Velocity-based burn-up SVG chart for a WorkItem__c tree. Wires
+ *               DeliveryForecastService.calculateProjectForecast and renders cumulative
+ *               actual hours, the scope line, and a velocity-extrapolated projection out
+ *               to scope intersection. Mounts on the WorkItem__c record page (also exposed
+ *               on AppPage / HomePage). Read-only forecasting view — no DML.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, wire, track } from "lwc";
 import calculateProjectForecast from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryForecastService.calculateProjectForecast";

@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Stage-gate validation banner for the WorkItem__c record page. Watches
+ *               StageNamePk__c + developer / estimated-hours / pre-approved-hours fields via
+ *               lightning/uiRecordApi and renders contextual warning / error / success
+ *               alerts when required fields for the current stage are missing. User-dismissable.
+ *               Pure read; gate enforcement still lives in trigger / service layer.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, wire, track } from 'lwc';
 import { getRecord, getFieldValue } from 'lightning/uiRecordApi';

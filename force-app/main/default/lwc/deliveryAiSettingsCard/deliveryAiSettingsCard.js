@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Admin settings card for the AI feature family (suggestions, auto-generate
+ *               descriptions, AI estimation). Composed into deliverySettingsContainer
+ *               (not exposed standalone). Reads/writes DeliveryHubSettings__c via
+ *               DeliveryHubSettingsController.getSettings / saveAiSettings. Master AI toggle
+ *               is gated on a tested OpenAI API key (openAiApiTested flag).
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
