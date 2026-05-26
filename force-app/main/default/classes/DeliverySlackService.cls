@@ -6,7 +6,7 @@
  *              The test-connection method runs synchronously from an LWC user action.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexSuggestUsingNamedCred')
+@SuppressWarnings('PMD.ApexSuggestUsingNamedCred, PMD.AvoidGlobalModifier')
 global with sharing class DeliverySlackService {
 
     // ── Public API ───────────────────────────────────────────────────────────

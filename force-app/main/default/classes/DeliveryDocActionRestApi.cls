@@ -22,7 +22,7 @@
  *               bundle without going through Aura.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation, PMD.ApexDoc')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.ApexDoc, PMD.AvoidGlobalModifier')
 @RestResource(urlMapping='/sign/*')
 global with sharing class DeliveryDocActionRestApi {
 

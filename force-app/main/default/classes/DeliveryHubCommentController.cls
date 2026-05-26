@@ -6,6 +6,7 @@
  * Uses standard DML so the DeliverySyncEngine Trigger picks it up automatically.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryHubCommentController {
 
     /**
