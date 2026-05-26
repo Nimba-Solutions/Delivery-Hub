@@ -1,7 +1,11 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  SVG-rendered burndown chart showing open vs completed WorkItem__c counts
+ *               across a rolling 12-week window. Wires DeliveryBurndownController.getBurndownData
+ *               with the Software_Delivery workflow type. Mounts on AppPage / HomePage.
+ *               Pure presentation — no DML, no admin actions.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, wire, track } from "lwc";
 import getBurndownData from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryBurndownController.getBurndownData";

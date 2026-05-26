@@ -1,7 +1,13 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Inline hours-logging form for the WorkItem__c record page (and ScreenAction
+ *               quick action). Submits via DeliveryTimeLoggerController.logHours, with a
+ *               pre-flight isApprovalRequired check that flips the UI into draft-badge mode
+ *               when the entry needs client approval. Reads TotalLoggedHoursSum__c +
+ *               ClientNetworkEntityLookup__c via lightning/uiRecordApi for the running tally
+ *               and approval routing.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, wire, track } from 'lwc';
 import { getRecord, getFieldValue, refreshApex } from 'lightning/uiRecordApi';

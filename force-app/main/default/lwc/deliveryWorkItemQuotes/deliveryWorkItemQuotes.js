@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Vendor quote list + acceptance UI for the WorkItem__c record page. Wires
+ *               DeliveryWorkItemQuotesController.getQuotes for the per-vendor quote table
+ *               with color-coded status pills (Accepted / In Progress / Completed /
+ *               Inactive / Budget Hold), and exposes acceptQuote action that locks in a
+ *               quote and de-activates the others.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, wire, track } from 'lwc';
 import { refreshApex } from '@salesforce/apex';

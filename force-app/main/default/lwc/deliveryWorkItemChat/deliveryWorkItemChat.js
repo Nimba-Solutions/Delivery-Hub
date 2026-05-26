@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Internal discussion / live comment stream for the WorkItem__c record page.
+ *               Wires DeliveryHubCommentController.getLiveComments / postLiveComment /
+ *               getCommentFiles and subscribes to the DeliveryWorkItemChange__e platform
+ *               event for sub-second updates. Falls back to a 5-minute poll if the empApi
+ *               subscription drops silently. Supports file attachments per comment.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, wire, api, track } from 'lwc';
 import getLiveComments from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubCommentController.getLiveComments';

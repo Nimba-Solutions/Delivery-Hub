@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Aggregate Activity Tracking analytics card. Mounts on HomePage /
+ *               RecordPage / AppPage / Tab. Wires DeliveryActivityDashboardController.getActivitySummary
+ *               for week/month totals, top users / components / pages, and the daily-count
+ *               sparkline rendered from Ghost Recorder activity data. Tile clicks deep-link
+ *               into pre-built reports via getReportIds + NavigationMixin.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, track, wire } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';

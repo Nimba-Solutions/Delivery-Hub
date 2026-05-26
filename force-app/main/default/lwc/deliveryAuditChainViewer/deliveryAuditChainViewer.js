@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Triggers a configurable-depth probe (1-5 hops) against the cross-org
+ *               fulfillment chain for the current WorkItem__c. Calls
+ *               DeliveryDepthProbeService.getFulfillmentChain and renders the flattened
+ *               tree (org, jurisdiction, reveal level, children). Mounts on the WorkItem__c
+ *               record page. Read-only audit-trail-style surface — no DML.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, track } from "lwc";
 import getFulfillmentChain from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDepthProbeService.getFulfillmentChain";

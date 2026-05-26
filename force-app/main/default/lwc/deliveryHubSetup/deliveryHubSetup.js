@@ -1,7 +1,13 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Admin onboarding / connection-setup wizard for DeliveryHubSettings__c.
+ *               Drives the local-entity prepare → handshake → mothership-approval flow via
+ *               DeliveryHubSetupController. Renders a pending-approvals inbox when the local
+ *               org is the mothership. Mounts on AppPage / HomePage. The @api showConnectedState
+ *               toggle keeps the card visible after setup completes (use on admin home, leave
+ *               off on client home so the component disappears once connected).
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, track, wire } from 'lwc';
 import getSetupStatus from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSetupController.getSetupStatus';

@@ -1,7 +1,13 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Smart stage-gate controller on the WorkItem__c record page. Reads stage +
+ *               required-field state via lightning/uiRecordApi, consults the CMT-driven
+ *               workflow config (DeliveryWorkflowConfigService), and exposes contextual
+ *               "Advance Stage" actions that round-trip DeliveryHubBoardController.updateWorkItemStage.
+ *               Blocks advancement when prerequisite fields (estimated hours, developer,
+ *               acceptance criteria, priority) are missing for the next stage.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, wire, track } from 'lwc';
 import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
