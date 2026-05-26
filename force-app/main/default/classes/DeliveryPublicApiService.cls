@@ -7,9 +7,12 @@
  * URL Pattern: /services/apexrest/delivery/deliveryhub/v1/api/{resource}
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.AvoidGlobalModifier')
 @RestResource(urlMapping='/deliveryhub/v1/api/*')
 global without sharing class DeliveryPublicApiService {
+
+    /** @description Page size for paginated list endpoints (LIMIT cap). */
+    private static final Integer FEATURE_TOGGLE_PAGE_SIZE = 50;
 
     /** @description Handles all GET requests. Routes by resource path after authentication. */
     @HttpGet
@@ -19,23 +22,46 @@ global without sharing class DeliveryPublicApiService {
             if (entity == null) { return; }
 
             // Rate limiting (opt-in — only active when PublicApiRateLimitNumber__c is set)
-            DeliveryHubSettings__c rlSettings = DeliveryHubSettings__c.getOrgDefaults();
-            if (rlSettings != null && rlSettings.PublicApiRateLimitNumber__c != null) {
-                Integer publicApiLimit = (Integer) rlSettings.PublicApiRateLimitNumber__c;
-                if (DeliveryRateLimitService.isRateLimited(entity.Id, 'PublicAPI', publicApiLimit, 1)) {
-                    RestContext.response.statusCode = 429;
-                    RestContext.response.addHeader('Retry-After', '3600');
-                    RestContext.response.responseBody = Blob.valueOf('{"error":"Rate limit exceeded"}');
-                    return;
-                }
-                DeliveryRateLimitService.recordRequest(entity.Id, 'PublicAPI');
-            }
+            if (!enforceRateLimit(entity.Id)) { return; }
 
             String resource = extractResource(RestContext.request.requestURI);
             if (handlePreEntityRoutes(resource)) { return; }
             Id entityId = resolveEffectiveEntity(entity.Id);
             if (entityId == null) { return; }
             routeGet(resource, entityId);
+        } catch (AuraHandledException e) {
+            sendError(400, e.getMessage());
+        } catch (Exception e) {
+            sendError(500, e.getMessage());
+        }
+    }
+
+    /**
+     * @description Handles all PATCH requests. Routes by resource path after authentication.
+     *              Currently only used by the dev-loop mirror route
+     *              (scratch-orgs/{id}) — added for PR 9 / Layer 6.
+     */
+    @HttpPatch
+    global static void handlePatch() {
+        try {
+            NetworkEntity__c entity = authenticateRequest();
+            if (entity == null) { return; }
+
+            // Rate limiting (opt-in — only active when PublicApiRateLimitNumber__c is set).
+            // Mirrors the gate in handleGet / handlePost; the PATCH path was previously
+            // ungated, letting an attacker with a valid X-Api-Key issue unlimited state-
+            // mutation calls on /scratch-orgs/{id}. Audit:
+            // docs/audits/rest-api-surface-review-2026-05-21.md §3.
+            if (!enforceRateLimit(entity.Id)) { return; }
+
+            String resource = extractResource(RestContext.request.requestURI);
+            String jsonBody = RestContext.request.requestBody != null ? RestContext.request.requestBody.toString() : '';
+            if (String.isBlank(jsonBody)) { sendError(400, 'Request body is required.'); return; }
+            if (resource.startsWith('scratch-orgs/')) {
+                patchScratchOrg(resource, jsonBody);
+                return;
+            }
+            sendError(404, 'Unknown resource: ' + resource);
         } catch (AuraHandledException e) {
             sendError(400, e.getMessage());
         } catch (Exception e) {
@@ -51,23 +77,20 @@ global without sharing class DeliveryPublicApiService {
             if (entity == null) { return; }
 
             // Rate limiting (opt-in — only active when PublicApiRateLimitNumber__c is set)
-            DeliveryHubSettings__c rlSettings2 = DeliveryHubSettings__c.getOrgDefaults();
-            if (rlSettings2 != null && rlSettings2.PublicApiRateLimitNumber__c != null) {
-                Integer publicApiLimit = (Integer) rlSettings2.PublicApiRateLimitNumber__c;
-                if (DeliveryRateLimitService.isRateLimited(entity.Id, 'PublicAPI', publicApiLimit, 1)) {
-                    RestContext.response.statusCode = 429;
-                    RestContext.response.addHeader('Retry-After', '3600');
-                    RestContext.response.responseBody = Blob.valueOf('{"error":"Rate limit exceeded"}');
-                    return;
-                }
-                DeliveryRateLimitService.recordRequest(entity.Id, 'PublicAPI');
-            }
+            if (!enforceRateLimit(entity.Id)) { return; }
 
-            Id entityId = resolveEffectiveEntity(entity.Id);
-            if (entityId == null) { return; }
             String resource = extractResource(RestContext.request.requestURI);
             String jsonBody = RestContext.request.requestBody != null ? RestContext.request.requestBody.toString() : '';
             if (String.isBlank(jsonBody)) { sendError(400, 'Request body is required.'); return; }
+            // PR 9 / Layer 6 — the dev-loop mirror route is developer-tooling
+            // scoped and skips the per-entity resolver (no portal user / no
+            // entity scoping). Auth is the X-Api-Key check above.
+            if (resource == 'scratch-orgs') {
+                postScratchOrg(jsonBody);
+                return;
+            }
+            Id entityId = resolveEffectiveEntity(entity.Id);
+            if (entityId == null) { return; }
             routePost(resource, jsonBody, entityId);
         } catch (AuraHandledException e) {
             sendError(400, e.getMessage());
@@ -116,6 +139,10 @@ global without sharing class DeliveryPublicApiService {
         if (resource == 'board-summary') { getBoardSummary(); return true; }
         if (resource == 'documents') { sendSuccess(DeliveryDocumentController.getDocumentsForEntity(entityId)); return true; }
         if (resource.startsWith('documents/')) { getDocumentByToken(resource); return true; }
+        // Feature cockpit endpoints (PR 8) — org-wide, not entity-scoped. The
+        // API key still authenticates the caller via authenticateRequest(); the
+        // feature toggle registry isn't per-tenant.
+        if (resource == 'feature-toggle-requests') { getFeatureToggleRequests(); return true; }
         return false;
     }
 
@@ -257,7 +284,260 @@ global without sharing class DeliveryPublicApiService {
         else if (resource == 'log-hours') { postLogHours(jsonBody, entityId); }
         else if (resource == 'document-approve') { postDocumentApprove(jsonBody); }
         else if (resource == 'document-dispute') { postDocumentDispute(jsonBody); }
+        else if (routePostFeatureCockpit(resource, jsonBody)) { return; }
         else { sendError(404, 'Unknown resource: ' + resource); }
+    }
+
+    // ── POST Feature Cockpit Routes (PR 8) ─────────────────────────────
+
+    /**
+     * @description Routes the feature-cockpit POST endpoints. Each operates on
+     *              org-wide feature catalog state (Feature__c, FeatureToggleRequest__c,
+     *              FeatureToggleApproval__c) rather than per-tenant data, so they
+     *              don't take the entityId. Authentication still happens via X-Api-Key
+     *              in handlePost. Returns true if the path matched.
+     * @param resource Path segment after /api/.
+     * @param jsonBody The raw request body.
+     * @return true if a feature-cockpit route was matched and handled.
+     */
+    private static Boolean routePostFeatureCockpit(String resource, String jsonBody) {
+        if (resource.startsWith('features/') && resource.endsWith('/toggle')) {
+            postFeatureToggle(resource, jsonBody);
+            return true;
+        }
+        if (resource.startsWith('feature-toggle-approvals/')) {
+            if (resource.endsWith('/grant')) {
+                postFeatureApprovalDecision(resource, jsonBody, true);
+                return true;
+            }
+            if (resource.endsWith('/reject')) {
+                postFeatureApprovalDecision(resource, jsonBody, false);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @description POST /features/{name}/toggle — submits a new
+     *              FeatureToggleRequest__c. Body shape:
+     *                { "action": "Enable" | "Disable", "reason": "..." }
+     *              The {name} segment matches Feature__c.Name or
+     *              FeatureDefinitionTxt__c (case-insensitive).
+     * @param resource Path segment.
+     * @param jsonBody Raw request body.
+     */
+    private static void postFeatureToggle(String resource, String jsonBody) {
+        String featureName = resource.substringBetween('features/', '/toggle');
+        if (String.isBlank(featureName)) { sendError(400, 'Feature name is required.'); return; }
+        Map<String, Object> body = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
+        String action = (String) body.get('action');
+        String reason = (String) body.get('reason');
+        if (action != 'Enable' && action != 'Disable') {
+            sendError(400, 'action must be Enable or Disable.'); return;
+        }
+        Id featureId = resolveFeatureIdByName(featureName);
+        if (featureId == null) { sendError(404, 'Feature not found: ' + featureName); return; }
+
+        // Idempotency guard — if a Pending or Granted request for the same
+        // (feature, action) already exists, return its id rather than inserting
+        // a duplicate row. Closes the duplicate-Pending-on-network-retry hole
+        // noted in the 2026-05-21 REST surface review §6.
+        List<FeatureToggleRequest__c> existing = [
+            SELECT Id FROM FeatureToggleRequest__c
+            WHERE FeatureLookup__c = :featureId
+              AND ActionPk__c = :action
+              AND StatusPk__c IN ('Pending', 'Granted')
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        if (!existing.isEmpty()) {
+            sendSuccess(new Map<String, Object>{
+                'requestId' => existing[0].Id,
+                'featureId' => featureId,
+                'status' => 'Pending'
+            });
+            return;
+        }
+
+        try {
+            Id requestId = DeliveryFeatureApprovalService.submit(featureId, action, reason);
+            sendSuccess(new Map<String, Object>{
+                'requestId' => requestId,
+                'featureId' => featureId,
+                'status' => 'Pending'
+            }, 201);
+        } catch (AuraHandledException e) {
+            sendError(400, e.getMessage());
+        }
+    }
+
+    /**
+     * @description POST /feature-toggle-approvals/{id}/grant or /reject.
+     *              Body shape: { "note": "..." }
+     * @param resource Path segment.
+     * @param jsonBody Raw request body.
+     * @param grant true for grant, false for reject.
+     */
+    private static void postFeatureApprovalDecision(String resource, String jsonBody, Boolean grant) {
+        String suffix = grant ? '/grant' : '/reject';
+        String approvalIdStr = resource.substringBetween('feature-toggle-approvals/', suffix);
+        if (String.isBlank(approvalIdStr)) { sendError(400, 'Approval Id is required.'); return; }
+        Id approvalId;
+        try { approvalId = Id.valueOf(approvalIdStr); }
+        catch (Exception e) { sendError(400, 'Invalid approval Id.'); return; }
+        Map<String, Object> body = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
+        String note = (String) body.get('note');
+        try {
+            if (grant) {
+                DeliveryFeatureApprovalService.grant(approvalId, note);
+            } else {
+                DeliveryFeatureApprovalService.reject(approvalId, note);
+            }
+            Map<String, Object> resp = describeApprovalAfterDecision(approvalId);
+            sendSuccess(resp);
+        } catch (AuraHandledException e) {
+            sendError(400, e.getMessage());
+        }
+    }
+
+    private static Map<String, Object> describeApprovalAfterDecision(Id approvalId) {
+        List<FeatureToggleApproval__c> rows = [
+            SELECT Id, StatusPk__c, RequestLookup__c, RequestLookup__r.StatusPk__c
+            FROM FeatureToggleApproval__c
+            WHERE Id = :approvalId
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        Map<String, Object> resp = new Map<String, Object>{
+            'approvalId' => approvalId
+        };
+        if (!rows.isEmpty()) {
+            FeatureToggleApproval__c row = rows[0];
+            resp.put('status', row.StatusPk__c);
+            resp.put('requestId', row.RequestLookup__c);
+            if (row.RequestLookup__r != null) {
+                resp.put('requestStatus', row.RequestLookup__r.StatusPk__c);
+            }
+        }
+        return resp;
+    }
+
+    /**
+     * @description GET /feature-toggle-requests — paginated list of
+     *              FeatureToggleRequest__c rows. Optional query params:
+     *                ?status=Pending|Granted|Applied|Rejected|RolledBack
+     *                ?feature=<name>  (matches FeatureLookup__r.Name)
+     *                ?pageOffset=N    (LIMIT/OFFSET pagination)
+     */
+    private static void getFeatureToggleRequests() {
+        String statusFilter = RestContext.request.params.get('status');
+        String featureFilter = RestContext.request.params.get('feature');
+        Integer offset = getPageOffset();
+        List<FeatureToggleRequest__c> requests = queryFeatureToggleRequests(
+            statusFilter, featureFilter, offset
+        );
+        List<Map<String, Object>> data = new List<Map<String, Object>>();
+        for (FeatureToggleRequest__c req : requests) {
+            data.add(buildFeatureRequestMap(req));
+        }
+        // Pagination envelope — `hasMore` is a heuristic (true when the LIMIT
+        // was filled); accurate enough for client UX without a second SOQL.
+        // See docs/audits/rest-api-surface-review-2026-05-21.md §8.
+        Integer maxRows = FEATURE_TOGGLE_PAGE_SIZE;
+        Map<String, Object> resp = new Map<String, Object>{
+            'data'     => data,
+            'offset'   => offset,
+            'pageSize' => maxRows,
+            'hasMore'  => data.size() >= maxRows
+        };
+        sendSuccess(resp);
+    }
+
+    private static List<FeatureToggleRequest__c> queryFeatureToggleRequests(
+        String statusFilter, String featureFilter, Integer offset
+    ) {
+        Integer maxRows = FEATURE_TOGGLE_PAGE_SIZE;
+        Integer safeOffset = (offset == null || offset < 0) ? 0 : offset;
+        if (String.isNotBlank(statusFilter) && String.isNotBlank(featureFilter)) {
+            return [
+                SELECT Id, ActionPk__c, StatusPk__c, ReasonTxt__c, RequestedDateTime__c,
+                       FeatureLookup__c, FeatureLookup__r.Name,
+                       FeatureLookup__r.FeatureDefinitionTxt__c
+                FROM FeatureToggleRequest__c
+                WHERE StatusPk__c = :statusFilter
+                  AND FeatureLookup__r.Name = :featureFilter
+                WITH SYSTEM_MODE
+                ORDER BY RequestedDateTime__c DESC NULLS LAST
+                LIMIT :maxRows OFFSET :safeOffset
+            ];
+        }
+        if (String.isNotBlank(statusFilter)) {
+            return [
+                SELECT Id, ActionPk__c, StatusPk__c, ReasonTxt__c, RequestedDateTime__c,
+                       FeatureLookup__c, FeatureLookup__r.Name,
+                       FeatureLookup__r.FeatureDefinitionTxt__c
+                FROM FeatureToggleRequest__c
+                WHERE StatusPk__c = :statusFilter
+                WITH SYSTEM_MODE
+                ORDER BY RequestedDateTime__c DESC NULLS LAST
+                LIMIT :maxRows OFFSET :safeOffset
+            ];
+        }
+        if (String.isNotBlank(featureFilter)) {
+            return [
+                SELECT Id, ActionPk__c, StatusPk__c, ReasonTxt__c, RequestedDateTime__c,
+                       FeatureLookup__c, FeatureLookup__r.Name,
+                       FeatureLookup__r.FeatureDefinitionTxt__c
+                FROM FeatureToggleRequest__c
+                WHERE FeatureLookup__r.Name = :featureFilter
+                WITH SYSTEM_MODE
+                ORDER BY RequestedDateTime__c DESC NULLS LAST
+                LIMIT :maxRows OFFSET :safeOffset
+            ];
+        }
+        return [
+            SELECT Id, ActionPk__c, StatusPk__c, ReasonTxt__c, RequestedDateTime__c,
+                   FeatureLookup__c, FeatureLookup__r.Name,
+                   FeatureLookup__r.FeatureDefinitionTxt__c
+            FROM FeatureToggleRequest__c
+            WITH SYSTEM_MODE
+            ORDER BY RequestedDateTime__c DESC NULLS LAST
+            LIMIT :maxRows OFFSET :safeOffset
+        ];
+    }
+
+    private static Map<String, Object> buildFeatureRequestMap(FeatureToggleRequest__c req) {
+        String featureName = null;
+        if (req.FeatureLookup__r != null) {
+            featureName = String.isNotBlank(req.FeatureLookup__r.FeatureDefinitionTxt__c)
+                ? req.FeatureLookup__r.FeatureDefinitionTxt__c
+                : req.FeatureLookup__r.Name;
+        }
+        return new Map<String, Object>{
+            'id' => req.Id,
+            'featureId' => req.FeatureLookup__c,
+            'featureName' => featureName,
+            'action' => req.ActionPk__c,
+            'status' => req.StatusPk__c,
+            'reason' => req.ReasonTxt__c,
+            'requestedAt' => req.RequestedDateTime__c
+        };
+    }
+
+    /**
+     * @description Looks up a Feature__c by Name OR FeatureDefinitionTxt__c
+     *              (case-insensitive). Returns null if no match.
+     * @param featureName The {name} path segment.
+     * @return Matching Feature__c.Id, or null.
+     */
+    private static Id resolveFeatureIdByName(String featureName) {
+        if (String.isBlank(featureName)) { return null; }
+        List<Feature__c> rows = [
+            SELECT Id FROM Feature__c
+            WHERE Name = :featureName OR FeatureDefinitionTxt__c = :featureName
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        return rows.isEmpty() ? null : rows[0].Id;
     }
 
     private static void postWorkItem(String jsonBody, Id entityId) {
@@ -368,7 +648,128 @@ global without sharing class DeliveryPublicApiService {
         sendSuccess(DeliveryDocumentController.disputeDocumentByToken(token, reason));
     }
 
+    // ── Dev-Loop Mirror (PR 9 / Layer 6) ───────────────────────────────
+
+    /**
+     * @description POST /deliveryhub/v1/api/scratch-orgs — invoked by GH
+     *              Actions after CumulusCI provisions a scratch. Body:
+     *              {branch, orgId, loginUrl, cciFlow, workItemName (opt),
+     *              expiresAt (opt ISO-8601)}. Resolves the WI by Name when
+     *              provided; otherwise leaves WorkItemLookup__c null. Returns
+     *              {id, state:&apos;Active&apos;}.
+     * @param jsonBody Raw request body.
+     */
+    private static void postScratchOrg(String jsonBody) {
+        Map<String, Object> bodyMap = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
+        String orgId = (String) bodyMap.get('orgId');
+        if (String.isBlank(orgId)) { sendError(400, 'orgId is required.'); return; }
+        ScratchOrgInstance__c soi = new ScratchOrgInstance__c();
+        soi.OrgIdTxt__c = orgId;
+        soi.Name = orgId; // Name is required (auto-name not configured); use orgId as a sane default.
+        soi.BranchTxt__c = (String) bodyMap.get('branch');
+        soi.LoginUrl__c = (String) bodyMap.get('loginUrl');
+        soi.CciFlowTxt__c = (String) bodyMap.get('cciFlow');
+        soi.StatePk__c = 'Active';
+        soi.LastSyncDateTime__c = Datetime.now();
+        String expiresAt = (String) bodyMap.get('expiresAt');
+        if (String.isNotBlank(expiresAt)) {
+            try {
+                soi.ExpiresDateTime__c = (DateTime) JSON.deserialize('"' + expiresAt + '"', DateTime.class);
+            } catch (Exception e) {
+                System.debug(LoggingLevel.WARN,
+                    '[DeliveryPublicApiService.POST /scratch-orgs] Bad expiresAt timestamp "'
+                    + expiresAt + '" — falling back to null. ' + e.getMessage());
+            }
+        }
+        String workItemName = (String) bodyMap.get('workItemName');
+        if (String.isNotBlank(workItemName)) {
+            List<WorkItem__c> matches = [
+                SELECT Id FROM WorkItem__c WHERE Name = :workItemName
+                WITH SYSTEM_MODE LIMIT 1
+            ];
+            if (!matches.isEmpty()) {
+                soi.WorkItemLookup__c = matches.get(0).Id;
+            }
+        }
+        Database.SaveResult sr = Database.insert(soi, false, AccessLevel.SYSTEM_MODE);
+        if (!sr.isSuccess()) {
+            sendError(500, 'Insert failed: ' + sr.getErrors().get(0).getMessage());
+            return;
+        }
+        sendSuccess(new Map<String, Object>{
+            'id' => sr.getId(),
+            'state' => 'Active'
+        }, 201);
+    }
+
+    /**
+     * @description PATCH /deliveryhub/v1/api/scratch-orgs/{id} — invoked by
+     *              GH Actions during teardown / state transitions. Body:
+     *              {state, lastSyncAt (opt)}. State must be one of the
+     *              ScratchOrgState GVS values; anything else returns 400.
+     * @param resource Full resource path including the id segment.
+     * @param jsonBody Raw request body.
+     */
+    private static void patchScratchOrg(String resource, String jsonBody) {
+        String soiId = resource.substringAfter('scratch-orgs/');
+        if (String.isBlank(soiId)) { sendError(400, 'Scratch org id is required.'); return; }
+        Map<String, Object> bodyMap = (Map<String, Object>) JSON.deserializeUntyped(jsonBody);
+        String state = (String) bodyMap.get('state');
+        if (String.isBlank(state)) { sendError(400, 'state is required.'); return; }
+        List<ScratchOrgInstance__c> existing = [
+            SELECT Id FROM ScratchOrgInstance__c WHERE Id = :soiId
+            WITH SYSTEM_MODE LIMIT 1
+        ];
+        if (existing.isEmpty()) { sendError(404, 'Scratch org not found.'); return; }
+        ScratchOrgInstance__c row = existing.get(0);
+        row.StatePk__c = state;
+        String lastSyncAt = (String) bodyMap.get('lastSyncAt');
+        if (String.isNotBlank(lastSyncAt)) {
+            try { row.LastSyncDateTime__c = (DateTime) JSON.deserialize('"' + lastSyncAt + '"', DateTime.class); }
+            catch (Exception e) { row.LastSyncDateTime__c = Datetime.now(); }
+        } else {
+            row.LastSyncDateTime__c = Datetime.now();
+        }
+        Database.SaveResult sr = Database.update(row, false, AccessLevel.SYSTEM_MODE);
+        if (!sr.isSuccess()) {
+            sendError(400, 'Update failed: ' + sr.getErrors().get(0).getMessage());
+            return;
+        }
+        sendSuccess(new Map<String, Object>{
+            'id' => row.Id,
+            'state' => row.StatePk__c
+        });
+    }
+
     // ── Auth + Resolution ──────────────────────────────────────────────
+
+    /**
+     * @description Applies the public-API rate-limit gate (opt-in via the
+     *              `PublicApiRateLimitNumber__c` org-default setting). Returns
+     *              true when the request should proceed and false when the
+     *              caller has been rate-limited (response already populated
+     *              with 429 + Retry-After). Shared across handleGet,
+     *              handlePost, and handlePatch — closes the PATCH gap noted
+     *              in the 2026-05-21 REST surface review.
+     * @param entityId The authenticated NetworkEntity__c.Id used as the rate-
+     *                 limit bucket key.
+     * @return true if the request may proceed, false if 429 was returned.
+     */
+    private static Boolean enforceRateLimit(Id entityId) {
+        DeliveryHubSettings__c rlSettings = DeliveryHubSettings__c.getOrgDefaults();
+        if (rlSettings == null || rlSettings.PublicApiRateLimitNumber__c == null) {
+            return true;
+        }
+        Integer publicApiLimit = (Integer) rlSettings.PublicApiRateLimitNumber__c;
+        if (DeliveryRateLimitService.isRateLimited(entityId, 'PublicAPI', publicApiLimit, 1)) {
+            RestContext.response.statusCode = 429;
+            RestContext.response.addHeader('Retry-After', '3600');
+            RestContext.response.responseBody = Blob.valueOf('{"error":"Rate limit exceeded"}');
+            return false;
+        }
+        DeliveryRateLimitService.recordRequest(entityId, 'PublicAPI');
+        return true;
+    }
 
     private static NetworkEntity__c authenticateRequest() {
         String apiKey = RestContext.request.headers.get('X-Api-Key');

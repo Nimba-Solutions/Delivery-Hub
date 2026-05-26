@@ -1,0 +1,6 @@
+/* Watcher Setup — narrow column form. Inherits SLDS card chrome from
+   lightning-card; keep custom rules minimal so the form stays consistent
+   with the other admin cockpit cards (deliveryHubSetup, deliveryFeatureCockpit). */
+:host {
+    display: block;
+}

@@ -62,7 +62,11 @@ public without sharing class DeliveryContentDocLinkTriggerHandler {
 
         for (ContentDocumentLink cdl : newLinks) {
             if (cdl.LinkedEntityId != null) {
-                String sObjName = cdl.LinkedEntityId.getSObjectType().getDescribe().getName();
+                // getLocalName() (not getName()) — returns bare 'WorkItem__c'
+                // regardless of namespace, which the endsWithIgnoreCase guard below
+                // accepts either way. CLAUDE.md prefers getLocalName() for
+                // comparison; only dynamic SOQL / Lightning URL build need getName().
+                String sObjName = cdl.LinkedEntityId.getSObjectType().getDescribe().getLocalName();
                 if (sObjName.endsWithIgnoreCase('WorkItem__c')) {
                     docToWorkItemMap.put(cdl.ContentDocumentId, cdl.LinkedEntityId);
                 }

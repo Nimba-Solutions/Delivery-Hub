@@ -12,6 +12,7 @@
  * @author Cloud Nimbus LLC
  */
 @RestResource(urlMapping='/deliveryhub/v1/webhook/*')
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryWebhookReceiverApi {
 
     /**

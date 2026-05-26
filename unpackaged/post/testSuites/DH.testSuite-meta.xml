@@ -8,7 +8,6 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryFileBytesFetcherTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryGhostControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubBoardControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubCalloutServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubCommentControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubDashboardControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubFilesControllerTest</testClassName>
@@ -57,7 +56,6 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryScoreServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryPortalAccessServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryActivityFeedControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryActivityTrackerControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryDataLineageControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocumentControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryFieldChangeServiceTest</testClassName>
@@ -77,7 +75,6 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryEmailServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryInboundEmailHandlerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliverySavedFilterControllerTest</testClassName>
-    <testClassName>%%%NAMESPACE_DOT%%%DeliveryTimelineControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryActivityDashboardControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryTemplateManagerControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryVelocityServiceTest</testClassName>
@@ -91,6 +88,7 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryVoiceNotesControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryGanttRemoteControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocActionServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocGenerationServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocActionControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocActionRestApiTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryEscalationContextTest</testClassName>
@@ -105,4 +103,31 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryStripePaymentHandlerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubHealthServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubRepairServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDashboardCardControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryPermissionAnalyzerControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureCatalogControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWatcherSetupCtrlTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureSyncServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureTriggerHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureGraphServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureApprovalServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%FeatureToggleRequestTriggerHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%FToggleApprovalTriggerHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryOnboardingServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDevLoopControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDatasetControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWatcherDigestFormatterTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWatcherServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WatcherDigestRunQueueableTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WatcherFailedSyncTrendQueryServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WatcherPaymentOpsQueryServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WatcherARAgingQueryServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WatcherSLABreachQueryServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WatcherStuckStageQueryServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WatcherUnhappySignalQueryServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WatcherUpcomingSignoffQueryServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryActivityLogControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%WatcherDigestHistoryControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryOnboardingHistoryControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryNotificationServiceTest</testClassName>
 </ApexTestSuite>

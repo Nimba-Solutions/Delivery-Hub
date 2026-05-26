@@ -8,6 +8,7 @@
  */
 // without sharing: Required so vendor request routing, status updates, and SyncItem creation
 // succeed regardless of the running user's sharing rules on WorkRequest__c / SyncItem__c.
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global without sharing class DeliveryRequestManagerController {
     
     /**

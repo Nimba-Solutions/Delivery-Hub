@@ -1,0 +1,11 @@
+.dataset-list {
+    margin-top: 0.25rem;
+}
+
+.dataset-row {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dataset-row:last-child {
+    border-bottom: none;
+}

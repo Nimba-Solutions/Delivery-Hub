@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>QuestionsJsonTxt__c</fullName>
+    <description>JSON array of question objects, each shaped as { "q": "question text", "options": ["a","b","c","d"], "correct": 0, "explanation": "why" }. The LWC renders these as multiple-choice radios; the controller grades on submit.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Questions (JSON)</label>
+    <length>32768</length>
+    <type>LongTextArea</type>
+    <visibleLines>10</visibleLines>
+</CustomField>

@@ -1,0 +1,15 @@
+.feature-grid {
+    margin-top: 0.5rem;
+}
+
+.feature-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 12rem;
+}
+
+.feature-description {
+    flex-grow: 1;
+    min-height: 3rem;
+}

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SetupChecklistJsonTxt__c</fullName>
+    <description>JSON array of {step, label, command, docsUrl} entries the LWC renders as a numbered checklist. Step ordering is array order. Keep entries small (the LWC truncates labels &gt; 120 chars).</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Setup Checklist JSON</label>
+    <length>32768</length>
+    <required>false</required>
+    <type>LongTextArea</type>
+    <visibleLines>10</visibleLines>
+</CustomField>

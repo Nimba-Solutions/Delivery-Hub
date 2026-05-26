@@ -17,12 +17,43 @@ global class DeliveryHubInstallHandler implements InstallHandler {
      */
     global void onInstall(InstallContext context) {
         initializeDefaultSettings();
+        seedFeaturesFromDefinitions();
+        syncLegacySettingsToFeatures();
         scheduleSyncJobs();
         backfillUserPermissionSets();
         backfillWorkItemStatusDefaults();
         enqueueInitialReconciliation();
     }
 
+    /**
+     * @description Copies legacy DeliveryHubSettings__c.Enable*DateTime__c
+     *              values onto matching Feature__c rows after seeding. So
+     *              existing tenants whose admins already toggled features
+     *              via Setup → Custom Settings will see the cockpit
+     *              reflect that state on first render. Idempotent.
+     *              Wrapped in try/catch — install must never fail on
+     *              cosmetic mirror.
+     */
+    private static void syncLegacySettingsToFeatures() {
+        try {
+            DeliveryFeatureSyncService.syncSettingsToFeatures();
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryHubInstallHandler] Feature settings sync failed: '
+                + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Initialises the org-default DeliveryHubSettings__c row on
+     *              a fresh tenant install. No-ops when settings already exist
+     *              (so re-install / upgrade never overwrites admin choices).
+     *              Includes Phase 2 Watcher v1 per-signal-on defaults for the
+     *              top 3 implemented signals (PR-B ships #1; PR-C ships #2+#3)
+     *              so admins don't have to re-toggle them when PR-C lands.
+     *              The master gate EnableWatcherDigestDateTime__c stays null
+     *              — Watcher is silent until the admin opts in explicitly.
+     */
     private static void initializeDefaultSettings() {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         if (settings.Id != null) {
@@ -40,10 +71,60 @@ global class DeliveryHubInstallHandler implements InstallHandler {
             EnableEmailNotificationsDateTime__c         = now,
             EnableActivityLoggingDateTime__c            = now,
             EnableBoardMetricsDateTime__c               = now,
+            EnableWatcherSLABreachDateTime__c           = now,
+            EnableWatcherStuckStageDateTime__c          = now,
+            EnableWatcherARAgingDateTime__c             = now,
             FailedSyncAutoDismissDaysNumber__c          = 14,
             StagesToAutoShareWithDevTeamTxt__c = 'All'
         );
         insert settings;
+    }
+
+    /**
+     * @description Seeds one Feature__c per FeatureDefinition__mdt that does not
+     *              already have a matching runtime row. Idempotent: re-running
+     *              the install never duplicates existing seeded rows. Defaults
+     *              the per-tenant EnabledDateTime__c to the catalog's
+     *              DefaultEnabledDateTime__c (which is currently null for every
+     *              shipped record — admins activate features explicitly via the
+     *              cockpit). Wrapped in try/catch — install must never fail on
+     *              seed (existing handler pattern).
+     */
+    private static void seedFeaturesFromDefinitions() {
+        try {
+            List<FeatureDefinition__mdt> defs = [
+                SELECT DeveloperName, DefaultEnabledDateTime__c
+                FROM FeatureDefinition__mdt
+            ];
+            if (defs.isEmpty()) {
+                return;
+            }
+            Set<String> existingDefNames = new Set<String>();
+            for (Feature__c existing : [
+                SELECT FeatureDefinitionTxt__c FROM Feature__c
+                WHERE FeatureDefinitionTxt__c != null
+            ]) {
+                existingDefNames.add(existing.FeatureDefinitionTxt__c);
+            }
+            List<Feature__c> toInsert = new List<Feature__c>();
+            for (FeatureDefinition__mdt fd : defs) {
+                if (existingDefNames.contains(fd.DeveloperName)) {
+                    continue;
+                }
+                toInsert.add(new Feature__c(
+                    Name = fd.DeveloperName,
+                    FeatureDefinitionTxt__c = fd.DeveloperName,
+                    EnabledDateTime__c = fd.DefaultEnabledDateTime__c
+                ));
+            }
+            if (!toInsert.isEmpty()) {
+                insert toInsert;
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryHubInstallHandler] Feature catalog seed failed: '
+                + e.getMessage());
+        }
     }
 
     /**

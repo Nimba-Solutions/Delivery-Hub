@@ -20,6 +20,19 @@ private class DeliveryHubInstallHandlerTest {
             System.assertNotEquals(null, settings.EnableAISuggestionsDateTime__c, 'AI suggestions should be enabled by default');
             System.assertEquals(14, settings.FailedSyncAutoDismissDaysNumber__c,
                 'FailedSyncAutoDismissDaysNumber__c should default to 14 on fresh install');
+            // Phase 2 Watcher v1 — top-3 signal flags default ON so PR-C can
+            // ship signals 2+3 without an install-handler edit. Master flag
+            // stays null — admins opt into Watcher explicitly.
+            System.assertNotEquals(null, settings.EnableWatcherSLABreachDateTime__c,
+                'Watcher SLA Breach signal default should be ON post-install');
+            System.assertNotEquals(null, settings.EnableWatcherStuckStageDateTime__c,
+                'Watcher Stuck Stage signal default should be ON post-install');
+            System.assertNotEquals(null, settings.EnableWatcherARAgingDateTime__c,
+                'Watcher AR Aging signal default should be ON post-install');
+            System.assertEquals(null, settings.EnableWatcherDigestDateTime__c,
+                'Watcher master flag must NOT default ON — admins flip this manually');
+            System.assertEquals(null, settings.WatcherDigestRecipientUserIdsTxt__c,
+                'Recipient list must NOT default — admins populate this manually');
         }
     }
 
@@ -80,6 +93,37 @@ private class DeliveryHubInstallHandlerTest {
             WorkItem__c reloaded = [SELECT StatusPk__c FROM WorkItem__c WHERE Id = :stale.Id];
             System.assertEquals('Active', reloaded.StatusPk__c,
                 'Install handler should backfill pre-upgrade stale Status=New records');
+        }
+    }
+
+    @IsTest
+    static void testInstallSeedsFeatureCatalog() {
+        System.runAs(testUser) {
+            Integer defCount = [SELECT COUNT() FROM FeatureDefinition__mdt];
+
+            Test.testInstall(new DeliveryHubInstallHandler(), null, false);
+
+            Integer seeded = [
+                SELECT COUNT() FROM Feature__c WHERE FeatureDefinitionTxt__c != null
+            ];
+            System.assertEquals(defCount, seeded,
+                'Install should seed one Feature__c per FeatureDefinition__mdt row');
+        }
+    }
+
+    @IsTest
+    static void testInstallFeatureSeedIsIdempotent() {
+        System.runAs(testUser) {
+            Test.testInstall(new DeliveryHubInstallHandler(), null, false);
+            Integer afterFirst = [
+                SELECT COUNT() FROM Feature__c WHERE FeatureDefinitionTxt__c != null
+            ];
+            Test.testInstall(new DeliveryHubInstallHandler(), null, false);
+            Integer afterSecond = [
+                SELECT COUNT() FROM Feature__c WHERE FeatureDefinitionTxt__c != null
+            ];
+            System.assertEquals(afterFirst, afterSecond,
+                'Re-running install should not duplicate seeded Feature__c rows');
         }
     }
 

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <masterLabel>Delivery Feature Cascade Preview</masterLabel>
+    <description>Read-only cascade-preview of FeatureDependency__c relationships for a given Feature__c. Hosts an indented tree with type icons and Enable/Disable required badges. Informational in PR 5; PR 6 wires enforcement.</description>
+    <isExposed>false</isExposed>
+</LightningComponentBundle>

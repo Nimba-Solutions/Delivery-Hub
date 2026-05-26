@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AllowRetryDateTime__c</fullName>
+    <description>Populated = retries are allowed on this quiz (one attempt per submit, no cap); null = one attempt only and a failure locks the track until an admin clears progress. The timestamp records when retries were enabled on the catalog entry. Pattern per docs/FIELD_NAMING.md (no Booleans).</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Allow Retry</label>
+    <required>false</required>
+    <type>DateTime</type>
+</CustomField>

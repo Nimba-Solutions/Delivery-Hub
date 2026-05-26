@@ -1,0 +1,140 @@
+# Dead Code / Orphan Metadata Audit (2026-05-13)
+
+> **Status as of 2026-05-18: MOSTLY RESOLVED.** "Definitely safe to delete"
+> cluster shipped via PR #789 (merged 2026-05-18) — 4,323 LOC removed across
+> 48 files: 5 Apex classes + tests/metas (`DeliveryTimelineController`,
+> `DeliveryWorkItemQueryService`, `DeliveryHubCalloutService`,
+> `DeliveryArchivalService`, `DeliveryActivityTrackerController`), 6 LWC
+> folders (4 Experience-Cloud portal LWCs + `deliveryPartnerSettingsCard` +
+> `deliveryActivityTracker`), plus 2 permset entries + 3 test-suite entries.
+>
+> **Audit was wrong about `DeliveryPortalController`.** The audit claimed the
+> 5 portal-bound methods (`getPortalDashboard`, `getPortalWorkItems`,
+> `getPortalWorkItemDetail`, `submitPortalRequest`, `addPortalComment`) were
+> "exclusively bound" to the 4 deleted portal LWCs. They are ALSO consumed by
+> `DeliveryPublicApiService.cls` (live `@RestResource` at `/deliveryhub/v1/api/*`,
+> serving the cloudnimbusllc.com Next.js portal) at lines 104, 128, 134, 289,
+> 297, 302. Following the audit blindly would have 500'd the public portal API.
+> `DeliveryPortalController` left intact in #789.
+>
+> **Deferred (Glen sign-off required):**
+> - `deliveryDocumentSignPortal/` — audit cited a "Coleman demo" commit reference.
+> - "Likely safe" cluster — Bounty marketplace (`@RestResource`, external HTTP
+>   traffic not visible from repo) + 7 analytics widget LWCs (need confirmation
+>   none are queued for "wire to DashboardCard__mdt" follow-on).
+>
+> File preserved as the punch-list for the "likely safe" follow-on PR.
+
+Scope: `force-app/main/default/` — 275 Apex classes, 75 LWCs, 35 objects, 29 reports, 3 report types, 6 VF pages, 2 Aura apps. Method: each class/component/field cross-referenced against every other file type in the package (cls/trigger/js/html/page/cmp/-meta.xml/permset/flexipage/layout/report), with externally-invoked entry points (`@RestResource`, `@AuraEnabled` LWC bindings, Aura `aura:application`, VF pages, tabs, app utility bars, scheduled cron via `DeliveryHubScheduler`) treated as live.
+
+## Executive summary
+
+- **Two clear "dark feature" clusters bloat the package** with ~13 LWCs + 3 supporting Apex classes that ship but are placed nowhere: (a) a Feb-2026 **Experience Cloud client portal** spike (PR #318) that was abandoned when Glen committed to the Next.js cloudnimbusllc.com portal instead — 5 LWCs targeted `lightningCommunity__` only, never deployed to a SF community; (b) a Feb-Mar-2026 **analytics widgets** spike — `deliveryBurndownChart`, `deliveryCycleTimeChart`, `deliveryDeveloperWorkload`, `deliverySLASummary`, `deliveryStageHistory`, `deliveryFieldHistory`, `deliveryBoardMetrics` — none placed in any FlexiPage. Glen has since standardized on CMDT-driven dashboard cards (`DashboardCard__mdt`) rendered by `deliveryActivityDashboard`, making these obsolete.
+- **4 Apex classes have zero production callers** (only their own test class references them): `DeliveryArchivalService`, `DeliveryHubCalloutService`, `DeliveryWorkItemQueryService`, `DeliveryTimelineController`. The last is name-confusing — there is also a live `DeliveryActivityTimelineController` consumed by `deliveryActivityTimeline` LWC. The "centralized query service" was built as a refactor target but no consumer migrated.
+- **The Bounty Marketplace cluster (1 object + 8 WI fields + 3 Apex classes) is shipped but dormant**. `DeliveryBountyApiService` (REST) + `DeliveryBountyService` + `DeliveryBountyClaimTriggerHandler` + `BountyClaim__c` object + `WorkItem__c.Bounty*__c` cluster are reachable only when `BountyEnabledDateTime__c` is set. No FlexiPage exposes the cluster (per `delivery-hub-page-field-audit-2026-05-13.md:71`). Memory: marketplace UI lives on cloudnimbusllc.com / Next.js, never wired back to Salesforce (phase 0 of `bounty-marketplace-plan.md` was the last code touch). Roughly 700-900 LOC of dark code.
+- **4 utility/placeholder LWCs are abandoned-in-progress**: `deliveryPartnerSettingsCard` (literally contains the placeholder string `[Your-Site-Domain].force.com`), `deliveryRecordLiveRefresh` (headless empApi LWC that needs to be placed on the WorkItem FlexiPage but isn't), `deliveryActivityTracker` (utility-bar component that nothing references), `deliveryWorkItemTemplates`.
+- **Reports, dashboards, permsets and report types are all clean** — every report field reference resolves to a real field, no permset references a deleted field/object, every `@IsTest` class contains real assertions, and only 2 `// TODO` comments exist in Apex (both ~36 days old, just under the 60-day flag threshold).
+- **Field-level orphans are limited to 4 fields total** after filtering out CMDT and the sync/audit plumbing — 3 dormant approval-workflow fields on `WorkLog__c` (already documented in the page-field audit as awaiting approval-workflow rollout) plus `PortalAccess__c.PermissionsTxt__c` (a JSON-permissions override that the service never reads — uses `RolePk__c` instead).
+
+## Definitely safe to delete
+
+### `force-app/main/default/classes/DeliveryTimelineController.cls` (+ `Test.cls`, `-meta.xml`)
+A `global` Timeline class with a `TimelineRow` DTO that no LWC, no Aura, no VF page, no other Apex class references. Distinct from the live `DeliveryActivityTimelineController` (which `deliveryActivityTimeline.js:10` consumes for the audit-trail timeline) and the live `DeliveryGanttController` (which `deliveryProFormaTimeline.js` consumes). Single live consumer of this class is `DeliveryTimelineControllerTest.cls`. First committed 2026-03-24 (PR #325 "activity timeline / audit trail"), last touched 2026-04-06 — appears to have been a parallel scaffold that was superseded by `DeliveryActivityTimelineController` in the same PR window. **Verify**: `grep -rl "DeliveryTimelineController\b" force-app/main/default/` returns only the .cls + .cls-meta.xml + Test.cls files for itself.
+
+### `force-app/main/default/classes/DeliveryWorkItemQueryService.cls` (+ `Test.cls`, `-meta.xml`)
+The class docstring openly states: *"Centralized query service for WorkItem__c records. Field sets derived from the top 5 consumers: DeliveryHubBoardController (19 queries), DeliveryPortalController (12), DeliveryHubDashboardController (11)..."*. Built as a refactor seam — but **none of those 5 consumers actually migrated**. The 14 references to `DeliveryWorkItemQueryService.*` outside its own .cls are all in its own Test class. Created 2026-04-06 and not touched since. **Verify**: `grep -rln "DeliveryWorkItemQueryService\." force-app/main/default/` — every match is inside `DeliveryWorkItemQueryServiceTest.cls`.
+
+### `force-app/main/default/classes/DeliveryHubCalloutService.cls` (+ `Test.cls`, `-meta.xml`)
+Generic HTTP wrapper (`get`, `post`, `getBaseUrl`). Comment says *"FIXED: Removed Named Credential dependency. Now relies strictly on the provided URL."* Created 2026-01-30, last touched 2026-02-26. Every outbound HTTP path that exists today (`DeliverySyncItemProcessor`, `DeliveryHubPoller`, webhook senders, `DeliveryStripePaymentHandler`) calls `Http.send()` directly, not through this wrapper. Only consumer is `DeliveryHubCalloutServiceTest.cls`. Test exercises `post` and `getBaseUrl`. **Verify**: `grep -rln "DeliveryHubCalloutService\." force-app/main/default/` — all matches inside `DeliveryHubCalloutServiceTest.cls`.
+
+### `force-app/main/default/classes/DeliveryArchivalService.cls` (+ `Test.cls`, `-meta.xml`)
+Archival, legal-hold, retention export service with 5 public static methods (`archiveRecords`, `setLegalHold`, `releaseLegalHold`, `exportArchivedData`, `purgeExpiredArchives`). No caller — not from a scheduled job (`DeliveryHubScheduler` does not enqueue it), not from a trigger (the `WorkItem__c.ArchivalStatusPk__c` field is written but never via this service), not from any LWC. Reads `DeliveryHubSettings__c.DefaultRetentionDaysNumber__c` — that custom setting field also has zero readers outside this class. Created 2026-04-05. The retention/archival cluster fields (`ArchivalStatusPk__c`, `ArchivedDateTime__c`, `RetentionExpiresDate__c`) are noted in `delivery-hub-page-field-audit-2026-05-13.md:76` as "admin-facing" but not on the WI FlexiPage either. **Verify**: `grep -rln "DeliveryArchivalService\." force-app/main/default/` — every match inside `DeliveryArchivalServiceTest.cls`.
+
+### Experience Cloud portal LWC cluster (5 components)
+- `force-app/main/default/lwc/deliveryPortalDashboard/`
+- `force-app/main/default/lwc/deliveryPortalRequestForm/`
+- `force-app/main/default/lwc/deliveryPortalWorkItemDetail/`
+- `force-app/main/default/lwc/deliveryPortalWorkItemList/`
+- `force-app/main/default/lwc/deliveryDocumentSignPortal/`
+
+All five LWCs declare ONLY `lightningCommunity__Page` + `lightningCommunity__Default` targets — they cannot be placed on a Lightning App / Home / Record page, only inside an Experience Cloud (Community) site. **The package contains no Experience site metadata** (`force-app/main/default/` has no `sites/`, `networks/`, or `experiences/` directory). Git history (`aabec2a2 feat: add Experience Cloud client portal components (#318)`, Feb 2026) shows these were the Phase-1 deliverable for the client portal. Per `feedback_cloudnimbusllc_deploy.md` and the bounty marketplace plan, that portal was instead built on Next.js at cloudnimbusllc.com, not as an SF community. Their Apex controllers (`DeliveryPortalController.getPortalDashboard`, `getPortalWorkItems`, `getPortalWorkItemDetail`, `addPortalComment`, `submitPortalRequest`) are exclusively bound to these orphan LWCs — if the LWCs go, that controller block (~1000 LOC) becomes deletable too. **Verify**: `grep -rln "deliveryPortalDashboard\|deliveryPortalRequestForm\|deliveryPortalWorkItemDetail\|deliveryPortalWorkItemList\|deliveryDocumentSignPortal" force-app/main/default/ | grep -v "/lwc/deliveryPortal\|/lwc/deliveryDocumentSignPortal"` returns zero matches in FlexiPages / Aura / tabs / quick actions. Then check `grep -l "lightning__" force-app/main/default/lwc/{deliveryPortal*,deliveryDocumentSignPortal}/*.js-meta.xml` — none have lightning__ targets.
+
+> Caveat on `deliveryDocumentSignPortal`: its commit message mentions "Coleman demo". Confirm with Glen this demo is no longer needed before deletion.
+
+### `force-app/main/default/lwc/deliveryPartnerSettingsCard/`
+Standalone settings card with no FlexiPage placement, no targets declared in `js-meta.xml`, and source code containing the placeholder string `myInboundUrl = 'https://[Your-Site-Domain].force.com/services/apexrest/delivery/deliveryhub/v1/intake'`. No Apex import. Comment in the code says *"In a real scenario, you'd fetch the User's actual Site URL here via Apex"* — abandoned in stub form. Created 2026-02-24. **Verify**: `grep -rln "deliveryPartnerSettingsCard\|delivery-partner-settings-card" force-app/main/default/` — every match is inside its own folder.
+
+### `force-app/main/default/lwc/deliveryActivityTracker/` + `force-app/main/default/classes/DeliveryActivityTrackerController.cls`
+Headless utility-bar component that fires `DeliveryActivityTrackerController.logActivity` on every page navigation, writing to `ActivityLog__c` for "user activity analytics". Declares `<target>lightning__UtilityBar</target>`. Neither utility bar FlexiPage (`DeliveryHubUtilityBar.flexipage-meta.xml`, `DeliveryHubAdmin_UtilityBar.flexipage-meta.xml`) contains it — both only host `deliveryGhostRecorder`. The controller class is referenced exclusively by this orphan LWC + its own test. Created 2026-03-12 (`d50b3f16 feat: Platform Operational Excellence`) — appears to have been deprioritized in favor of the explicit ghost recorder. ~150 LOC LWC + ~80 LOC controller. **Verify**: `grep -rln "deliveryActivityTracker" force-app/main/default/` returns only its own folder + the controller .cls files.
+
+## Likely safe (verify before deleting)
+
+### `force-app/main/default/classes/DeliveryBountyApiService.cls` + `DeliveryBountyService.cls` + `DeliveryBountyClaimTriggerHandler.cls` (+ tests)
+Bounty marketplace classes. `DeliveryBountyApiService` is `@RestResource(urlMapping='/deliveryhub/v1/bounties/*')` — meaning *external* HTTP clients could in theory be calling it without the SF codebase showing any reference. `DeliveryBountyService` IS called from production code (`DeliveryWorkItemTriggerHandler.cls:365, 528` calls `generateBountyToken()` when `BountyEnabledDateTime__c` flips). However: (a) memory says cloudnimbusllc.com bounty pages still use mock data (`bounty-marketplace-plan.md:65` — "Wire mock API to Salesforce" is the open next-step), (b) `BountyEnabledDateTime__c` is not surfaced on the WI FlexiPage so no UI flips it. **What I checked**: every Apex caller, every LWC, every FlexiPage. **What I didn't**: the actual production HTTP traffic against the REST endpoints — Glen could confirm via Setup → Site Usage or the `cloudnimbusllc.com` Vercel logs. If the HTTP endpoint has zero external traffic over the last 30 days, the whole cluster (plus `BountyClaim__c` object + `WorkItem__c.Bounty*__c` fields) is safe to delete. Roughly 1500 LOC + 9 fields + 1 object.
+
+### `force-app/main/default/lwc/deliveryBurndownChart/` + `deliveryCycleTimeChart/` + `deliveryDeveloperWorkload/` + `deliverySLASummary/` + `deliveryStageHistory/` + `deliveryFieldHistory/` + `deliveryBoardMetrics/`
+Seven analytics LWCs from the Feb-Mar 2026 widgets spike. Each one:
+- Declares `lightning__AppPage` and/or `lightning__HomePage` targets
+- Is not placed in any FlexiPage in `force-app/main/default/flexipages/`
+- Is not a child of any other LWC (no `<c-delivery-burndown-chart>` etc. in any HTML)
+- Is not in any Aura comp, tab, or quick action
+
+Each has a 1:1 Apex controller (`DeliveryBurndownController`, `DeliveryCycleTimeController`, `DeliveryWorkloadController`, `DeliverySLAService`, `DeliveryStageHistoryController`, `DeliveryFieldChangeService`/`DeliveryFieldTrackingService`, `DeliveryMetricsService`) — those Apex classes are ONLY referenced by the orphan LWC + its own test. So if a widget goes, ~200-400 LOC of supporting Apex follows. **What I checked**: FlexiPage, Aura, tab, quick action, LWC parent-import. **What I didn't**: whether Glen plans to revive any of them under the new CMDT-driven dashboard system. Memory note (`project_phase_1_2_dashboard_shipped_0510.md`, PR #755) says the dashboard now uses `DashboardCard__mdt` records rendered by `deliveryActivityDashboard` — these standalone LWCs predate that pattern. Recommend Glen confirm none are queued for a "wire to dashboard card" follow-on before deletion. Combined: ~3000 LOC LWC + ~800 LOC Apex.
+
+> **Caveat**: `deliveryStageHistory` ships an `lightning__RecordPage` target — feasibly could be intended for the WI record FlexiPage. Recommend checking `delivery-hub-page-field-audit-2026-05-13.md` for whether Glen has flagged "show stage history on record page" as a missing-feature.
+
+### `force-app/main/default/lwc/deliveryRecordLiveRefresh/`
+Headless LWC subscribing to `DeliveryWorkItemChange__e` and calling `getRecordNotifyChange` to refresh standard LDS UI. The component's own doc-comment says *"Drop on any record page where WorkItem__c fields are surfaced"* — but it is **not** dropped on `DeliveryWorkItemRecordPage.flexipage-meta.xml` or any other FlexiPage. Created 2026-04-30 (very recently). This is likely a **deferred wiring** rather than dead code — exactly the pattern Glen called out as a smell in `feedback_default_scope_and_defer_discipline.md` ("Don't reach for defer — ship the right thing the first time"). **Recommend**: don't delete; instead, place it on the WorkItem record FlexiPage to fulfill its purpose. Mark as "wire, don't delete" in the follow-up.
+
+### `force-app/main/default/lwc/deliveryCsvImport/` + `force-app/main/default/classes/DeliveryCsvImportController.cls`
+CSV importer for bulk WorkItem inserts. LWC targets `lightning__AppPage` + `lightning__HomePage` + `lightning__RecordPage` but no FlexiPage hosts it. Apex controller has 2 public methods (`getWorkItemFields`, `importWorkItems`). Created 2026-02-28 (same Feb spike). Could be intentionally hidden behind a "Settings → Import" admin route that doesn't exist yet, or genuinely orphan. **What I checked**: every FlexiPage, no host. **What I didn't**: whether Glen wants this surfaced; the feature itself (CSV import) is plausibly valuable for admins onboarding subscriber orgs. Recommend Glen call: ship-and-wire vs delete. ~250 LOC LWC + ~180 LOC controller.
+
+### `force-app/main/default/lwc/deliveryInvoicePreviewDeferPanel/`
+Created 2026-04-23. Targets `lightning__RecordPage`, `lightning__AppPage`, `lightning__HomePage`. Calls `DeliveryDocActionController.deferWorkLogs`, `getWorkLogsForEntityPeriod`, `releaseDeferredForPeriod`. Not placed anywhere. The defer-WL-period feature it exposes IS live in the controller (DocAction methods are used by `deliveryDocumentViewer` for individual deferrals). Looks like a "bulk-defer panel" UI that was built but never placed on the invoice or document FlexiPage. **What I checked**: FlexiPages, LWC parents, Aura. **What I didn't**: Glen's intent — this is recent enough to be in-flight work.
+
+### `force-app/main/default/lwc/deliveryKanbanSettingsContainer/`
+Targets include `lightning__Tab` but no tab uses it (Tabs listed: only `lwcComponent` entries are `deliveryHubBoard`, `deliveryActivityFeed`, `deliveryActivityDashboard`, `deliveryGuide`, `deliveryPermissionAnalyzer`, `deliveryProFormaTimeline`, `deliveryVoiceNotes`, `deliveryHubWorkspace`, `deliverySettingsContainer`). The "kanban" settings appear to have been superseded by the general `deliverySettingsContainer` LWC which IS tab-hosted and aura-hosted. The "Kanban OpenAI" sub-component (`deliveryKanbanOpenAiSettings`) lives inside `deliveryKanbanSettingsContainer` per the parent-child grep — so deleting the container deletes its child. **What I checked**: tab metadata, FlexiPages, Aura, settings cards. **What I didn't**: whether Glen wants Kanban-specific settings split out again. Probably safe to delete given there's a working alternative shipped.
+
+### `force-app/main/default/lwc/deliveryWorkItemTemplates/`
+Targets `lightning__AppPage`, `lightning__HomePage`, `lightning__Tab`. Not placed anywhere. There IS a live `deliveryTemplateManager` LWC (Apex `DeliveryTemplateManagerController`) for template management, and a `deliveryWorkflowTemplatePicker` for template selection. This one appears redundant. Last touched 2026-04-19. **What I checked**: FlexiPages, tabs, Aura, LWC parents. **What I didn't**: which set of templates each component handles (workflow templates vs WI templates) — they may not actually overlap.
+
+### `force-app/main/default/lwc/deliveryStatusPage/`
+Targets include `lightningCommunity__Page` AND `lightning__AppPage`. Not placed on any FlexiPage. **However**, there IS a `force-app/main/default/pages/DeliveryStatusPage.page` VF page driven by `DeliveryStatusPageController` (Apex class IS alive). Two surfaces, same intent ("public status page for site"). The VF page is the deployed one (referenced by `Delivery_Hub.site-meta.xml` per memory). The LWC version was probably a planned Lightning replacement that never landed. **Verify**: confirm the VF page is still the production status page; if yes, delete the LWC.
+
+## Worth a closer look (judgment call)
+
+### `force-app/main/default/objects/PortalAccess__c/fields/PermissionsTxt__c.field-meta.xml`
+A LongTextArea (1000 chars) "JSON array of granular permission strings... override role-based defaults". The service `DeliveryPortalAccessService.cls` reads/writes `RolePk__c` (Admin / Member) but never references `PermissionsTxt__c`. The override mechanism it documents was apparently never implemented. Borderline because: (a) the per-record permission override is a defensible future-feature, (b) field-level metadata is the cheapest to keep around. But it'd cost an admin nothing to delete and pay back if/when granular perms ship as a different shape.
+
+### `WorkLog__c.ApprovalRequestedDateTime__c` + `ApprovalStepNumber__c` + `ApprovedByTxt__c`
+Already flagged in `delivery-hub-page-field-audit-2026-05-13.md:48-50` as dormant approval-workflow plumbing. `project_jose_hours_reporting_plan_0508.md:24-29` confirms StatusPk__c is NULL on all 52 current MF-Prod WLs — workflow is not in use. The fields themselves don't appear in any Apex either; they were schema-only ground laying. **Not flagging for delete** — Glen's open decision D2 in the Jose hours plan is whether to activate the approval workflow, and these three fields would be the backbone if he does. Pure judgment call; if approval workflow is dropped, all 3 fields go.
+
+### Two `// TODO` comments in `DeliveryDocActionRestApi.cls:158` and `DeliveryDocGenerationService.cls:272`
+Both authored by Glen on 2026-04-07 in PR #597. Roughly 36 days old as of 2026-05-13 — under the 60-day "stale" threshold by the audit instructions, but worth noting. The first is "persist portalSessionEmail to a dedicated PortalSessionEmail__c field once the schema PR lands" — the schema PR has not landed yet, and the workaround (stuffing the email in a user-agent string column) has been live for over a month. The second is "surface a dedicated DeliveryHubSettings__c branding block so admins can override the issuer name/url" — a minor admin-config gap, no urgency.
+
+### `force-app/main/default/lwc/deliveryFieldHistory/` and `DeliveryFieldChangeService` + `DeliveryFieldTrackingService`
+Two distinct Apex services for field-change tracking; the LWC binds to `DeliveryFieldChangeService.getFieldChangeHistory` and `getFieldChangeTrend`. The companion `DeliveryFieldTrackingService` (also alive) writes to `TrackedField__mdt`-configured history records — that one IS called by triggers. So the *writer* path is live, but the *reader* LWC was never placed on a FlexiPage. Probably safe to delete the LWC + the read-side `getFieldChangeHistory`/`getFieldChangeTrend` methods, keeping the writer service. Requires reading both services side-by-side to confirm the writer doesn't depend on the reader's methods.
+
+## Cross-cutting patterns
+
+1. **The Feb 28 — Mar 1, 2026 widget spike** produced 8 dashboard-style LWCs (`deliveryBurndownChart`, `deliveryCycleTimeChart`, `deliveryDeveloperWorkload`, `deliverySLASummary`, `deliveryCsvImport`, plus the 5 Experience Cloud portal LWCs) that were all committed during a 48-hour window and none of them landed in a FlexiPage. Three named PRs from this period: `#304 burndown chart dashboard`, `#318 Experience Cloud client portal`, `#324 AI weekly digest email`. Glen's later move to `DashboardCard__mdt` + `deliveryActivityDashboard` (PR #755, May 10) and to the Next.js portal at cloudnimbusllc.com made every one of these obsolete on a different axis. Net: roughly 4000 LOC of LWC + 1500 LOC of supporting Apex shipping in every release without ever being placed.
+
+2. **Refactor-target classes never adopted.** Two of the three orphan classes (`DeliveryWorkItemQueryService`, `DeliveryArchivalService`) are pure-service refactor targets where the class itself was created but the migration from existing duplicate code never happened. This is a tractable cleanup that simultaneously reduces dead code AND lets a future PR actually do the refactor against an empty file rather than competing with an abandoned half-built one.
+
+3. **REST endpoints that may have external consumers.** Three `@RestResource` classes (`DeliveryBountyApiService`, `DeliveryTaskAPI`, `DeliveryGanttRemoteController`) have zero in-package callers — that's expected, they're entry points from outside. For `DeliveryGanttRemoteController` the entry is the `GanttRemote.page` VF + a mobile companion, both in-repo and live. For `DeliveryTaskAPI` and `DeliveryBountyApiService`, Glen should check Site Usage logs before deleting — the former is documented in README + CHANGELOG as the external-AI-agent integration, and removing it would silently break any CI/CD or AI client that polls it.
+
+4. **Field-level orphans are nearly absent**, despite the codebase being ~12 months old and admittedly fast-moving. Only 4 non-CMDT, non-system fields are unreferenced in Apex+LWC+layout+FlexiPage+report (3 of which are documented dormant). This is the strongest signal in the audit: **the package's field discipline is strong even when the code/component layer accumulates dead weight**. The orphan-fields pattern documented in `memory/orphan-fields-subscriber-drift.md` (renamed fields surviving on subscriber orgs) is real but happens *post-install on subscriber orgs*, not *in the repo* — the repo source is clean.
+
+5. **The dead code clusters all trace to feature-pivot decisions** that are documented in memory: (a) bounty marketplace shifted from SF UI to cloudnimbusllc.com Next.js, leaving the SF-side schema + REST stack dark; (b) client portal shifted from Experience Cloud to cloudnimbusllc.com Next.js, leaving the LWC bundle stranded; (c) dashboard cards shifted from standalone LWCs to CMDT-driven `DashboardCard__mdt`, leaving the standalone widgets behind. Each pivot was the right call but the cleanup never followed. This is a single ~half-day "follow-on PR cleanup" opportunity that ties off three distinct feature pivots in one pass.
+
+## Suggested deletion grouping for follow-on PRs
+
+If Glen wants to action this, a clean PR layout:
+
+1. **PR-A "drop dead refactor-target Apex"** — `DeliveryArchivalService`, `DeliveryHubCalloutService`, `DeliveryWorkItemQueryService`, `DeliveryTimelineController` (+ tests, + `DefaultRetentionDaysNumber__c` from `DeliveryHubSettings__c` if it has no other readers). Zero feature impact. ~800 LOC removed.
+2. **PR-B "drop Experience Cloud portal stub"** — 5 portal LWCs + their slice of `DeliveryPortalController` (the methods exclusively bound to them — keep `DeliveryPortalAccessService` since `PortalAccess__c` is still used by the docusign endpoint per `delivery-hub-page-field-audit-2026-05-13.md`). ~2000 LOC removed. Confirm with Glen first that the Coleman demo is no longer needed.
+3. **PR-C "drop unplaced analytics widgets"** — 7 widget LWCs + 1:1 controllers. ~3500 LOC removed. Confirm none are queued for CMDT-card migration.
+4. **PR-D "drop bounty marketplace cluster"** — only if Glen confirms zero external HTTP traffic on `/deliveryhub/v1/bounties/*` and that the marketplace pivot is committed. `BountyClaim__c` object + 8 WI bounty fields + 3 Apex classes. ~1500 LOC + 1 object + 9 fields.
+5. **PR-E "wire don't delete"** — place `deliveryRecordLiveRefresh` on `DeliveryWorkItemRecordPage.flexipage-meta.xml`. Place `WorkLog__c.ResourceTitleTxt__c` on `DeliveryWorkLogRecordPage` per the page-field audit. Net add 2 lines of FlexiPage XML, removes the LWC from this audit's flag list next pass.
+
+Net potential cleanup if all four delete-PRs land: ~7800 LOC, 1 object, 9 fields. Translated: smaller package install size, faster CI scratch-org spin-up, fewer reports of "namespace gotcha" type failures (each unused @AuraEnabled method is a namespace landmine on subscriber orgs), and a cleaner mental map of the codebase for the next developer.

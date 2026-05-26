@@ -6,7 +6,7 @@
  *               available field schema for dynamic column mapping.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.CyclomaticComplexity')
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.AvoidGlobalModifier')
 global with sharing class DeliveryCsvImportController {
 
     private static final Integer BATCH_SIZE = 200;
@@ -172,7 +172,11 @@ global with sharing class DeliveryCsvImportController {
                 continue;
             }
             Map<String, String> entry = new Map<String, String>();
-            entry.put('apiName', dfr.getName());
+            // getLocalName() (not getName()) — strips the delivery__ namespace
+            // prefix so the dropdown label in deliveryCsvImport LWC reads as
+            // 'BriefDescriptionTxt__c' instead of 'delivery__BriefDescriptionTxt__c'.
+            // resolveField() below is namespace-tolerant (handles both forms).
+            entry.put('apiName', dfr.getLocalName());
             entry.put('label', dfr.getLabel());
             entry.put('type', dfr.getType().name());
             fieldList.add(entry);
@@ -237,11 +241,14 @@ global with sharing class DeliveryCsvImportController {
         }
 
         try {
-            wi.put(dfr.getName(), coerceValue(dfr, val));
+            // getLocalName() (not getName()) — SObject.put() accepts both the
+            // namespaced and bare forms, and the error message below is cleaner
+            // without the delivery__ prefix leaking to the debug log.
+            wi.put(dfr.getLocalName(), coerceValue(dfr, val));
         } catch (Exception ex) {
             System.debug(LoggingLevel.WARN,
                 'CSV Import: Could not coerce value "' + val +
-                '" for field ' + dfr.getName() + ': ' + ex.getMessage());
+                '" for field ' + dfr.getLocalName() + ': ' + ex.getMessage());
         }
     }
 

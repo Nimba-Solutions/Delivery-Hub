@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GlobalValueSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Outcome of a DatasetTemplateAssignment__c loader execution. Success = all rows landed. PartialFailure = some rows landed and some failed. Failure = nothing landed.</description>
+    <masterLabel>Dataset Load Outcome</masterLabel>
+    <sorted>false</sorted>
+    <customValue>
+        <fullName>Success</fullName>
+        <default>true</default>
+        <label>Success</label>
+    </customValue>
+    <customValue>
+        <fullName>PartialFailure</fullName>
+        <default>false</default>
+        <label>Partial Failure</label>
+    </customValue>
+    <customValue>
+        <fullName>Failure</fullName>
+        <default>false</default>
+        <label>Failure</label>
+    </customValue>
+</GlobalValueSet>

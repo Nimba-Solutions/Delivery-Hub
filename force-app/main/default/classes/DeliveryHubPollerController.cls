@@ -5,6 +5,7 @@
  * Exposes the Delivery Hub polling logic to the Lightning UI for manual and on-load refreshes.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryHubPollerController {
     
     @TestVisible 

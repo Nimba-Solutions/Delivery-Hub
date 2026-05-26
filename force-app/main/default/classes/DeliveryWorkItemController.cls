@@ -4,7 +4,7 @@
  * @description Controller for retrieving and seeding demo WorkItem__c records.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.AvoidGlobalModifier')
 global with sharing class DeliveryWorkItemController {
 
     /**
@@ -68,6 +68,7 @@ global with sharing class DeliveryWorkItemController {
             FROM WorkItem__c
             WHERE ActivatedDateTime__c != null
             AND TemplateMarkedDateTime__c = null
+            WITH SYSTEM_MODE
             ORDER BY SortOrderNumber__c
         ];
     }
@@ -163,6 +164,7 @@ global with sharing class DeliveryWorkItemController {
                 SELECT EnabledDateTime__c
                 FROM CloudNimbusGlobalSettings__mdt
                 WHERE DeveloperName = 'Default'
+                WITH SYSTEM_MODE
                 LIMIT 1
             ];
             return m != null && m.EnabledDateTime__c != null;
@@ -225,6 +227,7 @@ global with sharing class DeliveryWorkItemController {
             SELECT RequiredFieldsTxt__c
             FROM WorkflowStageRequirement__mdt
             WHERE ActiveDateTime__c != null AND TargetStageTxt__c = :targetStage
+            WITH SYSTEM_MODE
             LIMIT 1
         ];
 

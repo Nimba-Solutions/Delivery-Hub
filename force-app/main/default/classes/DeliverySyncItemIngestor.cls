@@ -212,7 +212,9 @@ public without sharing class DeliverySyncItemIngestor {
             if (localParentId == null) {
                 try {
                     Id castId = (Id) parentWorkItemRef;
-                    if (castId.getSobjectType().getDescribe().getName().endsWithIgnoreCase('WorkItem__c')) {
+                    // getLocalName() (not getName()) — endsWithIgnoreCase works
+                    // either way; bare form keeps the check readable.
+                    if (castId.getSobjectType().getDescribe().getLocalName().endsWithIgnoreCase('WorkItem__c')) {
                         localParentId = castId;
                     }
                 } catch (Exception e) {
@@ -562,7 +564,10 @@ public without sharing class DeliverySyncItemIngestor {
         if (String.isBlank(remoteId)) {
             return null;
         }
-        String cleanName = stripNamespace(type.getDescribe().getName());
+        // getLocalName() (not getName()) — returns the bare form directly.
+        // The stripNamespace() wrapper becomes a no-op safety net (kept for
+        // defense in depth in case the schema describe ever returns prefixed).
+        String cleanName = stripNamespace(type.getDescribe().getLocalName());
 
         List<SyncItem__c> ledger = [
             SELECT LocalRecordIdTxt__c
@@ -641,7 +646,8 @@ public without sharing class DeliverySyncItemIngestor {
         if (String.isBlank(globalSourceId)) {
             return null;
         }
-        String cleanName = stripNamespace(type.getDescribe().getName());
+        // getLocalName() (not getName()) — same rationale as findLocalId() above.
+        String cleanName = stripNamespace(type.getDescribe().getLocalName());
 
         List<SyncItem__c> ledger = [
             SELECT LocalRecordIdTxt__c
@@ -681,6 +687,10 @@ public without sharing class DeliverySyncItemIngestor {
         if (candidateId == null || candidateId.getSobjectType() != type) {
             return false;
         }
+        // getName() (NOT getLocalName()) — LOAD-BEARING: dynamic SOQL requires
+        // the namespace-prefixed form ('delivery__Foo__c') in the packaging /
+        // subscriber context, otherwise the query fails to resolve the SObject.
+        // Per [[get-local-name-vs-get-name-nuance]] memory — do NOT migrate.
         String soql = 'SELECT Id FROM ' + type.getDescribe().getName() + ' WHERE Id = :candidateId LIMIT 1';
         List<SObject> existing = Database.queryWithBinds(
             soql,
@@ -781,7 +791,8 @@ public without sharing class DeliverySyncItemIngestor {
         }
         try {
             Id castId = (Id) targetRef;
-            if (castId.getSobjectType().getDescribe().getName().endsWithIgnoreCase('WorkItem__c')) {
+            // getLocalName() (not getName()) — endsWithIgnoreCase works either way.
+            if (castId.getSobjectType().getDescribe().getLocalName().endsWithIgnoreCase('WorkItem__c')) {
                 return castId;
             }
         } catch (Exception e) {
@@ -804,7 +815,8 @@ public without sharing class DeliverySyncItemIngestor {
         }
         try {
             Id castId = (Id) candidate;
-            return castId.getSobjectType().getDescribe().getName().endsWithIgnoreCase('WorkItem__c') ? castId : null;
+            // getLocalName() (not getName()) — endsWithIgnoreCase works either way.
+            return castId.getSobjectType().getDescribe().getLocalName().endsWithIgnoreCase('WorkItem__c') ? castId : null;
         } catch (Exception e) {
             System.debug(LoggingLevel.FINE, 'Candidate is not a local WorkItem Id: ' + e.getMessage());
             return null;
@@ -966,6 +978,10 @@ public without sharing class DeliverySyncItemIngestor {
                 entityName = 'Unknown Org';
             }
             String orgUrl = Url.getOrgDomainUrl().toExternalForm();
+            // getName() (NOT getLocalName()) — LOAD-BEARING: Lightning record URL
+            // requires the namespace-prefixed form. /lightning/r/delivery__NetworkEntity__c/...
+            // resolves in subscriber installs; the bare form 404s.
+            // Per [[get-local-name-vs-get-name-nuance]] memory — do NOT migrate.
             String recordUrl = orgUrl + '/lightning/r/' + entity.getSObjectType().getDescribe().getName() + '/' + entity.Id + '/view';
             Map<String, String> notificationContext = new Map<String, String>{
                 'entityName' => entityName,

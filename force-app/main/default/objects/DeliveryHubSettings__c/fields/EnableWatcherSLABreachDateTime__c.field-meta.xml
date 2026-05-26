@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableWatcherSLABreachDateTime__c</fullName>
+    <description>Per-signal gate for Signal 1 (SLA breach + at-risk WIs). When non-null AND the master EnableWatcherDigestDateTime__c is non-null, WatcherSLABreachQueryService runs on each digest tick. PR-B's install handler sets this on install for top-3 implemented signals.</description>
+    <externalId>false</externalId>
+    <label>Enable Watcher SLA Breach Signal</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

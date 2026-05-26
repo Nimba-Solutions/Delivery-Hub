@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RecipientUserIdsTxt__c</fullName>
+    <description>Snapshot of who was on the recipient list at this run (mirrors DeliveryHubSettings__c.WatcherDigestRecipientUserIdsTxt__c at run time). Comma-separated User IDs. Lets us audit Glen-to-Mahi expansion: when did Mahi start receiving the digest?</description>
+    <externalId>false</externalId>
+    <label>Recipient User IDs</label>
+    <length>255</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

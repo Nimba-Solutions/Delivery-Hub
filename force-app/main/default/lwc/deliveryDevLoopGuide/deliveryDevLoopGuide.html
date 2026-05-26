@@ -1,0 +1,131 @@
+<template>
+    <article class="slds-card devloop-card">
+        <header class="slds-card__header slds-grid">
+            <div class="slds-media slds-media_center slds-has-flexi-truncate">
+                <div class="slds-media__figure">
+                    <lightning-icon icon-name="utility:apex" size="small" alternative-text="Dev-loop guide"></lightning-icon>
+                </div>
+                <div class="slds-media__body">
+                    <h2 class="slds-card__header-title">
+                        <span class="slds-text-heading_small">Dev Loop Guide</span>
+                    </h2>
+                </div>
+            </div>
+        </header>
+
+        <div class="slds-card__body slds-card__body_inner">
+            <template if:true={hasError}>
+                <div class="slds-text-color_error slds-p-vertical_x-small">
+                    {errorMessage}
+                </div>
+            </template>
+
+            <template if:true={isSubscriberOrg}>
+                <div class="slds-box slds-theme_shade slds-text-body_small">
+                    Dev-loop guidance is for package developers &mdash;
+                    install scratch org tooling locally (CumulusCI + sfdx)
+                    to use this.
+                </div>
+            </template>
+
+            <template if:true={hasGuide}>
+                <template if:true={hasFlowCommand}>
+                    <div class="slds-p-vertical_x-small">
+                        <div class="slds-text-title_caps slds-m-bottom_xx-small">
+                            Recommended CCI Flow
+                        </div>
+                        <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                            <code class="devloop-code">{copyFlowCommand}</code>
+                            <lightning-button-icon
+                                icon-name="utility:copy"
+                                alternative-text="Copy command"
+                                title="Copy command"
+                                variant="border-filled"
+                                onclick={handleCopyFlow}>
+                            </lightning-button-icon>
+                        </div>
+                    </div>
+                </template>
+
+                <template if:true={hasPermsets}>
+                    <div class="slds-p-vertical_x-small">
+                        <div class="slds-text-title_caps slds-m-bottom_xx-small">
+                            Required Permsets
+                        </div>
+                        <template for:each={permsetList} for:item="p">
+                            <span key={p.key} class="slds-badge slds-m-right_xx-small">{p.name}</span>
+                        </template>
+                    </div>
+                </template>
+
+                <template if:true={checklistSteps.length}>
+                    <div class="slds-p-vertical_x-small">
+                        <div class="slds-text-title_caps slds-m-bottom_xx-small">
+                            Setup Checklist
+                        </div>
+                        <ol class="slds-list_ordered devloop-checklist">
+                            <template for:each={checklistSteps} for:item="s">
+                                <li key={s.key} class="slds-p-vertical_xx-small">
+                                    <div>{s.label}</div>
+                                    <template if:true={s.hasCommand}>
+                                        <div class="slds-grid slds-grid_vertical-align-center slds-m-top_xx-small">
+                                            <code class="devloop-code devloop-code_step">{s.command}</code>
+                                            <lightning-button-icon
+                                                icon-name="utility:copy"
+                                                alternative-text="Copy step command"
+                                                title="Copy step command"
+                                                variant="bare"
+                                                data-command={s.command}
+                                                onclick={handleCopyStep}>
+                                            </lightning-button-icon>
+                                        </div>
+                                    </template>
+                                    <template if:true={s.hasDocsUrl}>
+                                        <div class="slds-text-body_small">
+                                            <a href={s.docsUrl} target="_blank" rel="noopener noreferrer">Docs</a>
+                                        </div>
+                                    </template>
+                                </li>
+                            </template>
+                        </ol>
+                    </div>
+                </template>
+            </template>
+
+            <template if:true={hasScratchOrgs}>
+                <div class="slds-p-vertical_x-small">
+                    <div class="slds-text-title_caps slds-m-bottom_xx-small">
+                        Active Scratch Orgs
+                    </div>
+                    <ul class="slds-list_vertical">
+                        <template for:each={scratchOrgs} for:item="o">
+                            <li key={o.key} class="slds-p-vertical_xx-small slds-border_bottom">
+                                <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                                    <div class="slds-text-body_small">
+                                        <span class={o.stateBadgeClass}>{o.state}</span>
+                                        <span class="slds-m-left_x-small">{o.branch}</span>
+                                    </div>
+                                    <template if:true={o.hasLoginUrl}>
+                                        <a href={o.loginUrl} target="_blank" rel="noopener noreferrer">
+                                            Open
+                                        </a>
+                                    </template>
+                                </div>
+                                <template if:true={o.lastSyncAt}>
+                                    <div class="slds-text-color_weak slds-text-body_small">
+                                        Last sync:
+                                        <lightning-formatted-date-time
+                                            value={o.lastSyncAt}
+                                            year="numeric" month="short" day="2-digit"
+                                            hour="2-digit" minute="2-digit">
+                                        </lightning-formatted-date-time>
+                                    </div>
+                                </template>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </template>
+        </div>
+    </article>
+</template>

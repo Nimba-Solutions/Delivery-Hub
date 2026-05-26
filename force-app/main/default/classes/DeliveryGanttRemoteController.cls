@@ -8,6 +8,7 @@
  * @author Cloud Nimbus LLC
  */
 @RestResource(urlMapping='/gantt-remote/*')
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryGanttRemoteController {
 
     /**

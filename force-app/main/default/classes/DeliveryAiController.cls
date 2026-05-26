@@ -9,7 +9,7 @@
  * @author Cloud Nimbus LLC
  */
 // Complexity is distributed across many small, focused helper methods — aggregate is expected.
-@SuppressWarnings('PMD.CyclomaticComplexity')
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.AvoidGlobalModifier')
 global with sharing class DeliveryAiController {
 
     /**

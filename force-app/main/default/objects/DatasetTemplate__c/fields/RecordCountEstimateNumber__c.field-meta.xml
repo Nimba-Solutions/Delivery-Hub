@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RecordCountEstimateNumber__c</fullName>
+    <description>Hint to the cockpit UI about roughly how many rows the loader will insert. Drives the "this loader will create about N records" preview blurb. Not authoritative — the actual RecordsLoadedNumber__c on the assignment is the truth.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Rough estimate of records the loader will insert. Used for UI preview only.</inlineHelpText>
+    <label>Record Count Estimate</label>
+    <precision>8</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>TrackTxt__c</fullName>
+    <description>DeveloperName of the OnboardingTrack__mdt this progress row tracks. Indexed for fast per-user-per-track lookups during render.</description>
+    <externalId>true</externalId>
+    <label>Track</label>
+    <length>80</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

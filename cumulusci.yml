@@ -100,6 +100,13 @@ tasks:
         options:
             path: scripts/load-demo-data.apex
 
+    load_feature_data:
+        description: Load sample data for a specific Delivery Hub feature. Pass --feature <FeatureName> to pick a script from scripts/feature-data/. PR 10 ships invoice_generation; future PRs cookie-cut additional loaders.
+        class_path: cumulusci.tasks.apex.anon.AnonymousApexTask
+        options:
+            apex: >
+                System.debug('Stub load_feature_data wrapper. The actual per-feature loaders live in scripts/feature-data/. Run them directly via: cci task run execute_anon --path scripts/feature-data/<feature>.apex');
+
     schedule_all:
         description: Schedule all Delivery Hub background jobs (poller, cleanup, digest, reconciliation)
         class_path: cumulusci.tasks.apex.anon.AnonymousApexTask

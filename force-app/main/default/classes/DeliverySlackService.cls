@@ -6,7 +6,7 @@
  *              The test-connection method runs synchronously from an LWC user action.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexSuggestUsingNamedCred')
+@SuppressWarnings('PMD.ApexSuggestUsingNamedCred, PMD.AvoidGlobalModifier')
 global with sharing class DeliverySlackService {
 
     // ── Public API ───────────────────────────────────────────────────────────
@@ -131,6 +131,28 @@ global with sharing class DeliverySlackService {
             outbound.add(c);
         }
         return outbound;
+    }
+
+    /**
+     * @description Asynchronously posts the Watcher v1 daily digest to Slack.
+     *              Reuses the SlackWebhookUrlTxt__c webhook. Payload is the
+     *              JSON-serialised Block Kit map produced by
+     *              DeliveryWatcherDigestFormatter.buildBlockKit — pre-injected
+     *              with `channel` when WatcherDigestSlackChannelTxt__c is set
+     *              on org defaults. No-ops silently when Slack isn't
+     *              configured (mirrors postStageChanges).
+     * @param payloadJson Pre-serialised Block Kit JSON.
+     */
+    @future(callout=true)
+    public static void postWatcherDigest(String payloadJson) {
+        if (String.isBlank(payloadJson)) {
+            return;
+        }
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        if (settings == null || String.isBlank(settings.SlackWebhookUrlTxt__c)) {
+            return;
+        }
+        post(settings.SlackWebhookUrlTxt__c, payloadJson);
     }
 
     /**

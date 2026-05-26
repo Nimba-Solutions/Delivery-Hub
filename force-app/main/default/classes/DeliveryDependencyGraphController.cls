@@ -6,6 +6,7 @@
  *              of work item dependencies for visualization.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryDependencyGraphController {
 
     /**

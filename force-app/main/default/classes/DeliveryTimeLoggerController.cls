@@ -8,7 +8,7 @@
  *              isApprovalRequired check for the UI.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.AvoidGlobalModifier')
 global with sharing class DeliveryTimeLoggerController {
 
     /**
