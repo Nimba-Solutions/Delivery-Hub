@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>The root container for an onboarding curriculum (Layer 5). One row per track (e.g. Invoice_Generation_Track). Child OnboardingLesson__mdt / OnboardingQuiz__mdt / OnboardingChecklistItem__mdt rows bind via TrackTxt__c. Optionally gated by a Feature__c — non-admins cannot enable that feature until the track's CompletedDateTime__c is populated on their OnboardingProgress__c.</description>
     <label>Onboarding Track</label>
     <pluralLabel>Onboarding Tracks</pluralLabel>
     <visibility>Public</visibility>
