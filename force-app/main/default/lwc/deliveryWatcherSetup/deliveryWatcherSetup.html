@@ -1,0 +1,134 @@
+<template>
+    <lightning-card icon-name="utility:notification" title="Watcher Digest Setup">
+        <span slot="actions">
+            <lightning-badge label={enabledBadgeLabel} variant={enabledBadgeVariant}></lightning-badge>
+        </span>
+
+        <template lwc:if={isLoading}>
+            <div class="slds-p-around_large slds-text-align_center">
+                <lightning-spinner alternative-text="Loading Watcher settings" size="medium"></lightning-spinner>
+            </div>
+        </template>
+
+        <template lwc:else>
+            <div class="slds-p-around_medium">
+
+                <!-- Master toggle -->
+                <div class="slds-grid slds-grid_vertical-align-center slds-m-bottom_medium">
+                    <lightning-input
+                        type="toggle"
+                        label="Enable Watcher Digest"
+                        message-toggle-active="On"
+                        message-toggle-inactive="Off"
+                        checked={isEnabled}
+                        onchange={handleToggleChange}
+                        field-level-help="When ON, the daily Watcher tick scans for SLA breaches, stuck stages, and A/R aging signals, writes a WatcherDigest__c audit row, and posts to Slack when recipients are configured. When OFF, the entire Watcher pipeline is silent (no DML, no callout)."
+                    ></lightning-input>
+                </div>
+
+                <template lwc:if={enabledSince}>
+                    <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_small">
+                        Opted in:
+                        <lightning-formatted-date-time value={enabledSince}></lightning-formatted-date-time>
+                    </p>
+                </template>
+
+                <!-- Recipients -->
+                <lightning-input
+                    type="text"
+                    label="Digest Recipients"
+                    value={recipientIdsCsv}
+                    onchange={handleRecipientChange}
+                    field-level-help={recipientHelpText}
+                    placeholder="0051A00000aBcDeQAB,0051A00000aBcDfQAB"
+                    class="slds-m-bottom_small"
+                ></lightning-input>
+
+                <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_small">
+                    {recipientCountLabel}
+                </p>
+
+                <template lwc:if={hasRecipients}>
+                    <ul class="slds-listbox slds-listbox_inline slds-m-bottom_small">
+                        <template for:each={recipientUsers} for:item="u">
+                            <li key={u.userId} class="slds-listbox__item slds-m-right_x-small slds-m-bottom_x-small">
+                                <lightning-pill label={u.userName} title={u.userEmail}></lightning-pill>
+                            </li>
+                        </template>
+                    </ul>
+                </template>
+
+                <template lwc:if={hasInvalidIds}>
+                    <div class="slds-notify slds-notify_alert slds-alert_warning slds-m-bottom_small" role="alert">
+                        <span class="slds-assistive-text">Warning</span>
+                        <h2>
+                            Invalid or inactive recipient Ids dropped on last save: {invalidIdsText}
+                        </h2>
+                    </div>
+                </template>
+
+                <!-- Slack webhook -->
+                <template lwc:if={hasCurrentWebhook}>
+                    <div class="slds-form-element slds-m-bottom_xx-small">
+                        <span class="slds-form-element__label">Current Slack Webhook</span>
+                        <div class="slds-form-element__static slds-text-body_small slds-text-color_weak">
+                            {currentWebhookMasked}
+                        </div>
+                    </div>
+                </template>
+
+                <lightning-input
+                    type="url"
+                    label="Slack Webhook URL (override)"
+                    value={slackWebhookOverride}
+                    onchange={handleWebhookChange}
+                    field-level-help={webhookHelpText}
+                    placeholder="https://hooks.slack.com/services/..."
+                    class="slds-m-bottom_small"
+                ></lightning-input>
+
+                <!-- Schedule info -->
+                <div class="slds-grid slds-grid_vertical-align-center slds-m-top_small slds-m-bottom_medium">
+                    <div class="slds-col">
+                        <span class="slds-text-body_small">
+                            Run hour (GMT):
+                            <template lwc:if={runHourGmt}>{runHourGmt}</template>
+                            <template lwc:else>not set (defaults to 12 GMT)</template>
+                        </span>
+                    </div>
+                    <div class="slds-col slds-text-align_right">
+                        <a href={scheduledJobsUrl} target="_blank" rel="noopener">
+                            View scheduled jobs
+                        </a>
+                    </div>
+                </div>
+
+                <template lwc:if={hasNextScheduledRun}>
+                    <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_small">
+                        Next scheduled run:
+                        <lightning-formatted-date-time value={nextScheduledRunDateTime}></lightning-formatted-date-time>
+                    </p>
+                </template>
+
+                <!-- Save -->
+                <div class="slds-grid slds-grid_align-spread slds-m-top_medium">
+                    <div>
+                        <template lwc:if={hasLastSaved}>
+                            <span class="slds-text-body_small slds-text-color_weak">
+                                Last saved:
+                                <lightning-formatted-date-time value={lastSavedDateTime}></lightning-formatted-date-time>
+                            </span>
+                        </template>
+                    </div>
+                    <lightning-button
+                        label="Save Settings"
+                        variant="brand"
+                        onclick={handleSave}
+                        disabled={saveButtonDisabled}
+                    ></lightning-button>
+                </div>
+
+            </div>
+        </template>
+    </lightning-card>
+</template>

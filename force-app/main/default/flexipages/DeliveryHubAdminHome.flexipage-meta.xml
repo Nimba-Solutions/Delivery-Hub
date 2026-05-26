@@ -97,6 +97,12 @@
                 <identifier>c_deliveryGhostRecorder</identifier>
             </componentInstance>
         </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryWatcherSetup</componentName>
+                <identifier>c_deliveryWatcherSetup</identifier>
+            </componentInstance>
+        </itemInstances>
         <name>sidebar</name>
         <type>Region</type>
     </flexiPageRegions>
