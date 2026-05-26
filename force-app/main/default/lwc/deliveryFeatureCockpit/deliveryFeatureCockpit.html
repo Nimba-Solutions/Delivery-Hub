@@ -90,14 +90,26 @@
                                 </template>
 
                                 <template lwc:if={feature.hasFeatureId}>
-                                    <div class="slds-m-top_x-small">
-                                        <lightning-button
-                                            label="Show dependencies"
-                                            variant="neutral"
-                                            data-feature-id={feature.featureId}
-                                            data-feature-label={feature.label}
-                                            onclick={handleShowDependencies}>
-                                        </lightning-button>
+                                    <div class="slds-m-top_x-small slds-grid slds-grid_vertical-align-center slds-gutters_xx-small">
+                                        <div class="slds-col slds-no-flex">
+                                            <lightning-button
+                                                label="View record"
+                                                variant="neutral"
+                                                icon-name="utility:open"
+                                                icon-position="left"
+                                                data-feature-id={feature.featureId}
+                                                onclick={handleViewRecord}>
+                                            </lightning-button>
+                                        </div>
+                                        <div class="slds-col slds-no-flex">
+                                            <lightning-button
+                                                label="Show dependencies"
+                                                variant="neutral"
+                                                data-feature-id={feature.featureId}
+                                                data-feature-label={feature.label}
+                                                onclick={handleShowDependencies}>
+                                            </lightning-button>
+                                        </div>
                                     </div>
                                 </template>
 
