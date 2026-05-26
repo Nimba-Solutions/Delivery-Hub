@@ -114,6 +114,9 @@ global with sharing class DeliveryHubCommentController {
             }
         }
 
-        throw new AuraHandledException('Unsupported object type or work item not found: ' + type.getDescribe().getName());
+        // getLocalName() (not getName()) — user-facing AuraHandledException
+        // message; bare name reads cleaner than 'delivery__WorkItem__c' to
+        // subscriber admins reading the toast.
+        throw new AuraHandledException('Unsupported object type or work item not found: ' + type.getDescribe().getLocalName());
     }
 }
