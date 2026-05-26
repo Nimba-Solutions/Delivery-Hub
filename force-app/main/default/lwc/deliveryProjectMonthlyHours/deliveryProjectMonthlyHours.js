@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  SVG bar chart of monthly hours logged across a WorkItem__c tree, with a
+ *               linear-amortized monthly target overlay when estimated hours + start/end
+ *               dates are present. Wires DeliveryHoursAnalyticsController.getMonthlyHoursForProject.
+ *               Default window is 12 months back; user-toggleable to 60-month "all time" view.
+ *               Mounts on the WorkItem__c record page (also exposed on AppPage / HomePage).
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, wire, track } from "lwc";
 import getMonthlyHoursForProject from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHoursAnalyticsController.getMonthlyHoursForProject";

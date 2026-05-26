@@ -1,7 +1,11 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  SLA bucket summary tiles (On Track / At Risk / Breached / Met) for a given
+ *               workflow type. Wires DeliverySLAService.getSLAStatusCounts with @api
+ *               workflowTypeName (default Software_Delivery, override via FlexiPage property).
+ *               Mounts on AppPage / HomePage. Read-only — clicking a tile is consumer-defined.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, wire } from 'lwc';
 import getSLAStatusCounts from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliverySLAService.getSLAStatusCounts';

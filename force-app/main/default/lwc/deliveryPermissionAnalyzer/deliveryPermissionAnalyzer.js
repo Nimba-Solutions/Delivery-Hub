@@ -1,3 +1,14 @@
+/**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
+ * @description  Analyzes ActivityLog__c history to recommend Salesforce permission sets
+ *               based on each user's actual behavior. Wires
+ *               DeliveryPermissionAnalyzerController.getPermissionAnalysis for the
+ *               summary view, getUserDetail for the per-user drill-down, and
+ *               generateSecurityReport to feed DeliveryDocumentController.generateDocument
+ *               for the exportable Security Report PDF. Mounts on HomePage / AppPage / Tab.
+ * @author       Cloud Nimbus LLC
+ */
 import { LightningElement, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import getPermissionAnalysis from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryPermissionAnalyzerController.getPermissionAnalysis';

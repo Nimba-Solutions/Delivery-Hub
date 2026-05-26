@@ -1,3 +1,13 @@
+/**
+ * @name         Delivery Hub
+ * @license      BSL 1.1 — See LICENSE.md
+ * @description  In-app user guide — persona-filtered sections (Developer / PM / Client /
+ *               Admin / All) each with optional deep-link navigation to the matching tab or
+ *               object list. Wires DeliveryGuideController.getGuideContext for context-aware
+ *               labels (e.g. CMT-driven phase names). Mounts on Tab / AppPage / HomePage.
+ *               Pure documentation surface — no DML.
+ * @author       Cloud Nimbus LLC
+ */
 /* eslint-disable no-underscore-dangle, one-var, class-methods-use-this */
 import { LightningElement, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';

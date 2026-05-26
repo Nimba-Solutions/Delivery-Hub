@@ -1,7 +1,13 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  Mobile-friendly voice-to-work-item capture. Uses the Web Speech API to
+ *               transcribe speech, parses natural-language due-date phrases ("end of week",
+ *               "in 3 days", "next Monday", etc.) into ISO dates, and creates one or many
+ *               WorkItem__c records via DeliveryVoiceNotesController.createWorkItemFromVoice /
+ *               createBatchWorkItems. Mounts on AppPage / HomePage / Tab. Designed for
+ *               field reps needing hands-free note capture.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, track, wire } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';

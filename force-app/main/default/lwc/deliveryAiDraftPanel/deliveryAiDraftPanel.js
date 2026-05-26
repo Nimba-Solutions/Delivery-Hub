@@ -1,7 +1,12 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @author Cloud Nimbus LLC
+ * @description  AI-assisted "Draft Client Update" panel for the WorkItem__c record page.
+ *               Calls DeliveryAiController.draftStatusUpdate (OpenAI-backed) to generate a
+ *               professional client-facing status summary, with copy-to-clipboard + insert-as-comment
+ *               actions. Gated by the org's AI feature toggles (DeliveryHubSettings__c) and a
+ *               valid OpenAI key — see deliveryAiSettingsCard for the admin-side configuration.
+ * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
