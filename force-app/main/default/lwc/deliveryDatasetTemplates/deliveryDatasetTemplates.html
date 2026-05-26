@@ -59,6 +59,15 @@
                                         onclick={handleCopyCommand}>
                                     </lightning-button>
                                     <lightning-button
+                                        label="Mark as Loaded"
+                                        variant="success"
+                                        icon-name="utility:check"
+                                        class="slds-m-left_x-small"
+                                        data-template-id={t.templateId}
+                                        data-template-name={t.name}
+                                        onclick={handleOpenMarkAsLoaded}>
+                                    </lightning-button>
+                                    <lightning-button
                                         label="Recent Loads"
                                         variant="neutral"
                                         class="slds-m-left_x-small"
@@ -77,6 +86,12 @@
                             <template lwc:if={t.hasApexScriptPath}>
                                 <div class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
                                     Loader: <code>{t.apexScriptPath}</code>
+                                </div>
+                            </template>
+
+                            <template lwc:if={t.hasLastLoadedSubline}>
+                                <div class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                                    {t.lastLoadedSubline}
                                 </div>
                             </template>
                         </li>
@@ -112,4 +127,62 @@
 
         </div>
     </lightning-card>
+
+    <template lwc:if={isMarkAsLoadedModalOpen}>
+        <section role="dialog" tabindex="-1" aria-modal="true"
+            aria-labelledby="markAsLoadedHeading"
+            class="slds-modal slds-fade-in-open slds-modal_small">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <lightning-button-icon
+                        icon-name="utility:close"
+                        variant="bare-inverse"
+                        size="large"
+                        alternative-text="Cancel"
+                        title="Cancel"
+                        class="slds-modal__close"
+                        onclick={handleCloseMarkAsLoaded}>
+                    </lightning-button-icon>
+                    <h2 id="markAsLoadedHeading" class="slds-modal__title slds-hyphenate">
+                        Mark Dataset as Loaded
+                    </h2>
+                    <p class="slds-m-top_x-small slds-text-body_small slds-text-color_weak">
+                        Template: <strong>{markAsLoadedTemplateName}</strong>
+                    </p>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <p class="slds-text-body_small slds-m-bottom_small">
+                        Click <em>Confirm</em> after you have finished running
+                        <code>cci task run load_feature_data</code> locally.
+                        A DatasetTemplateAssignment audit row will be created
+                        with you as the loader, timestamped now.
+                    </p>
+                    <lightning-textarea
+                        name="notes"
+                        label="Notes (optional)"
+                        max-length="1000"
+                        placeholder="What dataset did you load? Any caveats?"
+                        value={markAsLoadedNotes}
+                        onchange={handleMarkAsLoadedNotesChange}>
+                    </lightning-textarea>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button
+                        label="Cancel"
+                        variant="neutral"
+                        onclick={handleCloseMarkAsLoaded}
+                        disabled={isSubmittingMarkAsLoaded}>
+                    </lightning-button>
+                    <lightning-button
+                        label="Confirm"
+                        variant="brand"
+                        class="slds-m-left_x-small"
+                        onclick={handleSubmitMarkAsLoaded}
+                        disabled={isSubmittingMarkAsLoaded}>
+                    </lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
 </template>
