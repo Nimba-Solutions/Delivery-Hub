@@ -11,6 +11,7 @@
  */
 @SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.ApexSOQLInjection')
 @RestResource(urlMapping='/deliveryhub/v1/tasks/*')
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global without sharing class DeliveryTaskAPI {
 
     /**

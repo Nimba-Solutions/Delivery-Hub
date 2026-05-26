@@ -7,6 +7,7 @@
  *              from the default view but visible when includeDismissed=true.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliverySyncRetryController {
 
     /** @description Summary of a failed sync item for display. */

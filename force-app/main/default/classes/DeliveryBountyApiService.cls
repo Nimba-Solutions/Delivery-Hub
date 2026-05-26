@@ -9,6 +9,7 @@
  */
 @SuppressWarnings('PMD.ApexCRUDViolation')
 @RestResource(urlMapping='/deliveryhub/v1/bounties/*')
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global without sharing class DeliveryBountyApiService {
 
     // ── GET: Public Bounty Browsing ──────────────────────────────────────

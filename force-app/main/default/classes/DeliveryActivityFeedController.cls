@@ -8,7 +8,7 @@
  *               WorkLog approval workflows.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation,PMD.ExcessiveParameterList,PMD.CyclomaticComplexity')
+@SuppressWarnings('PMD.ApexCRUDViolation,PMD.ExcessiveParameterList,PMD.CyclomaticComplexity,PMD.AvoidGlobalModifier')
 global with sharing class DeliveryActivityFeedController {
 
     private static final Integer PAGE_SIZE = 25;
@@ -623,9 +623,11 @@ global with sharing class DeliveryActivityFeedController {
     }
 
     /**
-     * Render a value for the activity-feed detail line. Null / blank become
-     * '(empty)' so users see signal instead of a bare arrow or the literal
+     * @description Render a value for the activity-feed detail line. Null / blank
+     * become '(empty)' so users see signal instead of a bare arrow or the literal
      * Apex String.valueOf(null) output of "null".
+     * @param v The raw string value (typically an old/new field value or stage name).
+     * @return '(empty)' when v is null or blank; otherwise v unchanged.
      */
     private static String displayValue(String v) {
         return String.isBlank(v) ? '(empty)' : v;

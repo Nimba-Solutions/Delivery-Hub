@@ -24,6 +24,7 @@
  */
 @SuppressWarnings('PMD.ApexCRUDViolation, PMD.ApexDoc')
 @RestResource(urlMapping='/sign/*')
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryDocActionRestApi {
 
     /** @description Handles GET /sign/<token>. Writes the document bundle to the response body. */

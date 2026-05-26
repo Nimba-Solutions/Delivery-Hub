@@ -6,6 +6,7 @@
  *               counts for dashboard components and warning day thresholds for At Risk detection.
  * @author Cloud Nimbus LLC
  */
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliverySLAService {
 
     /** @description Hardcoded fallback: days for Critical priority (used when no CMT rules exist) */

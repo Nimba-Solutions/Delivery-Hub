@@ -4,7 +4,7 @@
  * @description Controller for retrieving and seeding demo WorkItem__c records.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+@SuppressWarnings('PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.AvoidGlobalModifier')
 global with sharing class DeliveryWorkItemController {
 
     /**

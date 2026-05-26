@@ -9,6 +9,7 @@
  */
 @SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity')
 @RestResource(urlMapping='/deliveryhub/v1/api/*')
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global without sharing class DeliveryPublicApiService {
 
     /** @description Page size for paginated list endpoints (LIMIT cap). */

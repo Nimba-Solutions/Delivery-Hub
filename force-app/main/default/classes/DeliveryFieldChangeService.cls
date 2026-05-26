@@ -7,7 +7,7 @@
  *               retrieving change history and trend data.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity, PMD.StdCyclomaticComplexity, PMD.AvoidGlobalModifier')
 global with sharing class DeliveryFieldChangeService {
 
     /**

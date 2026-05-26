@@ -6,7 +6,7 @@
  *               and capacity utilization using DeveloperCapacity__mdt configuration.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexDoc, PMD.ExcessivePublicCount')
+@SuppressWarnings('PMD.ApexDoc, PMD.ExcessivePublicCount, PMD.AvoidGlobalModifier')
 global with sharing class DeliveryVelocityService {
 
     private static final Integer DEFAULT_WEEKS = 8;

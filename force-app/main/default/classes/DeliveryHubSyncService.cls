@@ -8,6 +8,7 @@
  */
 @SuppressWarnings('PMD.StdCyclomaticComplexity')
 @RestResource(urlMapping='/deliveryhub/v1/sync/*')
+@SuppressWarnings('PMD.AvoidGlobalModifier')
 global without sharing class DeliveryHubSyncService {
 
     /**
