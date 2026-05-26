@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DescriptionTxt__c</fullName>
+    <description>Admin-readable label for this routing rule, surfaced in setup screens and audit logs to explain who/why this approver was chosen.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <inlineHelpText>Short description shown in setup screens — e.g. "Billing director approves invoice toggles".</inlineHelpText>
+    <label>Description</label>
+    <length>255</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>
