@@ -1,0 +1,61 @@
+# Example: PATCH /scratch-orgs/{id} on PR close/merge — companion to
+# `example-scratch-org-create.yml`. Marks the ScratchOrgInstance__c row as
+# Decommissioned so the DH cockpit can hide / sweep it.
+#
+# Copy this file into YOUR OWN repo. Same adoption steps apply:
+#   1. Add the DH_BASE_URL + DH_API_KEY secrets.
+#   2. Remove the `if: false` safety guard.
+#   3. Drop the `branches: ['__never-matches__']` filter.
+#
+# Endpoint contract (source of truth: DeliveryPublicApiService.cls):
+#   URL:   PATCH {DH_BASE_URL}/services/apexrest/delivery/deliveryhub/v1/api/scratch-orgs/{id}
+#   Auth:  X-Api-Key header (same NetworkEntity__c.ApiKeyTxt__c as create).
+#   Body:  { "state":      "<required — one of the ScratchOrgState GVS values>",
+#            "lastSyncAt": "<optional — ISO-8601 timestamp>" }
+#   Resp:  200 { "success": true, "data": { "id": "<soi-id>", "state": "<new-state>" } }
+#          400/404 { "success": false, "error": "<message>" }
+#
+# Storing the SOI id between workflows: this example assumes you persisted the
+# `data.id` returned by the create workflow somewhere your decommission run can
+# read (a job artifact, a repo variable keyed by PR number, the PR body, etc.).
+# Replace the `SOI_ID` lookup with whatever scheme you use.
+
+name: Example - Decommission Scratch Org on PR Close
+
+on:
+  pull_request:
+    types: [closed]
+    # Safety filter — remove when you adopt this workflow.
+    branches: ['__never-matches__']
+
+jobs:
+  decommission-scratch-org:
+    runs-on: ubuntu-latest
+    # Safety guard — remove when you adopt this workflow.
+    if: false
+
+    steps:
+      - name: Resolve ScratchOrgInstance__c id for this PR (stub — replace)
+        id: lookup
+        run: |
+          # Replace this with however you stored the SOI id from the create run.
+          echo "soi_id=a01XX000000000XXX" >> "$GITHUB_OUTPUT"
+
+      - name: PATCH /scratch-orgs/{id} on the Delivery Hub
+        env:
+          DH_BASE_URL: ${{ secrets.DH_BASE_URL }}
+          DH_API_KEY:  ${{ secrets.DH_API_KEY }}
+          SOI_ID:      ${{ steps.lookup.outputs.soi_id }}
+        run: |
+          LAST_SYNC="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+
+          BODY="$(jq -n \
+            --arg state      'Decommissioned' \
+            --arg lastSyncAt "$LAST_SYNC" \
+            '{state: $state, lastSyncAt: $lastSyncAt}')"
+
+          curl --fail-with-body -sS -X PATCH \
+            -H "X-Api-Key: $DH_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$BODY" \
+            "$DH_BASE_URL/services/apexrest/delivery/deliveryhub/v1/api/scratch-orgs/$SOI_ID"
