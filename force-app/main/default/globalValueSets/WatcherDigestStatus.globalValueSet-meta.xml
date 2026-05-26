@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GlobalValueSet xmlns="http://soap.sforce.com/2006/04/metadata">
-    <description>Outcome status for a WatcherDigest__c run. Success = every enabled signal returned cleanly. Partial = at least one signal threw but the orchestrator caught and continued. Failed = the orchestrator itself errored before any signal ran.</description>
+    <description>Outcome status for a WatcherDigest__c run. Success = every enabled signal returned cleanly AND Slack delivery succeeded (or no Slack post was attempted). Partial = at least one signal threw but the orchestrator caught and continued. Failed = the orchestrator itself errored before any signal ran. Slack_Failed = signals ran cleanly but the Slack webhook returned non-2xx or threw — subscribers may not have received the digest (see SlackResponseTxt__c for the response).</description>
     <masterLabel>Watcher Digest Status</masterLabel>
     <sorted>false</sorted>
     <customValue>
@@ -17,5 +17,10 @@
         <fullName>Failed</fullName>
         <default>false</default>
         <label>Failed</label>
+    </customValue>
+    <customValue>
+        <fullName>Slack_Failed</fullName>
+        <default>false</default>
+        <label>Slack Failed</label>
     </customValue>
 </GlobalValueSet>
