@@ -157,4 +157,253 @@ private class DeliveryDatasetControllerTest {
         Test.stopTest();
         System.assertEquals(true, thrown, 'Null templateId must produce an exception.');
     }
+
+    // ────────────────────────────────────────────────────────────────────
+    // recordAssignment + getLastAssignment — writer + reader of the
+    // DatasetTemplateAssignment__c audit row (Flow 7 #2 gap closure).
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Builds a standard (non-admin) User. Used to assert the
+     *              admin gate fires on recordAssignment.
+     * @return Inserted standard User.
+     */
+    private static User buildStandardUser() {
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User u = new User(
+            Alias = 'ddctt',
+            Email = 'ddctt+' + Crypto.getRandomLong() + '@example.test',
+            EmailEncodingKey = 'UTF-8',
+            LastName = 'DatasetTester',
+            LanguageLocaleKey = 'en_US',
+            LocaleSidKey = 'en_US',
+            ProfileId = p.Id,
+            TimeZoneSidKey = 'America/New_York',
+            UserName = 'ddctt+' + Crypto.getRandomLong() + '@dh-test.example.test'
+        );
+        // Setup-object insert isolated in runAs(current) to avoid MIXED_DML
+        // against the caller's subsequent DatasetTemplate__c inserts.
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            insert u;
+        }
+        return u;
+    }
+
+    /**
+     * @description Builds an admin User with the DeliveryHubAdmin PSG
+     *              assigned so the assertAdminOrThrow gate lets calls
+     *              through. Calculates the PSG before assignment per
+     *              [[psg-must-be-calculated-before-assignment-in-test]] —
+     *              the namespaced packaging-org test context leaves PSGs
+     *              "Outdated" after install and PermissionSetAssignment
+     *              insert will fail without the recalc.
+     * @return Inserted admin User.
+     */
+    private static User buildAdminUser() {
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User u = new User(
+            Alias = 'ddcta',
+            Email = 'ddcta+' + Crypto.getRandomLong() + '@example.test',
+            EmailEncodingKey = 'UTF-8',
+            LastName = 'DatasetAdmin',
+            LanguageLocaleKey = 'en_US',
+            LocaleSidKey = 'en_US',
+            ProfileId = p.Id,
+            TimeZoneSidKey = 'America/New_York',
+            UserName = 'ddcta+' + Crypto.getRandomLong() + '@dh-test.example.test'
+        );
+        List<PermissionSetGroup> psgs = [
+            SELECT Id FROM PermissionSetGroup
+            WHERE DeveloperName IN ('DeliveryHubAdmin', 'delivery__DeliveryHubAdmin')
+            LIMIT 1
+        ];
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            insert u;
+            if (!psgs.isEmpty()) {
+                Test.calculatePermissionSetGroup(psgs[0].Id);
+                insert new PermissionSetAssignment(
+                    AssigneeId = u.Id,
+                    PermissionSetGroupId = psgs[0].Id
+                );
+            }
+        }
+        return u;
+    }
+
+    @IsTest
+    static void testRecordAssignmentInsertsRow() {
+        User admin = buildAdminUser();
+        DatasetTemplate__c t = TestDataFactory.newDatasetTemplate();
+
+        Test.startTest();
+        DatasetTemplateAssignment__c inserted;
+        System.runAs(admin) {
+            inserted = DeliveryDatasetController.recordAssignment(t.Id, 'Loaded the invoice demo seed.');
+        }
+        Test.stopTest();
+
+        System.assertNotEquals(null, inserted, 'recordAssignment must return the inserted row.');
+        System.assertNotEquals(null, inserted.Id, 'Returned row must be persisted (have an Id).');
+        DatasetTemplateAssignment__c reloaded = [
+            SELECT Id, DatasetTemplateLookup__c, LoadedByUserLookup__c, OutcomePk__c,
+                   NotesTxt__c, LoadedDateTime__c
+            FROM DatasetTemplateAssignment__c
+            WHERE Id = :inserted.Id
+            LIMIT 1
+        ];
+        System.assertEquals(t.Id, reloaded.DatasetTemplateLookup__c, 'Template lookup must match.');
+        System.assertEquals(admin.Id, reloaded.LoadedByUserLookup__c, 'LoadedBy must be the running admin.');
+        System.assertEquals('Success', reloaded.OutcomePk__c, 'Outcome must default to Success.');
+        System.assertEquals('Loaded the invoice demo seed.', reloaded.NotesTxt__c, 'Notes must round-trip.');
+        System.assertNotEquals(null, reloaded.LoadedDateTime__c, 'LoadedDateTime__c must be populated.');
+    }
+
+    @IsTest
+    static void testRecordAssignmentRequiresAdmin() {
+        User standard = buildStandardUser();
+        DatasetTemplate__c t = TestDataFactory.newDatasetTemplate();
+
+        Boolean thrown = false;
+        Test.startTest();
+        System.runAs(standard) {
+            try {
+                DeliveryDatasetController.recordAssignment(t.Id, 'no perms');
+            } catch (AuraHandledException e) {
+                thrown = true;
+            } catch (Exception e) {
+                thrown = true;
+            }
+        }
+        Test.stopTest();
+
+        System.assertEquals(true, thrown, 'Non-admin caller must hit the admin gate.');
+        Integer rows = [
+            SELECT COUNT() FROM DatasetTemplateAssignment__c
+            WHERE DatasetTemplateLookup__c = :t.Id
+        ];
+        System.assertEquals(0, rows, 'No audit row should land when the gate fires.');
+    }
+
+    @IsTest
+    static void testRecordAssignmentUpdatesExistingSameDayRow() {
+        User admin = buildAdminUser();
+        DatasetTemplate__c t = TestDataFactory.newDatasetTemplate();
+
+        Test.startTest();
+        DatasetTemplateAssignment__c first;
+        DatasetTemplateAssignment__c second;
+        System.runAs(admin) {
+            first = DeliveryDatasetController.recordAssignment(t.Id, 'first click');
+            second = DeliveryDatasetController.recordAssignment(t.Id, 'second click — same day');
+        }
+        Test.stopTest();
+
+        System.assertEquals(first.Id, second.Id,
+            'Same-day idempotency: second call must update the same row, not insert a duplicate.');
+        Integer rows = [
+            SELECT COUNT() FROM DatasetTemplateAssignment__c
+            WHERE DatasetTemplateLookup__c = :t.Id
+              AND LoadedByUserLookup__c = :admin.Id
+        ];
+        System.assertEquals(1, rows, 'Only one audit row should exist for this user+template today.');
+        DatasetTemplateAssignment__c reloaded = [
+            SELECT Id, NotesTxt__c FROM DatasetTemplateAssignment__c
+            WHERE Id = :second.Id
+            LIMIT 1
+        ];
+        System.assertEquals('second click — same day', reloaded.NotesTxt__c,
+            'Notes should reflect the most-recent click.');
+    }
+
+    @IsTest
+    static void testRecordAssignmentRejectsInvalidTemplateId() {
+        User admin = buildAdminUser();
+        // Borrow the running-user Id as a non-null Id of the WRONG sObject
+        // type — recordAssignment looks the template up by Id and must throw
+        // when no DatasetTemplate__c row matches.
+        Id bogus = UserInfo.getUserId();
+
+        Boolean thrown = false;
+        Test.startTest();
+        System.runAs(admin) {
+            try {
+                DeliveryDatasetController.recordAssignment(bogus, null);
+            } catch (AuraHandledException e) {
+                thrown = true;
+            } catch (Exception e) {
+                thrown = true;
+            }
+        }
+        Test.stopTest();
+
+        System.assertEquals(true, thrown, 'Bogus / wrong-type templateId must throw.');
+    }
+
+    @IsTest
+    static void testRecordAssignmentRejectsNullTemplateId() {
+        User admin = buildAdminUser();
+
+        Boolean thrown = false;
+        Test.startTest();
+        System.runAs(admin) {
+            try {
+                DeliveryDatasetController.recordAssignment(null, 'no id');
+            } catch (AuraHandledException e) {
+                thrown = true;
+            } catch (Exception e) {
+                thrown = true;
+            }
+        }
+        Test.stopTest();
+
+        System.assertEquals(true, thrown, 'Null templateId must throw.');
+    }
+
+    @IsTest
+    static void testGetLastAssignmentReturnsMostRecentRow() {
+        DatasetTemplate__c t = TestDataFactory.newDatasetTemplate();
+        DatasetTemplateAssignment__c older = TestDataFactory.buildDatasetTemplateAssignment(
+            t.Id, new Map<String, Object>{
+                'LoadedDateTime__c' => Datetime.now().addHours(-3),
+                'RecordsLoadedNumber__c' => 4
+            }
+        );
+        DatasetTemplateAssignment__c newer = TestDataFactory.buildDatasetTemplateAssignment(
+            t.Id, new Map<String, Object>{
+                'LoadedDateTime__c' => Datetime.now().addMinutes(-2),
+                'RecordsLoadedNumber__c' => 11
+            }
+        );
+        insert new List<DatasetTemplateAssignment__c>{ older, newer };
+
+        Test.startTest();
+        DeliveryDatasetController.LastAssignmentDTO dto =
+            DeliveryDatasetController.getLastAssignment(t.Id);
+        Test.stopTest();
+
+        System.assertNotEquals(null, dto, 'Must return a DTO when assignments exist.');
+        System.assertEquals(newer.Id, dto.assignmentId,
+            'Must return the most-recent row by LoadedDateTime__c DESC.');
+        System.assertEquals(t.Id, dto.templateId, 'Template id should round-trip.');
+        System.assertEquals(11, dto.recordsLoaded, 'recordsLoaded must reflect the newest row.');
+    }
+
+    @IsTest
+    static void testGetLastAssignmentNullReturnsNull() {
+        Test.startTest();
+        DeliveryDatasetController.LastAssignmentDTO dto =
+            DeliveryDatasetController.getLastAssignment(null);
+        Test.stopTest();
+        System.assertEquals(null, dto, 'Null templateId must return null (not throw).');
+    }
+
+    @IsTest
+    static void testGetLastAssignmentReturnsNullWhenNoRowsExist() {
+        DatasetTemplate__c t = TestDataFactory.newDatasetTemplate();
+        Test.startTest();
+        DeliveryDatasetController.LastAssignmentDTO dto =
+            DeliveryDatasetController.getLastAssignment(t.Id);
+        Test.stopTest();
+        System.assertEquals(null, dto, 'No assignment rows means null DTO (first-load case).');
+    }
 }

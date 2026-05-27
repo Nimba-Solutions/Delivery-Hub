@@ -85,6 +85,23 @@ global with sharing class DeliveryDatasetController {
     }
 
     /**
+     * @description Compact payload for the "last loaded by X on Y" subline
+     *              the LWC renders on each template card. Mirrors a single
+     *              DatasetTemplateAssignment__c without leaking the SObject.
+     *              All fields nullable — empty when no assignment row exists
+     *              for the template yet (first-load case).
+     */
+    global class LastAssignmentDTO {
+        @AuraEnabled public Id assignmentId;
+        @AuraEnabled public Id templateId;
+        @AuraEnabled public DateTime loadedAt;
+        @AuraEnabled public String loadedByName;
+        @AuraEnabled public String outcome;
+        @AuraEnabled public Integer recordsLoaded;
+        @AuraEnabled public String notes;
+    }
+
+    /**
      * @description Returns DatasetTemplate__c rows whose FeatureLookup__c
      *              points at the given feature. Cacheable so the LWC can
      *              @wire it without re-querying on every render.
@@ -320,6 +337,187 @@ global with sharing class DeliveryDatasetController {
             return null;
         }
         return null;
+    }
+
+    /**
+     * @description Records that an admin successfully loaded a dataset
+     *              template via the `cci task run load_feature_data` CLI
+     *              command (the cockpit "Mark as Loaded" button is the
+     *              explicit-attestation entry point — CCI runs out-of-band
+     *              so we cannot auto-detect completion). Inserts a
+     *              DatasetTemplateAssignment__c audit row tied to the running
+     *              user + current datetime, OutcomePk__c='Success'.
+     *
+     *              Idempotent same-day: if the running user already has an
+     *              assignment row for this template with LoadedDateTime__c
+     *              inside today's calendar day, updates that row instead of
+     *              inserting a duplicate (the admin clicked twice, or
+     *              re-confirmed a load — one click per template per day is
+     *              the documented contract).
+     *
+     *              Admin-gated. Reuses the same PSG check shape as
+     *              DeliveryFeatureCatalogController.isAdmin so non-admins
+     *              cannot pollute the audit trail.
+     * @param templateId DatasetTemplate__c Id the admin loaded. Required.
+     * @param notes Optional notes about what was loaded / why. ≤1000 chars
+     *              (matches NotesTxt__c LongTextArea length). Trimmed and
+     *              null-coalesced when blank.
+     * @return The inserted-or-updated DatasetTemplateAssignment__c row.
+     */
+    @AuraEnabled
+    global static DatasetTemplateAssignment__c recordAssignment(Id templateId, String notes) {
+        assertAdminOrThrow();
+        if (templateId == null) {
+            throw new AuraHandledException('templateId is required.');
+        }
+        List<DatasetTemplate__c> templates = [
+            SELECT Id FROM DatasetTemplate__c
+            WHERE Id = :templateId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (templates.isEmpty()) {
+            throw new AuraHandledException('Dataset template not found.');
+        }
+        String safeNotes = sanitizeNotes(notes);
+
+        // Same-day idempotency: did this user already record a load for this
+        // template today? Use today's start/end as a half-open window so the
+        // assertion is timezone-safe (the running user's TZ defines "today").
+        Datetime startOfDay = Datetime.newInstance(Date.today(), Time.newInstance(0, 0, 0, 0));
+        Datetime startOfTomorrow = startOfDay.addDays(1);
+        Id runningUserId = UserInfo.getUserId();
+        List<DatasetTemplateAssignment__c> existing = [
+            SELECT Id, NotesTxt__c, RecordsLoadedNumber__c, OutcomePk__c, LoadedDateTime__c
+            FROM DatasetTemplateAssignment__c
+            WHERE DatasetTemplateLookup__c = :templateId
+              AND LoadedByUserLookup__c = :runningUserId
+              AND LoadedDateTime__c >= :startOfDay
+              AND LoadedDateTime__c < :startOfTomorrow
+            WITH SYSTEM_MODE
+            ORDER BY LoadedDateTime__c DESC NULLS LAST
+            LIMIT 1
+        ];
+        DatasetTemplateAssignment__c row;
+        if (!existing.isEmpty()) {
+            row = existing.get(0);
+            row.NotesTxt__c = safeNotes;
+            row.LoadedDateTime__c = Datetime.now();
+            try {
+                update row;
+            } catch (Exception e) {
+                System.debug(LoggingLevel.WARN,
+                    '[DeliveryDatasetController.recordAssignment] update failed: ' + e.getMessage());
+                throw new AuraHandledException('Unable to update the existing assignment row.');
+            }
+        } else {
+            row = new DatasetTemplateAssignment__c(
+                DatasetTemplateLookup__c = templateId,
+                LoadedByUserLookup__c = runningUserId,
+                LoadedDateTime__c = Datetime.now(),
+                OutcomePk__c = 'Success',
+                NotesTxt__c = safeNotes
+            );
+            try {
+                insert row;
+            } catch (Exception e) {
+                System.debug(LoggingLevel.WARN,
+                    '[DeliveryDatasetController.recordAssignment] insert failed: ' + e.getMessage());
+                throw new AuraHandledException('Unable to record the dataset assignment.');
+            }
+        }
+        return row;
+    }
+
+    /**
+     * @description Returns the most-recent DatasetTemplateAssignment__c row
+     *              for the given template (across all users), packed into a
+     *              compact DTO suitable for the LWC "last loaded by X on Y"
+     *              subline. Returns null when no assignment row exists yet.
+     *              Cacheable so the LWC can @wire it without re-querying on
+     *              every render.
+     * @param templateId DatasetTemplate__c id whose most-recent load should
+     *                   be returned.
+     * @return LastAssignmentDTO or null when no row exists.
+     */
+    @AuraEnabled(cacheable=true)
+    global static LastAssignmentDTO getLastAssignment(Id templateId) {
+        if (templateId == null) {
+            return null;
+        }
+        try {
+            List<DatasetTemplateAssignment__c> rows = [
+                SELECT Id, DatasetTemplateLookup__c, LoadedDateTime__c,
+                       LoadedByUserLookup__c, LoadedByUserLookup__r.Name,
+                       OutcomePk__c, RecordsLoadedNumber__c, NotesTxt__c
+                FROM DatasetTemplateAssignment__c
+                WHERE DatasetTemplateLookup__c = :templateId
+                WITH SYSTEM_MODE
+                ORDER BY LoadedDateTime__c DESC NULLS LAST
+                LIMIT 1
+            ];
+            if (rows.isEmpty()) {
+                return null;
+            }
+            DatasetTemplateAssignment__c a = rows.get(0);
+            LastAssignmentDTO dto = new LastAssignmentDTO();
+            dto.assignmentId = a.Id;
+            dto.templateId = a.DatasetTemplateLookup__c;
+            dto.loadedAt = a.LoadedDateTime__c;
+            if (a.LoadedByUserLookup__c != null && a.LoadedByUserLookup__r != null) {
+                dto.loadedByName = a.LoadedByUserLookup__r.Name;
+            }
+            dto.outcome = a.OutcomePk__c;
+            if (a.RecordsLoadedNumber__c != null) {
+                dto.recordsLoaded = a.RecordsLoadedNumber__c.intValue();
+            }
+            dto.notes = a.NotesTxt__c;
+            return dto;
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryDatasetController.getLastAssignment] failed: ' + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * @description Throws an AuraHandledException when the running user is
+     *              not a DH admin. Reuses the same PermissionSetGroup gate
+     *              as DeliveryFeatureCatalogController.isAdmin (both
+     *              namespaced + bare DeveloperName forms accepted per
+     *              [[namespace-safe-typed-sobject-describe]]).
+     */
+    private static void assertAdminOrThrow() {
+        Boolean isAdmin = ![
+            SELECT Id FROM PermissionSetAssignment
+            WHERE AssigneeId = :UserInfo.getUserId()
+              AND PermissionSetGroup.DeveloperName IN
+                  ('DeliveryHubAdmin', 'delivery__DeliveryHubAdmin')
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ].isEmpty();
+        if (!isAdmin) {
+            throw new AuraHandledException('Only Delivery Hub admins can record dataset assignments.');
+        }
+    }
+
+    /**
+     * @description Trims optional admin notes and clamps to the NotesTxt__c
+     *              column length (1000 chars). Returns null when blank so we
+     *              don't insert empty strings into the audit row.
+     * @param notes Raw notes from the LWC.
+     * @return Sanitized notes string or null when blank.
+     */
+    private static String sanitizeNotes(String notes) {
+        if (String.isBlank(notes)) {
+            return null;
+        }
+        String trimmed = notes.trim();
+        Integer maxLen = 1000;
+        if (trimmed.length() > maxLen) {
+            trimmed = trimmed.substring(0, maxLen);
+        }
+        return trimmed;
     }
 
     /**
