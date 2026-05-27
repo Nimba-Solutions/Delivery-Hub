@@ -410,6 +410,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>DatasetTemplateAssignment__c.NotesTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Feature__c.FeatureDefinitionTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
