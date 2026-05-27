@@ -120,6 +120,7 @@ global without sharing class DeliveryPublicApiService {
     private static void routeGet(String resource, Id entityId) {
         if (routeGetCore(resource, entityId)) { return; }
         if (routeGetExtended(resource, entityId)) { return; }
+        if (routeGetMonitoring(resource, entityId)) { return; }
         sendError(404, 'Unknown resource: ' + resource);
     }
 
@@ -143,6 +144,22 @@ global without sharing class DeliveryPublicApiService {
         // API key still authenticates the caller via authenticateRequest(); the
         // feature toggle registry isn't per-tenant.
         if (resource == 'feature-toggle-requests') { getFeatureToggleRequests(); return true; }
+        return false;
+    }
+
+    /**
+     * @description Third routing tier — monitoring + onboarding read endpoints.
+     *              Kept separate from routeGetExtended so neither router method
+     *              accrues excessive cyclomatic complexity.
+     * @param resource Path segment after /api/.
+     * @param entityId The authenticated (or delegated) NetworkEntity__c.Id.
+     * @return true if a monitoring route was matched and handled.
+     */
+    private static Boolean routeGetMonitoring(String resource, Id entityId) {
+        // Watcher health — entity-scoped slice of the org-wide digest.
+        if (resource == 'watcher-health') { getWatcherHealth(entityId); return true; }
+        // Onboarding progress — subject-scoped via the X-Portal-User header.
+        if (resource == 'onboarding-progress') { getOnboardingProgress(); return true; }
         return false;
     }
 
@@ -521,6 +538,227 @@ global without sharing class DeliveryPublicApiService {
             'reason' => req.ReasonTxt__c,
             'requestedAt' => req.RequestedDateTime__c
         };
+    }
+
+    // ── Watcher Health (entity-scoped) ──────────────────────────────────
+
+    /**
+     * @description GET /api/watcher-health — returns the caller entity's slice
+     *              of the most recent Watcher digest run: a freshness timestamp,
+     *              an overallStatus derived solely from the caller's own flagged
+     *              records, and the caller's own flagged work items + documents.
+     *              The WatcherDigest__c run is org-wide; this endpoint
+     *              deliberately filters the flagged-Id payloads down to records
+     *              owned by the authenticated entity, so one tenant never sees
+     *              another tenant's flagged items, the org-wide signal totals,
+     *              the internal digest body, or the Slack payload.
+     * @param entityId The authenticated (or delegated) NetworkEntity__c.Id.
+     */
+    private static void getWatcherHealth(Id entityId) {
+        List<WatcherDigest__c> digests = [
+            SELECT RunDateTime__c, FlaggedWorkItemIdsTxt__c, FlaggedDocumentIdsTxt__c
+            FROM WatcherDigest__c
+            WITH SYSTEM_MODE
+            ORDER BY RunDateTime__c DESC NULLS LAST
+            LIMIT 1
+        ];
+        if (digests.isEmpty()) {
+            sendSuccess(new Map<String, Object>{
+                'lastRunAt' => null,
+                'overallStatus' => 'Unknown',
+                'flaggedWorkItemCount' => 0,
+                'flaggedDocumentCount' => 0,
+                'flaggedWorkItems' => new List<Object>(),
+                'flaggedDocuments' => new List<Object>()
+            });
+            return;
+        }
+        WatcherDigest__c digest = digests.get(0);
+        List<Map<String, Object>> flaggedWorkItems = buildEntityFlaggedWorkItems(
+            parseCsvIds(digest.FlaggedWorkItemIdsTxt__c), entityId
+        );
+        List<Map<String, Object>> flaggedDocuments = buildEntityFlaggedDocuments(
+            parseCsvIds(digest.FlaggedDocumentIdsTxt__c), entityId
+        );
+        Boolean clean = flaggedWorkItems.isEmpty() && flaggedDocuments.isEmpty();
+        sendSuccess(new Map<String, Object>{
+            'lastRunAt' => digest.RunDateTime__c,
+            'overallStatus' => clean ? 'Healthy' : 'Attention',
+            'flaggedWorkItemCount' => flaggedWorkItems.size(),
+            'flaggedDocumentCount' => flaggedDocuments.size(),
+            'flaggedWorkItems' => flaggedWorkItems,
+            'flaggedDocuments' => flaggedDocuments
+        });
+    }
+
+    private static List<Map<String, Object>> buildEntityFlaggedWorkItems(Set<Id> ids, Id entityId) {
+        List<Map<String, Object>> out = new List<Map<String, Object>>();
+        if (ids.isEmpty()) { return out; }
+        for (WorkItem__c wi : [
+            SELECT Id, Name, BriefDescriptionTxt__c, StatusPk__c, StageNamePk__c, SLATargetDate__c
+            FROM WorkItem__c
+            WHERE Id IN :ids AND ClientNetworkEntityLookup__c = :entityId
+            WITH SYSTEM_MODE
+            ORDER BY SLATargetDate__c ASC NULLS LAST
+            LIMIT 200
+        ]) {
+            out.add(new Map<String, Object>{
+                'id' => wi.Id,
+                'name' => wi.Name,
+                'title' => wi.BriefDescriptionTxt__c,
+                'status' => wi.StatusPk__c,
+                'stage' => wi.StageNamePk__c,
+                'slaTargetDate' => wi.SLATargetDate__c
+            });
+        }
+        return out;
+    }
+
+    private static List<Map<String, Object>> buildEntityFlaggedDocuments(Set<Id> ids, Id entityId) {
+        List<Map<String, Object>> out = new List<Map<String, Object>>();
+        if (ids.isEmpty()) { return out; }
+        for (DeliveryDocument__c doc : [
+            SELECT Id, Name, StatusPk__c, TemplatePk__c, DueDateDate__c
+            FROM DeliveryDocument__c
+            WHERE Id IN :ids AND NetworkEntityId__c = :entityId
+            WITH SYSTEM_MODE
+            ORDER BY DueDateDate__c ASC NULLS LAST
+            LIMIT 200
+        ]) {
+            out.add(new Map<String, Object>{
+                'id' => doc.Id,
+                'name' => doc.Name,
+                'status' => doc.StatusPk__c,
+                'template' => doc.TemplatePk__c,
+                'dueDate' => doc.DueDateDate__c
+            });
+        }
+        return out;
+    }
+
+    /**
+     * @description Parses a comma-separated Id payload (WatcherDigest__c stores
+     *              its flagged record Ids this way) into a Set&lt;Id&gt;,
+     *              silently skipping blanks and malformed tokens.
+     * @param csv Comma-separated Id string, possibly null / blank.
+     * @return Set of valid Ids (never null).
+     */
+    private static Set<Id> parseCsvIds(String csv) {
+        Set<Id> ids = new Set<Id>();
+        if (String.isBlank(csv)) { return ids; }
+        for (String token : csv.split(',')) {
+            String trimmed = (token == null) ? '' : token.trim();
+            if (String.isBlank(trimmed)) { continue; }
+            try {
+                ids.add(Id.valueOf(trimmed));
+            } catch (Exception e) {
+                System.debug(LoggingLevel.WARN,
+                    '[DeliveryPublicApiService.parseCsvIds] skipping malformed Id token "' + trimmed + '": ' + e.getMessage());
+            }
+        }
+        return ids;
+    }
+
+    // ── Onboarding Progress (subject-scoped via X-Portal-User) ──────────
+
+    /**
+     * @description GET /api/onboarding-progress — returns onboarding-track
+     *              progress for the user identified by the X-Portal-User header.
+     *              Realises the REST exposure DeliveryOnboardingService was
+     *              built for ("external onboarding portal drives the same flow").
+     *              Optional ?track=&lt;DeveloperName&gt; filters to one track.
+     *              Quiz score / attempts are intentionally omitted (PII
+     *              minimisation) — only completion state + timestamps + a
+     *              completed-lesson count are returned. The header email is
+     *              resolved to an active User; an unmatched email yields an
+     *              empty list (200), so a portal whose users aren't yet
+     *              provisioned as Salesforce Users degrades cleanly.
+     */
+    private static void getOnboardingProgress() {
+        String email = getPortalEmail();
+        if (String.isBlank(email)) {
+            sendError(400, 'X-Portal-User header is required.');
+            return;
+        }
+        Id subjectUserId = resolveUserIdByEmail(email);
+        if (subjectUserId == null) {
+            sendSuccess(new List<Object>());
+            return;
+        }
+        String trackFilter = RestContext.request.params.get('track');
+        List<Map<String, Object>> data = new List<Map<String, Object>>();
+        for (OnboardingProgress__c row : queryOnboardingProgress(subjectUserId, trackFilter)) {
+            data.add(buildOnboardingProgressMap(row));
+        }
+        sendSuccess(data);
+    }
+
+    private static Id resolveUserIdByEmail(String email) {
+        List<User> users = [
+            SELECT Id FROM User
+            WHERE IsActive = true AND (Username = :email OR Email = :email)
+            WITH SYSTEM_MODE
+            ORDER BY Username ASC
+            LIMIT 1
+        ];
+        return users.isEmpty() ? null : users.get(0).Id;
+    }
+
+    private static List<OnboardingProgress__c> queryOnboardingProgress(Id subjectUserId, String trackFilter) {
+        if (String.isNotBlank(trackFilter)) {
+            return [
+                SELECT TrackTxt__c, StartedDateTime__c, CompletedDateTime__c,
+                       WalkthroughScheduledDateTime__c, WalkthroughCompletedDateTime__c,
+                       LessonsCompletedJsonTxt__c
+                FROM OnboardingProgress__c
+                WHERE UserLookup__c = :subjectUserId AND TrackTxt__c = :trackFilter
+                WITH SYSTEM_MODE
+                ORDER BY CreatedDate DESC
+                LIMIT 100
+            ];
+        }
+        return [
+            SELECT TrackTxt__c, StartedDateTime__c, CompletedDateTime__c,
+                   WalkthroughScheduledDateTime__c, WalkthroughCompletedDateTime__c,
+                   LessonsCompletedJsonTxt__c
+            FROM OnboardingProgress__c
+            WHERE UserLookup__c = :subjectUserId
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate DESC
+            LIMIT 100
+        ];
+    }
+
+    private static Map<String, Object> buildOnboardingProgressMap(OnboardingProgress__c row) {
+        return new Map<String, Object>{
+            'track' => row.TrackTxt__c,
+            'startedAt' => row.StartedDateTime__c,
+            'completedAt' => row.CompletedDateTime__c,
+            'isComplete' => row.CompletedDateTime__c != null,
+            'walkthroughScheduledAt' => row.WalkthroughScheduledDateTime__c,
+            'walkthroughCompletedAt' => row.WalkthroughCompletedDateTime__c,
+            'lessonsCompletedCount' => countLessonsCompleted(row.LessonsCompletedJsonTxt__c)
+        };
+    }
+
+    /**
+     * @description Counts entries in LessonsCompletedJsonTxt__c (a JSON array of
+     *              {lesson, completedAt} objects). Tolerates null / malformed
+     *              JSON by returning 0.
+     * @param raw Raw JSON string from the progress row.
+     * @return Count of completed lessons.
+     */
+    private static Integer countLessonsCompleted(String raw) {
+        if (String.isBlank(raw)) { return 0; }
+        try {
+            Object parsed = JSON.deserializeUntyped(raw);
+            if (parsed instanceof List<Object>) {
+                return ((List<Object>) parsed).size();
+            }
+        } catch (Exception ignore) {
+            return 0;
+        }
+        return 0;
     }
 
     /**
