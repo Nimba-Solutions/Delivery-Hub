@@ -181,7 +181,11 @@ private class DeliveryDatasetControllerTest {
             TimeZoneSidKey = 'America/New_York',
             UserName = 'ddctt+' + Crypto.getRandomLong() + '@dh-test.example.test'
         );
-        insert u;
+        // Setup-object insert isolated in runAs(current) to avoid MIXED_DML
+        // against the caller's subsequent DatasetTemplate__c inserts.
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            insert u;
+        }
         return u;
     }
 
