@@ -23,6 +23,8 @@ import getTemplatesForWorkItem from '@salesforce/apex/%%%NAMESPACE_DOT%%%Deliver
 import getRecentAssignmentsForTemplate from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.getRecentAssignmentsForTemplate';
 import formatCciCommand from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.formatCciCommand';
 import isSubscriberOrgApex from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.isSubscriberOrg';
+import getLastAssignment from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.getLastAssignment';
+import recordAssignment from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.recordAssignment';
 
 const FEATURE_OBJECT = 'Feature__c',
     WORK_ITEM_OBJECT = 'WorkItem__c',
@@ -40,6 +42,13 @@ export default class DeliveryDatasetTemplates extends LightningElement {
     @track isLoaded = false;
     @track selectedTemplateId = null;
     @track isSubscriberOrg = false;
+
+    // ── Mark-as-Loaded modal state ──────────────────────────────────────
+    @track isMarkAsLoadedModalOpen = false;
+    @track markAsLoadedTemplateId = null;
+    @track markAsLoadedTemplateName = '';
+    @track markAsLoadedNotes = '';
+    @track isSubmittingMarkAsLoaded = false;
 
     wiredTemplatesResult;
     wiredRecentResult;
@@ -106,10 +115,13 @@ export default class DeliveryDatasetTemplates extends LightningElement {
                 hasApexScriptPath: !!t.apexScriptPath,
                 recordCountEstimate: typeof t.recordCountEstimate === 'number' ? t.recordCountEstimate : null,
                 hasRecordCountEstimate: typeof t.recordCountEstimate === 'number',
-                featureName: t.featureName || ''
+                featureName: t.featureName || '',
+                lastLoadedSubline: '',
+                hasLastLoadedSubline: false
             }));
             this.errorMessage = '';
             this.isLoaded = true;
+            this.loadLastAssignmentSublines();
         } else if (result.error) {
             this.errorMessage = (result.error && result.error.body && result.error.body.message)
                 ? result.error.body.message
@@ -117,6 +129,50 @@ export default class DeliveryDatasetTemplates extends LightningElement {
             this.templates = [];
             this.isLoaded = true;
         }
+    }
+
+    // Imperative fan-out: for each template card, fetch the most-recent
+    // assignment so we can render a "Last loaded by X on Y" subline. Best-
+    // effort — failures degrade silently to "no subline".
+    loadLastAssignmentSublines() {
+        const templateIds = (this.templates || [])
+            .map(t => t.templateId)
+            .filter(id => !!id);
+        templateIds.forEach(templateId => {
+            getLastAssignment({ templateId })
+                .then(dto => this.mergeLastAssignment(templateId, dto))
+                .catch(() => {
+                    // best-effort — don't surface a toast for the subline path
+                });
+        });
+    }
+
+    mergeLastAssignment(templateId, dto) {
+        if (!dto) {
+            return;
+        }
+        const formatted = this.formatLastLoadedSubline(dto);
+        this.templates = (this.templates || []).map(t => {
+            if (t.templateId !== templateId) {
+                return t;
+            }
+            return Object.assign({}, t, {
+                lastLoadedSubline: formatted,
+                hasLastLoadedSubline: !!formatted
+            });
+        });
+    }
+
+    formatLastLoadedSubline(dto) {
+        if (!dto || !dto.loadedAt) {
+            return '';
+        }
+        const when = new Date(dto.loadedAt);
+        const datePart = Number.isNaN(when.getTime())
+            ? String(dto.loadedAt)
+            : when.toLocaleDateString();
+        const who = dto.loadedByName || 'Unknown user';
+        return `Last loaded by ${who} on ${datePart}`;
     }
 
     outcomeBadgeFor(outcome) {
@@ -226,6 +282,76 @@ export default class DeliveryDatasetTemplates extends LightningElement {
         this.selectedTemplateId = templateId || null;
     }
 
+    // ── Mark-as-Loaded modal ────────────────────────────────────────────
+
+    handleOpenMarkAsLoaded(event) {
+        const templateId = event.currentTarget.dataset.templateId;
+        const templateName = event.currentTarget.dataset.templateName || '';
+        if (!templateId) {
+            return;
+        }
+        this.markAsLoadedTemplateId = templateId;
+        this.markAsLoadedTemplateName = templateName;
+        this.markAsLoadedNotes = '';
+        this.isMarkAsLoadedModalOpen = true;
+    }
+
+    handleCloseMarkAsLoaded() {
+        if (this.isSubmittingMarkAsLoaded) {
+            // In-flight submission — let it finish before closing.
+            return;
+        }
+        this.isMarkAsLoadedModalOpen = false;
+        this.markAsLoadedTemplateId = null;
+        this.markAsLoadedTemplateName = '';
+        this.markAsLoadedNotes = '';
+    }
+
+    handleMarkAsLoadedNotesChange(event) {
+        this.markAsLoadedNotes = event.target.value || '';
+    }
+
+    handleSubmitMarkAsLoaded() {
+        if (!this.markAsLoadedTemplateId || this.isSubmittingMarkAsLoaded) {
+            return;
+        }
+        this.isSubmittingMarkAsLoaded = true;
+        recordAssignment({
+            templateId: this.markAsLoadedTemplateId,
+            notes: this.markAsLoadedNotes
+        })
+            .then(() => {
+                this.dispatchEvent(new ShowToastEvent({
+                    title: 'Load recorded',
+                    message: `Audit row created for "${this.markAsLoadedTemplateName}".`,
+                    variant: 'success'
+                }));
+                // Refresh the recent-loads panel (if it's currently showing
+                // this template) AND the per-card last-loaded subline so the
+                // admin sees their entry immediately.
+                if (this.wiredRecentResult) {
+                    refreshApex(this.wiredRecentResult);
+                }
+                this.loadLastAssignmentSublines();
+                this.isSubmittingMarkAsLoaded = false;
+                this.isMarkAsLoadedModalOpen = false;
+                this.markAsLoadedTemplateId = null;
+                this.markAsLoadedTemplateName = '';
+                this.markAsLoadedNotes = '';
+            })
+            .catch(err => {
+                const msg = (err && err.body && err.body.message)
+                    ? err.body.message
+                    : 'Unable to record this load.';
+                this.dispatchEvent(new ShowToastEvent({
+                    title: 'Could not record load',
+                    message: msg,
+                    variant: 'error'
+                }));
+                this.isSubmittingMarkAsLoaded = false;
+            });
+    }
+
     handleRefresh() {
         if (this.wiredTemplatesResult) {
             refreshApex(this.wiredTemplatesResult);
@@ -233,5 +359,6 @@ export default class DeliveryDatasetTemplates extends LightningElement {
         if (this.wiredRecentResult) {
             refreshApex(this.wiredRecentResult);
         }
+        this.loadLastAssignmentSublines();
     }
 }

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>NotesTxt__c</fullName>
+    <description>Free-form admin notes captured when the cockpit "Mark as Loaded" button is clicked — what dataset was loaded, caveats, anything the admin wants to leave on the audit row. Distinct from ErrorSummaryTxt__c (which is loader-error output only).</description>
+    <inlineHelpText>Optional notes from the admin marking this load — what was loaded, caveats, etc.</inlineHelpText>
+    <label>Notes</label>
+    <length>1000</length>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>4</visibleLines>
+</CustomField>
