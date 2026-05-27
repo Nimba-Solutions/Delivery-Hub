@@ -126,7 +126,7 @@ These routes are intentionally **tenant-less** (no portal-entity scoping). They'
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/scratch-orgs` | Insert a `ScratchOrgInstance__c` row. Body: `{branch, orgId, loginUrl, cciFlow, workItemName (opt), expiresAt (opt ISO-8601)}`. Returns `{id, state: "Active"}`. |
+| POST | `/api/scratch-orgs` | Insert a `ScratchOrgInstance__c` row. Body: `{branch, orgId, loginUrl, cciFlow, workItemName (opt), expiresAt (opt ISO-8601), autoCreateWorkItem (opt bool)}`. Returns `{id, state: "Active", workItemId, workItemAutoCreated}`. |
 | PATCH | `/api/scratch-orgs/{id}` | Update state on teardown. Body: `{state, lastSyncAt (opt)}`. State must match a `ScratchOrgState` GVS value. **Rate-limited** since PR #813 (previously bypassed the gate). |
 
 ---
@@ -1413,7 +1413,8 @@ curl -s -X POST \
     "loginUrl": "https://scratch-org-12345.my.salesforce.com",
     "cciFlow": "ci_feature",
     "workItemName": "WI-0123",
-    "expiresAt": "2026-06-05T00:00:00Z"
+    "expiresAt": "2026-06-05T00:00:00Z",
+    "autoCreateWorkItem": false
   }' \
   "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/scratch-orgs"
 ```
@@ -1428,6 +1429,7 @@ curl -s -X POST \
 | `cciFlow` | No | String | CCI flow used to build (e.g., `ci_feature`, `dev_org`) |
 | `workItemName` | No | String | If matches an existing `WorkItem__c.Name`, links the scratch to that WI |
 | `expiresAt` | No | ISO-8601 DateTime | Scratch expiry; malformed values fall back to null |
+| `autoCreateWorkItem` | No | Boolean (default `false`) | When `true` AND `workItemName` doesn't match an existing WI, auto-inserts a stub `WorkItem__c` (Status `New`, Stage `Backlog`, current user as Developer, branch in `BranchTxt__c`) so the scratch row appears in the `deliveryDevLoopGuide` LWC. When omitted/false, the scratch row is still created but left unlinked (the PR #804 / `release/0.246.0.4` baseline). Closes the Flow 6 #2 audit gap. |
 
 **Response** (201):
 
@@ -1436,10 +1438,21 @@ curl -s -X POST \
     "success": true,
     "data": {
         "id": "a0dxx0000000001AAA",
-        "state": "Active"
+        "state": "Active",
+        "workItemId": "a04xx0000000abcAAA",
+        "workItemAutoCreated": true
     }
 }
 ```
+
+**Response fields**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | Id | The new `ScratchOrgInstance__c.Id`. |
+| `state` | String | Always `Active` on initial insert. |
+| `workItemId` | Id (nullable) | The `WorkItem__c.Id` the row is linked to. `null` when `workItemName` didn't match and `autoCreateWorkItem` was false/absent. |
+| `workItemAutoCreated` | Boolean | `true` only when this call inserted a brand-new stub WI. `false` when an existing WI was matched OR when no link was made. |
 
 **Note:** `OrgIdTxt__c` is not unique-constrained — submitting the same orgId twice creates two rows. On-retry idempotency is on the v2 roadmap. If GitHub Actions is the only caller, the network-retry surface is small.
 

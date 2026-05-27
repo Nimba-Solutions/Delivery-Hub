@@ -1224,6 +1224,10 @@ private class DeliveryPublicApiServiceTest {
             System.assertEquals(true, parsed.get('success'), 'Success flag set');
             Map<String, Object> data = (Map<String, Object>) parsed.get('data');
             System.assertNotEquals(null, data.get('id'), 'Returned new id');
+            // Flow 6 #2 closure — response envelope now includes the linked WI
+            // id and the auto-create flag (false here — known WI matched by name).
+            System.assertEquals(wi.Id, (Id) data.get('workItemId'), 'workItemId echoes linked WI');
+            System.assertEquals(false, data.get('workItemAutoCreated'), 'No auto-create when name matched');
 
             List<ScratchOrgInstance__c> rows = [
                 SELECT Id, OrgIdTxt__c, StatePk__c, WorkItemLookup__c
@@ -1233,6 +1237,162 @@ private class DeliveryPublicApiServiceTest {
             System.assertEquals(1, rows.size(), 'Row was inserted');
             System.assertEquals('Active', rows.get(0).StatePk__c, 'Default state is Active');
             System.assertEquals(wi.Id, rows.get(0).WorkItemLookup__c, 'WI lookup resolved by Name');
+        }
+    }
+
+    /**
+     * @description Flow 6 #2 — POST /scratch-orgs with a workItemName that
+     *              does NOT match an existing WI, and autoCreateWorkItem=true:
+     *              service inserts a stub WorkItem__c and links the scratch
+     *              row to it. Response envelope echoes the new WI id and sets
+     *              workItemAutoCreated=true.
+     */
+    @IsTest
+    static void testPostScratchOrgUnknownAutoCreates() {
+        System.runAs(testUser) {
+            Integer wiBefore = [SELECT COUNT() FROM WorkItem__c];
+            Map<String, Object> body = new Map<String, Object>{
+                'orgId' => '00DTDF00000autoC',
+                'branch' => 'feature/no-matching-wi',
+                'loginUrl' => 'https://scratch.example.test/login?token=zzz',
+                'cciFlow' => 'dev_org',
+                'workItemName' => 'T-DOES-NOT-EXIST',
+                'autoCreateWorkItem' => true
+            };
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/scratch-orgs', body);
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
+
+            System.assertEquals(201, res.statusCode, 'Scratch-org POST returns 201');
+            Map<String, Object> parsed = parseResponse(res);
+            Map<String, Object> data = (Map<String, Object>) parsed.get('data');
+            System.assertEquals(true, data.get('workItemAutoCreated'), 'Auto-create flag set');
+            Id newWorkItemId = (Id) data.get('workItemId');
+            System.assertNotEquals(null, newWorkItemId, 'workItemId returned');
+
+            ScratchOrgInstance__c soi = [
+                SELECT Id, WorkItemLookup__c
+                FROM ScratchOrgInstance__c
+                WHERE OrgIdTxt__c = '00DTDF00000autoC' LIMIT 1
+            ];
+            System.assertEquals(newWorkItemId, soi.WorkItemLookup__c,
+                'Scratch links to the auto-created WI');
+
+            Integer wiAfter = [SELECT COUNT() FROM WorkItem__c];
+            System.assertEquals(wiBefore + 1, wiAfter,
+                'Exactly one stub WI was created');
+        }
+    }
+
+    /**
+     * @description Flow 6 #2 — POST /scratch-orgs with unknown workItemName
+     *              AND autoCreateWorkItem omitted (default false): scratch
+     *              row is still created but unlinked. Preserves the original
+     *              PR #804 behavior for callers that haven't opted in.
+     */
+    @IsTest
+    static void testPostScratchOrgUnknownNoAutoUnlinked() {
+        System.runAs(testUser) {
+            Integer wiBefore = [SELECT COUNT() FROM WorkItem__c];
+            Map<String, Object> body = new Map<String, Object>{
+                'orgId' => '00DTDF00000noAuto',
+                'branch' => 'feature/no-match-no-flag',
+                'workItemName' => 'T-DOES-NOT-EXIST'
+                // autoCreateWorkItem intentionally omitted
+            };
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/scratch-orgs', body);
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
+
+            System.assertEquals(201, res.statusCode, 'Scratch-org POST returns 201');
+            Map<String, Object> parsed = parseResponse(res);
+            Map<String, Object> data = (Map<String, Object>) parsed.get('data');
+            System.assertEquals(false, data.get('workItemAutoCreated'),
+                'Auto-create flag false when not opted in');
+            System.assertEquals(null, data.get('workItemId'),
+                'workItemId null when no link');
+
+            ScratchOrgInstance__c soi = [
+                SELECT Id, WorkItemLookup__c
+                FROM ScratchOrgInstance__c
+                WHERE OrgIdTxt__c = '00DTDF00000noAuto' LIMIT 1
+            ];
+            System.assertEquals(null, soi.WorkItemLookup__c,
+                'Scratch row unlinked (existing PR #804 behavior preserved)');
+
+            Integer wiAfter = [SELECT COUNT() FROM WorkItem__c];
+            System.assertEquals(wiBefore, wiAfter,
+                'No stub WI created when flag absent');
+        }
+    }
+
+    /**
+     * @description Flow 6 #2 — verifies the auto-created stub WI has the
+     *              correct defaults: StatusPk__c='New' (intake state per
+     *              [[status-new-is-intake-state]]), StageNamePk__c='Backlog',
+     *              DeveloperLookup__c=running user, BranchTxt__c populated
+     *              from the request body, BriefDescriptionTxt__c contains
+     *              the originating branch name.
+     */
+    @IsTest
+    static void testPostScratchOrgAutoStubDefaults() {
+        System.runAs(testUser) {
+            Map<String, Object> body = new Map<String, Object>{
+                'orgId' => '00DTDF00000stub',
+                'branch' => 'feature/stub-defaults-check',
+                'workItemName' => 'T-NOT-PRESENT-9999',
+                'autoCreateWorkItem' => true
+            };
+            RestRequest req = buildPostRequest(
+                '/services/apexrest/delivery/deliveryhub/v1/api/scratch-orgs', body);
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handlePost();
+            Test.stopTest();
+
+            System.assertEquals(201, res.statusCode, 'POST returns 201');
+            Map<String, Object> data = (Map<String, Object>) parseResponse(res).get('data');
+            Id stubId = (Id) data.get('workItemId');
+            System.assertNotEquals(null, stubId, 'Stub WI id returned');
+
+            WorkItem__c stub = [
+                SELECT Id, StatusPk__c, StageNamePk__c, DeveloperLookup__c,
+                       BranchTxt__c, BriefDescriptionTxt__c, SortOrderNumber__c
+                FROM WorkItem__c WHERE Id = :stubId LIMIT 1
+            ];
+            System.assertEquals('New', stub.StatusPk__c,
+                'Stub ships as intake state New (do NOT normalize)');
+            System.assertEquals('Backlog', stub.StageNamePk__c,
+                'Stub lands on the board at Backlog');
+            System.assertEquals(UserInfo.getUserId(), stub.DeveloperLookup__c,
+                'DeveloperLookup__c = endpoint caller');
+            System.assertEquals('feature/stub-defaults-check', stub.BranchTxt__c,
+                'BranchTxt__c populated from request body');
+            System.assert(
+                stub.BriefDescriptionTxt__c != null
+                && stub.BriefDescriptionTxt__c.contains('feature/stub-defaults-check'),
+                'Brief description references originating branch'
+            );
+            System.assertEquals(9999, (Integer) stub.SortOrderNumber__c,
+                'Stub sorts to the bottom of the board');
         }
     }
 
