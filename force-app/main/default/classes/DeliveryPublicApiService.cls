@@ -654,9 +654,14 @@ global without sharing class DeliveryPublicApiService {
      * @description POST /deliveryhub/v1/api/scratch-orgs — invoked by GH
      *              Actions after CumulusCI provisions a scratch. Body:
      *              {branch, orgId, loginUrl, cciFlow, workItemName (opt),
-     *              expiresAt (opt ISO-8601)}. Resolves the WI by Name when
-     *              provided; otherwise leaves WorkItemLookup__c null. Returns
-     *              {id, state:&apos;Active&apos;}.
+     *              expiresAt (opt ISO-8601), autoCreateWorkItem (opt bool)}.
+     *              Resolves the WI by Name when provided; otherwise leaves
+     *              WorkItemLookup__c null UNLESS autoCreateWorkItem=true, in
+     *              which case a stub WorkItem__c is auto-inserted so the
+     *              scratch row is visible in the deliveryDevLoopGuide LWC
+     *              (which filters by linked WI). Closes the Flow 6 #2 gap
+     *              from docs/audits/e2e-walkthrough-2026-05-21.md. Returns
+     *              {id, state:&apos;Active&apos;, workItemId, workItemAutoCreated}.
      * @param jsonBody Raw request body.
      */
     private static void postScratchOrg(String jsonBody) {
@@ -666,7 +671,8 @@ global without sharing class DeliveryPublicApiService {
         ScratchOrgInstance__c soi = new ScratchOrgInstance__c();
         soi.OrgIdTxt__c = orgId;
         soi.Name = orgId; // Name is required (auto-name not configured); use orgId as a sane default.
-        soi.BranchTxt__c = (String) bodyMap.get('branch');
+        String branchName = (String) bodyMap.get('branch');
+        soi.BranchTxt__c = branchName;
         soi.LoginUrl__c = (String) bodyMap.get('loginUrl');
         soi.CciFlowTxt__c = (String) bodyMap.get('cciFlow');
         soi.StatePk__c = 'Active';
@@ -682,6 +688,7 @@ global without sharing class DeliveryPublicApiService {
             }
         }
         String workItemName = (String) bodyMap.get('workItemName');
+        Boolean workItemAutoCreated = false;
         if (String.isNotBlank(workItemName)) {
             List<WorkItem__c> matches = [
                 SELECT Id FROM WorkItem__c WHERE Name = :workItemName
@@ -689,6 +696,18 @@ global without sharing class DeliveryPublicApiService {
             ];
             if (!matches.isEmpty()) {
                 soi.WorkItemLookup__c = matches.get(0).Id;
+            } else {
+                // Flow 6 #2 gap closure — auto-create a stub WI gated behind
+                // the opt-in flag so existing callers don't change behavior.
+                Object autoFlag = bodyMap.get('autoCreateWorkItem');
+                Boolean shouldAutoCreate = (autoFlag instanceof Boolean) && ((Boolean) autoFlag);
+                if (shouldAutoCreate) {
+                    Id stubId = createStubWorkItemForBranch(workItemName, branchName);
+                    if (stubId != null) {
+                        soi.WorkItemLookup__c = stubId;
+                        workItemAutoCreated = true;
+                    }
+                }
             }
         }
         Database.SaveResult sr = Database.insert(soi, false, AccessLevel.SYSTEM_MODE);
@@ -698,8 +717,54 @@ global without sharing class DeliveryPublicApiService {
         }
         sendSuccess(new Map<String, Object>{
             'id' => sr.getId(),
-            'state' => 'Active'
+            'state' => 'Active',
+            'workItemId' => soi.WorkItemLookup__c,
+            'workItemAutoCreated' => workItemAutoCreated
         }, 201);
+    }
+
+    /**
+     * @description Inserts a stub WorkItem__c so a scratch org POSTed against
+     *              an unknown workItemName still surfaces in the dev-loop LWC
+     *              (which filters by linked WI). The stub ships as
+     *              StatusPk__c='New' (legitimate intake state — do NOT
+     *              normalize to Active) and StageNamePk__c='Backlog' so it
+     *              shows up on the board for grooming. The original
+     *              workItemName + branch are stored in BriefDescriptionTxt__c
+     *              (Name is AutoNumber so we cannot reuse the provided name).
+     *              Caller (UserInfo.getUserId()) is set as DeveloperLookup__c.
+     * @param requestedName  The workItemName from the POST body (preserved
+     *                       in description for human discoverability).
+     * @param branchName     Optional branch name from the POST body.
+     * @return Id of the newly-inserted WorkItem__c, or null if the insert
+     *         failed (failure is non-fatal — the scratch row is still
+     *         created, just unlinked).
+     */
+    private static Id createStubWorkItemForBranch(String requestedName, String branchName) {
+        String branchDescriptor = String.isNotBlank(branchName) ? branchName : requestedName;
+        String briefDescription = 'Auto-created from /scratch-orgs POST for branch ' + branchDescriptor;
+        // BriefDescriptionTxt__c is Text(100) — truncate defensively.
+        if (briefDescription.length() > 100) {
+            briefDescription = briefDescription.substring(0, 100);
+        }
+        WorkItem__c stub = new WorkItem__c();
+        stub.BriefDescriptionTxt__c = briefDescription;
+        stub.StatusPk__c = 'New';                  // intake state per [[status-new-is-intake-state]]
+        stub.StageNamePk__c = 'Backlog';           // surfaces on the Kanban for grooming
+        stub.SortOrderNumber__c = 9999;            // sortable but at the bottom
+        stub.DeveloperLookup__c = UserInfo.getUserId();
+        if (String.isNotBlank(branchName)) {
+            stub.BranchTxt__c = branchName.length() > 255 ? branchName.substring(0, 255) : branchName;
+        }
+        Database.SaveResult sr = Database.insert(stub, false, AccessLevel.SYSTEM_MODE);
+        if (!sr.isSuccess()) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryPublicApiService.createStubWorkItemForBranch] '
+                + 'Stub WI insert failed for branch "' + branchDescriptor + '": '
+                + sr.getErrors().get(0).getMessage());
+            return null;
+        }
+        return sr.getId();
     }
 
     /**

@@ -62,8 +62,8 @@ Preview renders correctly IF dependencies exist.
 **Correction to original audit:** the REST endpoint exists. `POST /scratch-orgs` + `PATCH /scratch-orgs/{id}` are implemented in `DeliveryPublicApiService.cls` (shipped in PR #804, in `release/0.246.0.4`).
 
 **Real gaps:**
-1. **No example GitHub Action workflow shipped** in `.github/workflows/` that actually calls the endpoint. Subscriber devs would need to write their own.
-2. **No auto-create of WorkItem__c** when a branch name doesn't match an existing WI — the LWC only shows scratch orgs linked to an existing WI.
+1. ~~**No example GitHub Action workflow shipped** in `.github/workflows/` that actually calls the endpoint. Subscriber devs would need to write their own.~~ **CLOSED** by PR #833 (2026-05-26) — two example workflows ship under `.github/workflows/example-scratch-org-{create,decommission}.yml` plus `docs/EXAMPLE_GITHUB_ACTIONS.md` adoption guide.
+2. ~~**No auto-create of WorkItem__c** when a branch name doesn't match an existing WI — the LWC only shows scratch orgs linked to an existing WI.~~ **CLOSED** (2026-05-26) — `POST /scratch-orgs` now accepts `autoCreateWorkItem: true` (opt-in flag, default false preserves PR #804 behavior). When set, the endpoint inserts a stub `WorkItem__c` (Status `New`, Stage `Backlog`, Developer = API caller, branch in `BranchTxt__c`) and links the scratch row to it so it surfaces in `deliveryDevLoopGuide`. Response envelope now also includes `workItemId` + `workItemAutoCreated`. See `DeliveryPublicApiService.createStubWorkItemForBranch`.
 3. **No record page or layout for `ScratchOrgInstance__c`** per the Admin UX audit, so even when rows exist they're hard to inspect.
 
 ## Flow 7 — Dataset loading — ⚠ PARTIAL

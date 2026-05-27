@@ -22,6 +22,15 @@ when you pass `workItemName` in the body). When the PR closes, the
 decommission workflow PATCHes the row to `state=Decommissioned` so the cockpit
 can hide or sweep it.
 
+> **Auto-create option:** the `deliveryDevLoopGuide` LWC only shows scratch
+> orgs that are linked to a `WorkItem__c`. If you open PRs for branches that
+> don't yet have a matching WI, pass `"autoCreateWorkItem": true` in the POST
+> body and the endpoint will insert a stub WI (Status `New`, Stage `Backlog`,
+> current API caller assigned as Developer, branch stored in `BranchTxt__c`)
+> and link the scratch to it. The default (`false` / omitted) preserves the
+> original PR #804 behavior: scratch row created, but unlinked when the name
+> doesn't match. Closes the Flow 6 #2 audit gap.
+
 ## What you need
 
 1. **A Delivery Hub instance URL.** The base URL of your DH org, e.g.
@@ -64,26 +73,64 @@ X-Api-Key: <ApiKeyTxt__c>
 Content-Type: application/json
 
 {
-  "orgId":        "<required — Salesforce 15/18-char scratch org id>",
-  "branch":       "<optional — git branch name>",
-  "loginUrl":     "<optional — scratch login URL from cci org info>",
-  "cciFlow":      "<optional — cumulusci flow that built the org>",
-  "workItemName": "<optional — WorkItem__c.Name to link the row to>",
-  "expiresAt":    "<optional — ISO-8601 timestamp>"
+  "orgId":              "<required — Salesforce 15/18-char scratch org id>",
+  "branch":             "<optional — git branch name>",
+  "loginUrl":           "<optional — scratch login URL from cci org info>",
+  "cciFlow":            "<optional — cumulusci flow that built the org>",
+  "workItemName":       "<optional — WorkItem__c.Name to link the row to>",
+  "expiresAt":          "<optional — ISO-8601 timestamp>",
+  "autoCreateWorkItem": "<optional boolean — default false. When true AND workItemName doesn't match an existing WI, inserts a stub WI so the scratch is visible in deliveryDevLoopGuide.>"
 }
 ```
 
 Success (201):
 
 ```json
-{ "success": true, "data": { "id": "a01XX...", "state": "Active" } }
+{
+  "success": true,
+  "data": {
+    "id": "a01XX...",
+    "state": "Active",
+    "workItemId": "a04XX...",
+    "workItemAutoCreated": true
+  }
+}
 ```
+
+`workItemId` is `null` when no link was made; `workItemAutoCreated` is `true`
+only when this call inserted a brand-new stub WI (false for both
+known-name-matched and not-linked outcomes).
 
 Error (400/500):
 
 ```json
 { "success": false, "error": "<message>" }
 ```
+
+### Alternative POST — auto-stub the WI for unknown branches
+
+For teams that want every PR branch to surface in the cockpit without
+pre-creating a `WorkItem__c`, set `autoCreateWorkItem: true`:
+
+```bash
+curl -s -X POST \
+  -H "X-Api-Key: $DH_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "orgId": "00DSB000005xY1z",
+    "branch": "feature/new-experimental-thing",
+    "loginUrl": "https://scratch-org-12345.my.salesforce.com",
+    "cciFlow": "ci_feature",
+    "workItemName": "feature/new-experimental-thing",
+    "autoCreateWorkItem": true
+  }' \
+  "$DH_BASE_URL/services/apexrest/delivery/deliveryhub/v1/api/scratch-orgs"
+```
+
+The stub WI ships at `Status='New'` / `Stage='Backlog'` and is assigned to the
+API caller (`DeveloperLookup__c = UserInfo.getUserId()` of whatever user owns
+the X-Api-Key's `NetworkEntity__c`). A DH admin can groom it from the board
+later.
 
 ## Pairing PATCH — decommission on PR close
 
