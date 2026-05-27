@@ -4,6 +4,26 @@ All notable changes to the Delivery Hub package are documented here. Versions ma
 
 ---
 
+## [0.240 — 0.250] — 2026-05-15 → 2026-05-26 (per-PR detail not back-filled)
+
+The strategic plan (`wild-roaming-rocket.md`) Phase 0 closed at 0.240 and the 50h DH Cockpit plan ran end-to-end across 0.243 → 0.245. Phase 2 Watcher v1 landed at 0.246. The "subscriber-ready first impression" cheap-wins bundle landed at 0.247. The audit-driven UX-gap fan-out closed across 0.248 → 0.250. Major themes that shipped in this stretch:
+
+- **0.240 (5/15)** — Slack bidirectional sync PR #782 PMD + test fix. Strategic plan locked.
+- **0.241.0.3 (5/17)** — Bug 4 PermissionSetGroup namespace fix (#784, `isAdminUser` IN clause), Slack activation runbook + Site Guest perm fix (#785), page-field audit backlog closure (#786, 9 admin fields across SyncItem/NetworkEntity/ActivityLog/PortalAccess).
+- **0.242.0.4 (5/18)** — TestDataFactory Phase 1 (#787, @IsTest-only helper class), CLAUDE.md picklist-trigger correction (#788), dead-code cleanup (#789 -4,323 LOC / -48 files), `DeliveryDocumentController` ApexDoc sweep (#791, 40→0 violations).
+- **0.243.0.1 (5/20 early AM)** — Feature Catalog scaffold (#793, PR 1 of the 10-PR Cockpit plan): `Feature__c` + `FeatureDefinition__mdt` schema, 6 seed mdt records, install-handler seed, read-only `deliveryFeatureCockpit` LWC.
+- **0.244.0.2 (5/20 evening)** — Cockpit PRs 2-5-3-7-4 cumulative: Feature↔Settings sync (#795, admin toggle + ActivityLog audit row per flip), FeatureDependency + cascade preview (#794), Onboarding Tracks MVP (#796), Approval framework single-step (#799), Onboarding gate enforcement (#798). Plus #797 + #800 namespace-safe describeSettingsFields hotfixes ([[namespace-safe-typed-sobject-describe]]).
+- **0.245.0.4 (5/21 early AM)** — Cockpit plan COMPLETE. PRs 6-8-10-9: Cascade enforcement (#801), multi-step approvals + REST (#802), Layer 7 dataset templates (#803), Layer 6 dev-loop mirror (#804). Plus #805 + #806 packaging-org context assertion hotfixes.
+- **0.246.0.4 (5/21 ~4:45 PM)** — **Phase 2 Watcher v1 SHIPPED.** PR-A schema (#807): `WatcherDigest__c` + 14 `DeliveryHubSettings__c` fields + 2 GVS. PR-B orchestrator (#809): scheduler tick + Signal 1 SLA Breach + 4 stub query services + Slack post. PR-C Signals 2+3 (#810): Stuck Stage + A/R Aging + multi-section formatter. Plus #808 (2 testSuite gaps + 4 repo-wide audit reports).
+- **0.247.0.6 (5/22 ~2:30 AM)** — "Subscriber-ready first impression" cheap-wins bundle: REST hardening (#813, rate-limit PATCH + idempotency on toggle POST + pagination envelope on list GET), LWC polish (#814, icon alt-text + DatasetTemplates subscriber flag + modal ESC), security caller-is-approver guard (#815), Admin UX bundle (#816, 9 layouts + 4 tabs + app-menu entries + permset tab visibility). Plus #812 (`DeliveryDocGenerationServiceTest` — only untested service with billing DML).
+- **0.248.0.3 (5/25)** — Wave 1 of the e2e-walkthrough UX-gap fan-out: approval submission UI (#818, `deliveryFeatureApprovalSubmit` + cockpit modal entry-point), audit-trail viewer LWCs (#820, `deliveryActivityLog` + `deliveryWatcherDigestHistory` + `deliveryOnboardingHistory`), FeatureDependency editor on Feature__c record page (#819). Plus #821 PSG-calc test hotfix ([[psg-must-be-calculated-before-assignment-in-test]]).
+- **0.249.0.2 (5/26 ~midday)** — Wave 2 + audit reports: notification layer (#822, `DeliveryNotificationService` + queueable + 5 invoke sites on toggle/submit/grant/reject/onboarding-complete), approver auto-assignment (#823, `ApprovalRouting__mdt` + before-insert handler). Plus README/architecture/contributing/flow-reference doc refresh (#824/#825), 4 audit reports refreshed (#826 dead-code+PMD baseline, #827 code-quality compliance — confirmed ZERO P0/P1 violations).
+- **0.250.0.x (5/26 evening)** — Cleanup + polish bundle: 7 cockpit __mdt descriptions (#828), ApexCRUDViolation hardening on `DeliveryWorkItemController` (#829, `WITH SYSTEM_MODE` ×3 fixes — not suppressions), PMD sweep (#830, 49 violations cleared, 83→34), Watcher admin setup LWC (#831, `deliveryWatcherSetup` form for enable + recipients + Slack), onboarding external evaluators wired (#832, SoqlQuery/RestCall/WebhookReceived — were silently passing as Manual before), example GitHub Action workflows for POST + PATCH `/scratch-orgs` (#833), cockpit catalog cards link to record pages + onboarding-gate toast action link (#834), getName() per-callsite discretion review (#835, 10 of 13 migrated, 3 kept load-bearing), `DeliveryActivityLogCleanup` wire-or-delete decision memo (#836), 40-LWC `@description` sweep (#837), Watcher Slack delivery-status capture (#838, real bug: `StatusPk__c=Success` was recorded even on 4xx/5xx Slack responses).
+
+Per-PR detail intentionally not back-filled — PR descriptions on GitHub stay authoritative.
+
+---
+
 ## [0.227 — 0.239] — 2026-05-10 → 2026-05-15 (per-PR detail not back-filled)
 
 Per-PR detail lives in the GitHub PR descriptions; the themes that shipped in this stretch:
