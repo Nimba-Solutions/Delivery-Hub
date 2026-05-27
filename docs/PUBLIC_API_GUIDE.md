@@ -129,6 +129,13 @@ These routes are intentionally **tenant-less** (no portal-entity scoping). They'
 | POST | `/api/scratch-orgs` | Insert a `ScratchOrgInstance__c` row. Body: `{branch, orgId, loginUrl, cciFlow, workItemName (opt), expiresAt (opt ISO-8601), autoCreateWorkItem (opt bool)}`. Returns `{id, state: "Active", workItemId, workItemAutoCreated}`. |
 | PATCH | `/api/scratch-orgs/{id}` | Update state on teardown. Body: `{state, lastSyncAt (opt)}`. State must match a `ScratchOrgState` GVS value. **Rate-limited** since PR #813 (previously bypassed the gate). |
 
+### Monitoring & onboarding (read-only)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/watcher-health` | **Entity-scoped.** Returns the caller's slice of the most recent Watcher digest run: `{lastRunAt, overallStatus, flaggedWorkItemCount, flaggedDocumentCount, flaggedWorkItems[], flaggedDocuments[]}`. The Watcher digest itself is org-wide; this endpoint filters the flagged-Id payloads down to records the calling entity owns — it never exposes another tenant's flagged items, the org-wide signal totals, the internal digest body, recipient list, or Slack payload. |
+| GET | `/api/onboarding-progress` | **Subject-scoped via the `X-Portal-User` header.** Returns onboarding-track progress for the user that email resolves to: `[{track, startedAt, completedAt, isComplete, walkthroughScheduledAt, walkthroughCompletedAt, lessonsCompletedCount}]`. Optional `?track=<DeveloperName>` filters to one track. Quiz score/attempts are intentionally **omitted** (PII minimisation). An email that matches no active Salesforce User returns an empty list. |
+
 ---
 
 ### GET /api/dashboard
@@ -1499,6 +1506,76 @@ curl -s -X PATCH \
 | 400 | Missing/blank `state` or unparseable `lastSyncAt` |
 | 404 | No scratch-org row with the given id |
 | 500 | DML failure |
+
+---
+
+### GET /api/watcher-health
+
+Returns the calling entity's slice of the most recent Watcher digest run. The digest is produced org-wide by `DeliveryWatcherService`; this endpoint filters the run's flagged work-item and document Ids down to records owned by the authenticated entity, so a tenant sees only its own at-risk items.
+
+```bash
+curl -H "X-Api-Key: YOUR_API_KEY" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/watcher-health"
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "lastRunAt": "2026-05-27T14:00:00.000Z",
+    "overallStatus": "Attention",
+    "flaggedWorkItemCount": 1,
+    "flaggedDocumentCount": 0,
+    "flaggedWorkItems": [
+      {
+        "id": "a01...",
+        "name": "WI-0042",
+        "title": "Build the export job",
+        "status": "In Progress",
+        "stage": "In Development",
+        "slaTargetDate": "2026-05-25"
+      }
+    ],
+    "flaggedDocuments": []
+  }
+}
+```
+
+- `overallStatus` is derived **only** from the caller's own flagged records: `Healthy` (none flagged), `Attention` (one or more flagged), or `Unknown` (no Watcher run has been recorded yet).
+- The org-wide signal counts, the rendered digest body, the recipient list, and the Slack delivery payload are **never** returned.
+
+### GET /api/onboarding-progress
+
+Returns onboarding-track progress for the user identified by the `X-Portal-User` header. This realises the REST surface `DeliveryOnboardingService` was built for (an external onboarding portal driving the same flow).
+
+```bash
+curl -H "X-Api-Key: YOUR_API_KEY" \
+  -H "X-Portal-User: jordan@example.com" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  "YOUR_INSTANCE_URL/services/apexrest/delivery/deliveryhub/v1/api/onboarding-progress?track=Software_Delivery"
+```
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "track": "Software_Delivery",
+      "startedAt": "2026-05-20T09:00:00.000Z",
+      "completedAt": "2026-05-24T17:30:00.000Z",
+      "isComplete": true,
+      "walkthroughScheduledAt": null,
+      "walkthroughCompletedAt": "2026-05-23T15:00:00.000Z",
+      "lessonsCompletedCount": 4
+    }
+  ]
+}
+```
+
+- `X-Portal-User` is **required**; without it the endpoint returns 400.
+- The email is resolved to an active Salesforce User (by `Username` or `Email`). An unmatched email returns `"data": []` with a 200 — a portal whose users aren't yet provisioned as Users degrades cleanly rather than erroring.
+- Quiz score and attempt counts are intentionally omitted; only completion state, timestamps, and a completed-lesson count are exposed.
 
 ---
 
