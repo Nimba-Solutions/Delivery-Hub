@@ -1694,6 +1694,225 @@ private class DeliveryPublicApiServiceTest {
     }
 
     // ==========================================
+    // GET WATCHER-HEALTH (entity-scoped slice of the org-wide digest)
+    // ==========================================
+
+    /**
+     * @description With no WatcherDigest__c row yet, the endpoint degrades to a
+     *              200 "Unknown" snapshot rather than erroring.
+     */
+    @IsTest
+    static void testGetWatcherHealthNoDigest() {
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/watcher-health');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
+
+            System.assertEquals(200, res.statusCode, 'Should return 200 even with no digest');
+            Map<String, Object> data = (Map<String, Object>) parseResponse(res).get('data');
+            System.assertEquals('Unknown', data.get('overallStatus'), 'No digest -> Unknown');
+            System.assertEquals(0, (Integer) data.get('flaggedWorkItemCount'), 'No flagged WIs');
+            System.assertEquals(null, data.get('lastRunAt'), 'No run timestamp');
+        }
+    }
+
+    /**
+     * @description The org-wide digest flags one of THIS entity's work items and
+     *              one belonging to another tenant. Only the caller's own item
+     *              must surface, and overallStatus must be Attention.
+     */
+    @IsTest
+    static void testGetWatcherHealthScopedToEntity() {
+        System.runAs(testUser) {
+            WorkItem__c mine = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'API Active Item' LIMIT 1];
+            WorkItem__c theirs = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Other Corp Item' LIMIT 1];
+            insert new WatcherDigest__c(
+                RunDateTime__c = Datetime.now(),
+                StatusPk__c = 'Success',
+                FlaggedWorkItemIdsTxt__c = mine.Id + ',' + theirs.Id
+            );
+
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/watcher-health');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
+
+            System.assertEquals(200, res.statusCode);
+            Map<String, Object> data = (Map<String, Object>) parseResponse(res).get('data');
+            System.assertEquals('Attention', data.get('overallStatus'), 'My flagged item -> Attention');
+            System.assertEquals(1, (Integer) data.get('flaggedWorkItemCount'),
+                'Only MY flagged item is counted, not the other tenant\'s');
+            List<Object> items = (List<Object>) data.get('flaggedWorkItems');
+            System.assertEquals(1, items.size(), 'Exactly one item returned');
+            Map<String, Object> item = (Map<String, Object>) items.get(0);
+            System.assertEquals(String.valueOf(mine.Id), (String) item.get('id'), 'Returned item is mine');
+        }
+    }
+
+    /**
+     * @description When the digest flags only another tenant's records, this
+     *              entity sees a clean Healthy snapshot with zero counts.
+     */
+    @IsTest
+    static void testGetWatcherHealthHealthyWhenNoneOfMine() {
+        System.runAs(testUser) {
+            WorkItem__c theirs = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Other Corp Item' LIMIT 1];
+            insert new WatcherDigest__c(
+                RunDateTime__c = Datetime.now(),
+                StatusPk__c = 'Success',
+                FlaggedWorkItemIdsTxt__c = String.valueOf(theirs.Id)
+            );
+
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/watcher-health');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
+
+            Map<String, Object> data = (Map<String, Object>) parseResponse(res).get('data');
+            System.assertEquals('Healthy', data.get('overallStatus'),
+                'Another tenant flagged, none of mine -> Healthy');
+            System.assertEquals(0, (Integer) data.get('flaggedWorkItemCount'));
+        }
+    }
+
+    // ==========================================
+    // GET ONBOARDING-PROGRESS (subject-scoped via X-Portal-User)
+    // ==========================================
+
+    /**
+     * @description Without an X-Portal-User header the endpoint can't identify a
+     *              subject, so it returns 400 rather than guessing.
+     */
+    @IsTest
+    static void testGetOnboardingProgressMissingHeader() {
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/onboarding-progress');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
+
+            System.assertEquals(400, res.statusCode, 'Missing X-Portal-User -> 400');
+            assertErrorResponse(res, 'X-Portal-User header is required');
+        }
+    }
+
+    /**
+     * @description An email that resolves to no active User degrades to an empty
+     *              200 list — a portal whose users aren't provisioned yet.
+     */
+    @IsTest
+    static void testGetOnboardingProgressUnknownEmail() {
+        System.runAs(testUser) {
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/onboarding-progress');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            req.addHeader('X-Portal-User', 'nobody-matches-this@example.invalid');
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
+
+            System.assertEquals(200, res.statusCode, 'Unknown email degrades to empty 200');
+            List<Object> data = (List<Object>) parseResponse(res).get('data');
+            System.assertEquals(0, data.size(), 'No progress for an unmatched email');
+        }
+    }
+
+    /**
+     * @description Returns the subject user's progress row; isComplete reflects
+     *              CompletedDateTime__c, lessonsCompletedCount reflects the JSON
+     *              payload, and quizScore is deliberately absent (PII).
+     */
+    @IsTest
+    static void testGetOnboardingProgressReturnsRows() {
+        System.runAs(testUser) {
+            User me = [SELECT Username FROM User WHERE Id = :UserInfo.getUserId() LIMIT 1];
+            TestDataFactory.newOnboardingProgress(new Map<String, Object>{
+                'TrackTxt__c' => 'API_Test_Track',
+                'CompletedDateTime__c' => Datetime.now(),
+                'QuizScoreNumber__c' => 9,
+                'LessonsCompletedJsonTxt__c' => JSON.serialize(new List<Object>{
+                    new Map<String, Object>{ 'lesson' => 'L1', 'completedAt' => '2026-05-27T00:00:00.000Z' },
+                    new Map<String, Object>{ 'lesson' => 'L2', 'completedAt' => '2026-05-27T00:00:00.000Z' }
+                })
+            });
+
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/onboarding-progress');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            req.addHeader('X-Portal-User', me.Username);
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
+
+            System.assertEquals(200, res.statusCode);
+            List<Object> data = (List<Object>) parseResponse(res).get('data');
+            System.assertEquals(1, data.size(), 'One progress row for this user');
+            Map<String, Object> row = (Map<String, Object>) data.get(0);
+            System.assertEquals('API_Test_Track', row.get('track'), 'Track echoed');
+            System.assertEquals(true, row.get('isComplete'), 'CompletedDateTime -> isComplete');
+            System.assertEquals(2, (Integer) row.get('lessonsCompletedCount'), 'Two lessons counted');
+            System.assertEquals(false, row.containsKey('quizScore'),
+                'Quiz score must NOT be exposed (PII minimisation)');
+        }
+    }
+
+    /**
+     * @description ?track=<name> narrows the result to the one matching track.
+     */
+    @IsTest
+    static void testGetOnboardingProgressTrackFilter() {
+        System.runAs(testUser) {
+            User me = [SELECT Username FROM User WHERE Id = :UserInfo.getUserId() LIMIT 1];
+            TestDataFactory.newOnboardingProgress(new Map<String, Object>{ 'TrackTxt__c' => 'Track_A' });
+            TestDataFactory.newOnboardingProgress(new Map<String, Object>{ 'TrackTxt__c' => 'Track_B' });
+
+            RestRequest req = buildGetRequest('/services/apexrest/delivery/deliveryhub/v1/api/onboarding-progress');
+            req.addHeader('X-Api-Key', TEST_API_KEY);
+            req.addHeader('X-Portal-User', me.Username);
+            req.addParameter('track', 'Track_B');
+            RestResponse res = new RestResponse();
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryPublicApiService.handleGet();
+            Test.stopTest();
+
+            List<Object> data = (List<Object>) parseResponse(res).get('data');
+            System.assertEquals(1, data.size(), 'Track filter returns only the matching track');
+            Map<String, Object> row = (Map<String, Object>) data.get(0);
+            System.assertEquals('Track_B', row.get('track'), 'Filtered to Track_B');
+        }
+    }
+
+    // ==========================================
     // REST API HARDENING — 2026-05-21 AUDIT FIXES
     // ==========================================
 

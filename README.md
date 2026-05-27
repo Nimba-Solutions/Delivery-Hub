@@ -112,7 +112,7 @@ Three REST surfaces ship with the package, all under `/services/apexrest/deliver
 | **Sync API** | `/deliveryhub/v1/sync/*` | Org-to-org bidirectional sync | `X-Api-Key` + HMAC (opt-in) |
 | **Task API** | `/deliveryhub/v1/tasks/*` | CI/CD agents, AI agents | `X-Api-Key` |
 
-The Public API covers dashboard reads, work items, comments, work logs, activity feed, documents, document signing, feature toggle requests, and scratch-org mirror writes.
+The Public API covers dashboard reads, work items, comments, work logs, activity feed, documents, document signing, feature toggle requests, scratch-org mirror writes, entity-scoped Watcher health (`GET /watcher-health`), and onboarding-track progress (`GET /onboarding-progress`).
 
 Highlights from the recent hardening pass (`release/0.247.x` PR #813):
 
