@@ -2,7 +2,20 @@
     <lightning-card title="Delivery Score" icon-name="standard:calibration">
         <c-delivery-info-popover slot="actions" component-name="deliveryScore"></c-delivery-info-popover>
 
-        <!-- Loading spinner -->
+        <!-- Empty state — no client/entity context (e.g. on a record page
+             whose record is not linked to a NetworkEntity). Prevents the
+             "Loading score" infinite-spinner regression that hit MF prod on
+             WorkItem record pages without an explicit entityId. -->
+        <template lwc:if={showNoContext}>
+            <div class="slds-p-around_medium slds-text-align_center">
+                <p class="slds-text-body_regular slds-text-color_weak">No delivery score</p>
+                <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                    This record is not linked to a client.
+                </p>
+            </div>
+        </template>
+
+        <!-- Loading spinner — only while waiting for an in-flight wire. -->
         <template lwc:if={isLoading}>
             <div class="slds-p-around_large slds-align_absolute-center">
                 <lightning-spinner alternative-text="Loading score" size="medium"></lightning-spinner>
