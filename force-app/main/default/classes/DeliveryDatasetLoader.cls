@@ -33,7 +33,7 @@
  *               NOT fabricated realistic figures.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation,PMD.AvoidGlobalModifier')
+@SuppressWarnings('PMD.ApexCRUDViolation,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity,PMD.ExcessiveParameterList')
 public with sharing class DeliveryDatasetLoader {
 
     /**
