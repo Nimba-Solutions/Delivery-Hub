@@ -25,6 +25,8 @@ import formatCciCommand from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatase
 import isSubscriberOrgApex from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.isSubscriberOrg';
 import getLastAssignment from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.getLastAssignment';
 import recordAssignment from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.recordAssignment';
+import loadSampleData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.loadSampleData';
+import removeSampleData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.removeSampleData';
 
 const FEATURE_OBJECT = 'Feature__c',
     WORK_ITEM_OBJECT = 'WorkItem__c',
@@ -49,6 +51,14 @@ export default class DeliveryDatasetTemplates extends LightningElement {
     @track markAsLoadedTemplateName = '';
     @track markAsLoadedNotes = '';
     @track isSubmittingMarkAsLoaded = false;
+
+    // ── In-app sample-data confirm modal state ──────────────────────────
+    // One modal serves both Load and Remove; sampleActionMode flips which.
+    @track isSampleModalOpen = false;
+    @track sampleActionMode = ''; // 'load' | 'remove'
+    @track sampleTemplateId = null;
+    @track sampleTemplateName = '';
+    @track isSampleActionRunning = false;
 
     wiredTemplatesResult;
     wiredRecentResult;
@@ -228,6 +238,46 @@ export default class DeliveryDatasetTemplates extends LightningElement {
             + 'This surface is for package developers — install CCI locally to load sample data.';
     }
 
+    // ── In-app sample-data modal getters (LWC has no ternary in v62) ─────
+
+    get isSampleRemoveMode() {
+        return this.sampleActionMode === 'remove';
+    }
+
+    get sampleModalHeading() {
+        if (this.isSampleRemoveMode) {
+            return 'Remove Sample Data';
+        }
+        return 'Load Sample Data';
+    }
+
+    get sampleModalBody() {
+        if (this.isSampleRemoveMode) {
+            return 'This deletes ONLY the clearly-marked "[DH SAMPLE]" records '
+                + 'created by the loader for this feature. Your real records are '
+                + 'never touched. This action is reversible — you can reload the '
+                + 'sample data afterward.';
+        }
+        return 'This loads clearly-marked "[DH SAMPLE]" sample records so you can '
+            + 'see this feature in action — no CumulusCI or CLI required. '
+            + 'Re-running is safe (it will not duplicate). You can remove the '
+            + 'sample data in one click afterward.';
+    }
+
+    get sampleConfirmLabel() {
+        if (this.isSampleRemoveMode) {
+            return 'Remove Sample Data';
+        }
+        return 'Load Sample Data';
+    }
+
+    get sampleConfirmVariant() {
+        if (this.isSampleRemoveMode) {
+            return 'destructive';
+        }
+        return 'brand';
+    }
+
     // ────────────────────────────────────────────────────────────────────
     // Handlers
     // ────────────────────────────────────────────────────────────────────
@@ -350,6 +400,92 @@ export default class DeliveryDatasetTemplates extends LightningElement {
                 }));
                 this.isSubmittingMarkAsLoaded = false;
             });
+    }
+
+    // ── In-app sample-data load / remove ────────────────────────────────
+
+    handleOpenLoadSample(event) {
+        this.openSampleModal(event, 'load');
+    }
+
+    handleOpenRemoveSample(event) {
+        this.openSampleModal(event, 'remove');
+    }
+
+    openSampleModal(event, mode) {
+        const templateId = event.currentTarget.dataset.templateId;
+        const templateName = event.currentTarget.dataset.templateName || '';
+        if (!templateId) {
+            return;
+        }
+        this.sampleTemplateId = templateId;
+        this.sampleTemplateName = templateName;
+        this.sampleActionMode = mode;
+        this.isSampleModalOpen = true;
+    }
+
+    handleCloseSampleModal() {
+        if (this.isSampleActionRunning) {
+            // In-flight operation — let it finish before closing.
+            return;
+        }
+        this.resetSampleModal();
+    }
+
+    resetSampleModal() {
+        this.isSampleModalOpen = false;
+        this.sampleActionMode = '';
+        this.sampleTemplateId = null;
+        this.sampleTemplateName = '';
+    }
+
+    handleConfirmSampleAction() {
+        if (!this.sampleTemplateId || this.isSampleActionRunning) {
+            return;
+        }
+        const isRemove = this.isSampleRemoveMode;
+        const templateName = this.sampleTemplateName;
+        const apexCall = isRemove ? removeSampleData : loadSampleData;
+        this.isSampleActionRunning = true;
+        apexCall({ templateId: this.sampleTemplateId })
+            .then(result => this.handleSampleSuccess(result, isRemove, templateName))
+            .catch(err => this.handleSampleError(err, isRemove));
+    }
+
+    handleSampleSuccess(result, isRemove, templateName) {
+        const count = result && typeof result.recordCount === 'number' ? result.recordCount : 0;
+        const verb = isRemove ? 'Removed' : 'Loaded';
+        let message;
+        if (result && result.message) {
+            message = result.message;
+        } else {
+            message = `${verb} ${count} sample record(s) for "${templateName}".`;
+        }
+        const variant = (result && result.outcome === 'Failure') ? 'error' : 'success';
+        this.dispatchEvent(new ShowToastEvent({
+            title: isRemove ? 'Sample data removed' : 'Sample data loaded',
+            message,
+            variant
+        }));
+        // Refresh audit panel + per-card sublines so the new assignment shows.
+        if (this.wiredRecentResult) {
+            refreshApex(this.wiredRecentResult);
+        }
+        this.loadLastAssignmentSublines();
+        this.isSampleActionRunning = false;
+        this.resetSampleModal();
+    }
+
+    handleSampleError(err, isRemove) {
+        const msg = (err && err.body && err.body.message)
+            ? err.body.message
+            : (isRemove ? 'Unable to remove sample data.' : 'Unable to load sample data.');
+        this.dispatchEvent(new ShowToastEvent({
+            title: isRemove ? 'Could not remove sample data' : 'Could not load sample data',
+            message: msg,
+            variant: 'error'
+        }));
+        this.isSampleActionRunning = false;
     }
 
     handleRefresh() {
