@@ -6,20 +6,31 @@
  *               logged hours). Mirrors the Project_Health_Pills dashboard card. Mounts on the
  *               WorkItem__c record page; reads via lightning/uiRecordApi (no Apex round-trip).
  *               Suppresses itself for terminal stages (Done / Cancelled / Closed / Rejected).
+ *
+ *               Fields are imported via @salesforce/schema so the platform resolves the
+ *               namespace at compile time — `delivery__WorkItem__c.delivery__Field__c` in
+ *               the managed package, plain `WorkItem__c.Field__c` in unmanaged. The earlier
+ *               version used `%%%NAMESPACE_DOT%%%` tokens in raw string literals; that
+ *               pattern does NOT round-trip through CCI's namespace injector for JS array
+ *               contents, which produced the "fields query string parameter contained
+ *               object api names: [WorkItem__c]" LDS error on MF prod's WorkItem record
+ *               page (mismatching the record's `delivery__WorkItem__c` type). Fixed 2026-05-29.
  * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, wire } from "lwc";
-import { getRecord } from "lightning/uiRecordApi";
+import { getRecord, getFieldValue } from "lightning/uiRecordApi";
+import ESTIMATED_HOURS_FIELD from "@salesforce/schema/WorkItem__c.EstimatedHoursNumber__c";
+import TOTAL_LOGGED_HOURS_FIELD from "@salesforce/schema/WorkItem__c.TotalLoggedHoursSum__c";
+import CALCULATED_ETA_FIELD from "@salesforce/schema/WorkItem__c.CalculatedETADate__c";
+import ESTIMATED_END_DEV_FIELD from "@salesforce/schema/WorkItem__c.EstimatedEndDevDate__c";
+import STAGE_FIELD from "@salesforce/schema/WorkItem__c.StageNamePk__c";
 
-// Field references — namespaced at runtime via the @salesforce/schema scheme is unavailable
-// for managed-package fields used outside the package, so we use string field names that
-// the bundler resolves through %%%NAMESPACE_DOT%%% replacement.
 const FIELDS = [
-    "%%%NAMESPACE_DOT%%%WorkItem__c.%%%NAMESPACE_DOT%%%EstimatedHoursNumber__c",
-    "%%%NAMESPACE_DOT%%%WorkItem__c.%%%NAMESPACE_DOT%%%TotalLoggedHoursSum__c",
-    "%%%NAMESPACE_DOT%%%WorkItem__c.%%%NAMESPACE_DOT%%%CalculatedETADate__c",
-    "%%%NAMESPACE_DOT%%%WorkItem__c.%%%NAMESPACE_DOT%%%EstimatedEndDevDate__c",
-    "%%%NAMESPACE_DOT%%%WorkItem__c.%%%NAMESPACE_DOT%%%StageNamePk__c"
+    ESTIMATED_HOURS_FIELD,
+    TOTAL_LOGGED_HOURS_FIELD,
+    CALCULATED_ETA_FIELD,
+    ESTIMATED_END_DEV_FIELD,
+    STAGE_FIELD
 ];
 
 const TERMINAL_STAGES = new Set(["Done", "Cancelled", "Closed", "Rejected"]);
@@ -43,37 +54,23 @@ export default class DeliveryHoursPills extends LightningElement {
         return !!this.record && !this.errorMessage;
     }
 
-    // ── Field readers (LDS getRecord shape) ───────────────────────
-
-    _field(apiName) {
-        if (!this.record || !this.record.fields) {
-            return null;
-        }
-        const namespacedKey = Object.keys(this.record.fields).find(
-            (k) => k.toLowerCase() === apiName.toLowerCase()
-                || k.toLowerCase().endsWith("__" + apiName.toLowerCase())
-        );
-        if (!namespacedKey) {
-            return null;
-        }
-        const f = this.record.fields[namespacedKey];
-        return f ? f.value : null;
-    }
+    // ── Field readers (namespace-safe via schema imports) ─────────
 
     get _estimated() {
-        return Number(this._field("EstimatedHoursNumber__c") || 0);
+        return Number(getFieldValue(this.record, ESTIMATED_HOURS_FIELD) || 0);
     }
 
     get _logged() {
-        return Number(this._field("TotalLoggedHoursSum__c") || 0);
+        return Number(getFieldValue(this.record, TOTAL_LOGGED_HOURS_FIELD) || 0);
     }
 
     get _eta() {
-        return this._field("CalculatedETADate__c") || this._field("EstimatedEndDevDate__c");
+        return getFieldValue(this.record, CALCULATED_ETA_FIELD)
+            || getFieldValue(this.record, ESTIMATED_END_DEV_FIELD);
     }
 
     get _stage() {
-        return this._field("StageNamePk__c");
+        return getFieldValue(this.record, STAGE_FIELD);
     }
 
     // ── Pill computation ──────────────────────────────────────────
