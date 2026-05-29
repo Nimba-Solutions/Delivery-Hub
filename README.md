@@ -29,12 +29,12 @@ It is open source under the [BSL 1.1 license](LICENSE.md) and ships as an unlock
 
 ## Install
 
-**Current release**: [`release/0.248.0.3`](https://github.com/Nimba-Solutions/Delivery-Hub/releases) (production-promoted 2026-05-25). See [GitHub Releases](https://github.com/Nimba-Solutions/Delivery-Hub/releases) for the full version history.
+**Current release**: [`release/0.253.0.4`](https://github.com/Nimba-Solutions/Delivery-Hub/releases) (production-promoted 2026-05-29). See [GitHub Releases](https://github.com/Nimba-Solutions/Delivery-Hub/releases) for the full version history.
 
 | Environment | Link |
 |---|---|
-| **Production** | [![Install in Production](https://img.shields.io/badge/Install-Production-0070d2?logo=salesforce&style=for-the-badge)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000Vgz3IAC) |
-| **Sandbox** | [![Install in Sandbox](https://img.shields.io/badge/Install-Sandbox-3e8b3e?logo=salesforce&style=for-the-badge)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000Vgz3IAC) |
+| **Production** | [![Install in Production](https://img.shields.io/badge/Install-Production-0070d2?logo=salesforce&style=for-the-badge)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000VhK1IAK) |
+| **Sandbox** | [![Install in Sandbox](https://img.shields.io/badge/Install-Sandbox-3e8b3e?logo=salesforce&style=for-the-badge)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000VhK1IAK) |
 
 **Quickstart (≈5 minutes):**
 
@@ -75,7 +75,7 @@ Delivery Hub ships **two Lightning apps**:
 - **Delivery Hub** — end-user app: Home, Workspace, Board, Timeline, Activity Feed, Voice Notes, Guide
 - **Delivery Hub Admin** — admin/superuser app: everything above plus all object tabs, cockpit objects, Permission Analyzer, Settings
 
-### Admin app tabs (current as of `release/0.252.0.3`)
+### Admin app tabs (current as of `release/0.253.0.4`)
 
 `Home` · `Workspace` · `WorkItem` · `Board` · `Timeline` · `Activity` · `Activity Dashboard` · `NetworkEntity` · `WorkRequest` · `WorkItemComment` · `SyncItem` · `ActivityLog` · **`Feature`** · **`FeatureToggleRequest`** · **`WatcherDigest`** · **`ScratchOrgInstance`** · `Permission Analyzer` · `Settings` · `Guide` · `Reports`
 
