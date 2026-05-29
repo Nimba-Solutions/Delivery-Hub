@@ -149,6 +149,121 @@ global with sharing class DeliveryHubSettingsController {
     }
 
     /**
+     * @description Plain-English "consequence preview" for a single consequential
+     *              setting toggle. Surfaced in the admin UI as a confirm dialog
+     *              BEFORE a noisy / cost-incurring feature is committed, so admins
+     *              get zero negative surprises when flipping a toggle ON.
+     *              (P1 of the "safe by default, explain before you commit" initiative.)
+     */
+    global class ConsequencePreview {
+        /** @description Short headline shown as the confirm dialog label */
+        @AuraEnabled public String title { get; set; }
+        /** @description What the feature will actually start doing once enabled */
+        @AuraEnabled public String whatHappens { get; set; }
+        /** @description Who or what is affected (recipients / external systems) */
+        @AuraEnabled public String whoIsAffected { get; set; }
+        /** @description Any cost or billing implication (null/blank if none) */
+        @AuraEnabled public String cost { get; set; }
+
+        /**
+         * @description Convenience constructor.
+         * @param title Headline
+         * @param whatHappens Effect description
+         * @param whoIsAffected Affected parties
+         * @param cost Cost note (may be null)
+         */
+        global ConsequencePreview(String title, String whatHappens, String whoIsAffected, String cost) {
+            this.title = title;
+            this.whatHappens = whatHappens;
+            this.whoIsAffected = whoIsAffected;
+            this.cost = cost;
+        }
+    }
+
+    /**
+     * @description Returns the consequence-preview copy for every consequential
+     *              (user-visible side effect) settings toggle, keyed by the
+     *              DeliveryHubSettings__c field API name. This is the single
+     *              maintainable source of the "what will happen" copy the admin
+     *              Settings UI shows before committing a toggle to ON. Internal-only
+     *              toggles (Activity Logging, Board Metrics, etc.) are intentionally
+     *              omitted — they have no user-visible side effect to preview.
+     * @return Map of field API name to its ConsequencePreview.
+     */
+    @AuraEnabled(cacheable=true)
+    global static Map<String, ConsequencePreview> getConsequencePreviews() {
+        Map<String, ConsequencePreview> previews = new Map<String, ConsequencePreview>();
+
+        previews.put('EnableNotificationsDateTime__c', new ConsequencePreview(
+            'Turn on Notifications?',
+            'Delivery Hub will start sending notifications for work item updates and system events through the channels you have enabled (email, bell, Slack, external webhook).',
+            'Assigned developers, record owners, and anyone subscribed to affected records.',
+            null));
+
+        previews.put('EnableEmailNotificationsDateTime__c', new ConsequencePreview(
+            'Turn on Email Notifications?',
+            'Delivery Hub will send emails whenever a work item changes stage.',
+            'Assigned developers and record owners receive an email per stage change. High-volume boards can generate a lot of mail.',
+            null));
+
+        previews.put('EnableBellNotificationsDateTime__c', new ConsequencePreview(
+            'Turn on Bell Notifications?',
+            'In-app Salesforce bell notifications will start firing for items needing attention, overdue SLAs, and new comments.',
+            'Every Delivery Hub user sees bell alerts in the Salesforce header.',
+            null));
+
+        previews.put('EnableExternalNotificationsDateTime__c', new ConsequencePreview(
+            'Turn on External Webhook Notifications?',
+            'Real-time event payloads (stage changes, escalations, comments) will be pushed to your configured external webhook URL.',
+            'Your external endpoint. Confirm the receiving system is ready and the webhook URL is set, or deliveries will fail.',
+            'May incur usage cost on the receiving/integration platform depending on your provider.'));
+
+        previews.put('EnableSlackCommentSyncDateTime__c', new ConsequencePreview(
+            'Turn on Slack Comment Sync?',
+            'New work item comments will be posted to your configured Slack channel via the Incoming Webhook.',
+            'Everyone in the target Slack channel sees synced comments. Requires a valid Slack webhook URL to be configured.',
+            null));
+
+        previews.put('EnableWeeklyDigestDateTime__c', new ConsequencePreview(
+            'Turn on the Weekly Digest?',
+            'A weekly AI-generated board-summary email will be sent on the configured day.',
+            'The digest recipient list (or all Delivery Hub users if no list is set).',
+            'Generated with your OpenAI API key — incurs OpenAI usage cost each week.'));
+
+        previews.put('EnableOverdueRemindersDateTime__c', new ConsequencePreview(
+            'Turn on Overdue Reminders?',
+            'Automated reminder emails will be sent at your configured day intervals for overdue invoices and documents.',
+            'Clients and contacts on overdue invoices/documents receive repeat reminder emails.',
+            null));
+
+        previews.put('EnableInvoiceGenerationDateTime__c', new ConsequencePreview(
+            'Turn on Auto-Generate Invoices?',
+            'Delivery Hub will automatically generate invoices and daily hour summaries for billing-enabled entities on their configured frequency.',
+            'Billing-enabled entities and their billing contacts. This creates real billing documents.',
+            null));
+
+        previews.put('EnableAISuggestionsDateTime__c', new ConsequencePreview(
+            'Turn on AI Suggestions?',
+            'AI-powered features (enhanced titles/descriptions and time estimates) turn on across the board. This also enables Auto-Generate Descriptions and AI Time Estimation.',
+            'Work item content is sent to OpenAI for analysis when these features run.',
+            'Uses your OpenAI API key — incurs OpenAI usage cost per request.'));
+
+        previews.put('EnableAIEstimationDateTime__c', new ConsequencePreview(
+            'Turn on AI Time Estimation?',
+            'Delivery Hub will request AI-generated development time estimates for work items.',
+            'Work item content is sent to OpenAI to produce estimates.',
+            'Uses your OpenAI API key — incurs OpenAI usage cost per request.'));
+
+        previews.put('EnableAutoGenerateDescriptionsDateTime__c', new ConsequencePreview(
+            'Turn on Auto-Generate Descriptions?',
+            'Delivery Hub will automatically enhance work item descriptions using AI.',
+            'Work item content is sent to OpenAI to generate enhanced descriptions.',
+            'Uses your OpenAI API key — incurs OpenAI usage cost per request.'));
+
+        return previews;
+    }
+
+    /**
      * @description Fetches settings. Not cacheable to ensure fresh reload.
      * @return SettingsDTO The aggregated settings object.
      */

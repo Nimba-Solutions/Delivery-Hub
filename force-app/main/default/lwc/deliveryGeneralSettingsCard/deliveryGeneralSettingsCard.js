@@ -15,6 +15,7 @@ import saveGeneralSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHub
 import saveExtendedSettings from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.saveExtendedSettings';
 import saveSlackWebhookUrl from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSettingsController.saveSlackWebhookUrl';
 import testWebhook from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliverySlackService.testWebhook';
+import { confirmConsequence } from 'c/deliveryConsequencePreview';
 
 export default class DeliveryGeneralSettingsCard extends LightningElement {
     // ── Core toggles (existing) ─────────────────────────────────────────
@@ -178,10 +179,34 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
         }
     }
 
+    // ── Consequence-preview gate ────────────────────────────────────────
+    // When a consequential toggle is flipped ON, show a plain-English confirm
+    // dialog (sourced from DeliveryHubSettingsController.getConsequencePreviews)
+    // BEFORE committing. Cancel reverts the toggle (stays OFF). Turning OFF needs
+    // no preview. Returns true if the change should commit.
+    async confirmEnableOrRevert(event, fieldApiName, propName) {
+        const isEnabling = event.target.checked;
+        if (!isEnabling) {
+            return true; // turning OFF — no preview
+        }
+        const confirmed = await confirmConsequence(fieldApiName);
+        if (!confirmed) {
+            // Revert both the bound state and the live DOM toggle.
+            this[propName] = false;
+            event.target.checked = false;
+            return false;
+        }
+        return true;
+    }
+
     // ── Core toggle handlers ────────────────────────────────────────────
 
-    handleNotificationsToggle(event) {
+    async handleNotificationsToggle(event) {
         this.notifications = event.target.checked;
+        const proceed = await this.confirmEnableOrRevert(event, 'EnableNotificationsDateTime__c', 'notifications');
+        if (!proceed) {
+            return;
+        }
         this.saveState();
     }
 
@@ -190,8 +215,12 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
         this.saveState();
     }
 
-    handleEmailNotificationsToggle(event) {
+    async handleEmailNotificationsToggle(event) {
         this.emailNotificationsEnabled = event.target.checked;
+        const proceed = await this.confirmEnableOrRevert(event, 'EnableEmailNotificationsDateTime__c', 'emailNotificationsEnabled');
+        if (!proceed) {
+            return;
+        }
         this.saveState();
     }
 
@@ -217,13 +246,21 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
         this.saveExtended();
     }
 
-    handleBellNotificationsToggle(event) {
+    async handleBellNotificationsToggle(event) {
         this.bellNotificationsEnabled = event.target.checked;
+        const proceed = await this.confirmEnableOrRevert(event, 'EnableBellNotificationsDateTime__c', 'bellNotificationsEnabled');
+        if (!proceed) {
+            return;
+        }
         this.saveExtended();
     }
 
-    handleWeeklyDigestToggle(event) {
+    async handleWeeklyDigestToggle(event) {
         this.weeklyDigestEnabled = event.target.checked;
+        const proceed = await this.confirmEnableOrRevert(event, 'EnableWeeklyDigestDateTime__c', 'weeklyDigestEnabled');
+        if (!proceed) {
+            return;
+        }
         this.saveExtended();
     }
 
@@ -237,20 +274,32 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
         this.saveExtended();
     }
 
-    handleInvoiceGenerationToggle(event) {
+    async handleInvoiceGenerationToggle(event) {
         this.invoiceGenerationEnabled = event.target.checked;
+        const proceed = await this.confirmEnableOrRevert(event, 'EnableInvoiceGenerationDateTime__c', 'invoiceGenerationEnabled');
+        if (!proceed) {
+            return;
+        }
         this.saveExtended();
     }
 
     // ── Enterprise toggle handlers ─────────────────────────────────────
 
-    handleExternalNotificationsToggle(event) {
+    async handleExternalNotificationsToggle(event) {
         this.externalNotificationsEnabled = event.target.checked;
+        const proceed = await this.confirmEnableOrRevert(event, 'EnableExternalNotificationsDateTime__c', 'externalNotificationsEnabled');
+        if (!proceed) {
+            return;
+        }
         this.saveExtended();
     }
 
-    handleOverdueRemindersToggle(event) {
+    async handleOverdueRemindersToggle(event) {
         this.overdueRemindersEnabled = event.target.checked;
+        const proceed = await this.confirmEnableOrRevert(event, 'EnableOverdueRemindersDateTime__c', 'overdueRemindersEnabled');
+        if (!proceed) {
+            return;
+        }
         this.saveExtended();
     }
 
