@@ -85,6 +85,21 @@ global with sharing class DeliveryDatasetController {
     }
 
     /**
+     * @description Result of an in-app sample-data load/remove run. Returned
+     *              to the LWC so it can show a precise toast ("Loaded 17
+     *              records" / "Removed 17 sample records"). Mirrors
+     *              DeliveryDatasetLoader.LoadResult without leaking the inner
+     *              type across the controller boundary.
+     */
+    global class SampleDataResultDTO {
+        @AuraEnabled public String outcome;
+        @AuraEnabled public Integer recordCount;
+        @AuraEnabled public Boolean alreadyLoaded;
+        @AuraEnabled public String message;
+        @AuraEnabled public Id assignmentId;
+    }
+
+    /**
      * @description Compact payload for the "last loaded by X on Y" subline
      *              the LWC renders on each template card. Mirrors a single
      *              DatasetTemplateAssignment__c without leaking the SObject.
@@ -427,6 +442,86 @@ global with sharing class DeliveryDatasetController {
             }
         }
         return row;
+    }
+
+    /**
+     * @description Loads the sample dataset for the given template via the
+     *              DeliveryDatasetLoader service — the in-app, no-CCI path. The
+     *              loader inserts clearly-marked sample records (queryable via
+     *              the SAMPLE_MARKER prefix) and writes a
+     *              DatasetTemplateAssignment__c audit row with the real outcome
+     *              + count. Idempotent: re-running when data is already present
+     *              is a no-op (the DTO's alreadyLoaded flag tells the LWC).
+     *
+     *              Admin-gated — same PermissionSetGroup check as
+     *              recordAssignment. Runs as the admin (SYSTEM_MODE inside the
+     *              loader) so a delegated admin without raw object CRUD can
+     *              still prime sample data through the package surface.
+     * @param templateId DatasetTemplate__c whose sample data should load. Required.
+     * @return SampleDataResultDTO with outcome + record count + already-loaded flag.
+     */
+    @AuraEnabled
+    global static SampleDataResultDTO loadSampleData(Id templateId) {
+        assertAdminOrThrow();
+        if (templateId == null) {
+            throw new AuraHandledException('templateId is required.');
+        }
+        try {
+            DeliveryDatasetLoader.LoadResult r = DeliveryDatasetLoader.load(templateId);
+            return toSampleResult(r);
+        } catch (DeliveryDatasetLoader.DatasetLoaderException dle) {
+            // Loader's own caller-meaningful message — pass it through.
+            throw new AuraHandledException(dle.getMessage());
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryDatasetController.loadSampleData] failed: ' + e.getMessage());
+            throw new AuraHandledException('Unable to load sample data for this template.');
+        }
+    }
+
+    /**
+     * @description Removes the sample dataset for the given template via the
+     *              DeliveryDatasetLoader service — deleting EXACTLY the records
+     *              the loader marked (SAMPLE_MARKER), never touching real data —
+     *              and writes a removal audit row. Idempotent: removing when
+     *              nothing is loaded is a clean no-op (recordCount=0).
+     *
+     *              Admin-gated. Runs the deletes in SYSTEM_MODE inside the loader.
+     * @param templateId DatasetTemplate__c whose sample data should be removed. Required.
+     * @return SampleDataResultDTO with the count of records removed.
+     */
+    @AuraEnabled
+    global static SampleDataResultDTO removeSampleData(Id templateId) {
+        assertAdminOrThrow();
+        if (templateId == null) {
+            throw new AuraHandledException('templateId is required.');
+        }
+        try {
+            DeliveryDatasetLoader.LoadResult r = DeliveryDatasetLoader.remove(templateId);
+            return toSampleResult(r);
+        } catch (DeliveryDatasetLoader.DatasetLoaderException dle) {
+            throw new AuraHandledException(dle.getMessage());
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryDatasetController.removeSampleData] failed: ' + e.getMessage());
+            throw new AuraHandledException('Unable to remove sample data for this template.');
+        }
+    }
+
+    /**
+     * @description Maps a DeliveryDatasetLoader.LoadResult into the
+     *              controller-boundary DTO the LWC consumes.
+     * @param r Loader result (never null at the call sites).
+     * @return Populated SampleDataResultDTO.
+     */
+    private static SampleDataResultDTO toSampleResult(DeliveryDatasetLoader.LoadResult r) {
+        SampleDataResultDTO dto = new SampleDataResultDTO();
+        dto.outcome = r.outcome;
+        dto.recordCount = r.recordCount;
+        dto.alreadyLoaded = r.alreadyLoaded;
+        dto.message = r.message;
+        dto.assignmentId = r.assignmentId;
+        return dto;
     }
 
     /**

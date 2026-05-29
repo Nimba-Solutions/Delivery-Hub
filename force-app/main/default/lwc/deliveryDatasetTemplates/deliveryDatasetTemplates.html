@@ -21,9 +21,11 @@
 
             <template lwc:if={isSubscriberOrg}>
                 <div class="slds-box slds-theme_shade slds-text-body_small slds-m-bottom_small">
-                    Dataset templates are for package developers &mdash;
-                    install scratch org tooling locally (CumulusCI + sfdx)
-                    to load sample data.
+                    Use <strong>Load Sample Data</strong> to populate clearly-marked
+                    &ldquo;[DH SAMPLE]&rdquo; demo records &mdash; no CumulusCI or CLI
+                    required. Remove them anytime with one click. (The
+                    <em>Copy Load Command</em> path remains for package developers
+                    running scratch-org tooling locally.)
                 </div>
             </template>
 
@@ -52,9 +54,27 @@
                                 </div>
                                 <div class="slds-col slds-no-flex">
                                     <lightning-button
-                                        label="Copy Load Command"
+                                        label="Load Sample Data"
                                         variant="brand"
+                                        icon-name="utility:upload"
+                                        data-template-id={t.templateId}
+                                        data-template-name={t.name}
+                                        onclick={handleOpenLoadSample}>
+                                    </lightning-button>
+                                    <lightning-button
+                                        label="Remove Sample Data"
+                                        variant="destructive-text"
+                                        icon-name="utility:delete"
+                                        class="slds-m-left_x-small"
+                                        data-template-id={t.templateId}
+                                        data-template-name={t.name}
+                                        onclick={handleOpenRemoveSample}>
+                                    </lightning-button>
+                                    <lightning-button
+                                        label="Copy Load Command"
+                                        variant="neutral"
                                         icon-name="utility:copy"
+                                        class="slds-m-left_x-small"
                                         data-template-id={t.templateId}
                                         onclick={handleCopyCommand}>
                                     </lightning-button>
@@ -179,6 +199,53 @@
                         class="slds-m-left_x-small"
                         onclick={handleSubmitMarkAsLoaded}
                         disabled={isSubmittingMarkAsLoaded}>
+                    </lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+    <template lwc:if={isSampleModalOpen}>
+        <section role="dialog" tabindex="-1" aria-modal="true"
+            aria-labelledby="sampleDataHeading"
+            class="slds-modal slds-fade-in-open slds-modal_small">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <lightning-button-icon
+                        icon-name="utility:close"
+                        variant="bare-inverse"
+                        size="large"
+                        alternative-text="Cancel"
+                        title="Cancel"
+                        class="slds-modal__close"
+                        onclick={handleCloseSampleModal}>
+                    </lightning-button-icon>
+                    <h2 id="sampleDataHeading" class="slds-modal__title slds-hyphenate">
+                        {sampleModalHeading}
+                    </h2>
+                    <p class="slds-m-top_x-small slds-text-body_small slds-text-color_weak">
+                        Template: <strong>{sampleTemplateName}</strong>
+                    </p>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <p class="slds-text-body_regular">
+                        {sampleModalBody}
+                    </p>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button
+                        label="Cancel"
+                        variant="neutral"
+                        onclick={handleCloseSampleModal}
+                        disabled={isSampleActionRunning}>
+                    </lightning-button>
+                    <lightning-button
+                        label={sampleConfirmLabel}
+                        variant={sampleConfirmVariant}
+                        class="slds-m-left_x-small"
+                        onclick={handleConfirmSampleAction}
+                        disabled={isSampleActionRunning}>
                     </lightning-button>
                 </footer>
             </div>
