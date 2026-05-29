@@ -33,8 +33,8 @@ It is open source under the [BSL 1.1 license](LICENSE.md) and ships as an unlock
 
 | Environment | Link |
 |---|---|
-| **Production** | [![Install in Production](https://img.shields.io/badge/Install-Production-0070d2?logo=salesforce&style=for-the-badge)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000T0SrIAK) |
-| **Sandbox** | [![Install in Sandbox](https://img.shields.io/badge/Install-Sandbox-3e8b3e?logo=salesforce&style=for-the-badge)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000T0SrIAK) |
+| **Production** | [![Install in Production](https://img.shields.io/badge/Install-Production-0070d2?logo=salesforce&style=for-the-badge)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000Vgz3IAC) |
+| **Sandbox** | [![Install in Sandbox](https://img.shields.io/badge/Install-Sandbox-3e8b3e?logo=salesforce&style=for-the-badge)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000Vgz3IAC) |
 
 **Quickstart (≈5 minutes):**
 
@@ -75,7 +75,7 @@ Delivery Hub ships **two Lightning apps**:
 - **Delivery Hub** — end-user app: Home, Workspace, Board, Timeline, Activity Feed, Voice Notes, Guide
 - **Delivery Hub Admin** — admin/superuser app: everything above plus all object tabs, cockpit objects, Permission Analyzer, Settings
 
-### Admin app tabs (current as of `release/0.248.0.3`)
+### Admin app tabs (current as of `release/0.252.0.3`)
 
 `Home` · `Workspace` · `WorkItem` · `Board` · `Timeline` · `Activity` · `Activity Dashboard` · `NetworkEntity` · `WorkRequest` · `WorkItemComment` · `SyncItem` · `ActivityLog` · **`Feature`** · **`FeatureToggleRequest`** · **`WatcherDigest`** · **`ScratchOrgInstance`** · `Permission Analyzer` · `Settings` · `Guide` · `Reports`
 
