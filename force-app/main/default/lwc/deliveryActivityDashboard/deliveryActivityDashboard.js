@@ -11,6 +11,7 @@
 import { LightningElement, track, wire } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
+import ACTIVITY_LOG_OBJECT from '@salesforce/schema/ActivityLog__c';
 import getActivitySummary from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryActivityDashboardController.getActivitySummary';
 import getReportIds from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getReportIds';
 
@@ -194,7 +195,13 @@ export default class DeliveryActivityDashboard extends NavigationMixin(Lightning
         this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
             attributes: {
                 actionName: 'list',
-                objectApiName: '%%%NAMESPACE_DOT%%%ActivityLog__c'
+                // Schema-import keeps the object api name namespace-correct in
+                // both managed (`delivery__ActivityLog__c`) and unmanaged
+                // contexts. The earlier `%%%NAMESPACE_DOT%%%` string literal
+                // did NOT round-trip through CCI's namespace injector inside
+                // JS objects and silently produced a broken nav target on
+                // managed installs.
+                objectApiName: ACTIVITY_LOG_OBJECT.objectApiName
             },
             state: {
                 filterName: 'Recent'
