@@ -8,6 +8,7 @@
  */
 import { LightningElement, api, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
+import WORK_ITEM_OBJECT from '@salesforce/schema/WorkItem__c';
 import getDependencyGraph from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDependencyGraphController.getDependencyGraph';
 import getProjectDependencyGraph from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDependencyGraphController.getProjectDependencyGraph';
 import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowConfig';
@@ -452,7 +453,11 @@ export default class DeliveryDependencyGraph extends NavigationMixin(LightningEl
                 type: 'standard__recordPage',
                 attributes: {
                     recordId: nodeId,
-                    objectApiName: '%%%NAMESPACE_DOT%%%WorkItem__c',
+                    // Schema-import keeps the object api name namespace-correct
+                    // in both managed and unmanaged contexts; the earlier
+                    // `%%%NAMESPACE_DOT%%%` string literal did NOT round-trip
+                    // through CCI's namespace injector inside JS objects.
+                    objectApiName: WORK_ITEM_OBJECT.objectApiName,
                     actionName: 'view'
                 }
             });
