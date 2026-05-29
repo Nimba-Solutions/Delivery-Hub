@@ -150,9 +150,15 @@ private class DeliveryDatasetLoaderTest {
         Test.stopTest();
 
         System.assertEquals('Success', removeResult.outcome, 'Remove should succeed.');
-        // 2 vendors + 5 WI + 5 WR + 10 WL = 22 deleted.
-        System.assertEquals(22, removeResult.recordCount,
-            'Remove should delete exactly the 22 marked records.');
+        // At least the loaded set (2 vendors + 5 WI + 5 WR + 10 WL = 22). A
+        // managed/packaging context can run WorkItem automation that creates
+        // additional marker-linked child records (e.g. an auto WorkRequest);
+        // remove() correctly deletes those too, so assert >= the loaded set
+        // rather than an exact count. The real guarantee — every marked record
+        // gone, every REAL record intact — is asserted below.
+        System.assert(removeResult.recordCount >= 22,
+            'Remove should delete at least the loaded sample records. Got: '
+            + removeResult.recordCount);
 
         // No marked records survive.
         System.assertEquals(0, markedWorkItemCount(),
@@ -196,8 +202,9 @@ private class DeliveryDatasetLoaderTest {
             LIMIT 1
         ];
         System.assertEquals('Success', audit.OutcomePk__c, 'Remove outcome recorded.');
-        System.assertEquals(22, audit.RecordsLoadedNumber__c.intValue(),
-            'Remove audit records the count deleted.');
+        System.assert(audit.RecordsLoadedNumber__c.intValue() >= 22,
+            'Remove audit records the count deleted (>= the loaded set). Got: '
+            + audit.RecordsLoadedNumber__c);
         System.assert(audit.NotesTxt__c.contains('Removed'),
             'Remove audit notes should say "Removed". Got: ' + audit.NotesTxt__c);
     }
