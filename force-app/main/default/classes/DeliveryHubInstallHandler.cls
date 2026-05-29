@@ -17,13 +17,34 @@ global class DeliveryHubInstallHandler implements InstallHandler {
      */
     global void onInstall(InstallContext context) {
         initializeDefaultSettings();
-        seedFeaturesFromDefinitions();
-        seedDatasetTemplates();
+        enqueueInstallSeed();
         syncLegacySettingsToFeatures();
         scheduleSyncJobs();
         backfillUserPermissionSets();
         backfillWorkItemStatusDefaults();
         enqueueInitialReconciliation();
+    }
+
+    /**
+     * @description Enqueues DeliveryHubInstallSeedQueueable so the Feature
+     *              catalog + DatasetTemplate samples are seeded in a fresh
+     *              transaction AFTER postInstall commits — sidesteps a
+     *              FeatureTrigger same-transaction interaction that silently
+     *              throws when the seeds run inside postInstall. Verified
+     *              empirically: 0.252.0.3 install on dh-prod + nimba left
+     *              both orgs with 0 Feature__c / 0 DatasetTemplate__c rows
+     *              even though scheduleSyncJobs (which runs AFTER the seeds
+     *              in onInstall) registered all four cron jobs cleanly. The
+     *              same seed bodies run as anonymous Apex outside the install
+     *              transaction insert 6 Features + 1 DatasetTemplate cleanly.
+     */
+    private static void enqueueInstallSeed() {
+        try {
+            System.enqueueJob(new DeliveryHubInstallSeedQueueable());
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryHubInstallHandler] enqueueInstallSeed failed: ' + e.getMessage());
+        }
     }
 
     /**
@@ -83,119 +104,6 @@ global class DeliveryHubInstallHandler implements InstallHandler {
             // left null = OFF. Admins opt in via the guided setup flow.
         );
         insert settings;
-    }
-
-    /**
-     * @description Seeds one Feature__c per FeatureDefinition__mdt that does not
-     *              already have a matching runtime row. Idempotent: re-running
-     *              the install never duplicates existing seeded rows. Defaults
-     *              the per-tenant EnabledDateTime__c to the catalog's
-     *              DefaultEnabledDateTime__c (which is currently null for every
-     *              shipped record — admins activate features explicitly via the
-     *              cockpit). Wrapped in try/catch — install must never fail on
-     *              seed (existing handler pattern).
-     */
-    private static void seedFeaturesFromDefinitions() {
-        try {
-            List<FeatureDefinition__mdt> defs = [
-                SELECT DeveloperName, DefaultEnabledDateTime__c
-                FROM FeatureDefinition__mdt
-            ];
-            if (defs.isEmpty()) {
-                return;
-            }
-            Set<String> existingDefNames = new Set<String>();
-            for (Feature__c existing : [
-                SELECT FeatureDefinitionTxt__c FROM Feature__c
-                WHERE FeatureDefinitionTxt__c != null
-            ]) {
-                existingDefNames.add(existing.FeatureDefinitionTxt__c);
-            }
-            List<Feature__c> toInsert = new List<Feature__c>();
-            for (FeatureDefinition__mdt fd : defs) {
-                if (existingDefNames.contains(fd.DeveloperName)) {
-                    continue;
-                }
-                toInsert.add(new Feature__c(
-                    Name = fd.DeveloperName,
-                    FeatureDefinitionTxt__c = fd.DeveloperName,
-                    EnabledDateTime__c = fd.DefaultEnabledDateTime__c
-                ));
-            }
-            if (!toInsert.isEmpty()) {
-                insert toInsert;
-            }
-        } catch (Exception e) {
-            System.debug(LoggingLevel.WARN,
-                '[DeliveryHubInstallHandler] Feature catalog seed failed: '
-                + e.getMessage());
-        }
-    }
-
-    /**
-     * @description Seeds the in-app sample-data DatasetTemplate__c rows that
-     *              the cockpit's "Load sample data" / "Remove sample data"
-     *              buttons (DeliveryDatasetLoader) drive. Currently ships ONE
-     *              template — Invoice Generation — linked to its Feature__c via
-     *              FeatureLookup__c so the deliveryDatasetTemplates LWC exposes
-     *              the load/remove actions on the feature record page.
-     *
-     *              Idempotent: keyed by the template Name, so a re-install /
-     *              upgrade never duplicates the seeded row. Wrapped in
-     *              try/catch — install must never fail on a cosmetic seed.
-     *
-     *              Adding more datasets later: add a row to TEMPLATE_SEEDS and a
-     *              matching branch in DeliveryDatasetLoader.resolveDatasetKey.
-     */
-    private static void seedDatasetTemplates() {
-        try {
-            // Map of template Name → linked FeatureDefinition DeveloperName.
-            Map<String, String> templateSeeds = new Map<String, String>{
-                'Invoice Generation Sample Data' => 'Invoice_Generation'
-            };
-
-            // Which seed names already exist (idempotency key = Name).
-            Set<String> existingNames = new Set<String>();
-            for (DatasetTemplate__c existing : [
-                SELECT Name FROM DatasetTemplate__c
-                WHERE Name IN :templateSeeds.keySet()
-            ]) {
-                existingNames.add(existing.Name);
-            }
-
-            // Resolve the runtime Feature__c rows for the seeds we still need.
-            Map<String, Id> featureIdByDefName = new Map<String, Id>();
-            for (Feature__c f : [
-                SELECT Id, FeatureDefinitionTxt__c FROM Feature__c
-                WHERE FeatureDefinitionTxt__c IN :templateSeeds.values()
-            ]) {
-                featureIdByDefName.put(f.FeatureDefinitionTxt__c, f.Id);
-            }
-
-            List<DatasetTemplate__c> toInsert = new List<DatasetTemplate__c>();
-            for (String templateName : templateSeeds.keySet()) {
-                if (existingNames.contains(templateName)) {
-                    continue;
-                }
-                String defName = templateSeeds.get(templateName);
-                toInsert.add(new DatasetTemplate__c(
-                    Name = templateName,
-                    FeatureLookup__c = featureIdByDefName.get(defName),
-                    DescriptionTxt__c = 'Loads clearly-marked sample data so you can '
-                        + 'see this feature in action. Records are tagged "[DH SAMPLE]" '
-                        + 'and can be removed in one click.',
-                    ApexScriptPathTxt__c = 'scripts/feature-data/invoice_generation.apex',
-                    RecordCountEstimateNumber__c = 17
-                ));
-            }
-            if (!toInsert.isEmpty()) {
-                insert toInsert;
-            }
-        } catch (Exception e) {
-            System.debug(LoggingLevel.WARN,
-                '[DeliveryHubInstallHandler] Dataset template seed failed: '
-                + e.getMessage());
-        }
     }
 
     /**
