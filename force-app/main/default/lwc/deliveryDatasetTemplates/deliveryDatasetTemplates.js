@@ -18,6 +18,8 @@
 import { LightningElement, api, wire, track } from 'lwc';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import FEATURE_OBJECT_SCHEMA from '@salesforce/schema/Feature__c';
+import WORK_ITEM_OBJECT_SCHEMA from '@salesforce/schema/WorkItem__c';
 import getTemplatesForFeature from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.getTemplatesForFeature';
 import getTemplatesForWorkItem from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.getTemplatesForWorkItem';
 import getRecentAssignmentsForTemplate from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.getRecentAssignmentsForTemplate';
@@ -28,8 +30,13 @@ import recordAssignment from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatase
 import loadSampleData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.loadSampleData';
 import removeSampleData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDatasetController.removeSampleData';
 
-const FEATURE_OBJECT = 'Feature__c',
-    WORK_ITEM_OBJECT = 'WorkItem__c',
+// Schema-import-derived so `this.objectApiName` (Lightning injects the
+// namespaced api name on managed installs) compares correctly in both
+// managed (`delivery__WorkItem__c`) and unmanaged contexts. The earlier
+// bare `'WorkItem__c'` / `'Feature__c'` literals silently never matched
+// on managed orgs, suppressing the template wires.
+const FEATURE_OBJECT = FEATURE_OBJECT_SCHEMA.objectApiName,
+    WORK_ITEM_OBJECT = WORK_ITEM_OBJECT_SCHEMA.objectApiName,
     EMPTY = 0;
 
 export default class DeliveryDatasetTemplates extends LightningElement {
