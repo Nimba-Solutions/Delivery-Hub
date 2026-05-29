@@ -18,6 +18,7 @@ global class DeliveryHubInstallHandler implements InstallHandler {
     global void onInstall(InstallContext context) {
         initializeDefaultSettings();
         seedFeaturesFromDefinitions();
+        seedDatasetTemplates();
         syncLegacySettingsToFeatures();
         scheduleSyncJobs();
         backfillUserPermissionSets();
@@ -127,6 +128,72 @@ global class DeliveryHubInstallHandler implements InstallHandler {
         } catch (Exception e) {
             System.debug(LoggingLevel.WARN,
                 '[DeliveryHubInstallHandler] Feature catalog seed failed: '
+                + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Seeds the in-app sample-data DatasetTemplate__c rows that
+     *              the cockpit's "Load sample data" / "Remove sample data"
+     *              buttons (DeliveryDatasetLoader) drive. Currently ships ONE
+     *              template — Invoice Generation — linked to its Feature__c via
+     *              FeatureLookup__c so the deliveryDatasetTemplates LWC exposes
+     *              the load/remove actions on the feature record page.
+     *
+     *              Idempotent: keyed by the template Name, so a re-install /
+     *              upgrade never duplicates the seeded row. Wrapped in
+     *              try/catch — install must never fail on a cosmetic seed.
+     *
+     *              Adding more datasets later: add a row to TEMPLATE_SEEDS and a
+     *              matching branch in DeliveryDatasetLoader.resolveDatasetKey.
+     */
+    private static void seedDatasetTemplates() {
+        try {
+            // Map of template Name → linked FeatureDefinition DeveloperName.
+            Map<String, String> templateSeeds = new Map<String, String>{
+                'Invoice Generation Sample Data' => 'Invoice_Generation'
+            };
+
+            // Which seed names already exist (idempotency key = Name).
+            Set<String> existingNames = new Set<String>();
+            for (DatasetTemplate__c existing : [
+                SELECT Name FROM DatasetTemplate__c
+                WHERE Name IN :templateSeeds.keySet()
+            ]) {
+                existingNames.add(existing.Name);
+            }
+
+            // Resolve the runtime Feature__c rows for the seeds we still need.
+            Map<String, Id> featureIdByDefName = new Map<String, Id>();
+            for (Feature__c f : [
+                SELECT Id, FeatureDefinitionTxt__c FROM Feature__c
+                WHERE FeatureDefinitionTxt__c IN :templateSeeds.values()
+            ]) {
+                featureIdByDefName.put(f.FeatureDefinitionTxt__c, f.Id);
+            }
+
+            List<DatasetTemplate__c> toInsert = new List<DatasetTemplate__c>();
+            for (String templateName : templateSeeds.keySet()) {
+                if (existingNames.contains(templateName)) {
+                    continue;
+                }
+                String defName = templateSeeds.get(templateName);
+                toInsert.add(new DatasetTemplate__c(
+                    Name = templateName,
+                    FeatureLookup__c = featureIdByDefName.get(defName),
+                    DescriptionTxt__c = 'Loads clearly-marked sample data so you can '
+                        + 'see this feature in action. Records are tagged "[DH SAMPLE]" '
+                        + 'and can be removed in one click.',
+                    ApexScriptPathTxt__c = 'scripts/feature-data/invoice_generation.apex',
+                    RecordCountEstimateNumber__c = 17
+                ));
+            }
+            if (!toInsert.isEmpty()) {
+                insert toInsert;
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryHubInstallHandler] Dataset template seed failed: '
                 + e.getMessage());
         }
     }
