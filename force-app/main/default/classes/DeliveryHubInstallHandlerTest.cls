@@ -122,7 +122,9 @@ private class DeliveryHubInstallHandlerTest {
         System.runAs(testUser) {
             Integer defCount = [SELECT COUNT() FROM FeatureDefinition__mdt];
 
+            Test.startTest();
             Test.testInstall(new DeliveryHubInstallHandler(), null, false);
+            Test.stopTest();
 
             Integer seeded = [
                 SELECT COUNT() FROM Feature__c WHERE FeatureDefinitionTxt__c != null
@@ -135,6 +137,7 @@ private class DeliveryHubInstallHandlerTest {
     @IsTest
     static void testInstallFeatureSeedIsIdempotent() {
         System.runAs(testUser) {
+            Test.startTest();
             Test.testInstall(new DeliveryHubInstallHandler(), null, false);
             Integer afterFirst = [
                 SELECT COUNT() FROM Feature__c WHERE FeatureDefinitionTxt__c != null
@@ -143,8 +146,50 @@ private class DeliveryHubInstallHandlerTest {
             Integer afterSecond = [
                 SELECT COUNT() FROM Feature__c WHERE FeatureDefinitionTxt__c != null
             ];
+            Test.stopTest();
             System.assertEquals(afterFirst, afterSecond,
                 'Re-running install should not duplicate seeded Feature__c rows');
+        }
+    }
+
+    @IsTest
+    static void testInstallSeedsDatasetTemplate() {
+        System.runAs(testUser) {
+            Test.startTest();
+            Test.testInstall(new DeliveryHubInstallHandler(), null, false);
+            Test.stopTest();
+
+            List<DatasetTemplate__c> templates = [
+                SELECT Id, Name, FeatureLookup__c
+                FROM DatasetTemplate__c
+                WHERE Name = 'Invoice Generation Sample Data'
+            ];
+            System.assertEquals(1, templates.size(),
+                'Install should seed exactly one DatasetTemplate__c "Invoice Generation Sample Data"');
+
+            Feature__c invoiceFeature = [
+                SELECT Id FROM Feature__c
+                WHERE FeatureDefinitionTxt__c = 'Invoice_Generation'
+                LIMIT 1
+            ];
+            System.assertEquals(invoiceFeature.Id, templates[0].FeatureLookup__c,
+                'Seeded DatasetTemplate__c.FeatureLookup__c should resolve to the Invoice_Generation Feature__c row');
+        }
+    }
+
+    @IsTest
+    static void testInstallEnqueuesSeedQueueable() {
+        System.runAs(testUser) {
+            Test.testInstall(new DeliveryHubInstallHandler(), null, false);
+
+            // Query BEFORE Test.stopTest() so the enqueued job is still queued
+            // and observable as an AsyncApexJob row.
+            Integer queued = [
+                SELECT COUNT() FROM AsyncApexJob
+                WHERE ApexClass.Name = 'DeliveryHubInstallSeedQueueable'
+            ];
+            System.assert(queued > 0,
+                'onInstall should enqueue DeliveryHubInstallSeedQueueable');
         }
     }
 
