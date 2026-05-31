@@ -12,6 +12,9 @@
  */
 import { LightningElement, api, track, wire } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
+import SYNC_ITEM_OBJECT from '@salesforce/schema/SyncItem__c';
+import WORK_ITEM_OBJECT from '@salesforce/schema/WorkItem__c';
+import WORK_LOG_OBJECT from '@salesforce/schema/WorkLog__c';
 import getBudgetMetrics from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getBudgetMetrics';
 import getReportIds from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getReportIds';
 import { refreshApex } from '@salesforce/apex';
@@ -106,7 +109,7 @@ export default class DeliveryBudgetSummary extends NavigationMixin(LightningElem
             this[NavigationMixin.Navigate]({ type: 'standard__webPage', attributes: { url: `/lightning/r/Report/${reportId}/view` } });
             return;
         }
-        this[NavigationMixin.Navigate]({ type: 'standard__objectPage', attributes: { objectApiName: '%%%NAMESPACE_DOT%%%SyncItem__c', actionName: 'list' }, state: { filterName: 'Recent' } });
+        this[NavigationMixin.Navigate]({ type: 'standard__objectPage', attributes: { objectApiName: SYNC_ITEM_OBJECT.objectApiName, actionName: 'list' }, state: { filterName: 'Recent' } });
     }
 
     handleFailedClick() {
@@ -115,7 +118,7 @@ export default class DeliveryBudgetSummary extends NavigationMixin(LightningElem
             this[NavigationMixin.Navigate]({ type: 'standard__webPage', attributes: { url: `/lightning/r/Report/${reportId}/view` } });
             return;
         }
-        this[NavigationMixin.Navigate]({ type: 'standard__objectPage', attributes: { objectApiName: '%%%NAMESPACE_DOT%%%SyncItem__c', actionName: 'list' }, state: { filterName: 'Recent' } });
+        this[NavigationMixin.Navigate]({ type: 'standard__objectPage', attributes: { objectApiName: SYNC_ITEM_OBJECT.objectApiName, actionName: 'list' }, state: { filterName: 'Recent' } });
     }
 
     handleRefresh() {
@@ -140,7 +143,7 @@ export default class DeliveryBudgetSummary extends NavigationMixin(LightningElem
         this[NavigationMixin.Navigate]({
             type: 'standard__objectPage',
             attributes: {
-                objectApiName: '%%%NAMESPACE_DOT%%%WorkItem__c',
+                objectApiName: WORK_ITEM_OBJECT.objectApiName,
                 actionName: 'list'
             },
             state: { filterName: 'In_Flight' }
@@ -183,7 +186,7 @@ export default class DeliveryBudgetSummary extends NavigationMixin(LightningElem
         }
         this[NavigationMixin.Navigate]({
             type: 'standard__objectPage',
-            attributes: { objectApiName: '%%%NAMESPACE_DOT%%%WorkLog__c', actionName: 'list' },
+            attributes: { objectApiName: WORK_LOG_OBJECT.objectApiName, actionName: 'list' },
             state: { filterName: offsetMonths === 0 ? 'This_Month' : 'Last_Month' }
         });
     }
