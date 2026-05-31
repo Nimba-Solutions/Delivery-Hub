@@ -11,6 +11,7 @@ import { getRecord, getFieldValue, updateRecord } from "lightning/uiRecordApi";
 import { NavigationMixin } from "lightning/navigation";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 
+import WORK_ITEM_OBJECT from "@salesforce/schema/WorkItem__c";
 import IS_RECURRING_FIELD from "@salesforce/schema/WorkItem__c.RecurringEnabledDateTime__c";
 import IS_TEMPLATE_FIELD from "@salesforce/schema/WorkItem__c.TemplateMarkedDateTime__c";
 import RECURRENCE_SCHEDULE_FIELD from "@salesforce/schema/WorkItem__c.RecurrenceScheduleTxt__c";
@@ -132,7 +133,7 @@ export default class DeliveryRecurringConfig extends NavigationMixin(LightningEl
                 type: "standard__recordPage",
                 attributes: {
                     recordId: this.templateSourceId,
-                    objectApiName: "%%%NAMESPACE_DOT%%%WorkItem__c",
+                    objectApiName: WORK_ITEM_OBJECT.objectApiName,
                     actionName: "view"
                 }
             });

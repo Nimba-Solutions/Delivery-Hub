@@ -15,6 +15,7 @@ import { LightningElement, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import FEATURE_OBJECT from '@salesforce/schema/Feature__c';
 import getCatalog from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureCatalogController.getCatalog';
 import isAdminApex from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureCatalogController.isAdmin';
 import toggleFeature from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureCatalogController.toggleFeature';
@@ -203,7 +204,7 @@ export default class DeliveryFeatureCockpit extends NavigationMixin(LightningEle
                 type: 'standard__recordPage',
                 attributes: {
                     recordId: featureId,
-                    objectApiName: '%%%NAMESPACE_DOT%%%Feature__c',
+                    objectApiName: FEATURE_OBJECT.objectApiName,
                     actionName: 'view'
                 }
             })
@@ -241,7 +242,7 @@ export default class DeliveryFeatureCockpit extends NavigationMixin(LightningEle
             type: 'standard__recordPage',
             attributes: {
                 recordId: featureId,
-                objectApiName: '%%%NAMESPACE_DOT%%%Feature__c',
+                objectApiName: FEATURE_OBJECT.objectApiName,
                 actionName: 'view'
             }
         });

@@ -16,6 +16,7 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 // Work Item Object & Fields to Read
 import WORK_ITEM_OBJECT from '@salesforce/schema/WorkItem__c';
 import WORK_ITEM_HOURS from '@salesforce/schema/WorkItem__c.ClientPreApprovedHoursNumber__c';
+import ACCEPTANCE_CRITERIA_FIELD from '@salesforce/schema/WorkItem__c.AcceptanceCriteriaTxt__c';
 
 // Request Object & Fields to Write
 import REQUEST_OBJ from '@salesforce/schema/WorkRequest__c';
@@ -69,7 +70,7 @@ export default class DeliveryWorkItemRefiner extends NavigationMixin(LightningEl
 
     handleApplyCriteria() {
         const field = this.template.querySelector(
-            'lightning-input-field[field-name="%%%NAMESPACE_DOT%%%AcceptanceCriteriaTxt__c"]'
+            `lightning-input-field[field-name="${ACCEPTANCE_CRITERIA_FIELD.fieldApiName}"]`
         );
         if (field) {
             field.value = this.suggestedCriteria;
@@ -131,7 +132,7 @@ export default class DeliveryWorkItemRefiner extends NavigationMixin(LightningEl
             type: 'standard__recordPage',
             attributes: {
                 recordId: this.newRequestId,
-                objectApiName: '%%%NAMESPACE_DOT%%%WorkRequest__c',
+                objectApiName: REQUEST_OBJ.objectApiName,
                 actionName: 'view'
             }
         });

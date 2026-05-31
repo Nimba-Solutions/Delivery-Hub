@@ -12,6 +12,7 @@
 import { LightningElement, track, wire } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import WORK_ITEM_OBJECT from '@salesforce/schema/WorkItem__c';
 import createWorkItemFromVoice from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryVoiceNotesController.createWorkItemFromVoice';
 import createBatchWorkItems from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryVoiceNotesController.createBatchWorkItems';
 import getEntityNames from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryVoiceNotesController.getEntityNames';
@@ -500,7 +501,7 @@ export default class DeliveryVoiceNotes extends NavigationMixin(LightningElement
             this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
                 attributes: {
                     actionName: 'view',
-                    objectApiName: '%%%NAMESPACE_DOT%%%WorkItem__c',
+                    objectApiName: WORK_ITEM_OBJECT.objectApiName,
                     recordId: recordId
                 },
                 type: 'standard__recordPage'

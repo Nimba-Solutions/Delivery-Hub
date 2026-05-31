@@ -196,7 +196,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
             const objName = pageRef.attributes?.objectApiName || '';
             if (recId && !this.networkEntityId) {
                 // If we're on a Document record page, load that document directly
-                if (objName === '%%%NAMESPACE_DOT%%%DeliveryDocument__c' || objName === 'DeliveryDocument__c') {
+                if (objName === DOC_OBJECT.objectApiName) {
                     this.loadDocumentById(recId);
                 } else {
                     this.effectiveEntityId = recId;
