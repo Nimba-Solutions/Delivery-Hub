@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableActivityLogCleanupDateTime__c</fullName>
+    <description>When non-null, the daily activity-log maintenance job is active (runs at 2 AM UTC). This single opt-in covers BOTH side effects of DeliveryActivityLogCleanup: the usage-analytics roll-up (writes a JSON summary to NetworkEntity.UsageAnalyticsJsonTxt and ships an outbound telemetry SyncItem to the vendor org) AND the batch purge of expired ActivityLog records (respects LegalHoldDateTime and the retention-day settings). Because it deletes subscriber data and exfiltrates telemetry, it is OFF by default — null disables the feature entirely; nothing runs until an admin opts in per org.</description>
+    <externalId>false</externalId>
+    <label>Enable Activity Log Cleanup</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

@@ -33,6 +33,7 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         processScheduledDocumentSends();
         runReconciliation();
         recalcWorkItemETAsIfTopOfHour();
+        enqueueActivityLogCleanupIfDue();
     }
 
     /**
@@ -326,6 +327,44 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         } catch (Exception ex) {
             System.debug(LoggingLevel.ERROR,
                 '[DeliveryHubScheduler] enqueueForecastAlertsIfDue failed: ' + ex.getMessage());
+        }
+    }
+
+    /**
+     * @description Runs the activity-log maintenance job once per day at 2 AM UTC
+     *              when the subscriber has explicitly opted in via
+     *              EnableActivityLogCleanupDateTime__c. This single gate covers
+     *              BOTH side effects of DeliveryActivityLogCleanup: (1) the usage-
+     *              analytics roll-up, which writes a JSON summary to
+     *              NetworkEntity__c.UsageAnalyticsJsonTxt__c AND ships an outbound
+     *              SyncItem__c of telemetry to the vendor org, and (2) the batch
+     *              purge of expired ActivityLog__c rows (respects LegalHoldDateTime__c
+     *              and the retention-day settings). Because this deletes subscriber
+     *              data and exfiltrates telemetry, it is OFF by default — nothing
+     *              runs until an admin sets the opt-in DateTime per org. The class
+     *              was previously orphaned (nothing scheduled it); this wires it
+     *              into the daily sub-job pattern. Mirrors enqueueForecastAlertsIfDue.
+     */
+    @TestVisible
+    private static void enqueueActivityLogCleanupIfDue() {
+        try {
+            Integer currentHour = DateTime.now().hourGmt();
+            if (currentHour != 2) {
+                return;
+            }
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            if (settings == null || settings.EnableActivityLogCleanupDateTime__c == null) {
+                return;
+            }
+            // Both the telemetry aggregate AND the batch purge run behind the single
+            // opt-in flag. Aggregate first (writes the JSON summary + queues the
+            // outbound analytics SyncItem), then kick off the batch purge of expired
+            // ActivityLog__c rows in chunks of 2000.
+            DeliveryActivityLogCleanup.aggregateUsageAnalytics();
+            Database.executeBatch(new DeliveryActivityLogCleanup(), 2000);
+        } catch (Exception ex) {
+            System.debug(LoggingLevel.ERROR,
+                '[DeliveryHubScheduler] enqueueActivityLogCleanupIfDue failed: ' + ex.getMessage());
         }
     }
 
