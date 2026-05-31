@@ -10,6 +10,7 @@
  * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, track } from 'lwc';
+import WORK_ITEM_OBJECT from '@salesforce/schema/WorkItem__c';
 import getCardsForPage from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDashboardCardController.getCardsForPage';
 import getCardData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDashboardCardController.getCardData';
 
@@ -149,10 +150,9 @@ export default class DeliveryExecutiveDashboard extends LightningElement {
     }
 
     workItemApiName() {
-        // Hardcoded namespace prefix is replaced at package-build time on
-        // subscriber orgs. In source it stays as the placeholder so the
-        // packaging tool can rewrite it.
-        return '%%%NAMESPACE%%%WorkItem__c';
+        // Namespace-safe object API name resolved via @salesforce/schema import;
+        // resolves correctly on managed (delivery__) and unmanaged installs alike.
+        return WORK_ITEM_OBJECT.objectApiName;
     }
 
     get hasCards() {

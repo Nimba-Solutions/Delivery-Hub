@@ -12,6 +12,8 @@ import { LightningElement, api, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
+import WORK_ITEM_OBJECT from '@salesforce/schema/WorkItem__c';
+import WORK_LOG_OBJECT from '@salesforce/schema/WorkLog__c';
 import getClientDashboard from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getClientDashboard';
 import getReportIds from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getReportIds';
 import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowConfig';
@@ -407,7 +409,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
         this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
             attributes: {
                 actionName: 'view',
-                objectApiName: '%%%NAMESPACE_DOT%%%WorkItem__c',
+                objectApiName: WORK_ITEM_OBJECT.objectApiName,
                 recordId
             },
             type: 'standard__recordPage'
@@ -463,7 +465,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
             this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
                 attributes: {
                     actionName: 'list',
-                    objectApiName: fallbackObject || '%%%NAMESPACE_DOT%%%WorkItem__c'
+                    objectApiName: fallbackObject || WORK_ITEM_OBJECT.objectApiName
                 },
                 state: { filterName: fallbackListView },
                 type: 'standard__objectPage'
@@ -493,7 +495,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
             this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
                 attributes: {
                     actionName: 'list',
-                    objectApiName: '%%%NAMESPACE_DOT%%%WorkLog__c'
+                    objectApiName: WORK_LOG_OBJECT.objectApiName
                 },
                 state: { filterName: 'This_Month' },
                 type: 'standard__objectPage'

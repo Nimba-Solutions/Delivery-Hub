@@ -10,6 +10,7 @@ import { LightningElement, api, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { subscribe, unsubscribe, onError } from 'lightning/empApi';
+import WORK_ITEM_OBJECT from '@salesforce/schema/WorkItem__c';
 import getBoardMetrics from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryMetricsService.getBoardMetrics';
 
 // Live updates — same channel + filter pattern as deliveryHubBoard.
@@ -365,7 +366,7 @@ export default class DeliveryBoardMetrics extends NavigationMixin(LightningEleme
         this[NavigationMixin.Navigate]({
             type: 'standard__objectPage',
             attributes: {
-                objectApiName: '%%%NAMESPACE_DOT%%%WorkItem__c',
+                objectApiName: WORK_ITEM_OBJECT.objectApiName,
                 actionName: 'list'
             }
         });
