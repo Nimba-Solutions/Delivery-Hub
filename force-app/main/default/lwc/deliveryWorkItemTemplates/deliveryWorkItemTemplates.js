@@ -10,6 +10,7 @@ import { LightningElement, wire, track } from "lwc";
 import { NavigationMixin } from "lightning/navigation";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 
+import WORK_ITEM_OBJECT from "@salesforce/schema/WorkItem__c";
 import getTemplates from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryRecurringItemService.getTemplates";
 import cloneFromTemplate from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryRecurringItemService.cloneFromTemplate";
 
@@ -137,7 +138,7 @@ export default class DeliveryWorkItemTemplates extends NavigationMixin(Lightning
                 type: "standard__recordPage",
                 attributes: {
                     recordId: newId,
-                    objectApiName: "%%%NAMESPACE_DOT%%%WorkItem__c",
+                    objectApiName: WORK_ITEM_OBJECT.objectApiName,
                     actionName: "view"
                 }
             });
