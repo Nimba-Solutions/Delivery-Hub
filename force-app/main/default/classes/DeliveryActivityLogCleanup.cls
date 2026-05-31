@@ -112,8 +112,15 @@ global without sharing class DeliveryActivityLogCleanup implements Schedulable, 
         Map<Id, Integer> totals = new Map<Id, Integer>();
     }
 
-    @TestVisible
-    private static void aggregateUsageAnalytics() {
+    /**
+     * @description Summarizes the last 30 days of ActivityLog__c activity per Network
+     *              Entity into a JSON blob on NetworkEntity__c.UsageAnalyticsJsonTxt__c
+     *              and queues an outbound SyncItem__c so the vendor org receives the
+     *              analytics. Public so DeliveryHubScheduler can invoke it from the
+     *              gated daily sub-job (EnableActivityLogCleanupDateTime__c) — the
+     *              Schedulable execute() also calls it for the standalone-cron path.
+     */
+    public static void aggregateUsageAnalytics() {
         DateTime since = DateTime.now().addDays(-AGGREGATION_DAYS);
         MetricsAccumulator acc = new MetricsAccumulator();
 
