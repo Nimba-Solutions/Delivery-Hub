@@ -76,17 +76,21 @@ export default class DeliveryHoursPills extends LightningElement {
     // ── Pill computation ──────────────────────────────────────────
 
     get onBudgetPill() {
-        const isTerminal = TERMINAL_STAGES.has(this._stage || "");
         if (this._estimated <= 0) {
             return this._pill("On-Budget", "—", "neutral", "No estimate set", "No data");
         }
-        const ratio = this._estimated / (this._logged || 0.0001);
-        const pct = Math.round(ratio * 100);
+        // Guard divide-by-zero BEFORE computing the ratio. The old
+        // `this._estimated / (this._logged || 0.0001)` produced a ~8,000,000%
+        // label when no hours were logged — rendered as a nonsense
+        // "Infinity"-looking figure on MF prod. With nothing logged there is
+        // no budget signal yet, so show a neutral placeholder.
+        if (this._logged <= 0) {
+            return this._pill("On-Budget", "—", "neutral", "No hours logged yet",
+                `Est ${this._formatHours(this._estimated)}h · Logged 0h`);
+        }
+        const pct = Math.round((this._estimated / this._logged) * 100);
         let band, tooltip;
-        if (this._logged === 0) {
-            band = "neutral";
-            tooltip = "No hours logged yet";
-        } else if (pct >= 100) {
+        if (pct >= 100) {
             band = "green";
             tooltip = `Earning ${pct}% of estimated hours per actual hour — at or under budget.`;
         } else if (pct >= 80) {
@@ -96,8 +100,7 @@ export default class DeliveryHoursPills extends LightningElement {
             band = "red";
             tooltip = `Earning only ${pct}% of estimated hours per actual hour — significantly over budget.`;
         }
-        const label = isTerminal && pct < 100 ? `${pct}%` : `${pct}%`;
-        return this._pill("On-Budget", label, band, tooltip,
+        return this._pill("On-Budget", `${pct}%`, band, tooltip,
             `Est ${this._formatHours(this._estimated)}h · Logged ${this._formatHours(this._logged)}h`);
     }
 
@@ -112,6 +115,9 @@ export default class DeliveryHoursPills extends LightningElement {
         const today = new Date();
         const eta = new Date(this._eta);
         const days = Math.ceil((eta - today) / (1000 * 60 * 60 * 24));
+        if (!Number.isFinite(days)) {
+            return this._pill("On-Schedule", "—", "neutral", "ETA date is invalid", "No data");
+        }
         let band, label, tooltip;
         if (days >= 7) {
             band = "green";
