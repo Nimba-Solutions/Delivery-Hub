@@ -12,6 +12,7 @@
 import { LightningElement, api, track, wire } from 'lwc';
 import { CurrentPageReference, NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import WORK_ITEM_OBJECT from '@salesforce/schema/WorkItem__c';
 import createWorkItem from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.createQuickRequest';
 import logActivity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.logUserActivity';
 import getAttentionCount from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getAttentionCount';
@@ -88,7 +89,7 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
 
     navigateToAttentionListView() {
         this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
-            attributes: { actionName: 'list', objectApiName: '%%%NAMESPACE_DOT%%%WorkItem__c' },
+            attributes: { actionName: 'list', objectApiName: WORK_ITEM_OBJECT.objectApiName },
             state: { filterName: 'In_Flight' },
             type: 'standard__objectPage'
         });
