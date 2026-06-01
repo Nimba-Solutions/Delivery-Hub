@@ -11,7 +11,60 @@
 /* eslint-disable no-underscore-dangle, one-var, class-methods-use-this */
 import { LightningElement, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
+import WORK_ITEM_OBJECT from '@salesforce/schema/WorkItem__c';
+import DELIVERY_DOCUMENT_OBJECT from '@salesforce/schema/DeliveryDocument__c';
+import SYNC_ITEM_OBJECT from '@salesforce/schema/SyncItem__c';
+import BOUNTY_CLAIM_OBJECT from '@salesforce/schema/BountyClaim__c';
 import getGuideContext from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGuideController.getGuideContext';
+
+/*
+ * Namespace resolution for NavigationMixin deep-links.
+ *
+ * The `%%%NAMESPACE_DOT%%%` build token is ONLY injected into Apex import
+ * paths + HTML attributes — NOT into arbitrary JS string literals (confirmed
+ * by PRs #850/#851/#853/#855). So embedding `'%%%NAMESPACE_DOT%%%Foo'`
+ * inside SECTION_CONFIG left every deep-link unprefixed at runtime and broke
+ * navigation on managed/MF-prod orgs (`delivery__` namespace).
+ *
+ * Two kinds of target need two fixes:
+ *   1. Object list pages (standard__objectPage) — resolve the namespaced
+ *      objectApiName straight off a `@salesforce/schema` import (the proven
+ *      #851/#853 approach: `WorkItem__c.objectApiName` === `delivery__WorkItem__c`
+ *      on a managed install, `WorkItem__c` in unmanaged dev).
+ *   2. CustomTab pages (standard__navItemPage) — there is NO `@salesforce/schema`
+ *      import for a tab, so derive the package namespace prefix at runtime from
+ *      a schema import's objectApiName and prepend it to the bare tab api name.
+ *
+ * OBJECT_TARGETS maps the stable config key to the schema import so the config
+ * stays readable (no tokens, no prefixes — just a stable local name).
+ */
+const OBJECT_TARGETS = {
+    WorkItem__c: WORK_ITEM_OBJECT,
+    DeliveryDocument__c: DELIVERY_DOCUMENT_OBJECT,
+    SyncItem__c: SYNC_ITEM_OBJECT,
+    BountyClaim__c: BOUNTY_CLAIM_OBJECT
+};
+
+/*
+ * Runtime package-namespace prefix (e.g. `delivery__` on a managed install,
+ * '' in unmanaged dev). Derived from a schema import's objectApiName: on a
+ * managed org `WORK_ITEM_OBJECT.objectApiName` is `delivery__WorkItem__c`, so
+ * everything up to and including the LAST `__` before the local name is the
+ * namespace prefix. Used to prefix CustomTab api names that have no schema
+ * import of their own. Mirrors the resourceUrl-derived `_vfPrefix()` helper in
+ * deliveryProFormaTimeline.
+ */
+const NS_PREFIX = (() => {
+    const apiName = WORK_ITEM_OBJECT.objectApiName || '';
+    const idx = apiName.indexOf('__');
+    // `delivery__WorkItem__c` -> idx at the namespace separator (not the
+    // trailing `__c`). If the first `__` is the object-suffix (unmanaged dev:
+    // `WorkItem__c`), there is no namespace prefix.
+    if (idx > -1 && apiName.slice(idx) !== '__c') {
+        return apiName.slice(0, idx + 2);
+    }
+    return '';
+})();
 
 const PERSONAS = [
     { label: 'All Roles', value: '' },
@@ -26,9 +79,14 @@ const PERSONAS = [
  * Each entry defines a section key, its relevant personas, and an optional
  * navigation target so users can jump directly to the feature.
  * navType values:
- *   'tab'        - NavigationMixin to a named tab
- *   'objectList' - NavigationMixin to an object's list view (Recent)
+ *   'tab'        - NavigationMixin to a named CustomTab (navTarget = bare tab
+ *                  api name; namespace prefix applied at runtime via NS_PREFIX)
+ *   'objectList' - NavigationMixin to an object's list view (Recent); navTarget
+ *                  = a key into OBJECT_TARGETS, resolved to the namespaced
+ *                  objectApiName via its `@salesforce/schema` import at run time
  *   null         - no deep-link (informational sections)
+ * navTarget never carries a namespace token — see the NS_PREFIX / OBJECT_TARGETS
+ * notes above. The token does not expand inside JS string literals.
  */
 const SECTION_CONFIG = [
     {
@@ -41,14 +99,14 @@ const SECTION_CONFIG = [
     {
         key: 'board',
         navLabel: 'Open Board',
-        navTarget: '%%%NAMESPACE_DOT%%%Delivery_Board',
+        navTarget: 'Delivery_Board',
         navType: 'tab',
         personas: ['Developer', 'Project Manager', 'Client', 'Admin']
     },
     {
         key: 'workItems',
         navLabel: 'View Work Items',
-        navTarget: '%%%NAMESPACE_DOT%%%WorkItem__c',
+        navTarget: 'WorkItem__c',
         navType: 'objectList',
         personas: ['Developer', 'Project Manager', 'Admin']
     },
@@ -62,14 +120,14 @@ const SECTION_CONFIG = [
     {
         key: 'documents',
         navLabel: 'View Documents',
-        navTarget: '%%%NAMESPACE_DOT%%%DeliveryDocument__c',
+        navTarget: 'DeliveryDocument__c',
         navType: 'objectList',
         personas: ['Project Manager', 'Client', 'Admin']
     },
     {
         key: 'activityFeed',
         navLabel: 'Open Activity Feed',
-        navTarget: '%%%NAMESPACE_DOT%%%Delivery_Activity',
+        navTarget: 'Delivery_Activity',
         navType: 'tab',
         personas: ['Developer', 'Project Manager', 'Client', 'Admin']
     },
@@ -83,7 +141,7 @@ const SECTION_CONFIG = [
     {
         key: 'sync',
         navLabel: 'View Sync Items',
-        navTarget: '%%%NAMESPACE_DOT%%%SyncItem__c',
+        navTarget: 'SyncItem__c',
         navType: 'objectList',
         personas: ['Admin']
     },
@@ -97,35 +155,35 @@ const SECTION_CONFIG = [
     {
         key: 'settings',
         navLabel: 'Open Settings',
-        navTarget: '%%%NAMESPACE_DOT%%%DeliveryHubSettings',
+        navTarget: 'DeliveryHubSettings',
         navType: 'tab',
         personas: ['Admin']
     },
     {
         key: 'timeline',
         navLabel: 'Open Timeline',
-        navTarget: '%%%NAMESPACE_DOT%%%Delivery_Timeline',
+        navTarget: 'Delivery_Timeline',
         navType: 'tab',
         personas: ['Developer', 'Project Manager', 'Admin']
     },
     {
         key: 'savedFilters',
         navLabel: 'Open Board',
-        navTarget: '%%%NAMESPACE_DOT%%%Delivery_Board',
+        navTarget: 'Delivery_Board',
         navType: 'tab',
         personas: ['Developer', 'Project Manager']
     },
     {
         key: 'docVersioning',
         navLabel: 'View Documents',
-        navTarget: '%%%NAMESPACE_DOT%%%DeliveryDocument__c',
+        navTarget: 'DeliveryDocument__c',
         navType: 'objectList',
         personas: ['Project Manager', 'Admin']
     },
     {
         key: 'invoiceApproval',
         navLabel: 'View Documents',
-        navTarget: '%%%NAMESPACE_DOT%%%DeliveryDocument__c',
+        navTarget: 'DeliveryDocument__c',
         navType: 'objectList',
         personas: ['Client', 'Admin']
     },
@@ -153,35 +211,35 @@ const SECTION_CONFIG = [
     {
         key: 'configurableSettings',
         navLabel: 'Open Settings',
-        navTarget: '%%%NAMESPACE_DOT%%%DeliveryHubSettings',
+        navTarget: 'DeliveryHubSettings',
         navType: 'tab',
         personas: ['Admin']
     },
     {
         key: 'pdfHyperlinks',
         navLabel: 'View Documents',
-        navTarget: '%%%NAMESPACE_DOT%%%DeliveryDocument__c',
+        navTarget: 'DeliveryDocument__c',
         navType: 'objectList',
         personas: ['Project Manager', 'Admin']
     },
     {
         key: 'hideEmptyColumns',
         navLabel: 'Open Board',
-        navTarget: '%%%NAMESPACE_DOT%%%Delivery_Board',
+        navTarget: 'Delivery_Board',
         navType: 'tab',
         personas: ['Developer', 'Project Manager']
     },
     {
         key: 'sla',
         navLabel: 'Open Settings',
-        navTarget: '%%%NAMESPACE_DOT%%%DeliveryHubSettings',
+        navTarget: 'DeliveryHubSettings',
         navType: 'tab',
         personas: ['Project Manager', 'Admin']
     },
     {
         key: 'escalation',
         navLabel: 'Open Settings',
-        navTarget: '%%%NAMESPACE_DOT%%%DeliveryHubSettings',
+        navTarget: 'DeliveryHubSettings',
         navType: 'tab',
         personas: ['Project Manager', 'Admin']
     },
@@ -195,7 +253,7 @@ const SECTION_CONFIG = [
     {
         key: 'rateLimiting',
         navLabel: 'Open Settings',
-        navTarget: '%%%NAMESPACE_DOT%%%DeliveryHubSettings',
+        navTarget: 'DeliveryHubSettings',
         navType: 'tab',
         personas: ['Admin']
     },
@@ -216,7 +274,7 @@ const SECTION_CONFIG = [
     {
         key: 'bounty',
         navLabel: 'View Bounties',
-        navTarget: '%%%NAMESPACE_DOT%%%BountyClaim__c',
+        navTarget: 'BountyClaim__c',
         navType: 'objectList',
         personas: ['Developer', 'Admin']
     },
@@ -326,15 +384,25 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
         }
 
         if (cfg.navType === 'tab') {
+            // CustomTab — no @salesforce/schema import exists for a tab, so
+            // prepend the runtime-resolved package namespace prefix to the
+            // bare tab api name (`delivery__Delivery_Board` on a managed org,
+            // `Delivery_Board` in unmanaged dev).
             this[NavigationMixin.Navigate]({
-                attributes: { apiName: cfg.navTarget },
+                attributes: { apiName: `${NS_PREFIX}${cfg.navTarget}` },
                 type: 'standard__navItemPage'
             });
         } else if (cfg.navType === 'objectList') {
+            // Object list — resolve the namespaced objectApiName off the
+            // schema import keyed by the stable config navTarget.
+            const objectSchema = OBJECT_TARGETS[cfg.navTarget];
+            if (!objectSchema) {
+                return;
+            }
             this[NavigationMixin.Navigate]({
                 attributes: {
                     actionName: 'list',
-                    objectApiName: cfg.navTarget
+                    objectApiName: objectSchema.objectApiName
                 },
                 state: { filterName: 'Recent' },
                 type: 'standard__objectPage'
