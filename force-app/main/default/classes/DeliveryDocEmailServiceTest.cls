@@ -113,6 +113,82 @@ private class DeliveryDocEmailServiceTest {
     }
 
     @IsTest
+    static void testSendDocumentEmailOweaSettingBlankFallsBack() {
+        System.runAs(testUser) {
+            // No DocumentFromOrgWideEmailTxt__c configured → must send as before
+            // (running user) with no exception.
+            DeliveryDocument__c doc = getDoc();
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryDocEmailService.sendDocumentEmail(
+                doc.Id, 'recipient@example.com'
+            );
+            Test.stopTest();
+
+            System.assertEquals(true, result.get('success'),
+                'Send should succeed and fall back to running user when OWEA setting is blank');
+
+            DeliveryDocument__c updated = getDoc();
+            System.assertEquals('Sent', updated.StatusPk__c,
+                'Document should be marked Sent on the blank-OWEA fallback path');
+        }
+    }
+
+    @IsTest
+    static void testSendDocumentEmailOweaSettingUnmatchedFallsBack() {
+        System.runAs(testUser) {
+            // OrgWideEmailAddress is NOT insertable in Apex tests, so we can only
+            // exercise the query-empty / unmatched branch: set the From address to
+            // something with no matching OWEA. resolveFromOrgWideEmailId must return
+            // null and the send must complete cleanly (running-user fallback).
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            settings.DocumentFromOrgWideEmailTxt__c = 'no-such-owea@example.com';
+            upsert settings;
+
+            DeliveryDocument__c doc = getDoc();
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryDocEmailService.sendDocumentEmail(
+                doc.Id, 'recipient@example.com'
+            );
+            Test.stopTest();
+
+            System.assertEquals(true, result.get('success'),
+                'Send should succeed and fall back cleanly when no OWEA matches the configured address');
+
+            DeliveryDocument__c updated = getDoc();
+            System.assertEquals('Sent', updated.StatusPk__c,
+                'Document should be marked Sent on the unmatched-OWEA fallback path');
+        }
+    }
+
+    @IsTest
+    static void testResolveFromOrgWideEmailIdNullWhenBlankOrUnmatched() {
+        System.runAs(testUser) {
+            Test.startTest();
+            // Null settings → null.
+            System.assertEquals(null,
+                DeliveryDocEmailService.resolveFromOrgWideEmailId(null),
+                'Null settings should resolve to a null OWEA Id');
+
+            // Blank address → null.
+            DeliveryHubSettings__c blank = new DeliveryHubSettings__c();
+            System.assertEquals(null,
+                DeliveryDocEmailService.resolveFromOrgWideEmailId(blank),
+                'Blank From address should resolve to a null OWEA Id');
+
+            // Set but unmatched → null (OrgWideEmailAddress not insertable in tests).
+            DeliveryHubSettings__c unmatched = new DeliveryHubSettings__c(
+                DocumentFromOrgWideEmailTxt__c = 'no-such-owea@example.com'
+            );
+            System.assertEquals(null,
+                DeliveryDocEmailService.resolveFromOrgWideEmailId(unmatched),
+                'Unmatched From address should resolve to a null OWEA Id');
+            Test.stopTest();
+        }
+    }
+
+    @IsTest
     static void testPreviewDocumentEmail() {
         System.runAs(testUser) {
             DeliveryDocument__c doc = getDoc();

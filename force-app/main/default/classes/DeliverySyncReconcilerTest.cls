@@ -210,4 +210,65 @@ private class DeliverySyncReconcilerTest {
             System.assert(workLogSyncs[0].PayloadTxt__c.contains('HoursLoggedNumber__c'), 'WorkLog payload should contain hours.');
         }
     }
+
+    /**
+     * @description Coverage parity (fix/sync-worklog-idempotency): a WorkLog
+     *              that already has a QUEUED (not yet Synced) outbound SyncItem
+     *              must NOT be re-queued every reconcile tick. Pre-fix only
+     *              'Synced' counted as covered for WorkLogs (the WorkItem path
+     *              already counted Queued/Processing/Staged), so a WorkLog
+     *              waiting in the processor queue got a fresh duplicate every
+     *              tick — the WorkLog analogue of the retry-storm the WorkItem
+     *              path already guards against.
+     */
+    @IsTest
+    static void testReconcileSkipsQueuedWorkLog() {
+        System.runAs(testUser) {
+            delete [SELECT Id FROM SyncItem__c];
+
+            // Cover the WorkItem gap (Synced) so the run focuses on WorkLog.
+            // Pre-seed a QUEUED WorkLog outbound for every existing WorkLog.
+            List<WorkRequest__c> allReqs = [SELECT Id, WorkItemId__c FROM WorkRequest__c];
+            List<WorkLog__c> allWLs = [SELECT Id, WorkItemLookup__c FROM WorkLog__c];
+
+            List<SyncItem__c> preCreated = new List<SyncItem__c>();
+            for (WorkRequest__c req : allReqs) {
+                preCreated.add(new SyncItem__c(
+                    ObjectTypePk__c     = 'WorkItem__c',
+                    LocalRecordIdTxt__c = req.WorkItemId__c,
+                    WorkItemLookup__c   = req.WorkItemId__c,
+                    RequestLookup__c    = req.Id,
+                    DirectionPk__c      = 'Outbound',
+                    StatusPk__c         = 'Synced',
+                    PayloadTxt__c       = '{"test":"wi synced"}'
+                ));
+            }
+            for (WorkLog__c wl : allWLs) {
+                preCreated.add(new SyncItem__c(
+                    ObjectTypePk__c     = 'WorkLog__c',
+                    LocalRecordIdTxt__c = (String) wl.Id,
+                    WorkItemLookup__c   = wl.WorkItemLookup__c,
+                    DirectionPk__c      = 'Outbound',
+                    StatusPk__c         = 'Queued', // not yet Synced — waiting in processor
+                    PayloadTxt__c       = '{"test":"wl queued"}'
+                ));
+            }
+            insert preCreated;
+
+            Test.startTest();
+            System.enqueueJob(new DeliverySyncReconciler());
+            Test.stopTest();
+
+            // No SECOND queued WorkLog row should be created — the existing
+            // Queued row counts as covered now.
+            Integer queuedWL = [
+                SELECT COUNT() FROM SyncItem__c
+                WHERE ObjectTypePk__c = 'WorkLog__c'
+                AND DirectionPk__c = 'Outbound'
+                AND StatusPk__c = 'Queued'
+            ];
+            System.assertEquals(allWLs.size(), queuedWL,
+                'Reconciler must NOT add a duplicate Queued WorkLog row when one already exists');
+        }
+    }
 }
