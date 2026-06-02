@@ -270,10 +270,26 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
         for (SyncItem__c existing : [
             SELECT LocalRecordIdTxt__c FROM SyncItem__c
             WHERE LocalRecordIdTxt__c IN :workLogIds
-            AND ObjectTypePk__c = 'WorkLog__c' AND DirectionPk__c = 'Outbound' AND StatusPk__c = 'Synced'
+            AND ObjectTypePk__c = 'WorkLog__c' AND DirectionPk__c = 'Outbound'
+            AND StatusPk__c IN ('Synced', 'Queued', 'Processing', 'Staged')
             WITH SYSTEM_MODE
         ]) {
             coveredWorkLogIds.add(existing.LocalRecordIdTxt__c);
+        }
+
+        // Bulk-load origin GlobalSourceId inheritance for relayed WorkLogs so
+        // the reconciler's re-queued outbound keeps the birthplace id across
+        // hops — same inheritance the trigger-handler builders apply. One
+        // query, no SOQL-in-loop.
+        Map<Id, String> recordToGlobalSource = new Map<Id, String>();
+        for (SyncItem__c inbound : [
+            SELECT LocalRecordIdTxt__c, GlobalSourceIdTxt__c FROM SyncItem__c
+            WHERE LocalRecordIdTxt__c IN :workLogIds
+            AND GlobalSourceIdTxt__c != NULL
+            AND DirectionPk__c = 'Inbound'
+            WITH SYSTEM_MODE
+        ]) {
+            recordToGlobalSource.put((Id) inbound.LocalRecordIdTxt__c, inbound.GlobalSourceIdTxt__c);
         }
 
         String senderOrgId = UserInfo.getOrganizationId();
@@ -288,7 +304,10 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
             if (parentReq == null) {
                 continue;
             }
-            itemsToInsert.add(buildWorkLogSyncItem(wl, parentReq, senderOrgId));
+            String gsid = recordToGlobalSource.containsKey(wl.Id)
+                ? recordToGlobalSource.get(wl.Id)
+                : (String) wl.Id;
+            itemsToInsert.add(buildWorkLogSyncItem(wl, parentReq, senderOrgId, gsid));
         }
     }
 
@@ -350,12 +369,15 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
      * @param wl The WorkLog record to sync.
      * @param parentReq The WorkRequest linking the parent WorkItem to the downstream entity.
      * @param senderOrgId The current org's Organization ID for routing metadata.
+     * @param globalSourceId The origin GlobalSourceId — inherited from the
+     *        inbound ledger for relayed WorkLogs, or this record's own Id when
+     *        this org is the birthplace.
      * @return A new SyncItem__c ready for insert.
      */
-    private SyncItem__c buildWorkLogSyncItem(WorkLog__c wl, WorkRequest__c parentReq, String senderOrgId) {
+    private SyncItem__c buildWorkLogSyncItem(WorkLog__c wl, WorkRequest__c parentReq, String senderOrgId, String globalSourceId) {
         Map<String, Object> payload = new Map<String, Object>{
             'SourceId'               => (String) wl.Id,
-            'GlobalSourceId'         => (String) wl.Id,
+            'GlobalSourceId'         => globalSourceId,
             'SenderOrgId'            => senderOrgId,
             'WorkItemLookup__c'          => wl.WorkItemLookup__c,
             'HoursLoggedNumber__c'   => wl.HoursLoggedNumber__c,
@@ -371,7 +393,7 @@ global without sharing class DeliverySyncReconciler implements Queueable, Databa
             RequestLookup__c         = parentReq.Id,
             DirectionPk__c       = 'Outbound',
             StatusPk__c          = 'Queued',
-            GlobalSourceIdTxt__c = (String) wl.Id,
+            GlobalSourceIdTxt__c = globalSourceId,
             PayloadTxt__c        = JSON.serialize(payload)
         );
     }
