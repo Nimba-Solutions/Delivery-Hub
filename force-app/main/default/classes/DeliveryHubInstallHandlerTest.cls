@@ -194,6 +194,48 @@ private class DeliveryHubInstallHandlerTest {
     }
 
     @IsTest
+    static void testSeedQueueableDocumentFromOweaNoopWhenNoOwea() {
+        System.runAs(testUser) {
+            // Drive the seed Queueable directly. Scratch/test orgs have no verified
+            // OrgWideEmailAddress (it is not insertable in Apex), so the OWEA seed
+            // must be a clean no-op: it leaves DocumentFromOrgWideEmailTxt__c blank
+            // and never throws (the execute() try/catch swallows any issue anyway).
+            Test.startTest();
+            System.enqueueJob(new DeliveryHubInstallSeedQueueable());
+            Test.stopTest();
+
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            // getOrgDefaults() can return a transient (no-Id) instance when nothing
+            // has been persisted; either way the From address must remain blank.
+            Boolean blankFrom = settings == null
+                || String.isBlank(settings.DocumentFromOrgWideEmailTxt__c);
+            System.assert(blankFrom,
+                'OWEA seed must be a no-op (blank From) when no OrgWideEmailAddress exists');
+        }
+    }
+
+    @IsTest
+    static void testSeedQueueableDocumentFromOweaDoesNotOverwriteExisting() {
+        System.runAs(testUser) {
+            // An admin's explicit choice must never be overwritten by the seed.
+            DeliveryHubSettings__c settings = new DeliveryHubSettings__c(
+                SetupOwnerId = UserInfo.getOrganizationId(),
+                DocumentFromOrgWideEmailTxt__c = 'admin-chosen@example.com'
+            );
+            insert settings;
+
+            Test.startTest();
+            System.enqueueJob(new DeliveryHubInstallSeedQueueable());
+            Test.stopTest();
+
+            DeliveryHubSettings__c reloaded = DeliveryHubSettings__c.getOrgDefaults();
+            System.assertEquals('admin-chosen@example.com',
+                reloaded.DocumentFromOrgWideEmailTxt__c,
+                'Seed must not overwrite an admin-chosen Document From address');
+        }
+    }
+
+    @IsTest
     static void testInstallIsIdempotentOnRepeatedScheduling() {
         System.runAs(testUser) {
             Test.testInstall(new DeliveryHubInstallHandler(), null, false);
