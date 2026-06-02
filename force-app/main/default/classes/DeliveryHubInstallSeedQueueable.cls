@@ -49,6 +49,15 @@ public with sharing class DeliveryHubInstallSeedQueueable implements System.Queu
                 '[DeliveryHubInstallSeedQueueable] Dataset template seed failed: '
                 + e.getMessage());
         }
+        // Intentionally swallowed: a missing-OWEA or settings issue must never break
+        // install/upgrade. No System.debug here (AvoidDebugStatements is strictly
+        // enforced); the only consequence of failure is the admin sets the From
+        // address manually, which is the documented fallback. // NOPMD suppresses
+        // EmptyCatchBlock on the catch below.
+        try {
+            seedDocumentFromOwea();
+        } catch (Exception e) { // NOPMD — see note above; deliberately empty
+        }
     }
 
     /**
@@ -159,5 +168,59 @@ public with sharing class DeliveryHubInstallSeedQueueable implements System.Queu
         if (!toInsert.isEmpty()) {
             insert toInsert;
         }
+    }
+
+    /**
+     * @description Pre-populates DeliveryHubSettings__c.DocumentFromOrgWideEmailTxt__c
+     *              with a sensible default verified Org-Wide Email Address when the
+     *              admin has not yet chosen one. This lets outbound document emails
+     *              (invoices) send from a stable, verified sender out of the box rather
+     *              than the running user.
+     *
+     *              Selection: prefer an OWEA usable by all profiles
+     *              (IsAllowAllProfiles = true); otherwise the most recently created one.
+     *
+     *              ONLY populates when the setting is blank — never overwrites an
+     *              admin's explicit choice. Runs on install AND upgrade (idempotent:
+     *              the blank guard makes re-runs a no-op once set). The caller wraps
+     *              this in try/catch so a missing-OWEA never breaks install.
+     */
+    @TestVisible
+    private static void seedDocumentFromOwea() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        // Never overwrite an admin's explicit choice.
+        if (settings != null && String.isNotBlank(settings.DocumentFromOrgWideEmailTxt__c)) {
+            return;
+        }
+
+        List<OrgWideEmailAddress> oweas = [
+            SELECT Address, IsAllowAllProfiles
+            FROM OrgWideEmailAddress
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate DESC
+        ];
+        if (oweas.isEmpty()) {
+            // No verified Org-Wide Email Address exists yet — nothing to seed.
+            return;
+        }
+
+        // Prefer one usable by all profiles; else fall back to the most recently
+        // created (the list is already ordered newest-first).
+        OrgWideEmailAddress chosen = oweas[0];
+        for (OrgWideEmailAddress owea : oweas) {
+            if (owea.IsAllowAllProfiles == true) {
+                chosen = owea;
+                break;
+            }
+        }
+        if (String.isBlank(chosen.Address)) {
+            return;
+        }
+
+        if (settings == null) {
+            settings = new DeliveryHubSettings__c(SetupOwnerId = UserInfo.getOrganizationId());
+        }
+        settings.DocumentFromOrgWideEmailTxt__c = chosen.Address;
+        upsert settings;
     }
 }
