@@ -201,6 +201,66 @@ private class DeliverySyncItemIngestorTest {
     }
 
     @IsTest
+    static void testWorkLogResolvesToLiveParentWhenLedgerHasStaleDeletedRow() {
+        // Regression (dh-prod inbound stall, 2026-06-02): when a WorkItem is
+        // re-created in this org, the inbound ledger holds MULTIPLE rows for the
+        // same remote id — some pointing at the now-deleted predecessor. The
+        // parent lookup must skip the dead row(s) and resolve the child WorkLog
+        // to the LIVE WorkItem, not strand it against a deleted parent. The old
+        // inline lookup took an unordered LIMIT 1 with no existence check and
+        // could grab the dead id; the fix routes through findLocalId(), which
+        // validates each candidate exists before returning it.
+        System.runAs(testUser) {
+            WorkItem__c liveWI = new WorkItem__c(BriefDescriptionTxt__c = 'Live re-created parent');
+            insert liveWI;
+            insert new WorkRequest__c(
+                WorkItemId__c = liveWI.Id,
+                RemoteWorkItemIdTxt__c = 'REMOTE-RECREATED-REQ',
+                StatusPk__c = 'Active'
+            );
+
+            // A predecessor WorkItem that was later deleted — its ledger row is now stale.
+            WorkItem__c deadWI = new WorkItem__c(BriefDescriptionTxt__c = 'Deleted predecessor');
+            insert deadWI;
+            Id deadWIId = deadWI.Id;
+
+            // Two Inbound ledger rows for the SAME remote WorkItem id: one stale
+            // (the soon-to-be-deleted predecessor) and one live.
+            insert new SyncItem__c(
+                DirectionPk__c = 'Inbound', StatusPk__c = 'Synced', ObjectTypePk__c = 'WorkItem__c',
+                RemoteExternalIdTxt__c = 'REMOTE-RECREATED-WI', LocalRecordIdTxt__c = deadWIId
+            );
+            insert new SyncItem__c(
+                DirectionPk__c = 'Inbound', StatusPk__c = 'Synced', ObjectTypePk__c = 'WorkItem__c',
+                RemoteExternalIdTxt__c = 'REMOTE-RECREATED-WI', LocalRecordIdTxt__c = liveWI.Id
+            );
+
+            delete deadWI; // the stale ledger row now dangles at a deleted id
+
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-WORKLOG-RECREATED-1',
+                'GlobalSourceId' => 'REMOTE-WORKLOG-RECREATED-1',
+                'WorkItemLookup__c' => 'REMOTE-RECREATED-WI',
+                'HoursLoggedNumber__c' => 1.25,
+                'WorkDateDate__c' => String.valueOf(Date.today()),
+                'WorkDescriptionTxt__c' => 'Child of a re-created parent'
+            };
+
+            Test.startTest();
+            Id resultId = DeliverySyncItemIngestor.processInboundItem('WorkLog__c', payload);
+            Test.stopTest();
+
+            System.assertNotEquals(null, resultId,
+                'WorkLog must resolve and insert — not strand against the deleted predecessor');
+            WorkLog__c wl = [SELECT WorkItemLookup__c FROM WorkLog__c WHERE Id = :resultId];
+            System.assertEquals(liveWI.Id, wl.WorkItemLookup__c,
+                'Parent must resolve to the LIVE WorkItem, skipping the stale ledger row at the deleted id');
+            System.assertNotEquals(deadWIId, wl.WorkItemLookup__c,
+                'Parent must NOT resolve to the deleted predecessor id');
+        }
+    }
+
+    @IsTest
     static void testFindLocalIdIgnoresNullSourceId() {
         System.runAs(testUser) {
             // When SourceId is null (e.g., from older payloads missing routing metadata),
