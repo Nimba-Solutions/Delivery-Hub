@@ -723,7 +723,7 @@ public without sharing class DeliverySyncItemIngestor {
         if (descRaw == null) {
             descRaw = payload.get('delivery__WorkDescriptionTxt__c');
         }
-        String desc = descRaw == null ? null : String.valueOf(descRaw);
+        String descTxt = descRaw == null ? null : String.valueOf(descRaw);
 
         // Can't form a safe billing-identity key without both hours and date.
         if (hours == null || String.isBlank(dateStr)) {
@@ -739,7 +739,7 @@ public without sharing class DeliverySyncItemIngestor {
             // Decimal — a direct (Decimal) cast on a boxed Double throws.
             h = Decimal.valueOf(String.valueOf(hours)).setScale(2);
         } catch (Exception e) {
-            System.debug(LoggingLevel.FINE, 'findWorkLogByContent: bad date/hours: ' + e.getMessage());
+            // Unparseable date/hours → no safe content key; fall through to insert.
             return null;
         }
 
@@ -755,9 +755,9 @@ public without sharing class DeliverySyncItemIngestor {
         for (WorkLog__c wl : candidates) {
             // Treat null and '' as equal so a blank-description payload still
             // dedupes against a blank-description existing row.
-            Boolean descMatches = String.isBlank(desc)
+            Boolean descMatches = String.isBlank(descTxt)
                 ? String.isBlank(wl.WorkDescriptionTxt__c)
-                : desc == wl.WorkDescriptionTxt__c;
+                : descTxt == wl.WorkDescriptionTxt__c;
             if (descMatches) {
                 return wl.Id;
             }
