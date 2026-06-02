@@ -200,11 +200,20 @@ public without sharing class DeliverySyncItemIngestor {
                 localRequestId = parentBridge.Id;
             }
 
-            // 2. Try to find parent via the Ledger (Upstream Origin)
+            // 2. Try to find parent via the Ledger (Upstream Origin).
+            // Route through findLocalId(), the canonical resolver: it filters to
+            // Inbound rows, orders by CreatedDate DESC, and validates the
+            // candidate still EXISTS (not deleted) before returning it. The
+            // previous inline lookup took an unordered LIMIT 1 with no existence
+            // check, so when a WorkItem was re-created in this org the ledger
+            // held multiple rows for the same remote id and this could grab one
+            // pointing at a now-deleted local WorkItem — stranding the child
+            // WorkLog/Comment against a dead parent (root cause of the dh-prod
+            // inbound stall, 2026-06-02).
             if (localParentId == null) {
-                List<SyncItem__c> ledger = [SELECT LocalRecordIdTxt__c FROM SyncItem__c WHERE RemoteExternalIdTxt__c = :parentWorkItemRef AND ObjectTypePk__c = 'WorkItem__c' WITH SYSTEM_MODE LIMIT 1];
-                if (!ledger.isEmpty()) {
-                    localParentId = (Id)ledger[0].LocalRecordIdTxt__c;
+                Schema.SObjectType wiType = findSObjectType('WorkItem__c');
+                if (wiType != null) {
+                    localParentId = findLocalId(wiType, parentWorkItemRef);
                 }
             }
 
@@ -604,22 +613,15 @@ public without sharing class DeliverySyncItemIngestor {
         if (String.isBlank(ref)) {
             return null;
         }
-        List<SyncItem__c> ledger = [
-            SELECT LocalRecordIdTxt__c FROM SyncItem__c
-            WHERE RemoteExternalIdTxt__c = :ref
-              AND ObjectTypePk__c = 'WorkItem__c'
-            WITH SYSTEM_MODE
-            LIMIT 1
-        ];
-        if (!ledger.isEmpty() && String.isNotBlank((String) ledger[0].LocalRecordIdTxt__c)) {
-            try {
-                Id ledgerId = (Id) ledger[0].LocalRecordIdTxt__c;
-                Schema.SObjectType wiType = findSObjectType('WorkItem__c');
-                if (wiType != null && validateLocalIdExists(wiType, ledgerId)) {
-                    return ledgerId;
-                }
-            } catch (Exception e) {
-                System.debug(LoggingLevel.FINE, 'Dep endpoint ledger cast failed: ' + e.getMessage());
+        // Route through findLocalId(): Inbound-filtered, CreatedDate DESC,
+        // existence-validated — same hardening as the WorkLog/Comment parent
+        // path. The previous inline LIMIT 1 (unordered) could pick a stale row
+        // pointing at a re-created WorkItem's deleted predecessor.
+        Schema.SObjectType wiType = findSObjectType('WorkItem__c');
+        if (wiType != null) {
+            Id resolved = findLocalId(wiType, ref);
+            if (resolved != null) {
+                return resolved;
             }
         }
         // Echo-path fallback: maybe ref is already a local Id.
