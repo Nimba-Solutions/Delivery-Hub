@@ -301,15 +301,24 @@ public with sharing class DeliveryWorkLogTriggerHandler {
      */
     private static List<SyncItem__c> buildSyncItems(List<WorkLog__c> logs, Map<Id, WorkItem__c> clientWorkItems) {
         String senderOrgId = UserInfo.getOrganizationId();
+        Map<Id, String> recordToGlobalSource = buildGlobalSourceMap(logs);
         List<SyncItem__c> items = new List<SyncItem__c>();
         for (WorkLog__c wl : logs) {
             if (!clientWorkItems.containsKey(wl.WorkItemLookup__c)) {
                 continue;
             }
+            // Inherit the ORIGIN GlobalSourceId if this WorkLog arrived via an
+            // inbound relay; otherwise this org is the birthplace and the id
+            // is minted from the local record. Without inheritance the origin
+            // id is re-minted at every MF → Nimba → dh-prod hop, killing the
+            // cross-path dedup on the receiver and duplicating invoice hours.
+            String gsid = recordToGlobalSource.containsKey(wl.Id)
+                ? recordToGlobalSource.get(wl.Id)
+                : (String) wl.Id;
             Map<String, Object> payload = new Map<String, Object>{
                 'SourceId'               => wl.Id,
                 'SenderOrgId'            => senderOrgId,
-                'GlobalSourceId'         => (String) wl.Id,
+                'GlobalSourceId'         => gsid,
                 'WorkItemLookup__c'          => wl.WorkItemLookup__c,
                 'HoursLoggedNumber__c'   => wl.HoursLoggedNumber__c,
                 'WorkDateDate__c'        => String.valueOf(wl.WorkDateDate__c),
@@ -321,11 +330,43 @@ public with sharing class DeliveryWorkLogTriggerHandler {
                 WorkItemLookup__c           = wl.WorkItemLookup__c,
                 DirectionPk__c          = 'Outbound',
                 StatusPk__c             = 'Queued',
-                GlobalSourceIdTxt__c    = (String) wl.Id,
+                GlobalSourceIdTxt__c    = gsid,
                 PayloadTxt__c           = JSON.serialize(payload)
             ));
         }
         return items;
+    }
+
+    /**
+     * @description Bulk-loads the origin GlobalSourceId for a set of WorkLogs by
+     *              walking their Inbound SyncItem ledger rows. Mirrors the
+     *              inheritance map built in DeliverySyncEngine.captureChanges so
+     *              relayed WorkLogs keep their birthplace id across hops instead
+     *              of re-minting it at every relay. One query, no SOQL-in-loop.
+     * @param logs The WorkLog records about to be emitted outbound.
+     * @return Map of WorkLog Id → inherited origin GlobalSourceId. WorkLogs with
+     *         no inbound ledger row are absent (caller treats absence as birthplace).
+     */
+    private static Map<Id, String> buildGlobalSourceMap(List<WorkLog__c> logs) {
+        Map<Id, String> recordToGlobalSource = new Map<Id, String>();
+        Set<Id> idSet = new Set<Id>();
+        for (WorkLog__c wl : logs) {
+            idSet.add(wl.Id);
+        }
+        if (idSet.isEmpty()) {
+            return recordToGlobalSource;
+        }
+        for (SyncItem__c inbound : [
+            SELECT LocalRecordIdTxt__c, GlobalSourceIdTxt__c
+            FROM SyncItem__c
+            WHERE LocalRecordIdTxt__c IN :idSet
+            AND GlobalSourceIdTxt__c != NULL
+            AND DirectionPk__c = 'Inbound'
+            WITH SYSTEM_MODE
+        ]) {
+            recordToGlobalSource.put((Id) inbound.LocalRecordIdTxt__c, inbound.GlobalSourceIdTxt__c);
+        }
+        return recordToGlobalSource;
     }
 
     /**
@@ -343,17 +384,22 @@ public with sharing class DeliveryWorkLogTriggerHandler {
      */
     private static List<SyncItem__c> buildPushSyncItems(List<WorkLog__c> logs, Map<Id, List<WorkRequest__c>> pushRoutes) {
         String senderOrgId = UserInfo.getOrganizationId();
+        Map<Id, String> recordToGlobalSource = buildGlobalSourceMap(logs);
         List<SyncItem__c> items = new List<SyncItem__c>();
         for (WorkLog__c wl : logs) {
             List<WorkRequest__c> reqs = pushRoutes.get(wl.WorkItemLookup__c);
             if (reqs == null || reqs.isEmpty()) {
                 continue;
             }
+            // Inherit origin GlobalSourceId across relay hops (see buildSyncItems).
+            String gsid = recordToGlobalSource.containsKey(wl.Id)
+                ? recordToGlobalSource.get(wl.Id)
+                : (String) wl.Id;
             for (WorkRequest__c req : reqs) {
                 Map<String, Object> payload = new Map<String, Object>{
                     'SourceId'               => wl.Id,
                     'SenderOrgId'            => senderOrgId,
-                    'GlobalSourceId'         => (String) wl.Id,
+                    'GlobalSourceId'         => gsid,
                     'TargetId'               => req.RemoteWorkItemIdTxt__c,
                     'WorkItemLookup__c'      => wl.WorkItemLookup__c,
                     'HoursLoggedNumber__c'   => wl.HoursLoggedNumber__c,
@@ -367,7 +413,7 @@ public with sharing class DeliveryWorkLogTriggerHandler {
                     RequestLookup__c        = req.Id,
                     DirectionPk__c          = 'Outbound',
                     StatusPk__c             = 'Queued',
-                    GlobalSourceIdTxt__c    = (String) wl.Id,
+                    GlobalSourceIdTxt__c    = gsid,
                     PayloadTxt__c           = JSON.serialize(payload)
                 ));
             }

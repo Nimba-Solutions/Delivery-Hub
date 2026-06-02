@@ -402,6 +402,65 @@ private class DeliveryWorkLogTriggerHandlerTest {
         }
     }
 
+    /**
+     * @description GSID inheritance across relay hops (fix/sync-worklog-idempotency).
+     *              A WorkLog that arrived via an inbound relay carries an inbound
+     *              SyncItem ledger row stamped with the ORIGIN GlobalSourceId.
+     *              When this org re-emits the WorkLog outbound, the SyncItem and
+     *              its payload must carry that ORIGIN gsid — not re-mint to the
+     *              local wl.Id — so the cross-path dedup survives MF → Nimba →
+     *              dh-prod. Drives the real trigger path via onAfterInsert.
+     */
+    @IsTest
+    static void testWorkLogOutboundInheritsOriginGlobalSourceId() {
+        System.runAs(testUser) {
+            WorkItem__c workItem = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
+            WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
+
+            // Insert the WorkLog WITHOUT firing the after-logic so we can seed
+            // the inbound ledger row that simulates this WorkLog having relayed
+            // in from an upstream org.
+            DeliveryTriggerControl.disableAfterLogic();
+            WorkLog__c relayed = new WorkLog__c(
+                RequestId__c = request.Id,
+                WorkItemLookup__c = workItem.Id,
+                HoursLoggedNumber__c = 3.0,
+                WorkDateDate__c = Date.today(),
+                WorkDescriptionTxt__c = 'Relayed log'
+            );
+            insert relayed;
+
+            insert new SyncItem__c(
+                DirectionPk__c = 'Inbound',
+                StatusPk__c = 'Synced',
+                ObjectTypePk__c = 'WorkLog__c',
+                RemoteExternalIdTxt__c = 'UPSTREAM-WL-SOURCE',
+                GlobalSourceIdTxt__c = 'ORIGIN-WL-GSID',
+                LocalRecordIdTxt__c = relayed.Id,
+                WorkItemLookup__c = workItem.Id
+            );
+            DeliveryTriggerControl.enableAfterLogic();
+
+            Test.startTest();
+            DeliveryWorkLogTriggerHandler.onAfterInsert(new List<WorkLog__c>{ relayed });
+            Test.stopTest();
+
+            List<SyncItem__c> outbound = [
+                SELECT GlobalSourceIdTxt__c, PayloadTxt__c FROM SyncItem__c
+                WHERE LocalRecordIdTxt__c = :relayed.Id
+                AND DirectionPk__c = 'Outbound'
+                AND ObjectTypePk__c = 'WorkLog__c'
+            ];
+            System.assertEquals(1, outbound.size(), 'One outbound WorkLog SyncItem should be emitted');
+            System.assertEquals('ORIGIN-WL-GSID', outbound[0].GlobalSourceIdTxt__c,
+                'Outbound must inherit the ORIGIN GlobalSourceId, not re-mint to the local wl.Id');
+            System.assert(outbound[0].PayloadTxt__c.contains('ORIGIN-WL-GSID'),
+                'Payload GlobalSourceId must also carry the inherited origin id');
+            System.assert(!outbound[0].PayloadTxt__c.contains('"GlobalSourceId":"' + relayed.Id + '"'),
+                'Payload must NOT re-mint GlobalSourceId to the local record Id');
+        }
+    }
+
     @IsTest
     static void testBulkApproval() {
         System.runAs(testUser) {
