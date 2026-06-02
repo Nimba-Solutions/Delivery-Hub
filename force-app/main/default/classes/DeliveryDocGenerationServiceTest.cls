@@ -526,6 +526,140 @@ private class DeliveryDocGenerationServiceTest {
         }
     }
 
+    // ── Snapshot Overflow Regression ─────────────────────────────────────────
+
+    /**
+     * @description Regression (snapshot overflow): an entity carrying many
+     *              historical WorkRequests on a work item with NO logs in the
+     *              billing period must still generate a clean Invoice. Previously
+     *              every WorkRequest on the entity was serialized regardless of
+     *              period, overflowing SnapshotTxt__c (131,072) on long-lived
+     *              entities and hard-failing the insert with STRING_TOO_LONG.
+     *              The snapshot must now carry only the WorkRequests for items
+     *              with billed time in the period.
+     */
+    @IsTest
+    static void testInvoiceScopesWorkRequestsToPeriodBilledItems() {
+        System.runAs(runningUser) {
+            DeliveryTriggerControl.disableAfterLogic();
+            NetworkEntity__c client = getClient();
+
+            // A second item with NO logs in the period, loaded with WorkRequests.
+            WorkItem__c stale = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Stale No-Period-Logs Item',
+                StageNamePk__c = 'In Development',
+                StatusPk__c = 'Active',
+                PriorityPk__c = 'Low',
+                ActivatedDateTime__c = Datetime.now(),
+                ClientNetworkEntityLookup__c = client.Id,
+                BillableRateCurrency__c = PLACEHOLDER_ITEM_RATE
+            );
+            insert stale;
+
+            List<WorkRequest__c> noise = new List<WorkRequest__c>();
+            for (Integer i = 0; i < 50; i++) {
+                noise.add(new WorkRequest__c(
+                    WorkItemId__c = stale.Id,
+                    StatusPk__c = 'Active',
+                    HourlyRateCurrency__c = PLACEHOLDER_REQUEST_RATE
+                ));
+            }
+            insert noise;
+            DeliveryTriggerControl.enableAfterLogic();
+
+            Test.startTest();
+            Id docId = DeliveryDocGenerationService.generateDocument(
+                client.Id, 'Invoice', periodStart(), periodEnd(), null
+            );
+            Test.stopTest();
+
+            DeliveryDocument__c persisted = [
+                SELECT SnapshotTxt__c FROM DeliveryDocument__c WHERE Id = :docId WITH SYSTEM_MODE
+            ];
+            Map<String, Object> snap = (Map<String, Object>) JSON.deserializeUntyped(persisted.SnapshotTxt__c);
+            List<Object> wrs = (List<Object>) snap.get('workRequests');
+
+            System.assert(!wrs.isEmpty(),
+                'WorkRequest for the period-billed item should still be present');
+            for (Object o : wrs) {
+                Map<String, Object> wr = (Map<String, Object>) o;
+                System.assertNotEquals(stale.Id, (String) wr.get('workItemId'),
+                    'WorkRequests on items with no period logs must be excluded from an Invoice snapshot');
+            }
+            System.assert(persisted.SnapshotTxt__c.length() < 131072,
+                'Snapshot must fit within the SnapshotTxt__c field cap');
+        }
+    }
+
+    /**
+     * @description Snapshot size guard: when the serialized snapshot exceeds the
+     *              soft limit, display-only descriptions are trimmed (and a
+     *              snapshotTrimmed marker set) so it fits the field cap, while
+     *              billing-relevant hours are preserved untouched.
+     */
+    @IsTest
+    static void testBoundSnapshotTrimsDescriptionsWhenOversized() {
+        System.runAs(runningUser) {
+            String big = 'x';
+            while (big.length() < 130000) {
+                big += big;
+            }
+            Map<String, Object> snap = new Map<String, Object>{
+                'entity'    => new Map<String, Object>{ 'name' => 'X' },
+                'workLogs'  => new List<Object>{
+                    new Map<String, Object>{ 'hours' => 5, 'description' => big }
+                },
+                'workItems' => new List<Object>()
+            };
+
+            Test.startTest();
+            DeliveryDocGenerationService.boundSnapshotToFieldCap(snap, 'Invoice');
+            Test.stopTest();
+
+            System.assertEquals(true, snap.get('snapshotTrimmed'),
+                'Oversized snapshot should be flagged as trimmed');
+            List<Object> logs = (List<Object>) snap.get('workLogs');
+            Map<String, Object> log0 = (Map<String, Object>) logs[0];
+            System.assertEquals(null, log0.get('description'),
+                'Display-only description should be trimmed to fit');
+            System.assertEquals(5, log0.get('hours'),
+                'Billing-relevant hours must be preserved through the trim');
+            System.assert(JSON.serialize(snap).length() < 131072,
+                'Trimmed snapshot must fit the field cap');
+        }
+    }
+
+    /**
+     * @description Snapshot size guard: when the snapshot is still over the hard
+     *              field cap after trimming display text (the oversize lives in a
+     *              non-trimmable field), generation fails loud with an
+     *              AuraHandledException rather than an opaque STRING_TOO_LONG.
+     *              Per CLAUDE.md we don't assert on the message in managed context.
+     */
+    @IsTest
+    static void testBoundSnapshotThrowsWhenIrreducible() {
+        System.runAs(runningUser) {
+            String big = 'x';
+            while (big.length() < 140000) {
+                big += big;
+            }
+            Map<String, Object> snap = new Map<String, Object>{
+                'entity' => new Map<String, Object>{ 'address' => big }
+            };
+
+            Boolean threw = false;
+            try {
+                Test.startTest();
+                DeliveryDocGenerationService.boundSnapshotToFieldCap(snap, 'Invoice');
+                Test.stopTest();
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
+            System.assertEquals(true, threw,
+                'Irreducible oversized snapshot must throw rather than overflow the field');
+        }
+    }
+
     // ── Agreement Clauses ────────────────────────────────────────────────────
 
     /**
