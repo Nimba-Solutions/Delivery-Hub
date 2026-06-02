@@ -137,6 +137,13 @@ public without sharing class DeliverySyncItemIngestor {
 
         SObject recordToUpsert = (localRecordId != null) ? targetType.newSObject(localRecordId) : targetType.newSObject();
 
+        // Set true only when the WorkLog content-dedup fallback (below) converts
+        // an apparent INSERT into an UPDATE against a pre-existing local row. The
+        // post-write block uses it to auto-heal the SourceId ledger so the next
+        // poll resolves via the cheap ledger lookup instead of re-running the
+        // content query.
+        Boolean contentMatched = false;
+
         // For WorkLogs, resolve the parent WorkItem ID from the payload (not TargetId).
         // We intentionally do NOT strip cross-org lookup IDs from the caller's
         // payload here. The Pending-queue path (queuePendingChild) stashes
@@ -262,6 +269,26 @@ public without sharing class DeliverySyncItemIngestor {
                 ];
                 if (!localRequests.isEmpty()) {
                     putSafe(recordToUpsert, 'RequestId__c', localRequests[0].Id);
+                }
+
+                // Content-based dedup FALLBACK. We only reach here when the
+                // SourceId ledger AND the GlobalSourceId cross-path lookup both
+                // missed (localRecordId == null is the outer guard). A WorkLog
+                // re-synced after a manual reconciliation, or a relayed copy
+                // whose ledger row was lost, would otherwise be inserted as a
+                // billing-corrupting twin. Match on parent + date + hours +
+                // description and convert to an UPDATE of the existing row.
+                Id contentMatch = findWorkLogByContent(localParentId, payload);
+                if (contentMatch != null) {
+                    // Convert to an UPDATE of the existing row. Do NOT re-stamp the
+                    // parent FKs: the matched record already carries the correct
+                    // WorkItemLookup__c / RequestId__c, and RequestId__c is a
+                    // master-detail field that is not editable on update — stamping
+                    // it threw "Field RequestId__c is not editable". Leaving the FKs
+                    // off the update SObject preserves the record's existing values.
+                    localRecordId = contentMatch;
+                    recordToUpsert = targetType.newSObject(localRecordId);
+                    contentMatched = true;
                 }
             }
         }
@@ -495,25 +522,59 @@ public without sharing class DeliverySyncItemIngestor {
         Boolean priorInboundFlag = DeliveryTriggerControl.inboundSyncContext;
         DeliveryTriggerControl.inboundSyncContext = true;
         try {
-            if (recordToUpsert.Id != null) {
-                Database.update(recordToUpsert, AccessLevel.SYSTEM_MODE);
-            } else {
-                Database.insert(recordToUpsert, AccessLevel.SYSTEM_MODE);
+            // Capture insert-vs-update BEFORE the write stamps an Id onto a
+            // freshly-inserted record — used to gate the post-commit Slack
+            // notification to NetworkEntity INSERTs only (not updates).
+            Boolean wasInsert = (recordToUpsert.Id == null);
 
-                // Notify admins of pending connection requests
-                if (objectType.endsWithIgnoreCase('NetworkEntity__c')) {
-                    notifyPendingConnection(recordToUpsert);
+            // Atomicity: the record write and its ledger write must commit or
+            // roll back together. If the ledger insert fails after the record
+            // write succeeds, the item would otherwise be silently un-tracked
+            // (insert) or re-content-queried forever (content match) while the
+            // record persists. A savepoint + rethrow lets the sync item
+            // legitimately re-deliver clean instead.
+            Savepoint sp = Database.setSavepoint();
+            try {
+                if (recordToUpsert.Id != null) {
+                    Database.update(recordToUpsert, AccessLevel.SYSTEM_MODE);
+
+                    // Auto-heal the SourceId ledger after a content-matched
+                    // UPDATE. createLedgerEntry only fires on the INSERT branch,
+                    // so without this a content match leaves no SourceId ledger
+                    // row and the next poll re-runs the expensive content query.
+                    // Guard against duplicating a row that already exists.
+                    if (contentMatched
+                            && String.isNotBlank(sourceId)
+                            && !ledgerEntryExists(objectType, sourceId)) {
+                        createLedgerEntry(objectType, sourceId, recordToUpsert.Id, localRequestId, globalSourceId);
+                    }
+                } else {
+                    Database.insert(recordToUpsert, AccessLevel.SYSTEM_MODE);
+
+                    // Pass the localRequestId and globalSourceId down to link the Sync Item
+                    createLedgerEntry(objectType, sourceId, recordToUpsert.Id, localRequestId, globalSourceId);
+
+                    if (objectType.equalsIgnoreCase('ContentVersion') && localParentId != null) {
+                        Id contentDocId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :recordToUpsert.Id LIMIT 1].ContentDocumentId;
+                        Database.insert(new ContentDocumentLink(
+                            ContentDocumentId = contentDocId, LinkedEntityId = localParentId, ShareType = 'V', Visibility = 'AllUsers'
+                        ), AccessLevel.SYSTEM_MODE);
+                    }
                 }
+            } catch (Exception e) {
+                Database.rollback(sp);
+                throw e;
+            }
 
-                // Pass the localRequestId and globalSourceId down to link the Sync Item
-                createLedgerEntry(objectType, sourceId, recordToUpsert.Id, localRequestId, globalSourceId);
-
-                if (objectType.equalsIgnoreCase('ContentVersion') && localParentId != null) {
-                    Id contentDocId = [SELECT ContentDocumentId FROM ContentVersion WHERE Id = :recordToUpsert.Id LIMIT 1].ContentDocumentId;
-                    Database.insert(new ContentDocumentLink(
-                        ContentDocumentId = contentDocId, LinkedEntityId = localParentId, ShareType = 'V', Visibility = 'AllUsers'
-                    ), AccessLevel.SYSTEM_MODE);
-                }
+            // Notify admins of pending connection requests AFTER the atomic
+            // write+ledger commits. Kept outside the savepoint block because
+            // notifyPendingConnection issues an HTTP callout, and an open
+            // savepoint counts as uncommitted work that blocks callouts. Only
+            // reachable on a fresh NetworkEntity insert (recordToUpsert was just
+            // created in the else-branch, so it carries a new Id and the
+            // Pending-Approval status stamped earlier).
+            if (wasInsert && objectType.endsWithIgnoreCase('NetworkEntity__c') && recordToUpsert.Id != null) {
+                notifyPendingConnection(recordToUpsert);
             }
         } finally {
             DeliveryTriggerControl.inboundSyncContext = priorInboundFlag;
@@ -626,6 +687,83 @@ public without sharing class DeliverySyncItemIngestor {
         }
         // Echo-path fallback: maybe ref is already a local Id.
         return tryAsLocalWorkItemId(ref);
+    }
+
+    /**
+     * @description Content-based dedup fallback for inbound WorkLogs. When the
+     *              SourceId ledger AND the GlobalSourceId cross-path lookup both
+     *              miss (e.g. a WorkLog was inserted manually during a
+     *              reconciliation replay, or a relayed copy lost its ledger row),
+     *              this finds an existing local WorkLog whose billing-identity
+     *              tuple matches the payload so the ingestor converts to an
+     *              UPDATE instead of inserting a duplicate that corrupts the
+     *              monthly invoice.
+     *
+     *              Key = parent WorkItem + work date + hours (scale 2) +
+     *              description ONLY. ResourceTitleTxt__c is deliberately excluded
+     *              because it is NOT transmitted on the outbound WorkLog payload
+     *              (confirmed) — including it would never match.
+     * @param localParentId The resolved local parent WorkItem Id.
+     * @param payload The deserialized inbound WorkLog payload.
+     * @return The matching local WorkLog Id, or null when no safe content key
+     *         can be formed or no row matches.
+     */
+    private static Id findWorkLogByContent(Id localParentId, Map<String, Object> payload) {
+        if (localParentId == null) {
+            return null;
+        }
+        Object hours = payload.get('HoursLoggedNumber__c');
+        if (hours == null) {
+            hours = payload.get('delivery__HoursLoggedNumber__c');
+        }
+        String dateStr = (String) payload.get('WorkDateDate__c');
+        if (String.isBlank(dateStr)) {
+            dateStr = (String) payload.get('delivery__WorkDateDate__c');
+        }
+        Object descRaw = payload.get('WorkDescriptionTxt__c');
+        if (descRaw == null) {
+            descRaw = payload.get('delivery__WorkDescriptionTxt__c');
+        }
+        String descTxt = descRaw == null ? null : String.valueOf(descRaw);
+
+        // Can't form a safe billing-identity key without both hours and date.
+        if (hours == null || String.isBlank(dateStr)) {
+            return null;
+        }
+
+        Date d;
+        Decimal h;
+        try {
+            d = Date.valueOf(dateStr);
+            // Route through String.valueOf so a JSON.deserializeUntyped value
+            // arriving as Double (the wire shape, e.g. 4.5) casts cleanly to
+            // Decimal — a direct (Decimal) cast on a boxed Double throws.
+            h = Decimal.valueOf(String.valueOf(hours)).setScale(2);
+        } catch (Exception e) {
+            // Unparseable date/hours → no safe content key; fall through to insert.
+            return null;
+        }
+
+        List<WorkLog__c> candidates = [
+            SELECT Id, WorkDescriptionTxt__c
+            FROM WorkLog__c
+            WHERE WorkItemLookup__c = :localParentId
+            AND WorkDateDate__c = :d
+            AND HoursLoggedNumber__c = :h
+            WITH SYSTEM_MODE
+        ];
+
+        for (WorkLog__c wl : candidates) {
+            // Treat null and '' as equal so a blank-description payload still
+            // dedupes against a blank-description existing row.
+            Boolean descMatches = String.isBlank(descTxt)
+                ? String.isBlank(wl.WorkDescriptionTxt__c)
+                : descTxt == wl.WorkDescriptionTxt__c;
+            if (descMatches) {
+                return wl.Id;
+            }
+        }
+        return null;
     }
 
     /**
@@ -829,6 +967,31 @@ public without sharing class DeliverySyncItemIngestor {
     private static WorkRequest__c findWorkItemBridge(String remoteWorkItemId) {
         List<WorkRequest__c> reqs = [SELECT Id, WorkItemId__c FROM WorkRequest__c WHERE RemoteWorkItemIdTxt__c = :remoteWorkItemId WITH SYSTEM_MODE LIMIT 1];
         return reqs.isEmpty() ? null : reqs[0];
+    }
+
+    /**
+     * @description Returns true when an Inbound ledger row already exists for
+     *              the given (objType, remoteId/SourceId) pair. Used to guard
+     *              the content-match auto-heal so a converted UPDATE doesn't
+     *              write a duplicate ledger row when one is already present.
+     * @param objType The (possibly namespaced) object type.
+     * @param remoteId The sender's SourceId.
+     * @return True if an inbound ledger entry already exists.
+     */
+    private static Boolean ledgerEntryExists(String objType, String remoteId) {
+        if (String.isBlank(remoteId)) {
+            return false;
+        }
+        String cleanName = stripNamespace(objType);
+        List<SyncItem__c> existing = [
+            SELECT Id FROM SyncItem__c
+            WHERE DirectionPk__c = 'Inbound'
+            AND ObjectTypePk__c = :cleanName
+            AND RemoteExternalIdTxt__c = :remoteId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        return !existing.isEmpty();
     }
 
     @SuppressWarnings('PMD.ExcessiveParameterList')

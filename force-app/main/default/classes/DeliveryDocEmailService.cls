@@ -82,8 +82,25 @@ public with sharing class DeliveryDocEmailService {
         email.setFileAttachments(new List<Messaging.EmailFileAttachment>{ att });
         email.setSaveAsActivity(false);
 
-        // Send
-        Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{ email });
+        // Send FROM a configured, verified Org-Wide Email Address when set;
+        // falls back to the running user when blank/unmatched.
+        Id oweaId = resolveFromOrgWideEmailId(settings);
+        if (oweaId != null) {
+            email.setOrgWideEmailAddressId(oweaId);
+        }
+
+        // Send \u2014 surface an actionable error if SF rejects the send (most
+        // commonly: no verified sender). We must NOT mark the document Sent
+        // when the send throws, so this guards the status update below.
+        try {
+            Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{ email });
+        } catch (Exception sendEx) {
+            throw new AuraHandledException(
+                'Email could not be sent \u2014 no verified sender is configured. '
+                + 'In Delivery Hub Settings, set \'Document From (Org-Wide Email)\' to a '
+                + 'verified Org-Wide Email Address (Setup \u2192 Org-Wide Addresses), then retry.'
+            );
+        }
 
         // Update document status to Sent
         doc.StatusPk__c = 'Sent';
@@ -238,6 +255,34 @@ public with sharing class DeliveryDocEmailService {
     // ═══════════════════════════════════════════════════════════
     //  HELPERS
     // ═══════════════════════════════════════════════════════════
+
+    /**
+     * @description Resolves the Org-Wide Email Address Id to send documents FROM,
+     *              based on the configured DocumentFromOrgWideEmailTxt__c address on
+     *              org-default settings. Returns null when the setting is blank or no
+     *              verified OrgWideEmailAddress matches — the caller then falls back to
+     *              sending as the running user. Guarded so an empty query (e.g. in test
+     *              context where OrgWideEmailAddress is not insertable) returns null.
+     * @param settings The org-default DeliveryHubSettings__c (may be null).
+     * @return The matching OrgWideEmailAddress Id, or null.
+     */
+    @TestVisible
+    private static Id resolveFromOrgWideEmailId(DeliveryHubSettings__c settings) {
+        if (settings == null || String.isBlank(settings.DocumentFromOrgWideEmailTxt__c)) {
+            return null;
+        }
+        String fromAddress = settings.DocumentFromOrgWideEmailTxt__c.trim();
+        List<OrgWideEmailAddress> oweas = [
+            SELECT Id FROM OrgWideEmailAddress
+            WHERE Address = :fromAddress
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (oweas.isEmpty()) {
+            return null;
+        }
+        return oweas[0].Id;
+    }
 
     /** @description Resolves the vendor display name from the first Vendor/Both NetworkEntity. */
     public static String resolveVendorName() {

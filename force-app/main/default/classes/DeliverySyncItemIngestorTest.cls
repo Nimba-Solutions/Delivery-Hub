@@ -990,6 +990,294 @@ private class DeliverySyncItemIngestorTest {
         }
     }
 
+    // ── WorkLog content-dedup idempotency (fix/sync-worklog-idempotency) ──
+
+    /**
+     * @description Manual-reconciliation replay: a WorkLog exists locally with
+     *              NO ledger row (inserted by hand during a catch-up). The
+     *              canonical inbound payload for the SAME parent + date + hours
+     *              + description must dedupe to the existing row (COUNT stays 1)
+     *              and auto-heal the SourceId ledger so the next poll resolves
+     *              cheaply.
+     */
+    @IsTest
+    static void testWorkLogContentDedupOnManualReplay() {
+        System.runAs(testUser) {
+            WorkItem__c localItem = [SELECT Id FROM WorkItem__c LIMIT 1];
+            WorkRequest__c localReq = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :localItem.Id LIMIT 1];
+
+            // Manually-inserted WorkLog — no SyncItem ledger row for it.
+            DeliveryTriggerControl.disableAfterLogic();
+            WorkLog__c manual = new WorkLog__c(
+                WorkItemLookup__c = localItem.Id,
+                RequestId__c = localReq.Id,
+                HoursLoggedNumber__c = 4.50,
+                WorkDateDate__c = Date.newInstance(2026, 5, 1),
+                WorkDescriptionTxt__c = 'Backfilled by hand'
+            );
+            insert manual;
+            DeliveryTriggerControl.enableAfterLogic();
+
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-WL-CONTENT-001',
+                'GlobalSourceId' => 'REMOTE-WL-CONTENT-001',
+                'WorkItemLookup__c' => 'REMOTE-CLIENT-WORKITEM-1',
+                'HoursLoggedNumber__c' => 4.5,
+                'WorkDateDate__c' => '2026-05-01',
+                'WorkDescriptionTxt__c' => 'Backfilled by hand'
+            };
+
+            Test.startTest();
+            Id resultId = DeliverySyncItemIngestor.processInboundItem('WorkLog__c', payload);
+            Test.stopTest();
+
+            System.assertEquals(manual.Id, resultId,
+                'Inbound must dedupe to the manually-inserted WorkLog via content match');
+            Integer count = [SELECT COUNT() FROM WorkLog__c];
+            System.assertEquals(1, count, 'Content dedup must NOT insert a billing-corrupting twin');
+
+            // Auto-heal: a ledger row for the SourceId must now exist so the
+            // next poll resolves via findLocalId, not the content query.
+            List<SyncItem__c> ledger = [
+                SELECT LocalRecordIdTxt__c FROM SyncItem__c
+                WHERE DirectionPk__c = 'Inbound'
+                AND ObjectTypePk__c = 'WorkLog__c'
+                AND RemoteExternalIdTxt__c = 'REMOTE-WL-CONTENT-001'
+            ];
+            System.assertEquals(1, ledger.size(),
+                'Content-matched UPDATE must auto-heal the SourceId ledger');
+            System.assertEquals((String) manual.Id, ledger[0].LocalRecordIdTxt__c,
+                'Healed ledger row must point at the deduped local WorkLog');
+        }
+    }
+
+    /**
+     * @description Distinct same-day logs (different hours) must NOT be merged
+     *              by the content fallback — two separate rows survive.
+     */
+    @IsTest
+    static void testWorkLogContentDedupDistinctHoursPreserved() {
+        System.runAs(testUser) {
+            WorkItem__c localItem = [SELECT Id FROM WorkItem__c LIMIT 1];
+            WorkRequest__c localReq = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :localItem.Id LIMIT 1];
+
+            DeliveryTriggerControl.disableAfterLogic();
+            insert new WorkLog__c(
+                WorkItemLookup__c = localItem.Id,
+                RequestId__c = localReq.Id,
+                HoursLoggedNumber__c = 2.00,
+                WorkDateDate__c = Date.newInstance(2026, 5, 2),
+                WorkDescriptionTxt__c = 'Same day, different hours'
+            );
+            DeliveryTriggerControl.enableAfterLogic();
+
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-WL-DISTINCT-HOURS',
+                'GlobalSourceId' => 'REMOTE-WL-DISTINCT-HOURS',
+                'WorkItemLookup__c' => 'REMOTE-CLIENT-WORKITEM-1',
+                'HoursLoggedNumber__c' => 3.0,
+                'WorkDateDate__c' => '2026-05-02',
+                'WorkDescriptionTxt__c' => 'Same day, different hours'
+            };
+
+            Test.startTest();
+            Id resultId = DeliverySyncItemIngestor.processInboundItem('WorkLog__c', payload);
+            Test.stopTest();
+
+            System.assertNotEquals(null, resultId, 'Distinct-hours log must be inserted');
+            Integer count = [SELECT COUNT() FROM WorkLog__c];
+            System.assertEquals(2, count, 'Different hours must NOT dedupe — two rows expected');
+        }
+    }
+
+    /**
+     * @description Logs differing ONLY by description must remain distinct.
+     */
+    @IsTest
+    static void testWorkLogContentDedupDistinctDescriptionPreserved() {
+        System.runAs(testUser) {
+            WorkItem__c localItem = [SELECT Id FROM WorkItem__c LIMIT 1];
+            WorkRequest__c localReq = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :localItem.Id LIMIT 1];
+
+            DeliveryTriggerControl.disableAfterLogic();
+            insert new WorkLog__c(
+                WorkItemLookup__c = localItem.Id,
+                RequestId__c = localReq.Id,
+                HoursLoggedNumber__c = 1.00,
+                WorkDateDate__c = Date.newInstance(2026, 5, 3),
+                WorkDescriptionTxt__c = 'Morning standup'
+            );
+            DeliveryTriggerControl.enableAfterLogic();
+
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-WL-DISTINCT-DESC',
+                'GlobalSourceId' => 'REMOTE-WL-DISTINCT-DESC',
+                'WorkItemLookup__c' => 'REMOTE-CLIENT-WORKITEM-1',
+                'HoursLoggedNumber__c' => 1.0,
+                'WorkDateDate__c' => '2026-05-03',
+                'WorkDescriptionTxt__c' => 'Afternoon code review'
+            };
+
+            Test.startTest();
+            DeliverySyncItemIngestor.processInboundItem('WorkLog__c', payload);
+            Test.stopTest();
+
+            Integer count = [SELECT COUNT() FROM WorkLog__c];
+            System.assertEquals(2, count, 'Different description must NOT dedupe — two rows expected');
+        }
+    }
+
+    /**
+     * @description Hours scale normalization: payload 4.5 must dedupe against an
+     *              existing 4.50 row (both normalized to scale 2).
+     */
+    @IsTest
+    static void testWorkLogContentDedupHoursScale() {
+        System.runAs(testUser) {
+            WorkItem__c localItem = [SELECT Id FROM WorkItem__c LIMIT 1];
+            WorkRequest__c localReq = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :localItem.Id LIMIT 1];
+
+            DeliveryTriggerControl.disableAfterLogic();
+            WorkLog__c existing = new WorkLog__c(
+                WorkItemLookup__c = localItem.Id,
+                RequestId__c = localReq.Id,
+                HoursLoggedNumber__c = 4.50,
+                WorkDateDate__c = Date.newInstance(2026, 5, 4),
+                WorkDescriptionTxt__c = 'Scale test'
+            );
+            insert existing;
+            DeliveryTriggerControl.enableAfterLogic();
+
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-WL-SCALE',
+                'GlobalSourceId' => 'REMOTE-WL-SCALE',
+                'WorkItemLookup__c' => 'REMOTE-CLIENT-WORKITEM-1',
+                'HoursLoggedNumber__c' => 4.5,
+                'WorkDateDate__c' => '2026-05-04',
+                'WorkDescriptionTxt__c' => 'Scale test'
+            };
+
+            Test.startTest();
+            Id resultId = DeliverySyncItemIngestor.processInboundItem('WorkLog__c', payload);
+            Test.stopTest();
+
+            System.assertEquals(existing.Id, resultId,
+                '4.5 payload must dedupe to existing 4.50 row after scale-2 normalization');
+            Integer count = [SELECT COUNT() FROM WorkLog__c];
+            System.assertEquals(1, count, 'Scale-equivalent hours must dedupe to one row');
+        }
+    }
+
+    /**
+     * @description Ledger match wins: when an inbound ledger row for the
+     *              SourceId already exists, the ingestor must UPDATE that exact
+     *              record — the content fallback must not be consulted (no
+     *              accidental merge into a different content-identical row).
+     */
+    @IsTest
+    static void testWorkLogLedgerMatchTakesPrecedenceOverContent() {
+        System.runAs(testUser) {
+            WorkItem__c localItem = [SELECT Id FROM WorkItem__c LIMIT 1];
+            WorkRequest__c localReq = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :localItem.Id LIMIT 1];
+
+            DeliveryTriggerControl.disableAfterLogic();
+            // The ledger-targeted record.
+            WorkLog__c ledgerTarget = new WorkLog__c(
+                WorkItemLookup__c = localItem.Id,
+                RequestId__c = localReq.Id,
+                HoursLoggedNumber__c = 5.00,
+                WorkDateDate__c = Date.newInstance(2026, 5, 5),
+                WorkDescriptionTxt__c = 'Ledger target'
+            );
+            // A content-identical decoy that the content path COULD match if
+            // the ledger lookup were skipped.
+            WorkLog__c contentDecoy = new WorkLog__c(
+                WorkItemLookup__c = localItem.Id,
+                RequestId__c = localReq.Id,
+                HoursLoggedNumber__c = 6.00,
+                WorkDateDate__c = Date.newInstance(2026, 5, 5),
+                WorkDescriptionTxt__c = 'Content decoy'
+            );
+            insert new List<WorkLog__c>{ ledgerTarget, contentDecoy };
+            DeliveryTriggerControl.enableAfterLogic();
+
+            insert new SyncItem__c(
+                DirectionPk__c = 'Inbound',
+                StatusPk__c = 'Synced',
+                ObjectTypePk__c = 'WorkLog__c',
+                RemoteExternalIdTxt__c = 'REMOTE-WL-LEDGER-WINS',
+                LocalRecordIdTxt__c = ledgerTarget.Id,
+                WorkItemLookup__c = localItem.Id
+            );
+
+            // Payload matches the DECOY's content but carries the ledger SourceId.
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-WL-LEDGER-WINS',
+                'GlobalSourceId' => 'REMOTE-WL-LEDGER-WINS',
+                'WorkItemLookup__c' => 'REMOTE-CLIENT-WORKITEM-1',
+                'HoursLoggedNumber__c' => 6.0,
+                'WorkDateDate__c' => '2026-05-05',
+                'WorkDescriptionTxt__c' => 'Content decoy'
+            };
+
+            Test.startTest();
+            Id resultId = DeliverySyncItemIngestor.processInboundItem('WorkLog__c', payload);
+            Test.stopTest();
+
+            System.assertEquals(ledgerTarget.Id, resultId,
+                'Ledger match must win — content fallback must not be consulted when SourceId resolves');
+            Integer count = [SELECT COUNT() FROM WorkLog__c];
+            System.assertEquals(2, count, 'No new row; ledger-targeted record updated in place');
+        }
+    }
+
+    /**
+     * @description Re-poll idempotency: once the ledger row exists (after the
+     *              first content-matched ingest), re-ingesting the same payload
+     *              must resolve via the ledger and not create a new row.
+     */
+    @IsTest
+    static void testWorkLogContentDedupRepollIdempotent() {
+        System.runAs(testUser) {
+            WorkItem__c localItem = [SELECT Id FROM WorkItem__c LIMIT 1];
+            WorkRequest__c localReq = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :localItem.Id LIMIT 1];
+
+            DeliveryTriggerControl.disableAfterLogic();
+            insert new WorkLog__c(
+                WorkItemLookup__c = localItem.Id,
+                RequestId__c = localReq.Id,
+                HoursLoggedNumber__c = 7.00,
+                WorkDateDate__c = Date.newInstance(2026, 5, 6),
+                WorkDescriptionTxt__c = 'Re-poll test'
+            );
+            DeliveryTriggerControl.enableAfterLogic();
+
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-WL-REPOLL',
+                'GlobalSourceId' => 'REMOTE-WL-REPOLL',
+                'WorkItemLookup__c' => 'REMOTE-CLIENT-WORKITEM-1',
+                'HoursLoggedNumber__c' => 7.0,
+                'WorkDateDate__c' => '2026-05-06',
+                'WorkDescriptionTxt__c' => 'Re-poll test'
+            };
+
+            Test.startTest();
+            Id firstId = DeliverySyncItemIngestor.processInboundItem('WorkLog__c', payload);
+            Id secondId = DeliverySyncItemIngestor.processInboundItem('WorkLog__c', payload);
+            Test.stopTest();
+
+            System.assertEquals(firstId, secondId, 'Re-poll must resolve to the same record');
+            Integer count = [SELECT COUNT() FROM WorkLog__c];
+            System.assertEquals(1, count, 'Re-poll after ledger heal must remain idempotent — one row');
+            Integer ledgerCount = [
+                SELECT COUNT() FROM SyncItem__c
+                WHERE DirectionPk__c = 'Inbound' AND ObjectTypePk__c = 'WorkLog__c'
+                AND RemoteExternalIdTxt__c = 'REMOTE-WL-REPOLL'
+            ];
+            System.assertEquals(1, ledgerCount, 'Exactly one healed ledger row — no duplicate ledger on re-poll');
+        }
+    }
+
     /**
      * @description Confirms cross-path dedup degrades gracefully when the
      *              ledger entry exists but its local record was deleted.
