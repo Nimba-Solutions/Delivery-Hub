@@ -86,6 +86,14 @@ public with sharing class DeliveryDocGenerationService {
             Database.update(prev, AccessLevel.SYSTEM_MODE);
         }
 
+        // Bound the snapshot to the SnapshotTxt__c field cap (131,072) BEFORE we
+        // hash + persist. On long-lived entities the serialized snapshot can
+        // exceed the field length and hard-fail the insert with STRING_TOO_LONG;
+        // this trims display-only text (never hours/rates) to fit, or fails loud
+        // with diagnostics if it still cannot. Must run before the hash so the
+        // stored JSON and the tamper-evidence hash describe the same bytes.
+        boundSnapshotToFieldCap(snapshot, templateType);
+
         // Phase 4: anchor the tamper-evidence chain. The document hash is a
         // SHA-256 over the frozen snapshot JSON; any later mutation of the
         // snapshot would change the hash and break the chain that signers
@@ -219,7 +227,26 @@ public with sharing class DeliveryDocGenerationService {
         }
         snapshot.put('workLogs', serializeWorkLogs(logs));
 
-        // Work requests (for rates and status)
+        // Work requests (for rates and status). Scope to the work items that
+        // actually carry logged time in the period for money/hours templates.
+        // Previously this pulled EVERY WorkRequest ever linked to the entity (no
+        // period, no hours filter); on long-lived entities with hundreds of
+        // historical WorkRequests the serialized snapshot overflowed the
+        // SnapshotTxt__c field cap (131,072) and hard-failed the insert with
+        // STRING_TOO_LONG. Rate resolution in calculateTotalCost only consults
+        // WorkRequests for items with billed logs, so for an Invoice this
+        // narrowing is loss-free for the total. Non-money templates keep the
+        // full set (the snapshot size guard below is the universal backstop).
+        Set<Id> requestScopeIds = itemIds;
+        if (templateType == 'Invoice' || templateType == 'Daily_Hours_Summary') {
+            Set<Id> billedItemIds = new Set<Id>();
+            for (WorkLog__c wl : logs) {
+                if (wl.WorkItemLookup__c != null) {
+                    billedItemIds.add(wl.WorkItemLookup__c);
+                }
+            }
+            requestScopeIds = billedItemIds;
+        }
         List<WorkRequest__c> requests = [
             SELECT Id, WorkItemId__c, WorkItemId__r.Name, StatusPk__c,
                    HourlyRateCurrency__c, QuotedHoursNumber__c,
@@ -227,7 +254,7 @@ public with sharing class DeliveryDocGenerationService {
                    BudgetUtilizationPct__c, DeliveryEntityLookup__c,
                    DeliveryEntityLookup__r.Name
             FROM WorkRequest__c
-            WHERE WorkItemId__c IN :itemIds
+            WHERE WorkItemId__c IN :requestScopeIds
             AND StatusPk__c != 'Inactive'
             WITH SYSTEM_MODE
             ORDER BY WorkItemId__r.Name
@@ -364,6 +391,80 @@ public with sharing class DeliveryDocGenerationService {
             result.add(m);
         }
         return result;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  SNAPSHOT SIZE GUARD
+    // ═══════════════════════════════════════════════════════════
+
+    // SnapshotTxt__c is a LongTextArea capped at 131,072 chars. The serialized
+    // snapshot is written there verbatim AND hashed for tamper-evidence, so it
+    // must fit. SOFT_LIMIT leaves headroom so we trim proactively rather than
+    // waiting until we're flush against the hard cap.
+    @TestVisible
+    private static final Integer SNAPSHOT_FIELD_CAP = 131072;
+    @TestVisible
+    private static final Integer SNAPSHOT_SOFT_LIMIT = 120000;
+
+    /**
+     * @description Ensures the serialized snapshot fits inside SnapshotTxt__c.
+     *              Billing-safe: only display-only free text (work log / work
+     *              item descriptions) is trimmed — the hours and rates that
+     *              drive the invoice total are never altered. If the snapshot
+     *              still exceeds the hard field cap after trimming, throws a
+     *              diagnostic AuraHandledException instead of letting the
+     *              platform raise an opaque STRING_TOO_LONG mid-insert (which
+     *              rolls the whole generation back with no actionable cause).
+     * @param snapshot The snapshot map, mutated in place to fit.
+     * @param templateType Template DeveloperName (recorded in the diagnostic).
+     */
+    @TestVisible
+    private static void boundSnapshotToFieldCap(Map<String, Object> snapshot, String templateType) {
+        if (snapshot == null || JSON.serialize(snapshot).length() <= SNAPSHOT_SOFT_LIMIT) {
+            return;
+        }
+
+        // Step 1 — drop display-only descriptions. These do not feed
+        // calculateTotalHours / calculateTotalCost, so the dollar total is
+        // unaffected; only the human-readable line text is lost, and we flag it.
+        nullOutField(snapshot, 'workLogs', 'description');
+        nullOutField(snapshot, 'workItems', 'description');
+        snapshot.put('snapshotTrimmed', true);
+
+        if (JSON.serialize(snapshot).length() <= SNAPSHOT_FIELD_CAP) {
+            return;
+        }
+
+        // Step 2 — still over the hard cap. Fail loud + diagnostic rather than
+        // ship a silently corrupt document or throw an opaque STRING_TOO_LONG.
+        throw new AuraHandledException(
+            'Document data snapshot exceeds the ' + SNAPSHOT_FIELD_CAP + '-char storage limit even after '
+            + 'trimming display text (workItems=' + sectionSize(snapshot, 'workItems')
+            + ', workLogs=' + sectionSize(snapshot, 'workLogs')
+            + ', workRequests=' + sectionSize(snapshot, 'workRequests')
+            + ', template=' + templateType + '). Narrow the billing period or split the document into '
+            + 'multiple periods. No document was created.'
+        );
+    }
+
+    /** @description Nulls a field on every map in a snapshot list section (no-op if absent). */
+    private static void nullOutField(Map<String, Object> snapshot, String sectionKey, String fieldKey) {
+        List<Object> section = (List<Object>) snapshot.get(sectionKey);
+        if (section == null) {
+            return;
+        }
+        for (Object o : section) {
+            Map<String, Object> row = (Map<String, Object>) o;
+            if (row.containsKey(fieldKey)) {
+                row.put(fieldKey, null);
+            }
+        }
+    }
+
+    /** @description Row count of a snapshot list section (0 when absent). */
+    private static Integer sectionSize(Map<String, Object> snapshot, String sectionKey) {
+        List<Object> section = (List<Object>) snapshot.get(sectionKey);
+        return section == null ? 0 : section.size();
     }
 
     // ═══════════════════════════════════════════════════════════
