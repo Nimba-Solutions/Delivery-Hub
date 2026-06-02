@@ -280,14 +280,15 @@ public without sharing class DeliverySyncItemIngestor {
                 // description and convert to an UPDATE of the existing row.
                 Id contentMatch = findWorkLogByContent(localParentId, payload);
                 if (contentMatch != null) {
+                    // Convert to an UPDATE of the existing row. Do NOT re-stamp the
+                    // parent FKs: the matched record already carries the correct
+                    // WorkItemLookup__c / RequestId__c, and RequestId__c is a
+                    // master-detail field that is not editable on update — stamping
+                    // it threw "Field RequestId__c is not editable". Leaving the FKs
+                    // off the update SObject preserves the record's existing values.
                     localRecordId = contentMatch;
                     recordToUpsert = targetType.newSObject(localRecordId);
                     contentMatched = true;
-                    // Re-stamp the resolved parent FKs on the rebuilt record.
-                    putSafe(recordToUpsert, 'WorkItemLookup__c', localParentId);
-                    if (!localRequests.isEmpty()) {
-                        putSafe(recordToUpsert, 'RequestId__c', localRequests[0].Id);
-                    }
                 }
             }
         }
