@@ -60,16 +60,11 @@ public with sharing class DeliveryDocEmailService {
         Messaging.SingleEmailMessage email = new Messaging.SingleEmailMessage();
         email.setToAddresses(new List<String>{ toEmail });
 
-        // CC from org settings (supports comma-separated list)
+        // CC from org settings (supports comma- AND semicolon-separated lists —
+        // Outlook pastes addresses with ';'). parseCcAddresses trims + skips blanks.
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         if (settings != null && String.isNotBlank(settings.DocumentCcEmailTxt__c)) {
-            List<String> ccAddresses = new List<String>();
-            for (String addr : settings.DocumentCcEmailTxt__c.split(',')) {
-                String trimmed = addr.trim();
-                if (String.isNotBlank(trimmed)) {
-                    ccAddresses.add(trimmed);
-                }
-            }
+            List<String> ccAddresses = parseCcAddresses(settings.DocumentCcEmailTxt__c);
             if (!ccAddresses.isEmpty()) {
                 email.setCcAddresses(ccAddresses);
             }
@@ -89,16 +84,18 @@ public with sharing class DeliveryDocEmailService {
             email.setOrgWideEmailAddressId(oweaId);
         }
 
-        // Send \u2014 surface an actionable error if SF rejects the send (most
-        // commonly: no verified sender). We must NOT mark the document Sent
+        // Send \u2014 surface the REAL underlying error so the failure is
+        // diagnosable (a blanket "no verified sender" message previously masked
+        // CC-format and other send errors). We must NOT mark the document Sent
         // when the send throws, so this guards the status update below.
         try {
             Messaging.sendEmail(new List<Messaging.SingleEmailMessage>{ email });
         } catch (Exception sendEx) {
             throw new AuraHandledException(
-                'Email could not be sent \u2014 no verified sender is configured. '
-                + 'In Delivery Hub Settings, set \'Document From (Org-Wide Email)\' to a '
-                + 'verified Org-Wide Email Address (Setup \u2192 Org-Wide Addresses), then retry.'
+                'Email could not be sent: ' + sendEx.getMessage()
+                + ' \u2014 If this is a domain-verification error, verify your sending '
+                + 'domain (Setup \u2192 Email \u2192 DKIM Keys) or set a verified '
+                + 'Org-Wide Email Address in Delivery Hub Settings.'
             );
         }
 
@@ -255,6 +252,27 @@ public with sharing class DeliveryDocEmailService {
     // ═══════════════════════════════════════════════════════════
     //  HELPERS
     // ═══════════════════════════════════════════════════════════
+
+    /**
+     * @description Parses a CC email list that may use commas OR semicolons as
+     *              separators (Outlook pastes addresses with ';'). Trims each
+     *              entry and skips blanks. Returns an empty list for blank input.
+     * @param rawCc The raw CC string from settings (may be null/blank).
+     * @return A list of trimmed, non-blank email addresses.
+     */
+    public static List<String> parseCcAddresses(String rawCc) {
+        List<String> addresses = new List<String>();
+        if (String.isBlank(rawCc)) {
+            return addresses;
+        }
+        for (String addr : rawCc.split('[,;]')) {
+            String trimmed = addr.trim();
+            if (String.isNotBlank(trimmed)) {
+                addresses.add(trimmed);
+            }
+        }
+        return addresses;
+    }
 
     /**
      * @description Resolves the Org-Wide Email Address Id to send documents FROM,
