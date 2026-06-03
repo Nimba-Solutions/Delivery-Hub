@@ -215,10 +215,15 @@ public with sharing class DeliveryOverdueReminderService {
         email.setHtmlBody(body);
         email.setSaveAsActivity(false);
 
-        // CC from org settings
+        // CC from org settings — supports comma- AND semicolon-separated lists
+        // (Outlook pastes addresses with ';'). Reuses the shared CC parser so a
+        // multi-address CC isn't sent as one invalid address.
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         if (settings != null && String.isNotBlank(settings.DocumentCcEmailTxt__c)) {
-            email.setCcAddresses(new List<String>{ settings.DocumentCcEmailTxt__c });
+            List<String> ccAddresses = DeliveryDocEmailService.parseCcAddresses(settings.DocumentCcEmailTxt__c);
+            if (!ccAddresses.isEmpty()) {
+                email.setCcAddresses(ccAddresses);
+            }
         }
 
         return email;
