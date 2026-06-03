@@ -75,6 +75,7 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
     @track weeklyDigestDay = 'Monday';
     @track weeklyDigestRecipients = '';
     @track documentCcEmail = '';
+    @track documentFromOrgWideEmail = '';
     @track statusPageToken = '';
     @track defaultBillingEntityId = '';
     @track stagesToAutoShare = '';
@@ -168,6 +169,7 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
                 this.weeklyDigestDay = data.weeklyDigestDay || 'Monday';
                 this.weeklyDigestRecipients = data.weeklyDigestRecipients || '';
                 this.documentCcEmail = data.documentCcEmail || '';
+                this.documentFromOrgWideEmail = data.documentFromOrgWideEmail || '';
                 this.statusPageToken = data.statusPageToken || '';
                 this.defaultBillingEntityId = data.defaultBillingEntityId || '';
                 this.stagesToAutoShare = data.stagesToAutoShare || '';
@@ -390,6 +392,14 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
         this.saveExtended();
     }
 
+    handleDocumentFromOrgWideEmailChange(event) {
+        this.documentFromOrgWideEmail = event.target.value;
+    }
+
+    handleDocumentFromOrgWideEmailSave() {
+        this.saveExtended();
+    }
+
     handleStatusPageTokenChange(event) {
         this.statusPageToken = event.target.value;
     }
@@ -455,6 +465,7 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
                     weeklyDigestDay: this.weeklyDigestDay,
                     weeklyDigestRecipients: this.weeklyDigestRecipients,
                     documentCcEmail: this.documentCcEmail,
+                    documentFromOrgWideEmail: this.documentFromOrgWideEmail,
                     statusPageToken: this.statusPageToken,
                     defaultBillingEntityId: this.defaultBillingEntityId,
                     stagesToAutoShare: this.stagesToAutoShare,
