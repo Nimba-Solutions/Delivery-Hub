@@ -620,6 +620,19 @@
                     </div>
                     <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
                         <lightning-input
+                            type="email"
+                            label="Document From (Org-Wide Email)"
+                            placeholder="invoices@yourdomain.com"
+                            value={documentFromOrgWideEmail}
+                            onchange={handleDocumentFromOrgWideEmailChange}
+                            onblur={handleDocumentFromOrgWideEmailSave}>
+                        </lightning-input>
+                        <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                            Verified Org-Wide Email Address to send documents (invoices) FROM. Must be a verified sender in this org; if the domain isn't verified, Salesforce blocks the send.
+                        </p>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
                             type="text"
                             label="Default Billing Entity ID"
                             placeholder="18-character NetworkEntity ID"

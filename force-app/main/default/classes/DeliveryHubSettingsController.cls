@@ -109,6 +109,8 @@ global with sharing class DeliveryHubSettingsController {
         @AuraEnabled public String weeklyDigestRecipients { get; set; }
         /** @description Email address to CC on every document email */
         @AuraEnabled public String documentCcEmail { get; set; }
+        /** @description Verified Org-Wide Email Address to send documents (invoices) FROM */
+        @AuraEnabled public String documentFromOrgWideEmail { get; set; }
         /** @description Token for the public status page URL */
         @AuraEnabled public String statusPageToken { get; set; }
         /** @description Default billing entity ID override */
@@ -331,6 +333,7 @@ global with sharing class DeliveryHubSettingsController {
             dto.weeklyDigestDay = settings.WeeklyDigestDayTxt__c != null ? settings.WeeklyDigestDayTxt__c : 'Monday';
             dto.weeklyDigestRecipients = settings.WeeklyDigestRecipientsTxt__c;
             dto.documentCcEmail = settings.DocumentCcEmailTxt__c;
+            dto.documentFromOrgWideEmail = settings.DocumentFromOrgWideEmailTxt__c;
             dto.statusPageToken = settings.StatusPageTokenTxt__c;
             dto.defaultBillingEntityId = settings.DefaultBillingEntityIdTxt__c;
             dto.stagesToAutoShare = settings.StagesToAutoShareWithDevTeamTxt__c;
@@ -497,6 +500,7 @@ global with sharing class DeliveryHubSettingsController {
             settings.WeeklyDigestDayTxt__c = dto.weeklyDigestDay;
             settings.WeeklyDigestRecipientsTxt__c = dto.weeklyDigestRecipients;
             settings.DocumentCcEmailTxt__c = dto.documentCcEmail;
+            settings.DocumentFromOrgWideEmailTxt__c = dto.documentFromOrgWideEmail;
             settings.StatusPageTokenTxt__c = dto.statusPageToken;
             settings.DefaultBillingEntityIdTxt__c = dto.defaultBillingEntityId;
             settings.StagesToAutoShareWithDevTeamTxt__c = dto.stagesToAutoShare;
