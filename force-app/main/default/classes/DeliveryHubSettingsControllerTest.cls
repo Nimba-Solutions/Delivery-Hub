@@ -95,6 +95,7 @@ private class DeliveryHubSettingsControllerTest {
             settings.WeeklyDigestDayTxt__c = 'Wednesday';
             settings.WeeklyDigestRecipientsTxt__c = 'test@example.com';
             settings.DocumentCcEmailTxt__c = 'cc@example.com';
+            settings.DocumentFromOrgWideEmailTxt__c = 'invoices@example.com';
             settings.StatusPageTokenTxt__c = 'abc-123';
             settings.DefaultBillingEntityIdTxt__c = 'a3VRu000002ZPtdMA';
             settings.StagesToAutoShareWithDevTeamTxt__c = 'In Development,Code Review';
@@ -115,6 +116,7 @@ private class DeliveryHubSettingsControllerTest {
             System.assertEquals('Wednesday', dto.weeklyDigestDay, 'Digest day should be Wednesday');
             System.assertEquals('test@example.com', dto.weeklyDigestRecipients, 'Digest recipients should be set');
             System.assertEquals('cc@example.com', dto.documentCcEmail, 'Document CC email should be set');
+            System.assertEquals('invoices@example.com', dto.documentFromOrgWideEmail, 'Document From org-wide email should be set');
             System.assertEquals('abc-123', dto.statusPageToken, 'Status page token should be set');
             System.assertEquals('a3VRu000002ZPtdMA', dto.defaultBillingEntityId, 'Default billing entity should be set');
             System.assertEquals('In Development,Code Review', dto.stagesToAutoShare, 'Stages to auto share should be set');
@@ -142,6 +144,7 @@ private class DeliveryHubSettingsControllerTest {
                 'weeklyDigestDay' => 'Friday',
                 'weeklyDigestRecipients' => 'a@b.com,c@d.com',
                 'documentCcEmail' => 'doc@test.com',
+                'documentFromOrgWideEmail' => 'from@test.com',
                 'statusPageToken' => 'xyz-789',
                 'defaultBillingEntityId' => 'a3VRu000002ZPtdMA',
                 'stagesToAutoShare' => 'Testing,Deployed',
@@ -168,6 +171,7 @@ private class DeliveryHubSettingsControllerTest {
             System.assertEquals('Friday', s.WeeklyDigestDayTxt__c, 'Digest day should be Friday');
             System.assertEquals('a@b.com,c@d.com', s.WeeklyDigestRecipientsTxt__c, 'Digest recipients should be set');
             System.assertEquals('doc@test.com', s.DocumentCcEmailTxt__c, 'Document CC email should be set');
+            System.assertEquals('from@test.com', s.DocumentFromOrgWideEmailTxt__c, 'Document From org-wide email should be saved');
             System.assertEquals('xyz-789', s.StatusPageTokenTxt__c, 'Status page token should be set');
             System.assertEquals('a3VRu000002ZPtdMA', s.DefaultBillingEntityIdTxt__c, 'Default billing entity should be set');
             System.assertEquals('Testing,Deployed', s.StagesToAutoShareWithDevTeamTxt__c, 'Stages to auto share should be set');

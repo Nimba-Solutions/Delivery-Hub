@@ -113,6 +113,72 @@ private class DeliveryDocEmailServiceTest {
     }
 
     @IsTest
+    static void testParseCcAddressesSemicolonSeparated() {
+        System.runAs(testUser) {
+            Test.startTest();
+            // Outlook-style semicolon-separated list must parse into multiple recipients.
+            List<String> parsed = DeliveryDocEmailService.parseCcAddresses('a@x.com;b@y.com');
+            Test.stopTest();
+
+            System.assertEquals(2, parsed.size(), 'Semicolon-separated CC should parse into two addresses');
+            System.assertEquals('a@x.com', parsed[0], 'First parsed address should be trimmed and correct');
+            System.assertEquals('b@y.com', parsed[1], 'Second parsed address should be trimmed and correct');
+        }
+    }
+
+    @IsTest
+    static void testParseCcAddressesCommaSeparated() {
+        System.runAs(testUser) {
+            Test.startTest();
+            // Existing comma behavior must still work.
+            List<String> parsed = DeliveryDocEmailService.parseCcAddresses('a@x.com, b@y.com');
+            Test.stopTest();
+
+            System.assertEquals(2, parsed.size(), 'Comma-separated CC should still parse into two addresses');
+            System.assertEquals('a@x.com', parsed[0], 'First comma-parsed address should be trimmed');
+            System.assertEquals('b@y.com', parsed[1], 'Second comma-parsed address should be trimmed');
+        }
+    }
+
+    @IsTest
+    static void testParseCcAddressesMixedAndBlanks() {
+        System.runAs(testUser) {
+            Test.startTest();
+            // Mixed separators plus stray blanks/whitespace must skip blanks.
+            List<String> parsed = DeliveryDocEmailService.parseCcAddresses('a@x.com; ,b@y.com ;; c@z.com');
+            List<String> none = DeliveryDocEmailService.parseCcAddresses('   ');
+            List<String> nullIn = DeliveryDocEmailService.parseCcAddresses(null);
+            Test.stopTest();
+
+            System.assertEquals(3, parsed.size(), 'Mixed separators should yield three non-blank addresses');
+            System.assertEquals(0, none.size(), 'Whitespace-only input should yield an empty list');
+            System.assertEquals(0, nullIn.size(), 'Null input should yield an empty list');
+        }
+    }
+
+    @IsTest
+    static void testSendDocumentEmailSemicolonCc() {
+        System.runAs(testUser) {
+            // End-to-end: a semicolon-separated CC must NOT throw on send (previously
+            // the whole string became one invalid address → INVALID_EMAIL_ADDRESS).
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            settings.DocumentCcEmailTxt__c = 'cc1@example.com;cc2@example.com';
+            upsert settings;
+
+            DeliveryDocument__c doc = getDoc();
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryDocEmailService.sendDocumentEmail(
+                doc.Id, 'recipient@example.com'
+            );
+            Test.stopTest();
+
+            System.assertEquals(true, result.get('success'),
+                'Send should succeed with semicolon-separated CC addresses');
+        }
+    }
+
+    @IsTest
     static void testSendDocumentEmailOweaSettingBlankFallsBack() {
         System.runAs(testUser) {
             // No DocumentFromOrgWideEmailTxt__c configured → must send as before
