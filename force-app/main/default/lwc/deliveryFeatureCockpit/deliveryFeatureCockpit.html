@@ -1,7 +1,8 @@
 <template>
     <lightning-card title="Feature Cockpit" icon-name="standard:apps">
 
-        <div slot="actions">
+        <div slot="actions" class="slds-grid slds-grid_vertical-align-center" style="gap: 0.25rem;">
+            <c-delivery-info-popover component-name="deliveryFeatureCockpit"></c-delivery-info-popover>
             <lightning-button
                 label="Request approval to toggle"
                 icon-name="utility:approval"
