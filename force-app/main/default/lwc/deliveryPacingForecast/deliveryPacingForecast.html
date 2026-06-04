@@ -1,0 +1,160 @@
+<template>
+    <div class="pacing-card">
+
+        <div class="pacing-header">
+            <div class="pacing-header-left">
+                <lightning-icon icon-name="utility:trending" alternative-text="Portfolio pacing" size="small" class="pacing-header-icon"></lightning-icon>
+                <div>
+                    <h2 class="pacing-title">Portfolio Pacing &amp; Forecast</h2>
+                    <p class="pacing-subtitle">Logged hours, amortized target, and run-rate forecast across all active projects</p>
+                </div>
+            </div>
+            <div class="pacing-controls">
+                <lightning-combobox
+                    name="granularity"
+                    label="Bucket"
+                    variant="label-hidden"
+                    value={granularity}
+                    options={granularityOptions}
+                    onchange={handleGranularityChange}
+                    class="pacing-select">
+                </lightning-combobox>
+                <lightning-combobox
+                    name="horizon"
+                    label="Forecast horizon"
+                    variant="label-hidden"
+                    value={horizon}
+                    options={horizonOptions}
+                    onchange={handleHorizonChange}
+                    class="pacing-select">
+                </lightning-combobox>
+            </div>
+        </div>
+
+        <template lwc:if={isLoading}>
+            <div class="pacing-loading">
+                <lightning-spinner alternative-text="Loading portfolio pacing..." size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <template lwc:if={hasError}>
+            <div class="pacing-error">
+                <lightning-icon icon-name="utility:error" size="x-small"></lightning-icon>
+                <span>{errorMessage}</span>
+            </div>
+        </template>
+
+        <template lwc:if={hasData}>
+            <div class="pacing-summary-row">
+                <div class="summary-tile">
+                    <div class="summary-label">Logged</div>
+                    <div class="summary-value">{totalLoggedDisplay}h</div>
+                    <template lwc:if={hasRate}>
+                        <div class="summary-money">{loggedDollarDisplay}</div>
+                    </template>
+                </div>
+                <div class="summary-tile">
+                    <div class="summary-label">Estimated</div>
+                    <div class="summary-value">{totalEstimatedDisplay}h</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="summary-label">Projected final</div>
+                    <div class="summary-value">{projectedFinalDisplay}h</div>
+                    <template lwc:if={hasRate}>
+                        <div class="summary-money">{projectedFinalDollarDisplay}</div>
+                    </template>
+                </div>
+                <template lwc:if={hasTarget}>
+                    <div class="summary-tile">
+                        <div class="summary-label">Pacing</div>
+                        <div class={pacingClass}>{pacingPercent}</div>
+                        <div class="summary-trajectory">{trajectoryLabel}</div>
+                    </div>
+                </template>
+                <div class="summary-tile">
+                    <div class="summary-label">Active projects</div>
+                    <div class="summary-value">{rootCountDisplay}</div>
+                </div>
+            </div>
+
+            <div class="pacing-body">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     viewBox={svgViewBox}
+                     class="pacing-svg"
+                     preserveAspectRatio="xMidYMid meet">
+
+                    <template for:each={gridLines} for:item="gl">
+                        <line key={gl.key}
+                              x1={chartLeft} y1={gl.y}
+                              x2={chartRight} y2={gl.y}
+                              class="grid-line"></line>
+                    </template>
+
+                    <template for:each={gridLines} for:item="gl">
+                        <text key={gl.labelKey}
+                              x={yLabelX} y={gl.y}
+                              class="axis-label axis-label--y">{gl.label}</text>
+                    </template>
+
+                    <template lwc:if={hasForecastBoundary}>
+                        <line x1={forecastBoundaryX} y1={chartTop}
+                              x2={forecastBoundaryX} y2={chartBottom}
+                              class="forecast-boundary"></line>
+                    </template>
+
+                    <template for:each={bars} for:item="bar">
+                        <rect key={bar.key}
+                              x={bar.x} y={bar.y}
+                              width={bar.width} height={bar.height}
+                              class={bar.cssClass}>
+                            <title>{bar.tooltip}</title>
+                        </rect>
+                    </template>
+
+                    <template lwc:if={hasTarget}>
+                        <polyline points={targetPoints} class="target-line"></polyline>
+                    </template>
+
+                    <template for:each={xLabels} for:item="xl">
+                        <text key={xl.key}
+                              x={xl.x} y={xLabelY}
+                              class="axis-label axis-label--x">{xl.label}</text>
+                    </template>
+
+                    <line x1={chartLeft} y1={chartTop}
+                          x2={chartLeft} y2={chartBottom}
+                          class="axis-line"></line>
+                    <line x1={chartLeft} y1={chartBottom}
+                          x2={chartRight} y2={chartBottom}
+                          class="axis-line"></line>
+                </svg>
+            </div>
+
+            <div class="pacing-legend">
+                <span class="legend-item">
+                    <span class="legend-swatch legend-swatch--under"></span>Logged (on/under target)
+                </span>
+                <span class="legend-item">
+                    <span class="legend-swatch legend-swatch--over"></span>Logged (over target)
+                </span>
+                <span class="legend-item">
+                    <span class="legend-swatch legend-swatch--forecast"></span>Forecast
+                </span>
+                <template lwc:if={hasTarget}>
+                    <span class="legend-item">
+                        <span class="legend-line legend-line--target"></span>Target
+                    </span>
+                </template>
+            </div>
+        </template>
+
+        <template lwc:if={isEmpty}>
+            <div class="pacing-empty">
+                <lightning-icon icon-name="utility:trending" size="medium" class="pacing-empty-icon"></lightning-icon>
+                <p>No active portfolio activity yet</p>
+                <p class="pacing-empty-sub">Activate projects and log work to populate the portfolio pacing view.</p>
+            </div>
+        </template>
+
+    </div>
+</template>
