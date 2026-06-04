@@ -92,6 +92,33 @@ const INFO_REGISTRY = {
         keyFields:
             'Document__c.StatusPk__c, Document__c.SnapshotJson__c, Document__c.TemplatePk__c, Document__c.TotalHoursNumber__c, Document__c.TotalCostNumber__c, NetworkEntity__c.Id, DocumentTemplate__mdt'
     },
+    deliveryExecutiveDashboard: {
+        dataSource:
+            'Calls DeliveryDashboardCardController.getCardsForPage to load the DashboardCard__mdt records configured for the given pageKey (default "home"), then DeliveryDashboardCardController.getCardData per card to resolve each card\'s value from its dataSource + filterJson. Card type (Metric / List / PieChart / BarChart / Pills) and threshold colors (critical / warning) are all authored as Custom Metadata — nothing is hardcoded.',
+        description:
+            'A CMT-driven executive dashboard. Renders a grid of admin-authored cards (metrics, lists, bar charts, and per-Work-Item traffic-light pills) for the current page. Cards support threshold-based color states and optional click-through URLs that open in a new tab.',
+        friendlyName: 'Executive Dashboard',
+        keyFields:
+            'DashboardCard__mdt.PageKeyTxt__c, DashboardCard__mdt.CardType, DashboardCard__mdt.DataSource, DashboardCard__mdt.FilterJson, DashboardCard__mdt.ThresholdCritical, DashboardCard__mdt.ThresholdWarning, DashboardCard__mdt.ClickThroughUrlTxt__c'
+    },
+    deliveryFeatureApprovalInbox: {
+        dataSource:
+            'Calls DeliveryFeatureApprovalService.getInbox to list Pending FeatureToggleApproval__c rows assigned to the running user. Approve / Reject call grant / reject with an optional decision note for the audit trail. "Show chain" calls getApprovalChain to render every step of a multi-step cascade approval request.',
+        description:
+            'Your personal approval inbox for feature-toggle requests. Lists pending requests assigned to you with the feature, the requested action (Enable / Disable), the reason, and who asked — plus inline Approve / Reject buttons, a decision-note field, and a "Show chain" view of multi-step approval chains.',
+        friendlyName: 'Feature Approval Inbox',
+        keyFields:
+            'FeatureToggleApproval__c.StatusPk__c, FeatureToggleApproval__c.ActionPk__c, FeatureToggleApproval__c.StepNumberNumber__c, FeatureToggleApproval__c.ReasonTxt__c, FeatureToggleRequest__c (feature, requestedBy), Feature__c.Label'
+    },
+    deliveryFeatureCockpit: {
+        dataSource:
+            'Calls DeliveryFeatureCatalogController.getCatalog to render the feature catalog (Feature__c rows joined with FeatureDefinition__mdt metadata) and isAdmin to gate the toggle buttons. Enable / Disable round-trips through toggleFeature, which enforces onboarding-track gating and dependency-cascade rules. "Show dependencies" opens a cascade-preview modal; "Request approval to toggle" opens the approval-submit flow.',
+        description:
+            'The Feature Catalog cockpit. Shows every Delivery Hub feature as a card with its category, maturity, mapped settings field, and Active / Inactive status. Admins get inline Enable / Disable toggles (gated by onboarding tracks and dependency cascades), a dependency-graph preview, and a "Request approval to toggle" submission flow.',
+        friendlyName: 'Feature Cockpit',
+        keyFields:
+            'Feature__c.IsActiveBoolean__c, Feature__c.Label, FeatureDefinition__mdt (Category, Maturity, Icon, SettingsFieldApiName, DocsUrl), FeatureDependency__mdt, FeatureToggleApproval__c'
+    },
     deliveryGeneralSettingsCard: {
         dataSource:
             'Loads all Delivery Hub settings via getSettings which reads the DeliveryHubSettings__c custom setting. Each toggle calls saveGeneralSettings or saveExtendedSettings to persist changes immediately. Slack webhook is saved separately via saveSlackWebhookUrl and tested via testWebhook.',
@@ -118,6 +145,15 @@ const INFO_REGISTRY = {
         friendlyName: 'Ghost Recorder',
         keyFields:
             'Activity_Log__c.ActionTypePk__c, WorkItem__c.BriefDescriptionTxt__c, WorkItem__c.PriorityPk__c, WorkItem__c.DetailsTxt__c'
+    },
+    deliveryHubHealthDashboard: {
+        dataSource:
+            'Calls DeliveryHubHealthService.runAllChecks, which runs every registered self-assessment check (connection status, sync schedule, settings integrity, seed data, guest-user access, etc.) and returns a pass / warn / fail status plus a human-readable detail per check. Checks that expose a repairKey get a one-click Repair button that calls DeliveryHubRepairService.runRepair and then re-runs the checks.',
+        description:
+            'An admin self-assessment dashboard for Delivery Hub. Runs every configured health check and renders a color-coded card per result (pass / warn / fail) with the diagnostic detail, plus one-click "Repair" buttons for checks that support automated remediation.',
+        friendlyName: 'Hub Health',
+        keyFields:
+            'DeliveryHubHealthService check results (checkKey, label, statusPk, detail, repairKey), NetworkEntity__c.StatusPk__c, DeliveryHubSettings__c, CronTrigger (sync schedule)'
     },
     deliveryHubBoard: {
         dataSource:
@@ -199,6 +235,15 @@ const INFO_REGISTRY = {
         friendlyName: 'Portfolio Pacing & Forecast',
         keyFields:
             'WorkItem__c.EstimatedHoursNumber__c, WorkItem__c.EstimatedStartDevDate__c, WorkItem__c.EstimatedEndDevDate__c, WorkItem__c.TotalLoggedHoursSum__c, WorkLog__c.HoursLoggedNumber__c, WorkLog__c.WorkDateDate__c, NetworkEntity__c.DefaultHourlyRateCurrency__c'
+    },
+    deliveryWatcherSetup: {
+        dataSource:
+            'Calls DeliveryWatcherSetupController.getSettings to load the Watcher digest configuration from DeliveryHubSettings__c, and saveSettings to persist it. Flipping the master toggle stamps EnableWatcherDigestDateTime__c; the recipient list is validated against active Users and stored in WatcherDigestRecipientUserIdsTxt__c; an optional Slack webhook override updates the org-wide webhook used by escalations and forecasts.',
+        description:
+            'Admin form for the daily Watcher digest. Flips the master opt-in, curates the digest recipient list (validated Salesforce User Ids), and optionally overrides the org-wide Slack webhook — so admins no longer need to open Setup → Custom Settings. Shows the next scheduled run and last-saved timestamp.',
+        friendlyName: 'Watcher Digest Setup',
+        keyFields:
+            'DeliveryHubSettings__c.EnableWatcherDigestDateTime__c, DeliveryHubSettings__c.WatcherDigestRecipientUserIdsTxt__c, DeliveryHubSettings__c.SlackWebhookUrl, CronTrigger (scheduled Watcher tick)'
     }
 };
 
