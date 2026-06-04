@@ -35,6 +35,12 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryPacingForecast</componentName>
+                <identifier>c_deliveryPacingForecast</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryFeatureCockpit</componentName>
                 <identifier>c_deliveryFeatureCockpit_home</identifier>
             </componentInstance>
