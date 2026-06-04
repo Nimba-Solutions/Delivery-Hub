@@ -268,7 +268,6 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             this._mountHandle = null;
         }
         this._uninstallCnEditBridge();
-        this._destroyTooltip();
         this._uninstallFullscreenChromeHide();
     }
 
@@ -670,7 +669,10 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             // NOT wire these so there's zero chance the engine takes the
             // immediate-dispatch branch by mistake. See the
             // `if (!this._auditPassEnabled)` block below.
-            onTaskHover: (taskId) => this._handleTaskHover(taskId),
+            // Hover tooltip is owned by nimbus-gantt's native TooltipManager
+            // (0.193.0+) — it renders the work-item ID + sizing/actuals from the
+            // estimatedHours/loggedHours fields _mapTasksForNg passes. No host
+            // onTaskHover wiring so DH inherits the substrate tooltip uniformly.
             // NG 0.185.26 — generic TitleBar button slot. DH contributes a
             // Show/Hide Header toggle that reveals the SF page-header chrome
             // that the Timeline tab hides by default.
@@ -1289,75 +1291,12 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         window.open(url, '_blank');
     }
 
-    /**
-     * NG 0.189+ onTaskHover(taskId|null). Fires once per row entry/leave —
-     * not on every mousemove, so we track cursor position separately to
-     * follow it. Renders a body-level tooltip with the task title +
-     * truncated (200 char) description so users can identify a row
-     * without clicking through to the DetailPanel.
-     */
-    _handleTaskHover(taskId) {
-        if (!taskId) {
-            this._hideTooltip();
-            return;
-        }
-        const norm = String(taskId);
-        const task = (this._tasks || []).find(
-            (t) => String(t.id) === norm || String(t.workItemId) === norm
-        );
-        if (!task) {
-            this._hideTooltip();
-            return;
-        }
-        const title = task.name || task.workItemId || '';
-        const desc = (task.description || '').trim();
-        const truncated = desc.length > 200 ? desc.slice(0, 200) + '…' : desc;
-        const text = truncated ? `${title} — ${truncated}` : title;
-        this._showTooltip(text);
-    }
-
-    _showTooltip(text) {
-        if (!this._tooltipEl) {
-            const el = document.createElement('div');
-            el.id = 'dh-gantt-tooltip';
-            el.style.cssText = [
-                'position:fixed', 'z-index:2147483645', 'max-width:420px',
-                'padding:8px 12px', 'background:#0f172a', 'color:#fff',
-                'border-radius:6px', 'pointer-events:none',
-                'box-shadow:0 8px 16px rgba(0,0,0,0.2)',
-                'font:12px ui-sans-serif,system-ui,-apple-system,sans-serif',
-                'line-height:1.4', 'display:none', 'white-space:normal',
-                'word-break:break-word'
-            ].join(';');
-            document.body.appendChild(el);
-            this._tooltipEl = el;
-            this._tooltipMouseHandler = (e) => {
-                if (!this._tooltipEl || this._tooltipEl.style.display === 'none') return;
-                this._tooltipEl.style.left = (e.clientX + 14) + 'px';
-                this._tooltipEl.style.top = (e.clientY + 14) + 'px';
-            };
-            document.addEventListener('mousemove', this._tooltipMouseHandler);
-        }
-        this._tooltipEl.textContent = text;
-        this._tooltipEl.style.display = 'block';
-    }
-
-    _hideTooltip() {
-        if (this._tooltipEl) {
-            this._tooltipEl.style.display = 'none';
-        }
-    }
-
-    _destroyTooltip() {
-        if (this._tooltipMouseHandler) {
-            document.removeEventListener('mousemove', this._tooltipMouseHandler);
-            this._tooltipMouseHandler = null;
-        }
-        if (this._tooltipEl && this._tooltipEl.parentNode) {
-            this._tooltipEl.parentNode.removeChild(this._tooltipEl);
-        }
-        this._tooltipEl = null;
-    }
+    // Hover tooltip is owned by nimbus-gantt's native TooltipManager (0.193.0+),
+    // which renders the work-item ID + sizing/actuals (estimate / logged / used%)
+    // from the estimatedHours/loggedHours fields _mapTasksForNg passes. DH no
+    // longer renders its own tooltip — the onTaskHover wiring + custom div were
+    // removed so the hover experience is inherited uniformly from the NG substrate.
+    // (Pending one live check: confirm NG's DOM-append tooltip renders under LWS.)
 
     // ── Context-menu host callbacks (NG 0.189.x) ──────────────────────────
     //
@@ -1558,8 +1497,11 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 priority: r.priority || 'Medium',
                 startDate: r.startDate || null,
                 endDate: r.endDate || null,
-                estimatedHours: estimated,
-                loggedHours: logged,
+                // Nullable (not ||0) so NG's tooltip hides the sizing block for
+                // unsized items instead of showing a misleading "0h". budgetUsedPercent
+                // above still uses the coerced locals.
+                estimatedHours: estimated > 0 ? estimated : null,
+                loggedHours: estimated > 0 ? logged : null,
                 budgetUsedPercent,
                 developerName: r.developerName || '',
                 entityName: r.entityName || '',
