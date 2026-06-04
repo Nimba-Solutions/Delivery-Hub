@@ -56,10 +56,14 @@ public with sharing class DeliveryDocGenerationService {
             metaMap.put('unpaidInvoices', DeliveryDocPaymentService.buildUnpaidInvoicesSummary(entityId));
         }
 
-        // Inject default agreement clauses if none provided
+        // Inject default agreement clauses if none provided. The clause set
+        // varies by compensation model (Hourly / Retainer / Fixed_Bid) read
+        // from the caller's metadata; commercial numbers (retainer/fixed-bid
+        // amounts) flow through the same metadata and fall back to neutral
+        // placeholders when not yet finalized.
         if ((templateType == 'Client_Agreement' || templateType == 'Contractor_Agreement')
             && !metaMap.containsKey('clauses')) {
-            metaMap.put('clauses', buildDefaultAgreementClauses(templateType, snapshot));
+            metaMap.put('clauses', buildDefaultAgreementClauses(templateType, snapshot, metaMap));
         }
 
         // ── Versioning: supersede existing document for same entity+period+template ──
@@ -543,9 +547,39 @@ public with sharing class DeliveryDocGenerationService {
         return EncodingUtil.convertToHex(randomBytes);
     }
 
-    /** @description Builds default legal clauses for agreement-type documents based on entity and template. */
+    /**
+     * @description Backwards-compatible overload. Builds default legal clauses
+     *              with the Hourly compensation model (preserves the historical
+     *              behavior for any caller that does not pass a metadata map).
+     * @param templateType Client_Agreement or Contractor_Agreement.
+     * @param snapshot The frozen document snapshot.
+     * @return The ordered list of default clauses (Hourly compensation).
+     */
     @TestVisible
     public static List<Map<String, String>> buildDefaultAgreementClauses(String templateType, Map<String, Object> snapshot) {
+        return buildDefaultAgreementClauses(templateType, snapshot, new Map<String, Object>());
+    }
+
+    /**
+     * @description Builds default legal clauses for agreement-type documents
+     *              based on entity, template, and the compensation model read
+     *              from the document metadata. Only the Compensation clause (and,
+     *              for Fixed_Bid, an added Payment Milestones clause) varies by
+     *              model — Scope, Confidentiality, IP, Liability, etc. are
+     *              identical across models. Commercial numbers are optional and
+     *              render as neutral placeholders when not supplied.
+     * @param templateType Client_Agreement or Contractor_Agreement.
+     * @param snapshot The frozen document snapshot (entity name, default rate).
+     * @param metaMap The document metadata map. Recognized keys:
+     *               compensationModel (Hourly|Retainer|Fixed_Bid),
+     *               retainerAmount, retainerHours, billingFrequency,
+     *               fixedBidAmount, milestones.
+     * @return The ordered list of default clauses for the resolved model.
+     */
+    @TestVisible
+    public static List<Map<String, String>> buildDefaultAgreementClauses(
+        String templateType, Map<String, Object> snapshot, Map<String, Object> metaMap
+    ) {
         Map<String, Object> entity = (Map<String, Object>) snapshot.get('entity');
         String clientName = entity != null && entity.get('name') != null ? (String) entity.get('name') : '[Client Name]';
         Decimal rate = entity != null && entity.get('defaultRate') != null ? (Decimal) entity.get('defaultRate') : 0;
@@ -556,6 +590,8 @@ public with sharing class DeliveryDocGenerationService {
         String partyB = isContractor ? clientName : clientName;
         String partyARole = isContractor ? 'Company' : 'Consultant';
         String partyBRole = isContractor ? 'Contractor' : 'Client';
+
+        String compModel = resolveCompensationModel(metaMap);
 
         List<Map<String, String>> clauses = new List<Map<String, String>>();
 
@@ -569,14 +605,14 @@ public with sharing class DeliveryDocGenerationService {
             + 'Work Items in the Delivery Hub platform.');
         clauses.add(c1);
 
-        Map<String, String> c2 = new Map<String, String>();
-        c2.put('title', 'Compensation');
-        c2.put('body', partyBRole + ' agrees to pay ' + partyARole + ' at a rate of ' + formattedRate
-            + ' per hour for all services rendered. Invoices are issued monthly and are payable within '
-            + 'thirty (30) days of receipt. Late payments are subject to a finance charge of three percent '
-            + '(3%) per month on outstanding balances. All work hours are tracked and documented in the '
-            + 'Delivery Hub platform and are available for review at any time.');
-        clauses.add(c2);
+        // Compensation clause varies by model (Hourly / Retainer / Fixed_Bid).
+        clauses.add(buildCompensationClause(compModel, partyARole, partyBRole, formattedRate, metaMap));
+
+        // Fixed_Bid adds a dedicated Payment Milestones clause (50% on
+        // commencement / 50% on completion) alongside the compensation terms.
+        if (compModel == 'Fixed_Bid') {
+            clauses.add(buildPaymentMilestonesClause(partyARole, partyBRole, metaMap));
+        }
 
         Map<String, String> c3 = new Map<String, String>();
         c3.put('title', 'Term and Termination');
@@ -630,5 +666,168 @@ public with sharing class DeliveryDocGenerationService {
         clauses.add(c8);
 
         return clauses;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  COMPENSATION MODELS
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * @description Normalizes the compensation model from metadata. Recognized
+     *              values are Hourly (default), Retainer, and Fixed_Bid. Any
+     *              absent / blank / unrecognized value resolves to Hourly so
+     *              the historical behavior is preserved exactly.
+     * @param metaMap The document metadata map (may be null).
+     * @return One of 'Hourly', 'Retainer', 'Fixed_Bid'.
+     */
+    @TestVisible
+    private static String resolveCompensationModel(Map<String, Object> metaMap) {
+        if (metaMap == null || metaMap.get('compensationModel') == null) {
+            return 'Hourly';
+        }
+        String model = String.valueOf(metaMap.get('compensationModel')).trim();
+        if (model == 'Retainer' || model == 'Fixed_Bid') {
+            return model;
+        }
+        return 'Hourly';
+    }
+
+    /**
+     * @description Builds the Compensation clause for the resolved model. Hourly
+     *              is byte-for-byte the historical clause. Retainer and Fixed_Bid
+     *              swap in model-appropriate language; commercial numbers are read
+     *              from metadata and fall back to neutral bracketed placeholders
+     *              when not finalized so the clause always renders sensibly.
+     * @param compModel Resolved model ('Hourly'|'Retainer'|'Fixed_Bid').
+     * @param partyARole The paying-to party role label (e.g. 'Consultant').
+     * @param partyBRole The paying party role label (e.g. 'Client').
+     * @param formattedRate The formatted hourly rate (used by Hourly).
+     * @param metaMap The document metadata map.
+     * @return A single clause map (title + body).
+     */
+    @TestVisible
+    private static Map<String, String> buildCompensationClause(
+        String compModel, String partyARole, String partyBRole, String formattedRate, Map<String, Object> metaMap
+    ) {
+        if (compModel == 'Retainer') {
+            return buildRetainerClause(partyARole, partyBRole, metaMap);
+        }
+        if (compModel == 'Fixed_Bid') {
+            return buildFixedBidClause(partyARole, partyBRole, metaMap);
+        }
+        return buildHourlyClause(partyARole, partyBRole, formattedRate);
+    }
+
+    /** @description Historical hourly time-and-materials Compensation clause (unchanged). */
+    private static Map<String, String> buildHourlyClause(String partyARole, String partyBRole, String formattedRate) {
+        Map<String, String> c = new Map<String, String>();
+        c.put('title', 'Compensation');
+        c.put('body', partyBRole + ' agrees to pay ' + partyARole + ' at a rate of ' + formattedRate
+            + ' per hour for all services rendered. Invoices are issued monthly and are payable within '
+            + 'thirty (30) days of receipt. Late payments are subject to a finance charge of three percent '
+            + '(3%) per month on outstanding balances. All work hours are tracked and documented in the '
+            + 'Delivery Hub platform and are available for review at any time.');
+        return c;
+    }
+
+    /**
+     * @description Recurring monthly retainer Compensation clause: a fixed
+     *              monthly amount is drawn down by tracked work; surplus/deficit
+     *              carries forward month to month; overages beyond the retainer
+     *              require written pre-approval before work proceeds.
+     */
+    private static Map<String, String> buildRetainerClause(String partyARole, String partyBRole, Map<String, Object> metaMap) {
+        String amount = metaValue(metaMap, 'retainerAmount', '[Monthly Retainer Amount]');
+        String hoursPhrase = metaHasValue(metaMap, 'retainerHours')
+            ? ' (representing approximately ' + metaValue(metaMap, 'retainerHours', '') + ' hours of service per period)'
+            : '';
+        String frequency = metaValue(metaMap, 'billingFrequency', 'monthly');
+
+        Map<String, String> c = new Map<String, String>();
+        c.put('title', 'Compensation');
+        c.put('body', partyBRole + ' agrees to engage ' + partyARole + ' on a recurring retainer basis '
+            + 'at a rate of ' + amount + ' per ' + frequency + ' period' + hoursPhrase + '. The retainer is '
+            + 'billed in advance and is payable within thirty (30) days of the invoice date. All services '
+            + 'rendered are tracked and documented in the Delivery Hub platform and draw down against the '
+            + 'retainer for the applicable period. Any unused retainer balance or any deficit at the close '
+            + 'of a period carries forward and is reconciled against the following period, so that the '
+            + partyBRole + ' is charged only for the net value of services delivered over time. Should the '
+            + 'scope of services in any period be expected to exceed the retainer, ' + partyARole + ' shall '
+            + 'notify ' + partyBRole + ' and obtain written pre-approval before performing work beyond the '
+            + 'retainer; no overage work proceeds without such approval. Late payments are subject to a '
+            + 'finance charge of three percent (3%) per month on outstanding balances.');
+        return c;
+    }
+
+    /**
+     * @description Fixed-price scope Compensation clause: a fixed total fee billed
+     *              50% on commencement and 50% on completion/acceptance, capable of
+     *              running alongside any retainer arrangement. The milestone
+     *              mechanics live in the separate Payment Milestones clause.
+     */
+    private static Map<String, String> buildFixedBidClause(String partyARole, String partyBRole, Map<String, Object> metaMap) {
+        String amount = metaValue(metaMap, 'fixedBidAmount', '[Fixed Bid Amount]');
+
+        Map<String, String> c = new Map<String, String>();
+        c.put('title', 'Compensation');
+        c.put('body', partyBRole + ' agrees to pay ' + partyARole + ' a fixed fee of ' + amount + ' for the '
+            + 'defined scope of services, inclusive of all labor required to deliver the agreed scope. The '
+            + 'fixed fee is billed in two equal installments of fifty percent (50%) each, as set out in the '
+            + 'Payment Milestones clause below. This fixed-price arrangement applies to the defined scope '
+            + 'only and may run alongside any concurrent retainer or hourly engagement, which is billed '
+            + 'separately under its own terms. Work performed outside the defined scope requires a separate '
+            + 'written agreement or change order before it proceeds. All deliverables are tracked and '
+            + 'documented in the Delivery Hub platform. Each installment invoice is payable within thirty '
+            + '(30) days of receipt, and late payments are subject to a finance charge of three percent '
+            + '(3%) per month on outstanding balances.');
+        return c;
+    }
+
+    /**
+     * @description Dedicated Payment Milestones clause for the Fixed_Bid model:
+     *              50% due on commencement, 50% due on completion and acceptance.
+     *              Optional milestone detail from metadata is appended verbatim.
+     */
+    private static Map<String, String> buildPaymentMilestonesClause(String partyARole, String partyBRole, Map<String, Object> metaMap) {
+        String amount = metaValue(metaMap, 'fixedBidAmount', '[Fixed Bid Amount]');
+        String detail = metaHasValue(metaMap, 'milestones')
+            ? ' Additional milestone schedule: ' + metaValue(metaMap, 'milestones', '') + '.'
+            : '';
+
+        Map<String, String> c = new Map<String, String>();
+        c.put('title', 'Payment Milestones');
+        c.put('body', 'The fixed fee of ' + amount + ' is invoiced against the following milestones: '
+            + 'fifty percent (50%) is due upon commencement of the engagement, invoiced at kickoff; and the '
+            + 'remaining fifty percent (50%) is due upon completion and ' + partyBRole + ' acceptance of the '
+            + 'agreed deliverables. ' + partyARole + ' shall notify ' + partyBRole + ' when the deliverables '
+            + 'are ready for acceptance, and ' + partyBRole + ' shall review and either accept or provide '
+            + 'specific written objections within ten (10) business days; absent such objections, the '
+            + 'deliverables are deemed accepted and the final installment becomes due. Each milestone '
+            + 'invoice is payable within thirty (30) days of receipt.' + detail);
+        return c;
+    }
+
+    /**
+     * @description Reads a metadata value as a trimmed String, returning the
+     *              supplied fallback when the key is absent or blank.
+     * @param metaMap The metadata map (may be null).
+     * @param key The metadata key.
+     * @param fallback The neutral placeholder to use when no value is present.
+     * @return The metadata value or the fallback.
+     */
+    private static String metaValue(Map<String, Object> metaMap, String key, String fallback) {
+        if (metaMap == null || metaMap.get(key) == null) {
+            return fallback;
+        }
+        String value = String.valueOf(metaMap.get(key)).trim();
+        return String.isBlank(value) ? fallback : value;
+    }
+
+    /** @description True when metadata carries a non-blank value for the given key. */
+    private static Boolean metaHasValue(Map<String, Object> metaMap, String key) {
+        if (metaMap == null || metaMap.get(key) == null) {
+            return false;
+        }
+        return String.isNotBlank(String.valueOf(metaMap.get(key)).trim());
     }
 }
