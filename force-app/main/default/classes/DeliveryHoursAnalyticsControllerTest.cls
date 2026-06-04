@@ -6,7 +6,7 @@
  *              estimate, no logs, deeply nested children).
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexDoc,PMD.ExcessiveParameterList')
+@SuppressWarnings('PMD.ApexDoc,PMD.ExcessiveParameterList,PMD.CyclomaticComplexity')
 @IsTest
 private class DeliveryHoursAnalyticsControllerTest {
 
@@ -252,5 +252,265 @@ private class DeliveryHoursAnalyticsControllerTest {
         for (DeliveryHoursAnalyticsController.MonthlyHoursDTO row : result.months) {
             System.assertEquals(0, row.hoursLogged, 'No logs → all buckets zero');
         }
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // getPortfolioPacing — account/org-level pacing across active roots
+    // ════════════════════════════════════════════════════════════════════
+
+    /** @description Sum of logged hours across all periods. */
+    private static Decimal totalLogged(DeliveryHoursAnalyticsController.PortfolioPacingDTO dto) {
+        Decimal sum = 0;
+        for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
+            sum += p.loggedHours;
+        }
+        return sum;
+    }
+
+    @IsTest
+    static void testPortfolioPacingBuildsBackAndForwardPeriods() {
+        // Two active roots, each with descendants + logs across recent months.
+        WorkItem__c rootA = insertWi('PortRootA', 80, Date.today().addMonths(-2), Date.today().addMonths(2), null);
+        WorkItem__c childA = insertWi('PortChildA', 20, null, null, rootA.Id);
+        WorkItem__c rootB = insertWi('PortRootB', 40, Date.today().addMonths(-1), Date.today().addMonths(1), null);
+
+        insert new List<WorkLog__c>{
+            buildLog(rootA.Id, 5, Date.today()),
+            buildLog(childA.Id, 3, Date.today().addMonths(-1)),
+            buildLog(rootB.Id, 7, Date.today())
+        };
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertNotEquals(null, dto, 'DTO must not be null');
+        System.assertEquals('Month', dto.granularity, 'Granularity echoed');
+        System.assertEquals(9, dto.periods.size(), '6 history + 3 forecast = 9 periods');
+        System.assertEquals(2, dto.rootCount, 'Two active roots in scope');
+
+        Integer forecastCount = 0;
+        for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
+            if (p.isForecast) {
+                forecastCount++;
+            }
+        }
+        System.assertEquals(3, forecastCount, 'Last 3 periods flagged as forecast');
+
+        // 5 + 3 + 7 = 15h logged across the window.
+        System.assertEquals(15, totalLogged(dto), 'Portfolio logged hours summed across roots + descendants');
+        System.assertEquals(140, dto.totalEstimatedHours, 'Estimate summed across the portfolio tree');
+    }
+
+    @IsTest
+    static void testPortfolioPacingForecastPresentOnForwardPeriods() {
+        WorkItem__c root = insertWi('FcRoot', 200, Date.today().addMonths(-3), Date.today().addMonths(6), null);
+        // Log meaningful recent hours so the run-rate is non-zero.
+        insert new List<WorkLog__c>{
+            buildLog(root.Id, 10, Date.today()),
+            buildLog(root.Id, 10, Date.today().addMonths(-1)),
+            buildLog(root.Id, 10, Date.today().addMonths(-2))
+        };
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assert(dto.runRateHoursPerPeriod > 0, 'Run-rate should be positive given recent logs');
+
+        Decimal forwardForecast = 0;
+        for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
+            if (p.isForecast) {
+                forwardForecast += p.forecastHours;
+            } else {
+                System.assertEquals(0, p.forecastHours, 'History periods carry no forecast');
+            }
+        }
+        System.assert(forwardForecast > 0, 'Forward periods should carry forecast hours');
+        System.assert(dto.projectedFinalHours >= dto.totalLoggedHours,
+            'Projected final >= logged hours');
+    }
+
+    @IsTest
+    static void testPortfolioForecastCappedAtRemainingEstimate() {
+        // Small estimate, high recent run-rate → forecast must cap at remaining scope.
+        WorkItem__c root = insertWi('CapRoot', 30, Date.today().addMonths(-2), Date.today().addMonths(4), null);
+        insert new List<WorkLog__c>{
+            buildLog(root.Id, 20, Date.today()),
+            buildLog(root.Id, 20, Date.today().addMonths(-1))
+        };
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 12);
+        Test.stopTest();
+
+        // totalLogged ~40 already exceeds the 30 estimate → remaining clamps to 0 → no forecast added.
+        Decimal forwardForecast = 0;
+        for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
+            if (p.isForecast) {
+                forwardForecast += p.forecastHours;
+            }
+        }
+        System.assertEquals(0, forwardForecast,
+            'When logged already exceeds estimate, forecast caps at 0');
+        System.assertEquals(true, dto.isOverBudgetTrajectory,
+            'Logged past estimate → over-budget trajectory');
+    }
+
+    @IsTest
+    static void testPortfolioPacingQuarterGranularity() {
+        WorkItem__c root = insertWi('QRoot', 90, Date.today().addMonths(-6), Date.today().addMonths(6), null);
+        insert new List<WorkLog__c>{
+            buildLog(root.Id, 8, Date.today()),
+            buildLog(root.Id, 4, Date.today().addMonths(-4))
+        };
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Quarter', 4, 2);
+        Test.stopTest();
+
+        System.assertEquals('Quarter', dto.granularity, 'Quarter granularity echoed');
+        System.assertEquals(6, dto.periods.size(), '4 history + 2 forecast quarters');
+        for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
+            System.assert(p.label.startsWith('Q'), 'Quarter labels start with Q: ' + p.label);
+        }
+        // Both logs fall inside the 4-quarter back window → 12h total.
+        System.assertEquals(12, totalLogged(dto), 'Both logs land inside the quarter window');
+    }
+
+    @IsTest
+    static void testPortfolioPacingWeekGranularity() {
+        WorkItem__c root = insertWi('WkRoot', 50, Date.today().addDays(-30), Date.today().addDays(30), null);
+        insert new List<WorkLog__c>{
+            buildLog(root.Id, 6, Date.today()),
+            buildLog(root.Id, 3, Date.today().addDays(-7))
+        };
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Week', 8, 4);
+        Test.stopTest();
+
+        System.assertEquals('Week', dto.granularity, 'Week granularity echoed');
+        System.assertEquals(12, dto.periods.size(), '8 history + 4 forecast weeks');
+        System.assertEquals(9, totalLogged(dto), 'This week 6h + last week 3h = 9h');
+    }
+
+    @IsTest
+    static void testPortfolioPacingDefaultsAndClamps() {
+        insertWi('DefRoot', 10, null, null, null);
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO defaults =
+            DeliveryHoursAnalyticsController.getPortfolioPacing(null, null, null);
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO clamped =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('bogus', 1000, 1000);
+        Test.stopTest();
+
+        System.assertEquals('Month', defaults.granularity, 'Null granularity defaults to Month');
+        System.assertEquals(9, defaults.periods.size(), 'Defaults: 6 back + 3 forward');
+        System.assert(clamped.periods.size() <= 60,
+            'Total periods clamped to MAX_PERIODS=60, got ' + clamped.periods.size());
+    }
+
+    @IsTest
+    static void testPortfolioTargetAmortizedAcrossPeriods() {
+        // Single root with a clean 1-month plan span → target concentrates in that month.
+        Date startDate = Date.newInstance(Date.today().year(), Date.today().month(), 1);
+        Date endDate = startDate.addMonths(1).addDays(-1);
+        insertWi('TgtRoot', 60, startDate, endDate, null);
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertEquals(true, dto.hasEstimate, 'Estimate present');
+        Decimal targetSum = 0;
+        for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
+            targetSum += p.targetHours;
+        }
+        System.assert(targetSum > 0, 'Some target hours allocated across the planned span');
+    }
+
+    @IsTest
+    static void testPortfolioBlendedRateWhenSingleActiveRate() {
+        insertWi('RateRoot', 20, null, null, null);
+        TestDataFactory.createNetworkEntity(new Map<String, Object>{
+            'EntityTypePk__c' => 'Client',
+            'DefaultHourlyRateCurrency__c' => 125
+        });
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertEquals(125, dto.blendedRate,
+            'Single active rated NetworkEntity surfaces as the blended rate');
+    }
+
+    @IsTest
+    static void testPortfolioBlendedRateNullWhenAmbiguous() {
+        insertWi('RateRoot2', 20, null, null, null);
+        TestDataFactory.createNetworkEntity(new Map<String, Object>{
+            'DefaultHourlyRateCurrency__c' => 100
+        });
+        TestDataFactory.createNetworkEntity(new Map<String, Object>{
+            'DefaultHourlyRateCurrency__c' => 200
+        });
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertEquals(null, dto.blendedRate,
+            'Multiple distinct rates → ambiguous → null blended rate');
+    }
+
+    @IsTest
+    static void testPortfolioExcludesTerminalAndArchivedRoots() {
+        // Active root counts; terminal-stage + archived roots are excluded from scope.
+        insertWi('LiveRoot', 10, null, null, null);
+        WorkItem__c doneRoot = insertWi('DoneRoot', 10, null, null, null);
+        WorkItem__c archived = insertWi('ArchivedRoot', 10, null, null, null);
+        // Mutate state via a trigger-bypassed update so the test isolates the
+        // scope filter from auto-WR / sync side effects.
+        Boolean prev = DeliveryWorkItemTriggerHandler.triggerDisabled;
+        DeliveryWorkItemTriggerHandler.triggerDisabled = true;
+        try {
+            doneRoot.StageNamePk__c = 'Done';
+            archived.ArchivedDateTime__c = Datetime.now();
+            update new List<WorkItem__c>{ doneRoot, archived };
+        } finally {
+            DeliveryWorkItemTriggerHandler.triggerDisabled = prev;
+        }
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertEquals(1, dto.rootCount,
+            'Only the live, non-terminal, non-archived root is in scope');
+    }
+
+    @IsTest
+    static void testPortfolioPacingEmptyOrgReturnsSkeleton() {
+        // No WorkItems at all — should still return a well-formed skeleton.
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertEquals(0, dto.rootCount, 'No roots');
+        System.assertEquals(9, dto.periods.size(), 'Skeleton still built');
+        System.assertEquals(0, totalLogged(dto), 'No logged hours');
+        System.assertEquals(false, dto.hasEstimate, 'No estimate');
     }
 }
