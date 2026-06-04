@@ -768,10 +768,12 @@ global with sharing class DeliveryHoursAnalyticsController {
      *              many distinct rates exist (ambiguous — hours-only display).
      */
     private static Decimal resolveBlendedRate() {
-        Schema.DescribeSObjectResult dsr = NetworkEntity__c.SObjectType.getDescribe();
-        if (!dsr.fields.getMap().containsKey('DefaultHourlyRateCurrency__c')) {
-            return null;
-        }
+        // No describe guard: DefaultHourlyRateCurrency__c is referenced statically
+        // in the SOQL below, so it is compile-time guaranteed to exist. A
+        // fields.getMap().containsKey('DefaultHourlyRateCurrency__c') guard is also
+        // namespace-UNSAFE — in the packaging org the map key is prefixed
+        // ('delivery__defaulthourly...'), so the unprefixed containsKey returns
+        // false and the method returned null in managed contexts (upload-beta only).
         List<NetworkEntity__c> rated = [
             SELECT DefaultHourlyRateCurrency__c
             FROM NetworkEntity__c
