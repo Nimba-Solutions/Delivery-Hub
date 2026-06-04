@@ -477,19 +477,28 @@ global with sharing class DeliveryHoursAnalyticsController {
         dto.hasEstimate = dto.totalEstimatedHours > 0;
     }
 
-    /** @description All-time logged hours across the portfolio, read from WorkLog. */
+    /**
+     * @description All-time logged hours across the portfolio, read from WorkLog.
+     *              Grouped by WorkItemLookup__c (a bare aggregate with no GROUP BY
+     *              fails to compile with "Non-grouped query that uses an aggregate
+     *              function") and summed in Apex.
+     */
     private static Decimal sumPortfolioLoggedHours(Set<Id> portfolioIds) {
-        List<AggregateResult> rows = [
+        Decimal total = 0;
+        for (AggregateResult ar : [
             SELECT SUM(HoursLoggedNumber__c) total
             FROM WorkLog__c
             WHERE WorkItemLookup__c IN :portfolioIds
             WITH SYSTEM_MODE
-            LIMIT 1
-        ];
-        if (rows.isEmpty() || rows[0].get('total') == null) {
-            return 0;
+            GROUP BY WorkItemLookup__c
+            LIMIT 5000
+        ]) {
+            Object totalObj = ar.get('total');
+            if (totalObj != null) {
+                total += (Decimal) totalObj;
+            }
         }
-        return (Decimal) rows[0].get('total');
+        return total;
     }
 
     /**
