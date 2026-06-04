@@ -17,6 +17,12 @@
                 <identifier>c_deliveryClientDashboard</identifier>
             </componentInstance>
         </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryPacingForecast</componentName>
+                <identifier>c_deliveryPacingForecast</identifier>
+            </componentInstance>
+        </itemInstances>
         <name>top</name>
         <type>Region</type>
     </flexiPageRegions>

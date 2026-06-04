@@ -190,6 +190,15 @@ const INFO_REGISTRY = {
         friendlyName: 'Pro Forma Timeline',
         keyFields:
             'WorkItem__c.PriorityGroupPk__c, WorkItem__c.EstimatedStartDevDate__c, WorkItem__c.EstimatedEndDevDate__c, WorkItem__c.StageNamePk__c, WorkItem__c.EstimatedHoursNumber__c, WorkItem__c.ParentWorkItemLookup__c, WorkItem__c.SortOrderNumber__c'
+    },
+    deliveryPacingForecast: {
+        dataSource:
+            'Calls DeliveryHoursAnalyticsController.getPortfolioPacing(granularity, periodsBack, periodsForward). Scans all active root WorkItem__c trees, sums WorkLog__c hours into Week/Month/Quarter buckets for the actual line, amortizes the total estimate across the planned span (earliest start → latest end) for the target line, and projects forward at a run-rate (trailing 4-period average) capped at remaining estimate. The blended $ rate is surfaced only when exactly one active NetworkEntity__c carries a DefaultHourlyRateCurrency__c (else hours-only).',
+        description:
+            'Account/org-level pacing & forecast across all active projects. Shows logged hours (bars), an amortized target line, and a run-rate forecast for the periods ahead — with a Week/Month/Quarter bucket selector and a forward horizon (Next 3 / 6 / 12 or rest of year). Hours are primary; dollars appear when a single blended rate is configured.',
+        friendlyName: 'Portfolio Pacing & Forecast',
+        keyFields:
+            'WorkItem__c.EstimatedHoursNumber__c, WorkItem__c.EstimatedStartDevDate__c, WorkItem__c.EstimatedEndDevDate__c, WorkItem__c.TotalLoggedHoursSum__c, WorkLog__c.HoursLoggedNumber__c, WorkLog__c.WorkDateDate__c, NetworkEntity__c.DefaultHourlyRateCurrency__c'
     }
 };
 
