@@ -1,12 +1,14 @@
 <template>
     <lightning-card title="Delivery Hub Health" icon-name="utility:health">
-        <lightning-button
-            slot="actions"
-            label="Refresh"
-            icon-name="utility:refresh"
-            onclick={handleRefresh}
-            disabled={loading}>
-        </lightning-button>
+        <div slot="actions" class="slds-grid slds-grid_vertical-align-center" style="gap: 0.25rem;">
+            <c-delivery-info-popover component-name="deliveryHubHealthDashboard"></c-delivery-info-popover>
+            <lightning-button
+                label="Refresh"
+                icon-name="utility:refresh"
+                onclick={handleRefresh}
+                disabled={loading}>
+            </lightning-button>
+        </div>
 
         <div class="slds-p-horizontal_medium">
             <template lwc:if={loading}>
