@@ -689,4 +689,287 @@ private class DeliveryDocGenerationServiceTest {
                 'Default agreement clauses set has 8 standard sections');
         }
     }
+
+    // ── Compensation Models ──────────────────────────────────────────────────
+
+    /**
+     * @description Helper: pull the body of the named clause from a clause list.
+     * @param clauses The List<Map<String,String>> clause set.
+     * @param title The clause title to find.
+     * @return The clause body, or null if absent.
+     */
+    private static String clauseBody(List<Map<String, String>> clauses, String title) {
+        for (Map<String, String> c : clauses) {
+            if (title == c.get('title')) {
+                return c.get('body');
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @description Regression guard: with no compensation model in metadata, the
+     *              Compensation clause is the historical hourly time-and-materials
+     *              language, the clause count is unchanged (8), and there is no
+     *              Payment Milestones clause.
+     */
+    @IsTest
+    static void testHourlyCompensationModelUnchangedByDefault() {
+        System.runAs(runningUser) {
+            Map<String, Object> snap = new Map<String, Object>{
+                'entity' => new Map<String, Object>{ 'name' => 'Acme', 'defaultRate' => PLACEHOLDER_DEFAULT_RATE }
+            };
+
+            Test.startTest();
+            List<Map<String, String>> clauses =
+                DeliveryDocGenerationService.buildDefaultAgreementClauses('Client_Agreement', snap);
+            Test.stopTest();
+
+            System.assertEquals(8, clauses.size(),
+                'Hourly (default) model keeps the historical 8-clause set');
+            String comp = clauseBody(clauses, 'Compensation');
+            System.assert(comp.contains('per hour'),
+                'Default Compensation clause should remain hourly time-and-materials');
+            System.assert(comp.contains('issued monthly'),
+                'Hourly language should mention monthly invoicing');
+            System.assertEquals(null, clauseBody(clauses, 'Payment Milestones'),
+                'Hourly model must not add a Payment Milestones clause');
+        }
+    }
+
+    /**
+     * @description An explicit Hourly compensationModel resolves identically to
+     *              the absent/default case (regression-safe).
+     */
+    @IsTest
+    static void testExplicitHourlyMatchesDefault() {
+        System.runAs(runningUser) {
+            Map<String, Object> snap = new Map<String, Object>{
+                'entity' => new Map<String, Object>{ 'name' => 'Acme', 'defaultRate' => PLACEHOLDER_DEFAULT_RATE }
+            };
+            Map<String, Object> meta = new Map<String, Object>{ 'compensationModel' => 'Hourly' };
+
+            Test.startTest();
+            List<Map<String, String>> clauses =
+                DeliveryDocGenerationService.buildDefaultAgreementClauses('Client_Agreement', snap, meta);
+            Test.stopTest();
+
+            System.assertEquals(8, clauses.size(), 'Explicit Hourly keeps 8 clauses');
+            System.assert(clauseBody(clauses, 'Compensation').contains('per hour'),
+                'Explicit Hourly should produce hourly language');
+        }
+    }
+
+    /**
+     * @description Retainer model: the Compensation clause carries recurring
+     *              retainer, draw-down, carry-forward, and written pre-approval
+     *              overage language. With no commercial number supplied it falls
+     *              back to the neutral [Monthly Retainer Amount] placeholder.
+     */
+    @IsTest
+    static void testRetainerModelProducesRetainerLanguageWithPlaceholder() {
+        System.runAs(runningUser) {
+            Map<String, Object> snap = new Map<String, Object>{
+                'entity' => new Map<String, Object>{ 'name' => 'Acme', 'defaultRate' => PLACEHOLDER_DEFAULT_RATE }
+            };
+            Map<String, Object> meta = new Map<String, Object>{ 'compensationModel' => 'Retainer' };
+
+            Test.startTest();
+            List<Map<String, String>> clauses =
+                DeliveryDocGenerationService.buildDefaultAgreementClauses('Client_Agreement', snap, meta);
+            Test.stopTest();
+
+            System.assertEquals(8, clauses.size(),
+                'Retainer swaps the Compensation clause but adds no new clause');
+            String comp = clauseBody(clauses, 'Compensation');
+            System.assert(comp.contains('retainer'), 'Retainer clause must mention the retainer');
+            System.assert(comp.contains('draw down') || comp.contains('draws down'),
+                'Retainer clause must describe drawing down against the retainer');
+            System.assert(comp.contains('carries forward'),
+                'Retainer clause must describe surplus/deficit carry-forward');
+            System.assert(comp.contains('pre-approval'),
+                'Retainer clause must require written pre-approval for overages');
+            System.assert(comp.contains('[Monthly Retainer Amount]'),
+                'Missing commercial number must fall back to neutral placeholder');
+            System.assertEquals(null, clauseBody(clauses, 'Payment Milestones'),
+                'Retainer model must not add a Payment Milestones clause');
+        }
+    }
+
+    /**
+     * @description Retainer model with supplied commercial numbers: the provided
+     *              retainerAmount, retainerHours, and billingFrequency render into
+     *              the clause and the placeholder no longer appears.
+     */
+    @IsTest
+    static void testRetainerModelUsesSuppliedNumbers() {
+        System.runAs(runningUser) {
+            Map<String, Object> snap = new Map<String, Object>{
+                'entity' => new Map<String, Object>{ 'name' => 'Acme' }
+            };
+            // Obvious placeholder commercial values (not production data).
+            Map<String, Object> meta = new Map<String, Object>{
+                'compensationModel' => 'Retainer',
+                'retainerAmount'    => '$1,234 (placeholder)',
+                'retainerHours'     => '21',
+                'billingFrequency'  => 'monthly'
+            };
+
+            Test.startTest();
+            List<Map<String, String>> clauses =
+                DeliveryDocGenerationService.buildDefaultAgreementClauses('Client_Agreement', snap, meta);
+            Test.stopTest();
+
+            String comp = clauseBody(clauses, 'Compensation');
+            System.assert(comp.contains('$1,234 (placeholder)'),
+                'Supplied retainerAmount should render in the clause');
+            System.assert(comp.contains('21 hours'),
+                'Supplied retainerHours should render in the clause');
+            System.assert(!comp.contains('[Monthly Retainer Amount]'),
+                'Placeholder must not appear once a real amount is supplied');
+        }
+    }
+
+    /**
+     * @description Fixed_Bid model: the Compensation clause carries 50/50
+     *              installment language and a dedicated Payment Milestones clause
+     *              is added (9 clauses total). Missing commercial number falls
+     *              back to the neutral [Fixed Bid Amount] placeholder.
+     */
+    @IsTest
+    static void testFixedBidModelProducesFiftyFiftyAndMilestones() {
+        System.runAs(runningUser) {
+            Map<String, Object> snap = new Map<String, Object>{
+                'entity' => new Map<String, Object>{ 'name' => 'Acme' }
+            };
+            Map<String, Object> meta = new Map<String, Object>{ 'compensationModel' => 'Fixed_Bid' };
+
+            Test.startTest();
+            List<Map<String, String>> clauses =
+                DeliveryDocGenerationService.buildDefaultAgreementClauses('Client_Agreement', snap, meta);
+            Test.stopTest();
+
+            System.assertEquals(9, clauses.size(),
+                'Fixed_Bid adds a dedicated Payment Milestones clause (8 + 1)');
+
+            String comp = clauseBody(clauses, 'Compensation');
+            System.assert(comp.contains('fixed fee'), 'Fixed_Bid Compensation must describe a fixed fee');
+            System.assert(comp.contains('fifty percent (50%)'),
+                'Fixed_Bid Compensation must describe the 50% installment structure');
+            System.assert(comp.contains('[Fixed Bid Amount]'),
+                'Missing commercial number must fall back to neutral placeholder');
+
+            String milestones = clauseBody(clauses, 'Payment Milestones');
+            System.assertNotEquals(null, milestones,
+                'Fixed_Bid must add a Payment Milestones clause');
+            System.assert(milestones.contains('commencement'),
+                'Milestones clause must bill 50% on commencement');
+            System.assert(milestones.contains('acceptance'),
+                'Milestones clause must bill the remaining 50% on completion/acceptance');
+        }
+    }
+
+    /**
+     * @description Fixed_Bid with a supplied amount + milestones detail: the
+     *              numbers render and the placeholder is gone.
+     */
+    @IsTest
+    static void testFixedBidModelUsesSuppliedNumbers() {
+        System.runAs(runningUser) {
+            Map<String, Object> snap = new Map<String, Object>{
+                'entity' => new Map<String, Object>{ 'name' => 'Acme' }
+            };
+            Map<String, Object> meta = new Map<String, Object>{
+                'compensationModel' => 'Fixed_Bid',
+                'fixedBidAmount'    => '$9,999 (placeholder)',
+                'milestones'        => 'Phase 1 kickoff, Phase 2 UAT'
+            };
+
+            Test.startTest();
+            List<Map<String, String>> clauses =
+                DeliveryDocGenerationService.buildDefaultAgreementClauses('Client_Agreement', snap, meta);
+            Test.stopTest();
+
+            String comp = clauseBody(clauses, 'Compensation');
+            String milestones = clauseBody(clauses, 'Payment Milestones');
+            System.assert(comp.contains('$9,999 (placeholder)'),
+                'Supplied fixedBidAmount should render in the Compensation clause');
+            System.assert(!comp.contains('[Fixed Bid Amount]'),
+                'Placeholder must not appear once a real amount is supplied');
+            System.assert(milestones.contains('Phase 1 kickoff, Phase 2 UAT'),
+                'Supplied milestones detail should append to the Payment Milestones clause');
+        }
+    }
+
+    /**
+     * @description An unrecognized compensationModel value resolves safely to
+     *              Hourly (no exception, historical clause set).
+     */
+    @IsTest
+    static void testUnknownCompensationModelFallsBackToHourly() {
+        System.runAs(runningUser) {
+            Map<String, Object> snap = new Map<String, Object>{
+                'entity' => new Map<String, Object>{ 'name' => 'Acme', 'defaultRate' => PLACEHOLDER_DEFAULT_RATE }
+            };
+            Map<String, Object> meta = new Map<String, Object>{ 'compensationModel' => 'Barter' };
+
+            Test.startTest();
+            List<Map<String, String>> clauses =
+                DeliveryDocGenerationService.buildDefaultAgreementClauses('Client_Agreement', snap, meta);
+            Test.stopTest();
+
+            System.assertEquals(8, clauses.size(),
+                'Unknown model falls back to the 8-clause Hourly set');
+            System.assert(clauseBody(clauses, 'Compensation').contains('per hour'),
+                'Unknown model must resolve to hourly language');
+        }
+    }
+
+    /**
+     * @description End-to-end: generateDocument for a Client_Agreement with a
+     *              Fixed_Bid compensationModel in metadata persists a document
+     *              whose MetadataTxt__c clauses reflect the model (50/50 +
+     *              Payment Milestones).
+     */
+    @IsTest
+    static void testGenerateDocumentThreadsCompensationModelEndToEnd() {
+        System.runAs(runningUser) {
+            NetworkEntity__c client = getClient();
+            String metadata = JSON.serialize(new Map<String, Object>{
+                'compensationModel' => 'Fixed_Bid'
+            });
+
+            Test.startTest();
+            Id docId = DeliveryDocGenerationService.generateDocument(
+                client.Id, 'Client_Agreement', periodStart(), periodEnd(), metadata
+            );
+            Test.stopTest();
+
+            DeliveryDocument__c persisted = [
+                SELECT MetadataTxt__c FROM DeliveryDocument__c WHERE Id = :docId WITH SYSTEM_MODE
+            ];
+            Map<String, Object> meta = (Map<String, Object>) JSON.deserializeUntyped(persisted.MetadataTxt__c);
+            List<Object> clauses = (List<Object>) meta.get('clauses');
+            System.assertEquals(9, clauses.size(),
+                'End-to-end Fixed_Bid doc should carry 9 clauses (8 + Payment Milestones)');
+
+            Boolean foundMilestones = false;
+            Boolean foundFiftyFifty = false;
+            for (Object o : clauses) {
+                Map<String, Object> c = (Map<String, Object>) o;
+                String title = (String) c.get('title');
+                String body = (String) c.get('body');
+                if ('Payment Milestones' == title) {
+                    foundMilestones = true;
+                }
+                if ('Compensation' == title && body.contains('fifty percent (50%)')) {
+                    foundFiftyFifty = true;
+                }
+            }
+            System.assert(foundMilestones,
+                'Persisted metadata clauses must include the Payment Milestones clause');
+            System.assert(foundFiftyFifty,
+                'Persisted Compensation clause must reflect the 50/50 Fixed_Bid structure');
+        }
+    }
 }
