@@ -1,8 +1,9 @@
 <template>
     <lightning-card icon-name="utility:notification" title="Watcher Digest Setup">
-        <span slot="actions">
+        <div slot="actions" class="slds-grid slds-grid_vertical-align-center" style="gap: 0.25rem;">
+            <c-delivery-info-popover component-name="deliveryWatcherSetup"></c-delivery-info-popover>
             <lightning-badge label={enabledBadgeLabel} variant={enabledBadgeVariant}></lightning-badge>
-        </span>
+        </div>
 
         <template lwc:if={isLoading}>
             <div class="slds-p-around_large slds-text-align_center">
