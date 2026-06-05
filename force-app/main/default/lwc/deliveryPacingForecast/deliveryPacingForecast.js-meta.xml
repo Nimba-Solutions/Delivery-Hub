@@ -8,5 +8,5 @@
         <target>lightning__RecordPage</target>
     </targets>
     <masterLabel>Delivery Portfolio Pacing &amp; Forecast</masterLabel>
-    <description>The Salesforce-native Pacing &amp; Forecast (parallel to the Gantt Pacing view): actual logged hours then a schedule-based forecast that spreads each in-flight item's remaining across its planned Gantt dates. Range/Bucket/Measure/Mode cuts, series toggles, click-a-bar drill-down into the work items, and navigate-to-record.</description>
+    <description>Salesforce-native Pacing &amp; Forecast: actual logged hours plus a schedule-based forecast spreading each in-flight item's remaining across its planned dates. Range/Bucket/Measure/Mode cuts, drill-down, navigate-to-record.</description>
 </LightningComponentBundle>
