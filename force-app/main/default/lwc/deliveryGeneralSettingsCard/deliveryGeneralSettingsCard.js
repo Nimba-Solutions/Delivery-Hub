@@ -37,6 +37,13 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
     @track requireWorkLogApproval = false;
     @track invoiceGenerationEnabled = false;
 
+    // ── Checkout Cart settings ──────────────────────────────────────────
+    @track cartDollarsEnabled = false;
+    @track cartDollarsActivatedAt = null;
+    @track cartSelfServeEnabled = false;
+    @track cartSelfServeActivatedAt = null;
+    @track checkoutMode = 'Invoice';
+
     // ── Activation-date display strings ─────────────────────────────────
     @track notificationsActivatedAt = null;
     @track autoSyncActivatedAt = null;
@@ -144,6 +151,13 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
                 this.autoCreateWorkRequestActivatedAt = data.autoCreateWorkRequestActivatedAt || null;
                 this.requireWorkLogApprovalActivatedAt = data.requireWorkLogApprovalActivatedAt || null;
                 this.invoiceGenerationActivatedAt = data.invoiceGenerationActivatedAt || null;
+
+                // Checkout Cart settings
+                this.cartDollarsEnabled = data.cartDollarsEnabled || false;
+                this.cartDollarsActivatedAt = data.cartDollarsActivatedAt || null;
+                this.cartSelfServeEnabled = data.cartSelfServeEnabled || false;
+                this.cartSelfServeActivatedAt = data.cartSelfServeActivatedAt || null;
+                this.checkoutMode = data.checkoutMode || 'Invoice';
 
                 // Enterprise settings
                 this.externalNotificationsEnabled = data.externalNotificationsEnabled || false;
@@ -400,6 +414,29 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
         this.saveExtended();
     }
 
+    handleCartDollarsChange(event) {
+        this.cartDollarsEnabled = event.target.checked;
+        this.saveExtended();
+    }
+
+    handleCartSelfServeChange(event) {
+        this.cartSelfServeEnabled = event.target.checked;
+        this.saveExtended();
+    }
+
+    handleCheckoutModeChange(event) {
+        this.checkoutMode = event.detail.value;
+        this.saveExtended();
+    }
+
+    get checkoutModeOptions() {
+        return [
+            { label: 'Invoice — generate a proposal/agreement', value: 'Invoice' },
+            { label: 'Stripe — paid checkout', value: 'Stripe' },
+            { label: 'Approve — route through approval', value: 'Approve' }
+        ];
+    }
+
     handleStatusPageTokenChange(event) {
         this.statusPageToken = event.target.value;
     }
@@ -477,7 +514,10 @@ export default class DeliveryGeneralSettingsCard extends LightningElement {
                     syncApiRateLimit: this.syncApiRateLimit,
                     publicApiRateLimit: this.publicApiRateLimit,
                     invoiceHourLockoutDay: this.invoiceHourLockoutDay,
-                    invoiceHourLockoutTime: this.invoiceHourLockoutTime
+                    invoiceHourLockoutTime: this.invoiceHourLockoutTime,
+                    cartDollarsEnabled: this.cartDollarsEnabled,
+                    cartSelfServeEnabled: this.cartSelfServeEnabled,
+                    checkoutMode: this.checkoutMode
                 })
             });
 

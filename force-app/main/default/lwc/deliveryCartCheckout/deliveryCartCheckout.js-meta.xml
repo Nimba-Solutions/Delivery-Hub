@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__AppPage</target>
+        <target>lightning__HomePage</target>
+        <target>lightning__RecordPage</target>
+    </targets>
+    <masterLabel>Delivery Checkout Cart</masterLabel>
+    <description>Org-wide procurement basket review: Will Do (committed) vs Sizing Only lines with hours (and dollars when enabled), a forecast month-spread, and a Checkout button that activates the committed lines per the configured checkout mode.</description>
+</LightningComponentBundle>

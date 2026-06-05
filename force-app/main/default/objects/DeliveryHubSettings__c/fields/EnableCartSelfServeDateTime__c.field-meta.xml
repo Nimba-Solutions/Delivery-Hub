@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableCartSelfServeDateTime__c</fullName>
+    <description>When non-null, clients self-serve the Checkout Cart (browse + add + checkout). Null = Glen/admin assembles the cart on the client's behalf (default; MF behavior).</description>
+    <inlineHelpText>Set to let clients self-serve the cart. Leave blank for admin-assembled carts.</inlineHelpText>
+    <label>Enable Cart Self-Serve</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

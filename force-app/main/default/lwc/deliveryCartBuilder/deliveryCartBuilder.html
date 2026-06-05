@@ -1,0 +1,118 @@
+<template>
+    <div class="builder-card">
+
+        <div class="builder-header">
+            <div class="builder-header-left">
+                <lightning-icon icon-name="utility:add" alternative-text="Add to cart" size="small" class="builder-header-icon"></lightning-icon>
+                <div>
+                    <h2 class="builder-title">Cart Builder</h2>
+                    <p class="builder-subtitle">Assemble the basket — add scoped work to size or commit.</p>
+                </div>
+            </div>
+            <div class="builder-controls">
+                <c-delivery-info-popover component-name="deliveryCartBuilder"></c-delivery-info-popover>
+            </div>
+        </div>
+
+        <!-- Running total -->
+        <div class="builder-total">
+            <span class="builder-total-value">{totalHoursLabel}h</span>
+            <template lwc:if={showDollars}>
+                <span class="builder-total-cost">{totalCostLabel}</span>
+            </template>
+            <span class="builder-total-label">in cart ({cartCountLabel})</span>
+        </div>
+
+        <!-- Freeform add -->
+        <div class="builder-form">
+            <lightning-input
+                type="text"
+                label="What do you want to add?"
+                value={newDescription}
+                onchange={handleDescriptionChange}
+                class="builder-input"></lightning-input>
+            <lightning-input
+                type="number"
+                label="Estimated hours"
+                value={newHours}
+                min="0"
+                step="0.25"
+                onchange={handleHoursChange}
+                class="builder-input builder-input--hours"></lightning-input>
+            <div class="builder-form-actions">
+                <lightning-button
+                    variant="neutral"
+                    label="Add to size"
+                    disabled={addDisabled}
+                    onclick={handleAddSizing}></lightning-button>
+                <lightning-button
+                    variant="brand"
+                    label="Add &amp; commit"
+                    disabled={addDisabled}
+                    onclick={handleAddWillDo}></lightning-button>
+            </div>
+        </div>
+
+        <template lwc:if={statusMessage}>
+            <p class="builder-status">{statusMessage}</p>
+        </template>
+
+        <template lwc:if={hasError}>
+            <div class="builder-error">{errorMessage}</div>
+        </template>
+
+        <template lwc:if={isLoading}>
+            <div class="builder-loading">
+                <lightning-spinner alternative-text="Loading cart" size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <template lwc:if={isEmpty}>
+            <p class="builder-empty">No items in the cart yet — add one above.</p>
+        </template>
+
+        <!-- Current cart lines -->
+        <template for:each={lines} for:item="line">
+            <div key={line.workItemId} class="builder-line">
+                <div class="builder-line-main">
+                    <span class="builder-line-name">{line.name}</span>
+                    <span class={line.intentionClass}>{line.intention}</span>
+                </div>
+                <div class="builder-line-figures">
+                    <span class="builder-line-hours">{line.hoursLabel}h</span>
+                    <template lwc:if={showDollars}>
+                        <span class="builder-line-cost">{line.costLabel}</span>
+                    </template>
+                </div>
+                <div class="builder-line-actions">
+                    <lightning-combobox
+                        name="priority"
+                        label="Priority"
+                        variant="label-hidden"
+                        value={line.priority}
+                        options={priorityOptions}
+                        data-record-id={line.workItemId}
+                        onchange={handleReorder}
+                        class="builder-priority"></lightning-combobox>
+                    <template lwc:if={line.canCommit}>
+                        <lightning-button-icon
+                            icon-name="utility:check"
+                            variant="bare"
+                            alternative-text="Commit"
+                            title="Commit (Will Do)"
+                            data-record-id={line.workItemId}
+                            onclick={handleCommit}></lightning-button-icon>
+                    </template>
+                    <lightning-button-icon
+                        icon-name="utility:close"
+                        variant="bare"
+                        alternative-text="Remove"
+                        title="Remove from cart"
+                        data-record-id={line.workItemId}
+                        onclick={handleRemove}></lightning-button-icon>
+                </div>
+            </div>
+        </template>
+
+    </div>
+</template>
