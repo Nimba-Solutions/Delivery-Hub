@@ -229,12 +229,12 @@ const INFO_REGISTRY = {
     },
     deliveryPacingForecast: {
         dataSource:
-            'Calls DeliveryHoursAnalyticsController.getPortfolioPacing(granularity, periodsBack, periodsForward). Scans all active root WorkItem__c trees, sums WorkLog__c hours into Week/Month/Quarter buckets for the actual line, amortizes the total estimate across the planned span (earliest start → latest end) for the target line, and projects forward at a run-rate (trailing 4-period average) capped at remaining estimate. The blended $ rate is surfaced only when exactly one active NetworkEntity__c carries a DefaultHourlyRateCurrency__c (else hours-only).',
+            'Calls DeliveryHoursAnalyticsController.getPortfolioPacing(granularity, periodsBack, periodsForward) — the Salesforce-native engine parallel to the nimbus-gantt Pacing view (same model both render). ACTUALS count ALL WorkLog__c hours by WorkDateDate__c into Week/Month/Quarter buckets — no active-portfolio filter, so completed work is never undercounted. FORECAST is schedule-based: each in-flight WorkItem__c\'s remaining (EstimatedHoursNumber__c − logged) is spread evenly across the forward periods its EstimatedStartDevDate__c → EstimatedEndDevDate__c span covers — the same dates the Gantt drag-writes. Each period carries a per-item drill-down. Remaining with no usable dates lands in an unscheduled bucket. projectedFinal = logged + Σremaining. The blended $ rate is surfaced only when exactly one active NetworkEntity__c carries a DefaultHourlyRateCurrency__c.',
         description:
-            'Account/org-level pacing & forecast across all active projects. Shows logged hours (bars), an amortized target line, and a run-rate forecast for the periods ahead — with a Week/Month/Quarter bucket selector and a forward horizon (Next 3 / 6 / 12 or rest of year). Hours are primary; dollars appear when a single blended rate is configured.',
-        friendlyName: 'Portfolio Pacing & Forecast',
+            'The Salesforce-native Pacing & Forecast — actual logged hours (green bars; red over target) → today → schedule-based forecast (light-blue bars), with an amortized target line and a current-period marker. Cuts: Range (Next 3/6 · Rest of year · This Qtr · YTD · All · Custom), Bucket (Week/Month/Quarter), Measure (Hours/$), Mode (Per-period / Cumulative), and Actual/Forecast/Target series toggles. Click a bar to break it into its work items; click a work item to open the record. Surfaces un-dated remaining the forecast can\'t place. Parallel to the Gantt Pacing view as a backup/comparison.',
+        friendlyName: 'Pacing & Forecast',
         keyFields:
-            'WorkItem__c.EstimatedHoursNumber__c, WorkItem__c.EstimatedStartDevDate__c, WorkItem__c.EstimatedEndDevDate__c, WorkItem__c.TotalLoggedHoursSum__c, WorkLog__c.HoursLoggedNumber__c, WorkLog__c.WorkDateDate__c, NetworkEntity__c.DefaultHourlyRateCurrency__c'
+            'WorkItem__c.EstimatedHoursNumber__c, WorkItem__c.EstimatedStartDevDate__c, WorkItem__c.EstimatedEndDevDate__c, WorkItem__c.StageNamePk__c, WorkItem__c.PriorityGroupPk__c, WorkItem__c.DeveloperLookup__c, WorkLog__c.HoursLoggedNumber__c, WorkLog__c.WorkDateDate__c, NetworkEntity__c.DefaultHourlyRateCurrency__c'
     },
     deliveryWatcherSetup: {
         dataSource:

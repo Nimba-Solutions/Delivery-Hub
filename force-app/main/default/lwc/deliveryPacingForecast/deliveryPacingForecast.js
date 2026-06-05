@@ -1,18 +1,37 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @description  Portfolio Pacing & Forecast HomePage card. Renders an account/org-level
- *               pacing view across ALL active root WorkItems: actual logged hours (bars),
- *               an amortized target line, and a forward run-rate forecast (dashed bars).
- *               The user picks the bucket granularity (Week / Month / Quarter) and the
- *               forward horizon (3 / 6 / 12 periods or rest-of-year), which re-wires the
- *               Apex call. Pure-SVG chart (no chart library), mirroring
- *               deliveryProjectMonthlyHours. Hours are primary; $ shown when the org has a
- *               single resolvable blended rate. Wires
+ * @description  Salesforce-native Pacing & Forecast view — the parallel to the
+ *               nimbus-gantt Pacing view (SAME model both render). Hours-first, fully
+ *               interactive over a single server payload:
+ *
+ *               • ACTUALS (past): all logged hours per period (green bars; red when
+ *                 over that period's amortized target).
+ *               • FORECAST (future): each in-flight item's remaining estimate
+ *                 (estimate − logged) spread across the forward periods its
+ *                 EstimatedStart → EstimatedEnd span covers — the same dates the Gantt
+ *                 drag-writes — rendered as light-blue bars. So the chart reads
+ *                 actual → today → forecast.
+ *               • Unscheduled remaining (un-dated work the forecast can't place) is
+ *                 surfaced as an amber note.
+ *
+ *               Controls applied CLIENT-SIDE over the returned data (only the Range +
+ *               Bucket re-wire Apex): Range (Next 3/6 · Rest of year · This Qtr · YTD ·
+ *               All · Custom), Bucket (Week/Month/Quarter), Measure (Hours/$ when a
+ *               blended rate is present), Mode (Per-period / Cumulative burn-up), and
+ *               Series toggles (Actual / Forecast / Target).
+ *
+ *               Click a bar → a drill-down panel lists the in-flight items contributing
+ *               that period (work item · this period · % of item · est · logged ·
+ *               remaining · % used + a meta line). Click a work-item row → navigate to
+ *               that WorkItem record (NavigationMixin standard__recordPage) — DH's
+ *               native advantage over NG. Pure-SVG chart (no chart library). Wires
  *               DeliveryHoursAnalyticsController.getPortfolioPacing.
  * @author       Cloud Nimbus LLC
  */
 import { LightningElement, track, wire } from "lwc";
+import { NavigationMixin } from "lightning/navigation";
+import WORK_ITEM_OBJECT from "@salesforce/schema/WorkItem__c";
 import getPortfolioPacing from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHoursAnalyticsController.getPortfolioPacing";
 
 const SVG_WIDTH = 760;
@@ -24,15 +43,38 @@ const PADDING_LEFT = 56;
 const GRID_LINE_COUNT = 5;
 const BAR_GAP_RATIO = 0.35;
 const DEFAULT_PERIODS_BACK = 6;
-const REST_OF_YEAR = "rest-of-year";
 
-export default class DeliveryPacingForecast extends LightningElement {
+// Range selector values.
+const RANGE_NEXT3 = "next3";
+const RANGE_NEXT6 = "next6";
+const RANGE_REST_OF_YEAR = "rest-of-year";
+const RANGE_THIS_QTR = "this-qtr";
+const RANGE_YTD = "ytd";
+const RANGE_ALL = "all";
+const RANGE_CUSTOM = "custom";
+
+export default class DeliveryPacingForecast extends NavigationMixin(
+    LightningElement
+) {
     @track pacing;
     @track errorMessage = "";
     isLoading = true;
 
+    // Server-driving controls (re-wire Apex).
     granularity = "Month";
-    horizon = "3";
+    range = RANGE_NEXT3;
+    customStart = null;
+    customEnd = null;
+
+    // Client-only controls (no re-wire).
+    measure = "hours";
+    mode = "per-period";
+    showActual = true;
+    showForecast = true;
+    showTarget = true;
+
+    // Drill-down selection.
+    @track selectedPeriodKey = null;
 
     @wire(getPortfolioPacing, {
         granularity: "$granularity",
@@ -53,15 +95,53 @@ export default class DeliveryPacingForecast extends LightningElement {
     // ── Wire inputs ──────────────────────────────────────────────
 
     get _periodsBack() {
+        if (this.range === RANGE_YTD) {
+            return this._periodsSinceYearStart();
+        }
+        if (this.range === RANGE_ALL) {
+            return 24;
+        }
+        if (this.range === RANGE_CUSTOM) {
+            return this._customPeriodsBack();
+        }
         return DEFAULT_PERIODS_BACK;
     }
 
     get _periodsForward() {
-        if (this.horizon === REST_OF_YEAR) {
-            return this._restOfYearPeriods();
+        switch (this.range) {
+            case RANGE_NEXT3:
+                return 3;
+            case RANGE_NEXT6:
+                return 6;
+            case RANGE_REST_OF_YEAR:
+                return this._restOfYearPeriods();
+            case RANGE_THIS_QTR:
+                return this._restOfQuarterPeriods();
+            case RANGE_YTD:
+                return 0;
+            case RANGE_ALL:
+                return 12;
+            case RANGE_CUSTOM:
+                return this._customPeriodsForward();
+            default:
+                return 3;
         }
-        const n = parseInt(this.horizon, 10);
-        return Number.isFinite(n) ? n : 3;
+    }
+
+    _periodsSinceYearStart() {
+        const today = new Date();
+        if (this.granularity === "Week") {
+            const yearStart = new Date(today.getFullYear(), 0, 1);
+            const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+            return Math.max(
+                1,
+                Math.ceil((today.getTime() - yearStart.getTime()) / msPerWeek) + 1
+            );
+        }
+        if (this.granularity === "Quarter") {
+            return Math.floor(today.getMonth() / 3) + 1;
+        }
+        return today.getMonth() + 1;
     }
 
     /**
@@ -74,7 +154,9 @@ export default class DeliveryPacingForecast extends LightningElement {
         if (this.granularity === "Week") {
             const yearEnd = new Date(year, 11, 31);
             const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-            const weeks = Math.ceil((yearEnd.getTime() - today.getTime()) / msPerWeek);
+            const weeks = Math.ceil(
+                (yearEnd.getTime() - today.getTime()) / msPerWeek
+            );
             return Math.max(1, weeks);
         }
         if (this.granularity === "Quarter") {
@@ -82,6 +164,69 @@ export default class DeliveryPacingForecast extends LightningElement {
             return Math.max(1, 3 - currentQuarter);
         }
         return Math.max(1, 12 - today.getMonth());
+    }
+
+    _restOfQuarterPeriods() {
+        const today = new Date();
+        if (this.granularity === "Quarter") {
+            return 1;
+        }
+        const monthInQuarter = today.getMonth() % 3;
+        if (this.granularity === "Week") {
+            return Math.max(1, (3 - monthInQuarter) * 4);
+        }
+        return Math.max(1, 3 - monthInQuarter);
+    }
+
+    _periodsBetween(startDate, endDate) {
+        if (!startDate || !endDate) {
+            return 0;
+        }
+        const s = new Date(startDate);
+        const e = new Date(endDate);
+        if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime()) || e < s) {
+            return 0;
+        }
+        if (this.granularity === "Week") {
+            const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+            return Math.max(1, Math.ceil((e.getTime() - s.getTime()) / msPerWeek) + 1);
+        }
+        if (this.granularity === "Quarter") {
+            return (
+                (e.getFullYear() - s.getFullYear()) * 4 +
+                (Math.floor(e.getMonth() / 3) - Math.floor(s.getMonth() / 3)) +
+                1
+            );
+        }
+        return (
+            (e.getFullYear() - s.getFullYear()) * 12 +
+            (e.getMonth() - s.getMonth()) +
+            1
+        );
+    }
+
+    _customPeriodsBack() {
+        if (!this.customStart) {
+            return DEFAULT_PERIODS_BACK;
+        }
+        const today = new Date();
+        const start = new Date(this.customStart);
+        if (start >= today) {
+            return 1;
+        }
+        return Math.max(1, this._periodsBetween(start, today));
+    }
+
+    _customPeriodsForward() {
+        if (!this.customEnd) {
+            return 3;
+        }
+        const today = new Date();
+        const end = new Date(this.customEnd);
+        if (end <= today) {
+            return 0;
+        }
+        return Math.max(0, this._periodsBetween(today, end) - 1);
     }
 
     // ── Combobox / button-group options ──────────────────────────
@@ -94,19 +239,48 @@ export default class DeliveryPacingForecast extends LightningElement {
         ];
     }
 
-    get horizonOptions() {
+    get rangeOptions() {
         return [
-            { label: "Next 3", value: "3" },
-            { label: "Next 6", value: "6" },
-            { label: "Next 12", value: "12" },
-            { label: "Rest of year", value: REST_OF_YEAR }
+            { label: "Next 3", value: RANGE_NEXT3 },
+            { label: "Next 6", value: RANGE_NEXT6 },
+            { label: "Rest of year", value: RANGE_REST_OF_YEAR },
+            { label: "This quarter", value: RANGE_THIS_QTR },
+            { label: "Year to date", value: RANGE_YTD },
+            { label: "All", value: RANGE_ALL },
+            { label: "Custom", value: RANGE_CUSTOM }
         ];
+    }
+
+    get measureOptions() {
+        return [
+            { label: "Hours", value: "hours" },
+            { label: "Dollars", value: "dollars" }
+        ];
+    }
+
+    get modeOptions() {
+        return [
+            { label: "Per period", value: "per-period" },
+            { label: "Cumulative", value: "cumulative" }
+        ];
+    }
+
+    get isCustomRange() {
+        return this.range === RANGE_CUSTOM;
+    }
+
+    get isDollarMeasure() {
+        return this.measure === "dollars" && this.hasRate;
     }
 
     // ── State flags ──────────────────────────────────────────────
 
     get hasError() {
         return !this.isLoading && this.errorMessage;
+    }
+
+    get summary() {
+        return (this.pacing && this.pacing.summary) || null;
     }
 
     get isEmpty() {
@@ -117,75 +291,106 @@ export default class DeliveryPacingForecast extends LightningElement {
         if (periods.length === 0) {
             return true;
         }
-        const noActuals = periods.every((p) => !p.loggedHours);
+        const s = this.summary;
+        const noActuals = periods.every((p) => !p.actualHours);
         const noForecast = periods.every((p) => !p.forecastHours);
-        return noActuals && noForecast && !this.pacing.totalEstimatedHours;
+        return noActuals && noForecast && !(s && s.estimatedHours);
     }
 
     get hasData() {
-        return !this.isLoading && !this.errorMessage && !this.isEmpty && this.pacing;
+        return (
+            !this.isLoading && !this.errorMessage && !this.isEmpty && this.pacing
+        );
     }
 
     get hasTarget() {
-        return this.pacing && this.pacing.hasEstimate;
+        return this.summary && this.summary.hasEstimate;
+    }
+
+    get showTargetSeries() {
+        return this.hasTarget && this.showTarget;
     }
 
     get hasRate() {
         return this.pacing && this.pacing.blendedRate > 0;
     }
 
-    // ── Headline numbers ─────────────────────────────────────────
-
-    get totalEstimatedDisplay() {
-        return this.pacing ? this._formatHours(this.pacing.totalEstimatedHours) : "0";
+    get scopeLabel() {
+        return this.pacing ? this.pacing.scopeLabel : "";
     }
 
-    get totalLoggedDisplay() {
-        return this.pacing ? this._formatHours(this.pacing.totalLoggedHours) : "0";
+    // ── Headline summary cards ───────────────────────────────────
+
+    get loggedDisplay() {
+        return this.summary ? this._formatMeasure(this.summary.loggedHours) : "0";
+    }
+
+    get estimatedDisplay() {
+        return this.summary
+            ? this._formatMeasure(this.summary.estimatedHours)
+            : "0";
+    }
+
+    get remainingDisplay() {
+        return this.summary
+            ? this._formatMeasure(this.summary.remainingHours)
+            : "0";
     }
 
     get projectedFinalDisplay() {
-        return this.pacing ? this._formatHours(this.pacing.projectedFinalHours) : "0";
+        return this.summary
+            ? this._formatMeasure(this.summary.projectedFinalHours)
+            : "0";
     }
 
-    get rootCountDisplay() {
-        return this.pacing ? this.pacing.rootCount : 0;
+    get pacingPctDisplay() {
+        if (!this.summary || !this.summary.pacingPct) {
+            return "—";
+        }
+        return `${this.summary.pacingPct}%`;
     }
 
-    get projectedFinalDollarDisplay() {
-        if (!this.hasRate) {
+    get pacingPctClass() {
+        const base = "summary-value";
+        if (!this.summary) {
+            return base;
+        }
+        return this.summary.isOverBudgetTrajectory
+            ? `${base} summary-value--over`
+            : base;
+    }
+
+    get activeItemsDisplay() {
+        return this.summary ? this.summary.activeItems : 0;
+    }
+
+    get projectedFinalClass() {
+        const base = "summary-value";
+        if (this.summary && this.summary.isOverBudgetTrajectory) {
+            return `${base} summary-value--over`;
+        }
+        return base;
+    }
+
+    // ── Unscheduled-remaining note ───────────────────────────────
+
+    get hasUnscheduled() {
+        return this.summary && this.summary.unscheduledRemainingHours > 0;
+    }
+
+    get unscheduledNote() {
+        if (!this.hasUnscheduled) {
             return "";
         }
-        return this._formatMoney(this.pacing.projectedFinalHours * this.pacing.blendedRate);
+        const hours = this._formatHours(this.summary.unscheduledRemainingHours);
+        return `${hours}h of remaining work can't be placed on the forecast — size and schedule these (set start/end dates on the Gantt) so the projection can place them.`;
     }
 
-    get loggedDollarDisplay() {
-        if (!this.hasRate) {
+    get forecastCappedNote() {
+        if (!this.summary || !this.summary.forecastCapped) {
             return "";
         }
-        return this._formatMoney(this.pacing.totalLoggedHours * this.pacing.blendedRate);
-    }
-
-    get pacingPercent() {
-        if (!this.pacing || !this.pacing.hasEstimate || !this.pacing.totalEstimatedHours) {
-            return "";
-        }
-        const pct = (this.pacing.projectedFinalHours / this.pacing.totalEstimatedHours) * 100;
-        return `${pct.toFixed(0)}%`;
-    }
-
-    get isOverBudget() {
-        return this.pacing && this.pacing.isOverBudgetTrajectory;
-    }
-
-    get pacingClass() {
-        return this.isOverBudget
-            ? "summary-variance summary-variance--over"
-            : "summary-variance summary-variance--under";
-    }
-
-    get trajectoryLabel() {
-        return this.isOverBudget ? "Over budget at current pace" : "On track at current pace";
+        return "Showing the soonest-ending in-flight items only — the forecast set was capped. Projection may be partial.";
     }
 
     // ── SVG geometry ─────────────────────────────────────────────
@@ -230,10 +435,44 @@ export default class DeliveryPacingForecast extends LightningElement {
         return (this.pacing && this.pacing.periods) || [];
     }
 
+    /**
+     * The per-period plot value for the bar series, honoring Measure ($ vs hours) and
+     * Mode (cumulative burn-up vs per-period). Cumulative accumulates the combined
+     * actual+forecast spend so the line climbs toward projected final.
+     */
+    _plotValue(period, runningTotal) {
+        const rate = this.isDollarMeasure ? this.pacing.blendedRate : 1;
+        const raw = period.isForecast
+            ? period.forecastHours || 0
+            : period.actualHours || 0;
+        if (this.mode === "cumulative") {
+            return (runningTotal + raw) * rate;
+        }
+        return raw * rate;
+    }
+
+    _targetPlotValue(period, runningTarget) {
+        const rate = this.isDollarMeasure ? this.pacing.blendedRate : 1;
+        const raw = period.targetHours || 0;
+        if (this.mode === "cumulative") {
+            return (runningTarget + raw) * rate;
+        }
+        return raw * rate;
+    }
+
     get _maxValue() {
         let max = 0;
+        let running = 0;
+        let runningTarget = 0;
         for (const p of this._periods) {
-            const candidate = Math.max(p.loggedHours || 0, p.forecastHours || 0, p.targetHours || 0);
+            const series = this._plotValue(p, running);
+            const target = this._targetPlotValue(p, runningTarget);
+            running += p.isForecast ? p.forecastHours || 0 : p.actualHours || 0;
+            runningTarget += p.targetHours || 0;
+            const candidate = Math.max(
+                this.showActual || this.showForecast ? series : 0,
+                this.showTargetSeries ? target : 0
+            );
             if (candidate > max) {
                 max = candidate;
             }
@@ -284,45 +523,54 @@ export default class DeliveryPacingForecast extends LightningElement {
     get bars() {
         const periods = this._periods;
         const out = [];
+        let running = 0;
         for (let i = 0; i < periods.length; i++) {
             const p = periods[i];
-            const value = p.isForecast ? p.forecastHours || 0 : p.loggedHours || 0;
+            const visible = p.isForecast ? this.showForecast : this.showActual;
+            const value = this._plotValue(p, running);
+            running += p.isForecast ? p.forecastHours || 0 : p.actualHours || 0;
+            if (!visible) {
+                continue;
+            }
             const slotX = this.chartLeft + i * this._slotWidth;
             const x = slotX + this._barXOffset;
             const yTop = this._yForValue(value);
             const height = this.chartBottom - yTop;
             out.push({
                 key: `bar-${i}`,
+                periodKey: String(i),
                 x,
                 y: yTop,
                 width: this._barWidth,
                 height: height > 0 ? height : 0,
-                cssClass: this._barClass(p),
+                cssClass: this._barClass(p, String(i)),
                 tooltip: this._buildTooltip(p)
             });
         }
         return out;
     }
 
-    _barClass(p) {
+    _barClass(p, periodKey) {
+        const selected =
+            this.selectedPeriodKey === periodKey ? " bar--selected" : "";
         if (p.isForecast) {
-            return "bar bar--forecast";
+            return `bar bar--forecast${selected}`;
         }
         if (p.overTarget) {
-            return "bar bar--over";
+            return `bar bar--over${selected}`;
         }
-        return "bar bar--under";
+        return `bar bar--actual${selected}`;
     }
 
     _buildTooltip(p) {
-        const value = p.isForecast ? p.forecastHours || 0 : p.loggedHours || 0;
+        const raw = p.isForecast ? p.forecastHours || 0 : p.actualHours || 0;
         const kind = p.isForecast ? "forecast" : "logged";
-        const parts = [`${p.label}: ${this._formatHours(value)}h ${kind}`];
+        const parts = [`${p.label}: ${this._formatHours(raw)}h ${kind}`];
         if (p.targetHours > 0) {
             parts.push(`target ${this._formatHours(p.targetHours)}h`);
         }
         if (this.hasRate) {
-            parts.push(`${this._formatMoney(value * this.pacing.blendedRate)}`);
+            parts.push(`${this._formatMoney(raw * this.pacing.blendedRate)}`);
         }
         return parts.join(" · ");
     }
@@ -330,34 +578,36 @@ export default class DeliveryPacingForecast extends LightningElement {
     // ── Target line (per-period amortized estimate) ──────────────
 
     get targetPoints() {
-        if (!this.hasTarget) {
+        if (!this.showTargetSeries) {
             return "";
         }
         const periods = this._periods;
         const points = [];
+        let running = 0;
         for (let i = 0; i < periods.length; i++) {
+            const value = this._targetPlotValue(periods[i], running);
+            running += periods[i].targetHours || 0;
             const x = this.chartLeft + i * this._slotWidth + this._slotWidth / 2;
-            const y = this._yForValue(periods[i].targetHours || 0);
+            const y = this._yForValue(value);
             points.push(`${x.toFixed(1)},${y.toFixed(1)}`);
         }
         return points.join(" ");
     }
 
-    // ── Forecast boundary marker ─────────────────────────────────
+    // ── Current-period marker ────────────────────────────────────
 
-    get forecastBoundaryX() {
+    get currentMarkerX() {
         const periods = this._periods;
         for (let i = 0; i < periods.length; i++) {
-            if (periods[i].isForecast) {
-                return this.chartLeft + i * this._slotWidth;
+            if (periods[i].isCurrent) {
+                return this.chartLeft + i * this._slotWidth + this._slotWidth / 2;
             }
         }
         return 0;
     }
 
-    get hasForecastBoundary() {
-        const x = this.forecastBoundaryX;
-        return x > this.chartLeft;
+    get hasCurrentMarker() {
+        return this.currentMarkerX > 0;
     }
 
     // ── Grid + labels ────────────────────────────────────────────
@@ -372,7 +622,9 @@ export default class DeliveryPacingForecast extends LightningElement {
                 key: `grid-${i}`,
                 labelKey: `grid-label-${i}`,
                 y,
-                label: this._formatHours(value)
+                label: this.isDollarMeasure
+                    ? this._formatMoney(value)
+                    : this._formatHours(value)
             });
         }
         return lines;
@@ -396,19 +648,185 @@ export default class DeliveryPacingForecast extends LightningElement {
         return labels;
     }
 
-    // ── Handlers ─────────────────────────────────────────────────
+    // ── Drill-down panel ─────────────────────────────────────────
+
+    get selectedPeriod() {
+        if (this.selectedPeriodKey === null) {
+            return null;
+        }
+        const idx = parseInt(this.selectedPeriodKey, 10);
+        const periods = this._periods;
+        return Number.isFinite(idx) && periods[idx] ? periods[idx] : null;
+    }
+
+    get hasDrillDown() {
+        const p = this.selectedPeriod;
+        return !!(p && p.items && p.items.length > 0);
+    }
+
+    get drillEmpty() {
+        const p = this.selectedPeriod;
+        return !!(p && (!p.items || p.items.length === 0));
+    }
+
+    get drillTitle() {
+        const p = this.selectedPeriod;
+        return p ? `${p.label} — in-flight work` : "";
+    }
+
+    get drillRows() {
+        const p = this.selectedPeriod;
+        if (!p || !p.items) {
+            return [];
+        }
+        const rate = this.hasRate ? this.pacing.blendedRate : null;
+        return p.items.map((it, i) => {
+            const overBudget = it.budgetUsedPct > 100;
+            const meta = [];
+            if (it.priorityGroup) {
+                meta.push(it.priorityGroup);
+            }
+            if (it.developerName) {
+                meta.push(it.developerName);
+            }
+            if (it.stage) {
+                meta.push(it.stage);
+            }
+            if (it.startDate && it.endDate) {
+                meta.push(`${it.startDate} → ${it.endDate}`);
+            }
+            return {
+                key: `${p.label}-row-${i}`,
+                workItemId: it.workItemId,
+                name: it.name,
+                thisPeriod: this._formatHours(it.hoursThisPeriod),
+                thisPeriodDollars: rate
+                    ? this._formatMoney(it.hoursThisPeriod * rate)
+                    : "",
+                pctOfItem: `${it.pctOfItem}%`,
+                estimated: this._formatHours(it.estimatedHours),
+                logged: this._formatHours(it.loggedHours),
+                remaining: this._formatHours(it.remainingHours),
+                budgetUsedPct: `${it.budgetUsedPct}%`,
+                budgetClass: overBudget
+                    ? "drill-cell drill-cell--over"
+                    : "drill-cell",
+                metaLine: meta.join(" · ")
+            };
+        });
+    }
+
+    // ── Legend ───────────────────────────────────────────────────
+
+    get measureWord() {
+        return this.isDollarMeasure ? "$" : "hours";
+    }
+
+    // ── Handlers (server-driving) ────────────────────────────────
 
     handleGranularityChange(event) {
         this.granularity = event.detail.value;
+        this.selectedPeriodKey = null;
         this.isLoading = true;
     }
 
-    handleHorizonChange(event) {
-        this.horizon = event.detail.value;
-        this.isLoading = true;
+    handleRangeChange(event) {
+        this.range = event.detail.value;
+        this.selectedPeriodKey = null;
+        if (this.range !== RANGE_CUSTOM) {
+            this.isLoading = true;
+        }
+    }
+
+    handleCustomStartChange(event) {
+        this.customStart = event.detail.value;
+        if (this.customStart && this.customEnd) {
+            this.isLoading = true;
+        }
+    }
+
+    handleCustomEndChange(event) {
+        this.customEnd = event.detail.value;
+        if (this.customStart && this.customEnd) {
+            this.isLoading = true;
+        }
+    }
+
+    // ── Handlers (client-only) ───────────────────────────────────
+
+    handleMeasureChange(event) {
+        this.measure = event.detail.value;
+    }
+
+    handleModeChange(event) {
+        this.mode = event.detail.value;
+    }
+
+    handleToggleActual() {
+        this.showActual = !this.showActual;
+    }
+
+    handleToggleForecast() {
+        this.showForecast = !this.showForecast;
+    }
+
+    handleToggleTarget() {
+        this.showTarget = !this.showTarget;
+    }
+
+    get actualToggleClass() {
+        return this.showActual
+            ? "series-toggle series-toggle--on series-toggle--actual"
+            : "series-toggle";
+    }
+
+    get forecastToggleClass() {
+        return this.showForecast
+            ? "series-toggle series-toggle--on series-toggle--forecast"
+            : "series-toggle";
+    }
+
+    get targetToggleClass() {
+        return this.showTarget
+            ? "series-toggle series-toggle--on series-toggle--target"
+            : "series-toggle";
+    }
+
+    // ── Drill-down handlers ──────────────────────────────────────
+
+    handleBarClick(event) {
+        const key = event.currentTarget.dataset.periodKey;
+        this.selectedPeriodKey = this.selectedPeriodKey === key ? null : key;
+    }
+
+    handleCloseDrill() {
+        this.selectedPeriodKey = null;
+    }
+
+    handleRowClick(event) {
+        const recordId = event.currentTarget.dataset.recordId;
+        if (!recordId) {
+            return;
+        }
+        this[NavigationMixin.Navigate]({
+            // eslint-disable-next-line new-cap
+            type: "standard__recordPage",
+            attributes: {
+                recordId,
+                objectApiName: WORK_ITEM_OBJECT.objectApiName,
+                actionName: "view"
+            }
+        });
     }
 
     // ── Formatting helpers ───────────────────────────────────────
+
+    _formatMeasure(hours) {
+        if (this.isDollarMeasure) {
+            return this._formatMoney((Number(hours) || 0) * this.pacing.blendedRate);
+        }
+        return `${this._formatHours(hours)}h`;
+    }
 
     _formatHours(value) {
         if (value === null || value === undefined) {

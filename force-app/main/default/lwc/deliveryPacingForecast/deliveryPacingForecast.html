@@ -3,14 +3,26 @@
 
         <div class="pacing-header">
             <div class="pacing-header-left">
-                <lightning-icon icon-name="utility:trending" alternative-text="Portfolio pacing" size="small" class="pacing-header-icon"></lightning-icon>
+                <lightning-icon icon-name="utility:trending" alternative-text="Pacing and forecast" size="small" class="pacing-header-icon"></lightning-icon>
                 <div>
-                    <h2 class="pacing-title">Portfolio Pacing &amp; Forecast</h2>
-                    <p class="pacing-subtitle">Logged hours, amortized target, and run-rate forecast across all active projects</p>
+                    <h2 class="pacing-title">Pacing &amp; Forecast</h2>
+                    <p class="pacing-subtitle">Actual logged hours and a schedule-based forecast — the Salesforce-native parallel to the Gantt Pacing view</p>
                 </div>
+                <c-delivery-info-popover
+                    component-name="deliveryPacingForecast"
+                    class="pacing-header-info">
+                </c-delivery-info-popover>
             </div>
             <div class="pacing-controls">
-                <c-delivery-info-popover component-name="deliveryPacingForecast"></c-delivery-info-popover>
+                <lightning-combobox
+                    name="range"
+                    label="Range"
+                    variant="label-hidden"
+                    value={range}
+                    options={rangeOptions}
+                    onchange={handleRangeChange}
+                    class="pacing-select">
+                </lightning-combobox>
                 <lightning-combobox
                     name="granularity"
                     label="Bucket"
@@ -21,20 +33,49 @@
                     class="pacing-select">
                 </lightning-combobox>
                 <lightning-combobox
-                    name="horizon"
-                    label="Forecast horizon"
+                    lwc:if={hasRate}
+                    name="measure"
+                    label="Measure"
                     variant="label-hidden"
-                    value={horizon}
-                    options={horizonOptions}
-                    onchange={handleHorizonChange}
+                    value={measure}
+                    options={measureOptions}
+                    onchange={handleMeasureChange}
+                    class="pacing-select">
+                </lightning-combobox>
+                <lightning-combobox
+                    name="mode"
+                    label="Mode"
+                    variant="label-hidden"
+                    value={mode}
+                    options={modeOptions}
+                    onchange={handleModeChange}
                     class="pacing-select">
                 </lightning-combobox>
             </div>
         </div>
 
+        <template lwc:if={isCustomRange}>
+            <div class="pacing-custom-range">
+                <lightning-input
+                    type="date"
+                    label="From"
+                    value={customStart}
+                    onchange={handleCustomStartChange}
+                    class="pacing-date">
+                </lightning-input>
+                <lightning-input
+                    type="date"
+                    label="To"
+                    value={customEnd}
+                    onchange={handleCustomEndChange}
+                    class="pacing-date">
+                </lightning-input>
+            </div>
+        </template>
+
         <template lwc:if={isLoading}>
             <div class="pacing-loading">
-                <lightning-spinner alternative-text="Loading portfolio pacing..." size="small"></lightning-spinner>
+                <lightning-spinner alternative-text="Loading pacing and forecast..." size="small"></lightning-spinner>
             </div>
         </template>
 
@@ -49,33 +90,59 @@
             <div class="pacing-summary-row">
                 <div class="summary-tile">
                     <div class="summary-label">Logged</div>
-                    <div class="summary-value">{totalLoggedDisplay}h</div>
-                    <template lwc:if={hasRate}>
-                        <div class="summary-money">{loggedDollarDisplay}</div>
-                    </template>
+                    <div class="summary-value">{loggedDisplay}</div>
                 </div>
                 <div class="summary-tile">
                     <div class="summary-label">Estimated</div>
-                    <div class="summary-value">{totalEstimatedDisplay}h</div>
+                    <div class="summary-value">{estimatedDisplay}</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="summary-label">Remaining</div>
+                    <div class="summary-value">{remainingDisplay}</div>
+                    <div class="summary-trajectory">across in-flight work</div>
                 </div>
                 <div class="summary-tile">
                     <div class="summary-label">Projected final</div>
-                    <div class="summary-value">{projectedFinalDisplay}h</div>
-                    <template lwc:if={hasRate}>
-                        <div class="summary-money">{projectedFinalDollarDisplay}</div>
-                    </template>
+                    <div class={projectedFinalClass}>{projectedFinalDisplay}</div>
                 </div>
-                <template lwc:if={hasTarget}>
-                    <div class="summary-tile">
-                        <div class="summary-label">Pacing</div>
-                        <div class={pacingClass}>{pacingPercent}</div>
-                        <div class="summary-trajectory">{trajectoryLabel}</div>
-                    </div>
-                </template>
                 <div class="summary-tile">
-                    <div class="summary-label">Active projects</div>
-                    <div class="summary-value">{rootCountDisplay}</div>
+                    <div class="summary-label">Pacing</div>
+                    <div class={pacingPctClass}>{pacingPctDisplay}</div>
+                    <div class="summary-trajectory">logged of estimate</div>
                 </div>
+                <div class="summary-tile">
+                    <div class="summary-label">Active items</div>
+                    <div class="summary-value">{activeItemsDisplay}</div>
+                    <div class="summary-trajectory">{scopeLabel}</div>
+                </div>
+            </div>
+
+            <template lwc:if={hasUnscheduled}>
+                <div class="pacing-unscheduled-note">
+                    <lightning-icon icon-name="utility:warning" size="xx-small" class="pacing-unscheduled-icon"></lightning-icon>
+                    <span>{unscheduledNote}</span>
+                </div>
+            </template>
+
+            <template lwc:if={forecastCappedNote}>
+                <div class="pacing-unscheduled-note">
+                    <lightning-icon icon-name="utility:info" size="xx-small" class="pacing-unscheduled-icon"></lightning-icon>
+                    <span>{forecastCappedNote}</span>
+                </div>
+            </template>
+
+            <div class="pacing-series-toggles">
+                <button type="button" class={actualToggleClass} onclick={handleToggleActual}>
+                    <span class="series-swatch series-swatch--actual"></span>Actual
+                </button>
+                <button type="button" class={forecastToggleClass} onclick={handleToggleForecast}>
+                    <span class="series-swatch series-swatch--forecast"></span>Forecast
+                </button>
+                <template lwc:if={hasTarget}>
+                    <button type="button" class={targetToggleClass} onclick={handleToggleTarget}>
+                        <span class="series-swatch series-swatch--target"></span>Target
+                    </button>
+                </template>
             </div>
 
             <div class="pacing-body">
@@ -97,22 +164,24 @@
                               class="axis-label axis-label--y">{gl.label}</text>
                     </template>
 
-                    <template lwc:if={hasForecastBoundary}>
-                        <line x1={forecastBoundaryX} y1={chartTop}
-                              x2={forecastBoundaryX} y2={chartBottom}
-                              class="forecast-boundary"></line>
+                    <template lwc:if={hasCurrentMarker}>
+                        <line x1={currentMarkerX} y1={chartTop}
+                              x2={currentMarkerX} y2={chartBottom}
+                              class="current-marker"></line>
                     </template>
 
                     <template for:each={bars} for:item="bar">
                         <rect key={bar.key}
                               x={bar.x} y={bar.y}
                               width={bar.width} height={bar.height}
-                              class={bar.cssClass}>
+                              class={bar.cssClass}
+                              data-period-key={bar.periodKey}
+                              onclick={handleBarClick}>
                             <title>{bar.tooltip}</title>
                         </rect>
                     </template>
 
-                    <template lwc:if={hasTarget}>
+                    <template lwc:if={showTargetSeries}>
                         <polyline points={targetPoints} class="target-line"></polyline>
                     </template>
 
@@ -133,27 +202,70 @@
 
             <div class="pacing-legend">
                 <span class="legend-item">
-                    <span class="legend-swatch legend-swatch--under"></span>Logged (on/under target)
+                    <span class="legend-swatch legend-swatch--actual"></span>Logged (actual)
                 </span>
                 <span class="legend-item">
                     <span class="legend-swatch legend-swatch--over"></span>Logged (over target)
                 </span>
                 <span class="legend-item">
-                    <span class="legend-swatch legend-swatch--forecast"></span>Forecast
+                    <span class="legend-swatch legend-swatch--forecast"></span>Forecast (scheduled remaining)
                 </span>
                 <template lwc:if={hasTarget}>
                     <span class="legend-item">
-                        <span class="legend-line legend-line--target"></span>Target
+                        <span class="legend-line legend-line--target"></span>Amortized target
                     </span>
                 </template>
+                <span class="legend-item legend-hint">Click a bar to break down the work items</span>
             </div>
+
+            <template lwc:if={hasDrillDown}>
+                <div class="pacing-drill">
+                    <div class="drill-header">
+                        <h3 class="drill-title">{drillTitle}</h3>
+                        <button type="button" class="drill-close" onclick={handleCloseDrill} title="Close breakdown">
+                            <lightning-icon icon-name="utility:close" size="xx-small"></lightning-icon>
+                        </button>
+                    </div>
+                    <table class="drill-table">
+                        <thead>
+                            <tr>
+                                <th class="drill-th drill-th--name">Work item</th>
+                                <th class="drill-th drill-th--num">This period</th>
+                                <th class="drill-th drill-th--num">% of item</th>
+                                <th class="drill-th drill-th--num">Est</th>
+                                <th class="drill-th drill-th--num">Logged</th>
+                                <th class="drill-th drill-th--num">Remaining</th>
+                                <th class="drill-th drill-th--num">% used</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template for:each={drillRows} for:item="row">
+                                <tr key={row.key} class="drill-row" data-record-id={row.workItemId} onclick={handleRowClick} title="Open this work item">
+                                    <td class="drill-cell drill-cell--name">
+                                        <span class="drill-link">{row.name}</span>
+                                        <template lwc:if={row.metaLine}>
+                                            <span class="drill-meta">{row.metaLine}</span>
+                                        </template>
+                                    </td>
+                                    <td class="drill-cell drill-cell--num">{row.thisPeriod}</td>
+                                    <td class="drill-cell drill-cell--num">{row.pctOfItem}</td>
+                                    <td class="drill-cell drill-cell--num">{row.estimated}</td>
+                                    <td class="drill-cell drill-cell--num">{row.logged}</td>
+                                    <td class="drill-cell drill-cell--num">{row.remaining}</td>
+                                    <td class={row.budgetClass}>{row.budgetUsedPct}</td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </template>
         </template>
 
         <template lwc:if={isEmpty}>
             <div class="pacing-empty">
                 <lightning-icon icon-name="utility:trending" size="medium" class="pacing-empty-icon"></lightning-icon>
                 <p>No active portfolio activity yet</p>
-                <p class="pacing-empty-sub">Activate projects and log work to populate the portfolio pacing view.</p>
+                <p class="pacing-empty-sub">Activate projects and log work to populate the pacing &amp; forecast view.</p>
             </div>
         </template>
 

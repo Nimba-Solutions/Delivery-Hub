@@ -2,8 +2,10 @@
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
  * @description Unit tests for DeliveryHoursAnalyticsController. Verifies the WI tree
- *              walk, monthly bucket assembly, target overlay, and edge cases (no
- *              estimate, no logs, deeply nested children).
+ *              walk, monthly bucket assembly, target overlay, and the Salesforce-native
+ *              Pacing & Forecast engine: accurate (all-scope) actuals, schedule-based
+ *              remaining-spread on the Gantt date fields, the unscheduled bucket, the
+ *              per-period drill-down item metrics, and projectedFinal = logged + Σremaining.
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexDoc,PMD.ExcessiveParameterList,PMD.CyclomaticComplexity')
@@ -27,9 +29,9 @@ private class DeliveryHoursAnalyticsControllerTest {
     }
 
     /**
-     * @description Thin wrapper around TestDataFactory.buildWorkLog — the factory
-     *              owns the per-WI WorkRequest__c bridge cache so RequestId__c
-     *              (required MD per PR #770 feedback) auto-populates.
+     * @description Thin wrapper around TestDataFactory.buildWorkLog — the factory owns
+     *              the per-WI WorkRequest__c bridge cache so RequestId__c (required MD
+     *              per PR #770 feedback) auto-populates.
      */
     private static WorkLog__c buildLog(Id wiId, Decimal hours, Date workDate) {
         return TestDataFactory.buildWorkLog(wiId, hours, workDate, null);
@@ -171,7 +173,6 @@ private class DeliveryHoursAnalyticsControllerTest {
         Test.stopTest();
 
         System.assertEquals(true, result.hasEstimate, 'hasEstimate true with non-null estimate');
-        // 40h / ~3-month plan span. Expect ~13.33/month.
         System.assert(result.monthlyTarget > 0, 'monthlyTarget should be > 0');
         for (DeliveryHoursAnalyticsController.MonthlyHoursDTO row : result.months) {
             System.assertEquals(result.monthlyTarget, row.monthlyTarget,
@@ -202,7 +203,6 @@ private class DeliveryHoursAnalyticsControllerTest {
         Date endDate = startDate.addMonths(1).addDays(-1);
         WorkItem__c root = insertWi('Over', 5, startDate, endDate, null);
 
-        // 5h estimate over 1-month span → 5h/month target. Log 10h.
         insert buildLog(root.Id, 10, Date.today());
 
         Test.startTest();
@@ -224,7 +224,6 @@ private class DeliveryHoursAnalyticsControllerTest {
     @IsTest
     static void testLogsOutsideWindowAreIgnored() {
         WorkItem__c root = insertWi('Windowed', null, null, null, null);
-        // Log a date 5 years ago — outside the default 12-month window.
         insert buildLog(root.Id, 99, Date.today().addYears(-5));
 
         Test.startTest();
@@ -255,21 +254,31 @@ private class DeliveryHoursAnalyticsControllerTest {
     }
 
     // ════════════════════════════════════════════════════════════════════
-    // getPortfolioPacing — account/org-level pacing across active roots
+    // getPortfolioPacing — Salesforce-native Pacing & Forecast engine
     // ════════════════════════════════════════════════════════════════════
 
-    /** @description Sum of logged hours across all periods. */
-    private static Decimal totalLogged(DeliveryHoursAnalyticsController.PortfolioPacingDTO dto) {
+    /** @description Sum of actual logged hours across all periods. */
+    private static Decimal totalActual(DeliveryHoursAnalyticsController.PortfolioPacingDTO dto) {
         Decimal sum = 0;
         for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
-            sum += p.loggedHours;
+            sum += p.actualHours;
+        }
+        return sum;
+    }
+
+    /** @description Sum of forecast hours across the forward periods. */
+    private static Decimal totalForecast(DeliveryHoursAnalyticsController.PortfolioPacingDTO dto) {
+        Decimal sum = 0;
+        for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
+            if (p.isForecast) {
+                sum += p.forecastHours;
+            }
         }
         return sum;
     }
 
     @IsTest
     static void testPortfolioPacingBuildsBackAndForwardPeriods() {
-        // Two active roots, each with descendants + logs across recent months.
         WorkItem__c rootA = insertWi('PortRootA', 80, Date.today().addMonths(-2), Date.today().addMonths(2), null);
         WorkItem__c childA = insertWi('PortChildA', 20, null, null, rootA.Id);
         WorkItem__c rootB = insertWi('PortRootB', 40, Date.today().addMonths(-1), Date.today().addMonths(1), null);
@@ -286,27 +295,32 @@ private class DeliveryHoursAnalyticsControllerTest {
         Test.stopTest();
 
         System.assertNotEquals(null, dto, 'DTO must not be null');
+        System.assertNotEquals(null, dto.summary, 'Summary block present');
         System.assertEquals('Month', dto.granularity, 'Granularity echoed');
         System.assertEquals(9, dto.periods.size(), '6 history + 3 forecast = 9 periods');
         System.assertEquals(2, dto.rootCount, 'Two active roots in scope');
 
         Integer forecastCount = 0;
+        Integer currentCount = 0;
         for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
             if (p.isForecast) {
                 forecastCount++;
             }
+            if (p.isCurrent) {
+                currentCount++;
+            }
         }
         System.assertEquals(3, forecastCount, 'Last 3 periods flagged as forecast');
+        System.assertEquals(1, currentCount, 'Exactly one period flagged as current');
 
-        // 5 + 3 + 7 = 15h logged across the window.
-        System.assertEquals(15, totalLogged(dto), 'Portfolio logged hours summed across roots + descendants');
-        System.assertEquals(140, dto.totalEstimatedHours, 'Estimate summed across the portfolio tree');
+        System.assertEquals(15, totalActual(dto), 'Portfolio actuals summed across roots + descendants');
+        System.assertEquals(140, dto.summary.estimatedHours, 'Estimate summed across the portfolio tree');
+        System.assertNotEquals(null, dto.scopeLabel, 'Scope label built');
     }
 
     @IsTest
     static void testPortfolioPacingForecastPresentOnForwardPeriods() {
-        WorkItem__c root = insertWi('FcRoot', 200, Date.today().addMonths(-3), Date.today().addMonths(6), null);
-        // Log meaningful recent hours so the run-rate is non-zero.
+        WorkItem__c root = insertWi('FcRoot', 200, Date.today().toStartOfMonth(), Date.today().addMonths(6), null);
         insert new List<WorkLog__c>{
             buildLog(root.Id, 10, Date.today()),
             buildLog(root.Id, 10, Date.today().addMonths(-1)),
@@ -318,46 +332,16 @@ private class DeliveryHoursAnalyticsControllerTest {
             DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
         Test.stopTest();
 
-        System.assert(dto.runRateHoursPerPeriod > 0, 'Run-rate should be positive given recent logs');
+        System.assert(dto.summary.runRateHoursPerPeriod > 0, 'Run-rate positive given recent logs');
 
-        Decimal forwardForecast = 0;
         for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
-            if (p.isForecast) {
-                forwardForecast += p.forecastHours;
-            } else {
+            if (!p.isForecast) {
                 System.assertEquals(0, p.forecastHours, 'History periods carry no forecast');
             }
         }
-        System.assert(forwardForecast > 0, 'Forward periods should carry forecast hours');
-        System.assert(dto.projectedFinalHours >= dto.totalLoggedHours,
+        System.assert(totalForecast(dto) > 0, 'Forward periods should carry forecast hours');
+        System.assert(dto.summary.projectedFinalHours >= dto.summary.loggedHours,
             'Projected final >= logged hours');
-    }
-
-    @IsTest
-    static void testPortfolioForecastCappedAtRemainingEstimate() {
-        // Small estimate, high recent run-rate → forecast must cap at remaining scope.
-        WorkItem__c root = insertWi('CapRoot', 30, Date.today().addMonths(-2), Date.today().addMonths(4), null);
-        insert new List<WorkLog__c>{
-            buildLog(root.Id, 20, Date.today()),
-            buildLog(root.Id, 20, Date.today().addMonths(-1))
-        };
-
-        Test.startTest();
-        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
-            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 12);
-        Test.stopTest();
-
-        // totalLogged ~40 already exceeds the 30 estimate → remaining clamps to 0 → no forecast added.
-        Decimal forwardForecast = 0;
-        for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
-            if (p.isForecast) {
-                forwardForecast += p.forecastHours;
-            }
-        }
-        System.assertEquals(0, forwardForecast,
-            'When logged already exceeds estimate, forecast caps at 0');
-        System.assertEquals(true, dto.isOverBudgetTrajectory,
-            'Logged past estimate → over-budget trajectory');
     }
 
     @IsTest
@@ -378,8 +362,7 @@ private class DeliveryHoursAnalyticsControllerTest {
         for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
             System.assert(p.label.startsWith('Q'), 'Quarter labels start with Q: ' + p.label);
         }
-        // Both logs fall inside the 4-quarter back window → 12h total.
-        System.assertEquals(12, totalLogged(dto), 'Both logs land inside the quarter window');
+        System.assertEquals(12, totalActual(dto), 'Both logs land inside the quarter window');
     }
 
     @IsTest
@@ -397,7 +380,7 @@ private class DeliveryHoursAnalyticsControllerTest {
 
         System.assertEquals('Week', dto.granularity, 'Week granularity echoed');
         System.assertEquals(12, dto.periods.size(), '8 history + 4 forecast weeks');
-        System.assertEquals(9, totalLogged(dto), 'This week 6h + last week 3h = 9h');
+        System.assertEquals(9, totalActual(dto), 'This week 6h + last week 3h = 9h');
     }
 
     @IsTest
@@ -419,7 +402,6 @@ private class DeliveryHoursAnalyticsControllerTest {
 
     @IsTest
     static void testPortfolioTargetAmortizedAcrossPeriods() {
-        // Single root with a clean 1-month plan span → target concentrates in that month.
         Date startDate = Date.newInstance(Date.today().year(), Date.today().month(), 1);
         Date endDate = startDate.addMonths(1).addDays(-1);
         insertWi('TgtRoot', 60, startDate, endDate, null);
@@ -429,7 +411,7 @@ private class DeliveryHoursAnalyticsControllerTest {
             DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
         Test.stopTest();
 
-        System.assertEquals(true, dto.hasEstimate, 'Estimate present');
+        System.assertEquals(true, dto.summary.hasEstimate, 'Estimate present');
         Decimal targetSum = 0;
         for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
             targetSum += p.targetHours;
@@ -475,12 +457,9 @@ private class DeliveryHoursAnalyticsControllerTest {
 
     @IsTest
     static void testPortfolioExcludesTerminalAndArchivedRoots() {
-        // Active root counts; terminal-stage + archived roots are excluded from scope.
         insertWi('LiveRoot', 10, null, null, null);
         WorkItem__c doneRoot = insertWi('DoneRoot', 10, null, null, null);
         WorkItem__c archived = insertWi('ArchivedRoot', 10, null, null, null);
-        // Mutate state via a trigger-bypassed update so the test isolates the
-        // scope filter from auto-WR / sync side effects.
         Boolean prev = DeliveryWorkItemTriggerHandler.triggerDisabled;
         DeliveryWorkItemTriggerHandler.triggerDisabled = true;
         try {
@@ -502,7 +481,6 @@ private class DeliveryHoursAnalyticsControllerTest {
 
     @IsTest
     static void testPortfolioPacingEmptyOrgReturnsSkeleton() {
-        // No WorkItems at all — should still return a well-formed skeleton.
         Test.startTest();
         DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
             DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
@@ -510,7 +488,218 @@ private class DeliveryHoursAnalyticsControllerTest {
 
         System.assertEquals(0, dto.rootCount, 'No roots');
         System.assertEquals(9, dto.periods.size(), 'Skeleton still built');
-        System.assertEquals(0, totalLogged(dto), 'No logged hours');
-        System.assertEquals(false, dto.hasEstimate, 'No estimate');
+        System.assertEquals(0, totalActual(dto), 'No logged hours');
+        System.assertEquals(false, dto.summary.hasEstimate, 'No estimate');
+        System.assertEquals(0, dto.summary.activeItems, 'No in-flight items');
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // Schedule-based forecast + accurate (all-scope) actuals + drill-down
+    // ════════════════════════════════════════════════════════════════════
+
+    /**
+     * @description Actuals count ALL WorkLog hours — including logs on a terminal
+     *              (completed) WorkItem that the active-portfolio scope would have
+     *              dropped. The historical bars + summary.loggedHours must include the
+     *              completed item's hours.
+     */
+    @IsTest
+    static void testActualsCountAllHoursIncludingCompletedWork() {
+        WorkItem__c liveRoot = insertWi('LiveActuals', 40, Date.today().addMonths(-1), Date.today().addMonths(2), null);
+        WorkItem__c doneRoot = insertWi('DoneActuals', 20, null, null, null);
+
+        insert new List<WorkLog__c>{
+            buildLog(liveRoot.Id, 5, Date.today()),
+            buildLog(doneRoot.Id, 8, Date.today())
+        };
+
+        Boolean prev = DeliveryWorkItemTriggerHandler.triggerDisabled;
+        DeliveryWorkItemTriggerHandler.triggerDisabled = true;
+        try {
+            doneRoot.StageNamePk__c = 'Done';
+            update doneRoot;
+        } finally {
+            DeliveryWorkItemTriggerHandler.triggerDisabled = prev;
+        }
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertEquals(1, dto.rootCount, 'Only the live root is an active root');
+        System.assertEquals(13, dto.summary.loggedHours,
+            'Actuals count ALL hours (5 live + 8 completed), not just active-scope');
+        System.assertEquals(13, totalActual(dto),
+            'Per-period bars also count the completed item\'s hours');
+    }
+
+    /**
+     * @description A single in-flight item with 60h remaining and a 2-month forward
+     *              schedule spreads ~30h into each of the two covered forecast months —
+     *              not a flat run-rate — and emits a drill-down item per covered period.
+     */
+    @IsTest
+    static void testScheduleSpreadPlacesRemainingAcrossCoveredMonths() {
+        Date start = Date.today().toStartOfMonth();
+        Date theEnd = start.addMonths(2).addDays(-1);
+        insertWi('SpreadItem', 60, start, theEnd, null);
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 4);
+        Test.stopTest();
+
+        System.assertEquals(0, dto.summary.unscheduledRemainingHours,
+            'Dated item is fully schedulable — nothing unscheduled');
+        System.assertEquals(60, dto.summary.remainingHours, 'Remaining = full 60h estimate');
+        System.assertEquals(1, dto.summary.activeItems, 'One in-flight item');
+
+        Decimal forwardForecast = 0;
+        Integer touchedPeriods = 0;
+        Integer drillRows = 0;
+        for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
+            if (p.isForecast && p.forecastHours > 0) {
+                forwardForecast += p.forecastHours;
+                touchedPeriods++;
+                drillRows += p.items.size();
+            }
+        }
+        System.assertEquals(60, forwardForecast,
+            'All 60h remaining is placed across the forward schedule');
+        System.assert(touchedPeriods >= 1 && touchedPeriods <= 3,
+            'Remaining spread across the covered forward months, got ' + touchedPeriods);
+        System.assertEquals(touchedPeriods, drillRows,
+            'Each touched period carries exactly one drill-down row for the item');
+    }
+
+    /**
+     * @description The per-period drill-down carries accurate item metrics: est /
+     *              logged / remaining / budgetUsedPct, the schedule dates, the stage,
+     *              and pctOfItem that sums to ~100% across the item's covered periods.
+     */
+    @IsTest
+    static void testDrillDownItemMetricsAreAccurate() {
+        // 100h estimate, 40h logged → 60h remaining, 40% budget used. Spread over a
+        // clean 2-month forward span → ~30h into each, ~50% of item per period.
+        Date start = Date.today().toStartOfMonth();
+        Date theEnd = start.addMonths(2).addDays(-1);
+        WorkItem__c item = insertWi('DrillItem', 100, start, theEnd, null);
+        insert new List<WorkLog__c>{
+            buildLog(item.Id, 25, Date.today()),
+            buildLog(item.Id, 15, Date.today().addDays(-2))
+        };
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 4);
+        Test.stopTest();
+
+        Decimal pctSum = 0;
+        Integer rows = 0;
+        for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
+            for (DeliveryHoursAnalyticsController.PacingItemDTO it : p.items) {
+                System.assertEquals(item.Id, it.workItemId, 'Drill row carries the WorkItem Id');
+                System.assertEquals(100, it.estimatedHours, 'Estimate surfaced');
+                System.assertEquals(40, it.loggedHours, 'Logged-so-far summed from WorkLogs');
+                System.assertEquals(60, it.remainingHours, 'Remaining = 100 - 40');
+                System.assertEquals(40, it.budgetUsedPct, 'Budget used = 40/100 = 40%');
+                System.assertEquals('Backlog', it.stage, 'Stage surfaced from StageNamePk__c');
+                System.assertNotEquals(null, it.startDate, 'Schedule start surfaced');
+                System.assertNotEquals(null, it.endDate, 'Schedule end surfaced');
+                pctSum += it.pctOfItem;
+                rows++;
+            }
+        }
+        System.assert(rows >= 1, 'At least one drill-down row emitted');
+        System.assert(pctSum >= 99 && pctSum <= 101,
+            'pctOfItem across covered periods sums to ~100%, got ' + pctSum);
+    }
+
+    /**
+     * @description An in-flight item with an estimate but NO usable start/end dates
+     *              can't be placed on the calendar, so its remaining accumulates into
+     *              unscheduledRemainingHours instead of being silently dropped.
+     */
+    @IsTest
+    static void testUnscheduledBucketCapturesUndatedRemaining() {
+        insertWi('UndatedItem', 50, null, null, null);
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertEquals(50, dto.summary.unscheduledRemainingHours,
+            'Un-dated remaining lands in the unscheduled bucket');
+        System.assertEquals(50, dto.summary.remainingHours, 'Remaining still counted in the total');
+        System.assertEquals(0, totalForecast(dto),
+            'Nothing placed on the forecast bars — it is all unscheduled');
+    }
+
+    /**
+     * @description An in-flight item whose end date is in the PAST cannot be placed
+     *              forward, so its remaining also routes to the unscheduled bucket.
+     */
+    @IsTest
+    static void testPastDueRemainingIsUnscheduled() {
+        insertWi('PastDue', 30, Date.today().addMonths(-4), Date.today().addMonths(-2), null);
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertEquals(30, dto.summary.unscheduledRemainingHours,
+            'A past-due schedule cannot be placed forward — remaining is unscheduled');
+    }
+
+    /**
+     * @description projectedFinalHours == loggedHours + Σ remaining across all
+     *              in-flight items, and remaining nets out logged-so-far (summed from
+     *              WorkLogs). pacingPct reflects logged ÷ estimate.
+     */
+    @IsTest
+    static void testProjectedFinalEqualsLoggedPlusRemaining() {
+        WorkItem__c item = insertWi('NetItem', 100, Date.today().toStartOfMonth(), Date.today().addMonths(2), null);
+        insert new List<WorkLog__c>{
+            buildLog(item.Id, 20, Date.today()),
+            buildLog(item.Id, 10, Date.today().addDays(-3))
+        };
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 4);
+        Test.stopTest();
+
+        System.assertEquals(30, dto.summary.loggedHours, 'All logged hours counted (20 + 10)');
+        System.assertEquals(70, dto.summary.remainingHours,
+            'Remaining nets logged-so-far: 100 estimate - 30 logged = 70');
+        System.assertEquals(100, dto.summary.projectedFinalHours,
+            'Projected final = 30 logged + 70 remaining = 100');
+        System.assertEquals(30, dto.summary.pacingPct,
+            'Pacing % = 30 logged / 100 estimate = 30%');
+    }
+
+    /**
+     * @description Remaining clamps at 0 when logged-so-far already exceeds the
+     *              estimate — an over-logged item adds no remaining, and the
+     *              over-budget trajectory flag fires off the all-scope logged total.
+     */
+    @IsTest
+    static void testOverLoggedItemAddsNoRemaining() {
+        WorkItem__c item = insertWi('OverLogged', 10, Date.today().toStartOfMonth(), Date.today().addMonths(1), null);
+        insert buildLog(item.Id, 25, Date.today());
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertEquals(0, dto.summary.remainingHours, 'Over-logged item contributes 0 remaining');
+        System.assertEquals(25, dto.summary.projectedFinalHours,
+            'Projected final = 25 logged + 0 remaining');
+        System.assertEquals(true, dto.summary.isOverBudgetTrajectory,
+            'Logged past estimate → over-budget trajectory');
     }
 }
