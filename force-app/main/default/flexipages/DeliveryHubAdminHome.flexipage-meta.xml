@@ -19,8 +19,30 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentInstanceProperties>
+                    <name>pageKey</name>
+                    <value>home</value>
+                </componentInstanceProperties>
+                <componentName>deliveryExecutiveDashboard</componentName>
+                <identifier>c_deliveryExecutiveDashboard</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryPacingForecast</componentName>
                 <identifier>c_deliveryPacingForecast</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryFeatureCockpit</componentName>
+                <identifier>c_deliveryFeatureCockpit_home</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryFeatureApprovalInbox</componentName>
+                <identifier>c_deliveryFeatureApprovalInbox_home</identifier>
             </componentInstance>
         </itemInstances>
         <name>top</name>

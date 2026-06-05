@@ -1,14 +1,17 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @description  Portfolio Pacing & Forecast HomePage card. Renders an account/org-level
- *               pacing view across ALL active root WorkItems: actual logged hours (bars),
- *               an amortized target line, and a forward run-rate forecast (dashed bars).
- *               The user picks the bucket granularity (Week / Month / Quarter) and the
- *               forward horizon (3 / 6 / 12 periods or rest-of-year), which re-wires the
- *               Apex call. Pure-SVG chart (no chart library), mirroring
- *               deliveryProjectMonthlyHours. Hours are primary; $ shown when the org has a
- *               single resolvable blended rate. Wires
+ * @description  Portfolio Hours & Forecast HomePage card. Hours-first: actual logged
+ *               hours per period (bars) plus a schedule-based forecast (dashed bars)
+ *               where each in-flight item's remaining estimate is spread across the
+ *               forward periods its EstimatedStart → EstimatedEnd span covers — the
+ *               same dates the Gantt drag-writes. Unscheduled remaining (un-dated
+ *               work the forecast can't place) is surfaced as a note. The user picks
+ *               the bucket granularity (Week / Month / Quarter) and the forward
+ *               horizon (3 / 6 / 12 periods or rest-of-year), which re-wires the Apex
+ *               call. Pure-SVG chart (no chart library). Hours are primary; $ shown
+ *               secondary when the org has a single resolvable blended rate. An
+ *               amortized target line is kept as a faint secondary reference. Wires
  *               DeliveryHoursAnalyticsController.getPortfolioPacing.
  * @author       Cloud Nimbus LLC
  */
@@ -152,6 +155,32 @@ export default class DeliveryPacingForecast extends LightningElement {
         return this.pacing ? this.pacing.rootCount : 0;
     }
 
+    get remainingDisplay() {
+        if (!this.pacing) {
+            return "0";
+        }
+        const remaining =
+            this.pacing.totalRemainingHours !== null &&
+            this.pacing.totalRemainingHours !== undefined
+                ? this.pacing.totalRemainingHours
+                : 0;
+        return this._formatHours(remaining);
+    }
+
+    // ── Unscheduled-remaining note ───────────────────────────────
+
+    get hasUnscheduled() {
+        return this.pacing && this.pacing.unscheduledRemainingHours > 0;
+    }
+
+    get unscheduledNote() {
+        if (!this.hasUnscheduled) {
+            return "";
+        }
+        const hours = this._formatHours(this.pacing.unscheduledRemainingHours);
+        return `${hours}h of remaining work can't be placed on the forecast — set start/end dates on the Gantt so it can be scheduled.`;
+    }
+
     get projectedFinalDollarDisplay() {
         if (!this.hasRate) {
             return "";
@@ -164,28 +193,6 @@ export default class DeliveryPacingForecast extends LightningElement {
             return "";
         }
         return this._formatMoney(this.pacing.totalLoggedHours * this.pacing.blendedRate);
-    }
-
-    get pacingPercent() {
-        if (!this.pacing || !this.pacing.hasEstimate || !this.pacing.totalEstimatedHours) {
-            return "";
-        }
-        const pct = (this.pacing.projectedFinalHours / this.pacing.totalEstimatedHours) * 100;
-        return `${pct.toFixed(0)}%`;
-    }
-
-    get isOverBudget() {
-        return this.pacing && this.pacing.isOverBudgetTrajectory;
-    }
-
-    get pacingClass() {
-        return this.isOverBudget
-            ? "summary-variance summary-variance--over"
-            : "summary-variance summary-variance--under";
-    }
-
-    get trajectoryLabel() {
-        return this.isOverBudget ? "Over budget at current pace" : "On track at current pace";
     }
 
     // ── SVG geometry ─────────────────────────────────────────────

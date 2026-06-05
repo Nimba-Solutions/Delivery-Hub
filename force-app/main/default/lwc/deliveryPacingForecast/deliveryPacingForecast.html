@@ -5,12 +5,15 @@
             <div class="pacing-header-left">
                 <lightning-icon icon-name="utility:trending" alternative-text="Portfolio pacing" size="small" class="pacing-header-icon"></lightning-icon>
                 <div>
-                    <h2 class="pacing-title">Portfolio Pacing &amp; Forecast</h2>
-                    <p class="pacing-subtitle">Logged hours, amortized target, and run-rate forecast across all active projects</p>
+                    <h2 class="pacing-title">Portfolio Hours &amp; Forecast</h2>
+                    <p class="pacing-subtitle">Logged hours per period and a schedule-based forecast across all active projects</p>
                 </div>
+                <c-delivery-info-popover
+                    component-name="deliveryPacingForecast"
+                    class="pacing-header-info">
+                </c-delivery-info-popover>
             </div>
             <div class="pacing-controls">
-                <c-delivery-info-popover component-name="deliveryPacingForecast"></c-delivery-info-popover>
                 <lightning-combobox
                     name="granularity"
                     label="Bucket"
@@ -59,24 +62,29 @@
                     <div class="summary-value">{totalEstimatedDisplay}h</div>
                 </div>
                 <div class="summary-tile">
+                    <div class="summary-label">Remaining</div>
+                    <div class="summary-value">{remainingDisplay}h</div>
+                    <div class="summary-trajectory">across in-flight work</div>
+                </div>
+                <div class="summary-tile">
                     <div class="summary-label">Projected final</div>
                     <div class="summary-value">{projectedFinalDisplay}h</div>
                     <template lwc:if={hasRate}>
                         <div class="summary-money">{projectedFinalDollarDisplay}</div>
                     </template>
                 </div>
-                <template lwc:if={hasTarget}>
-                    <div class="summary-tile">
-                        <div class="summary-label">Pacing</div>
-                        <div class={pacingClass}>{pacingPercent}</div>
-                        <div class="summary-trajectory">{trajectoryLabel}</div>
-                    </div>
-                </template>
                 <div class="summary-tile">
                     <div class="summary-label">Active projects</div>
                     <div class="summary-value">{rootCountDisplay}</div>
                 </div>
             </div>
+
+            <template lwc:if={hasUnscheduled}>
+                <div class="pacing-unscheduled-note">
+                    <lightning-icon icon-name="utility:warning" size="xx-small" class="pacing-unscheduled-icon"></lightning-icon>
+                    <span>{unscheduledNote}</span>
+                </div>
+            </template>
 
             <div class="pacing-body">
                 <svg xmlns="http://www.w3.org/2000/svg"
@@ -133,17 +141,17 @@
 
             <div class="pacing-legend">
                 <span class="legend-item">
-                    <span class="legend-swatch legend-swatch--under"></span>Logged (on/under target)
+                    <span class="legend-swatch legend-swatch--under"></span>Logged hours
                 </span>
                 <span class="legend-item">
                     <span class="legend-swatch legend-swatch--over"></span>Logged (over target)
                 </span>
                 <span class="legend-item">
-                    <span class="legend-swatch legend-swatch--forecast"></span>Forecast
+                    <span class="legend-swatch legend-swatch--forecast"></span>Forecast (scheduled remaining)
                 </span>
                 <template lwc:if={hasTarget}>
                     <span class="legend-item">
-                        <span class="legend-line legend-line--target"></span>Target
+                        <span class="legend-line legend-line--target"></span>Amortized target
                     </span>
                 </template>
             </div>

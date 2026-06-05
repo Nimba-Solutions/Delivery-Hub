@@ -513,4 +513,184 @@ private class DeliveryHoursAnalyticsControllerTest {
         System.assertEquals(0, totalLogged(dto), 'No logged hours');
         System.assertEquals(false, dto.hasEstimate, 'No estimate');
     }
+
+    // ════════════════════════════════════════════════════════════════════
+    // Schedule-based forecast + accurate (all-scope) actuals
+    // ════════════════════════════════════════════════════════════════════
+
+    /**
+     * @description CHANGE 1: actuals count ALL WorkLog hours — including logs on a
+     *              terminal (completed) WorkItem that the active-portfolio scope
+     *              would have dropped. The historical bars + totalLoggedHours must
+     *              include the completed item's hours.
+     */
+    @IsTest
+    static void testActualsCountAllHoursIncludingCompletedWork() {
+        // One active root with an in-window log.
+        WorkItem__c liveRoot = insertWi('LiveActuals', 40, Date.today().addMonths(-1), Date.today().addMonths(2), null);
+        // One COMPLETED (terminal) root — excluded from the active scope, but its
+        // logged hours must STILL count toward the actuals.
+        WorkItem__c doneRoot = insertWi('DoneActuals', 20, null, null, null);
+
+        insert new List<WorkLog__c>{
+            buildLog(liveRoot.Id, 5, Date.today()),
+            buildLog(doneRoot.Id, 8, Date.today())
+        };
+
+        // Flip the completed root to a terminal stage post-insert (trigger-bypassed).
+        Boolean prev = DeliveryWorkItemTriggerHandler.triggerDisabled;
+        DeliveryWorkItemTriggerHandler.triggerDisabled = true;
+        try {
+            doneRoot.StageNamePk__c = 'Done';
+            update doneRoot;
+        } finally {
+            DeliveryWorkItemTriggerHandler.triggerDisabled = prev;
+        }
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        // Only the live root is "in scope", but actuals count BOTH logs = 13h.
+        System.assertEquals(1, dto.rootCount, 'Only the live root is an active root');
+        System.assertEquals(13, dto.totalLoggedHours,
+            'Actuals count ALL hours (5 live + 8 completed), not just active-scope');
+        System.assertEquals(13, totalLogged(dto),
+            'Per-period bars also count the completed item\'s hours');
+    }
+
+    /**
+     * @description CHANGE 2: a single in-flight item with 60h remaining and a
+     *              2-month forward schedule spreads ~30h into each of the two
+     *              covered forecast months — not a flat run-rate.
+     */
+    @IsTest
+    static void testScheduleSpreadPlacesRemainingAcrossCoveredMonths() {
+        // Estimate 60h, no logs yet → 60h remaining. Schedule starts this month and
+        // ends ~2 months out so it covers the first two forward periods.
+        Date start = Date.today().toStartOfMonth();
+        Date theEnd = start.addMonths(2).addDays(-1); // spans current + next month region
+        insertWi('SpreadItem', 60, start, theEnd, null);
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 4);
+        Test.stopTest();
+
+        System.assertEquals(0, dto.unscheduledRemainingHours,
+            'Dated item is fully schedulable — nothing unscheduled');
+        System.assertEquals(60, dto.totalRemainingHours, 'Remaining = full 60h estimate');
+
+        // Sum forecast across forward periods = the full remaining (60h).
+        Decimal forwardForecast = 0;
+        Integer touchedPeriods = 0;
+        for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
+            if (p.isForecast && p.forecastHours > 0) {
+                forwardForecast += p.forecastHours;
+                touchedPeriods++;
+            }
+        }
+        System.assertEquals(60, forwardForecast,
+            'All 60h remaining is placed across the forward schedule');
+        System.assert(touchedPeriods >= 1 && touchedPeriods <= 3,
+            'Remaining spread across the covered forward months, got ' + touchedPeriods);
+    }
+
+    /**
+     * @description CHANGE 2 (unscheduled bucket): an in-flight item with an estimate
+     *              but NO usable start/end dates can't be placed on the calendar, so
+     *              its remaining accumulates into unscheduledRemainingHours instead
+     *              of being silently dropped.
+     */
+    @IsTest
+    static void testUnscheduledBucketCapturesUndatedRemaining() {
+        // 50h estimate, no logs, NO dates → 50h unscheduled.
+        insertWi('UndatedItem', 50, null, null, null);
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertEquals(50, dto.unscheduledRemainingHours,
+            'Un-dated remaining lands in the unscheduled bucket');
+        System.assertEquals(50, dto.totalRemainingHours, 'Remaining still counted in the total');
+
+        Decimal forwardForecast = 0;
+        for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
+            if (p.isForecast) {
+                forwardForecast += p.forecastHours;
+            }
+        }
+        System.assertEquals(0, forwardForecast,
+            'Nothing placed on the forecast bars — it is all unscheduled');
+    }
+
+    /**
+     * @description An in-flight item whose end date is in the PAST cannot be placed
+     *              forward, so its remaining also routes to the unscheduled bucket.
+     */
+    @IsTest
+    static void testPastDueRemainingIsUnscheduled() {
+        // Estimate 30h, schedule entirely in the past → 30h unscheduled.
+        insertWi('PastDue', 30, Date.today().addMonths(-4), Date.today().addMonths(-2), null);
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertEquals(30, dto.unscheduledRemainingHours,
+            'A past-due schedule cannot be placed forward — remaining is unscheduled');
+    }
+
+    /**
+     * @description CHANGE 2 headline: projectedFinalHours == totalLoggedHours +
+     *              Σ remaining across all in-flight items, and remaining nets out
+     *              logged-so-far (summed from WorkLogs).
+     */
+    @IsTest
+    static void testProjectedFinalEqualsLoggedPlusRemaining() {
+        // Item: 100h estimate, 30h already logged → 70h remaining.
+        WorkItem__c item = insertWi('NetItem', 100, Date.today().toStartOfMonth(), Date.today().addMonths(2), null);
+        insert new List<WorkLog__c>{
+            buildLog(item.Id, 20, Date.today()),
+            buildLog(item.Id, 10, Date.today().addDays(-3))
+        };
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 4);
+        Test.stopTest();
+
+        System.assertEquals(30, dto.totalLoggedHours, 'All logged hours counted (20 + 10)');
+        System.assertEquals(70, dto.totalRemainingHours,
+            'Remaining nets logged-so-far: 100 estimate - 30 logged = 70');
+        System.assertEquals(100, dto.projectedFinalHours,
+            'Projected final = 30 logged + 70 remaining = 100');
+    }
+
+    /**
+     * @description Remaining clamps at 0 when logged-so-far already exceeds the
+     *              estimate — an over-logged item adds no remaining, and the
+     *              over-budget trajectory flag fires off the all-scope logged total.
+     */
+    @IsTest
+    static void testOverLoggedItemAddsNoRemaining() {
+        // 10h estimate but 25h logged → remaining clamps to 0.
+        WorkItem__c item = insertWi('OverLogged', 10, Date.today().toStartOfMonth(), Date.today().addMonths(1), null);
+        insert buildLog(item.Id, 25, Date.today());
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertEquals(0, dto.totalRemainingHours, 'Over-logged item contributes 0 remaining');
+        System.assertEquals(25, dto.projectedFinalHours,
+            'Projected final = 25 logged + 0 remaining');
+        System.assertEquals(true, dto.isOverBudgetTrajectory,
+            'Logged past estimate → over-budget trajectory');
+    }
 }

@@ -9,12 +9,6 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryHubSetup</componentName>
-                <identifier>c_deliveryHubSetup</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
                 <componentInstanceProperties>
                     <name>hideAttentionSection</name>
                     <value>false</value>
@@ -37,18 +31,6 @@
             <componentInstance>
                 <componentName>deliveryPacingForecast</componentName>
                 <identifier>c_deliveryPacingForecast</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentName>deliveryFeatureCockpit</componentName>
-                <identifier>c_deliveryFeatureCockpit_home</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentName>deliveryFeatureApprovalInbox</componentName>
-                <identifier>c_deliveryFeatureApprovalInbox_home</identifier>
             </componentInstance>
         </itemInstances>
         <name>top</name>

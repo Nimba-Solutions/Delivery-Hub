@@ -18,6 +18,8 @@ function samplePacing(overrides = {}) {
         totalEstimatedHours: 100,
         totalLoggedHours: 40,
         projectedFinalHours: 90,
+        totalRemainingHours: 50,
+        unscheduledRemainingHours: 0,
         runRateHoursPerPeriod: 10,
         blendedRate: null,
         hasEstimate: true,
@@ -82,16 +84,33 @@ describe("c-delivery-pacing-forecast", () => {
         expect(boundary).not.toBeNull();
     });
 
-    it("shows headline hours and pacing percent", async () => {
+    it("shows headline hours: logged, remaining, and projected final", async () => {
         const element = createComponent();
         getPortfolioPacing.emit(samplePacing());
         await flushPromises();
 
         const text = element.shadowRoot.textContent;
         expect(text).toContain("40.0h"); // logged
+        expect(text).toContain("50.0h"); // remaining
         expect(text).toContain("90.0h"); // projected final
-        expect(text).toContain("90%"); // pacing
-        expect(text).toContain("On track at current pace");
+    });
+
+    it("surfaces an unscheduled-remaining note when hours can't be placed", async () => {
+        const element = createComponent();
+        getPortfolioPacing.emit(samplePacing({ unscheduledRemainingHours: 24 }));
+        await flushPromises();
+
+        const note = element.shadowRoot.querySelector(".pacing-unscheduled-note");
+        expect(note).not.toBeNull();
+        expect(note.textContent).toContain("24.0h");
+        expect(note.textContent).toContain("Gantt");
+    });
+
+    it("hides the unscheduled note when everything is scheduled", async () => {
+        const element = createComponent();
+        getPortfolioPacing.emit(samplePacing({ unscheduledRemainingHours: 0 }));
+        await flushPromises();
+        expect(element.shadowRoot.querySelector(".pacing-unscheduled-note")).toBeNull();
     });
 
     it("hides $ figures when no blended rate is present", async () => {
@@ -113,14 +132,16 @@ describe("c-delivery-pacing-forecast", () => {
         expect(moneyText).toContain("$9,000"); // 90h * 100
     });
 
-    it("flags an over-budget trajectory", async () => {
+    it("renders the projected-final headline for an over-budget trajectory", async () => {
         const element = createComponent();
-        getPortfolioPacing.emit(samplePacing({ isOverBudgetTrajectory: true }));
+        getPortfolioPacing.emit(
+            samplePacing({ isOverBudgetTrajectory: true, projectedFinalHours: 130 })
+        );
         await flushPromises();
 
-        const variance = element.shadowRoot.querySelector(".summary-variance--over");
-        expect(variance).not.toBeNull();
-        expect(element.shadowRoot.textContent).toContain("Over budget at current pace");
+        // Hours-first card: projected final still renders; no pacing-percent framing.
+        expect(element.shadowRoot.textContent).toContain("130");
+        expect(element.shadowRoot.querySelector("rect.bar")).not.toBeNull();
     });
 
     it("re-wires when the granularity selector changes", async () => {
