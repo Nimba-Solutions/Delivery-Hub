@@ -43,7 +43,11 @@ private class DeliveryCartServiceTest {
         insert new PermissionSetAssignment(AssigneeId = u.Id, PermissionSetId = ps.Id);
     }
 
-    /** @description The permset-assigned cart test user (see makeCartUser). */
+    /**
+     * @description The permset-assigned cart test user (see makeCartUser), used to
+     *              call the stripInaccessible-guarded service writes with FLS.
+     * @return The DeliveryHubAdmin_App-assigned User created in @TestSetup.
+     */
     private static User cartUser() {
         return [
             SELECT Id FROM User
