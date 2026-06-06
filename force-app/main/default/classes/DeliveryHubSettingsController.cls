@@ -148,6 +148,18 @@ global with sharing class DeliveryHubSettingsController {
         @AuraEnabled public Boolean invoiceGenerationEnabled { get; set; }
         /** @description Formatted date when invoice generation was activated */
         @AuraEnabled public String invoiceGenerationActivatedAt { get; set; }
+
+        // ── Checkout Cart settings ─────────────────────────────────────────
+        /** @description Show dollars in the Checkout Cart (computed from DateTime) */
+        @AuraEnabled public Boolean cartDollarsEnabled { get; set; }
+        /** @description Formatted date when cart dollars were activated */
+        @AuraEnabled public String cartDollarsActivatedAt { get; set; }
+        /** @description Clients self-serve the Checkout Cart (computed from DateTime) */
+        @AuraEnabled public Boolean cartSelfServeEnabled { get; set; }
+        /** @description Formatted date when cart self-serve was activated */
+        @AuraEnabled public String cartSelfServeActivatedAt { get; set; }
+        /** @description Checkout routing mode: Approve | Invoice | Stripe (blank = Invoice) */
+        @AuraEnabled public String checkoutMode { get; set; }
     }
 
     /**
@@ -343,6 +355,14 @@ global with sharing class DeliveryHubSettingsController {
             dto.invoiceGenerationEnabled = settings.EnableInvoiceGenerationDateTime__c != null;
             dto.invoiceGenerationActivatedAt = formatActivationDate(settings.EnableInvoiceGenerationDateTime__c);
 
+            // Checkout Cart settings
+            dto.cartDollarsEnabled = settings.EnableCartDollarsDateTime__c != null;
+            dto.cartDollarsActivatedAt = formatActivationDate(settings.EnableCartDollarsDateTime__c);
+            dto.cartSelfServeEnabled = settings.EnableCartSelfServeDateTime__c != null;
+            dto.cartSelfServeActivatedAt = formatActivationDate(settings.EnableCartSelfServeDateTime__c);
+            dto.checkoutMode = String.isNotBlank(settings.CheckoutModeTxt__c)
+                ? settings.CheckoutModeTxt__c : 'Invoice';
+
             // Enterprise / API settings
             dto.syncApiRateLimit = settings.SyncApiRateLimitNumber__c != null
                 ? Integer.valueOf(settings.SyncApiRateLimitNumber__c) : null;
@@ -388,6 +408,11 @@ global with sharing class DeliveryHubSettingsController {
             dto.overdueRemindersEnabled = false;
             dto.overdueReminderSchedule = '1,7,14,30';
             dto.resourceTitleAutoFillEnabled = false;
+            // Checkout Cart defaults — dollars off org-wide (MF behavior), admin
+            // assembles, Invoice routing.
+            dto.cartDollarsEnabled = false;
+            dto.cartSelfServeEnabled = false;
+            dto.checkoutMode = 'Invoice';
         }
         return dto;
     }
@@ -483,6 +508,11 @@ global with sharing class DeliveryHubSettingsController {
             settings.EnableAutoCreateWorkRequestDateTime__c = dto.autoCreateWorkRequest ? (settings.EnableAutoCreateWorkRequestDateTime__c != null ? settings.EnableAutoCreateWorkRequestDateTime__c : Datetime.now()) : null;
             settings.RequireWorkLogApprovalDateTime__c = dto.requireWorkLogApproval ? (settings.RequireWorkLogApprovalDateTime__c != null ? settings.RequireWorkLogApprovalDateTime__c : Datetime.now()) : null;
             settings.EnableInvoiceGenerationDateTime__c = dto.invoiceGenerationEnabled == true ? (settings.EnableInvoiceGenerationDateTime__c != null ? settings.EnableInvoiceGenerationDateTime__c : Datetime.now()) : null;
+
+            // Checkout Cart toggles (DateTime-based) + mode (Text, validated)
+            settings.EnableCartDollarsDateTime__c = dto.cartDollarsEnabled == true ? (settings.EnableCartDollarsDateTime__c != null ? settings.EnableCartDollarsDateTime__c : Datetime.now()) : null;
+            settings.EnableCartSelfServeDateTime__c = dto.cartSelfServeEnabled == true ? (settings.EnableCartSelfServeDateTime__c != null ? settings.EnableCartSelfServeDateTime__c : Datetime.now()) : null;
+            settings.CheckoutModeTxt__c = CartExperienceProfile.normalizeMode(dto.checkoutMode);
 
             // Enterprise feature toggles
             settings.EnableExternalNotificationsDateTime__c = dto.externalNotificationsEnabled == true ? (settings.EnableExternalNotificationsDateTime__c != null ? settings.EnableExternalNotificationsDateTime__c : Datetime.now()) : null;

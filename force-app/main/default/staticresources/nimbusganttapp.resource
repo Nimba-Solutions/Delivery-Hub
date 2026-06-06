@@ -109,6 +109,15 @@ var NimbusGanttApp = (function(exports) {
     });
     return dm;
   }
+  function applyHoursBridge(tasks, hoursPerDay) {
+    if (!hoursPerDay || hoursPerDay <= 0) return tasks;
+    return tasks.map((t) => {
+      if (!t.startDate || !t.estimatedHours || t.estimatedHours <= 0) return t;
+      const durationDays = Math.max(1, Math.ceil(t.estimatedHours / hoursPerDay));
+      const derivedEnd = addDays(t.startDate, durationDays - 1);
+      return { ...t, endDate: derivedEnd };
+    });
+  }
   function buildTasks(tasks) {
     const today = todayISO();
     const fallback = addMonths(today, -1);
@@ -154,7 +163,12 @@ var NimbusGanttApp = (function(exports) {
         parentId: t.parentWorkItemId || void 0,
         sortOrder: Number(t.sortOrder) || 0,
         isInactive: !!t.isInactive,
-        metadata: { hoursHigh: hrs, hoursLogged: logged }
+        // `hoursHigh`/`hoursLogged` are this pipeline's internal rollup keys
+        // (read by the parent pass). `estimatedHours`/`loggedHours` are the NG
+        // core contract keys the tooltip reads for its sizing/actuals block —
+        // emit both so the app adapter feeds core correctly (the leaf metadata
+        // object is reused for parent rows, so parents inherit these too).
+        metadata: { hoursHigh: hrs, hoursLogged: logged, estimatedHours: hrs, loggedHours: logged }
       };
     });
     const parentIds = {};
@@ -921,7 +935,7 @@ var NimbusGanttApp = (function(exports) {
       cleanupDrag();
     };
   }
-  function el$1(tag, className, styleText) {
+  function el$2(tag, className, styleText) {
     const e = document.createElement(tag);
     if (className) e.className = className;
     return e;
@@ -1048,7 +1062,7 @@ var NimbusGanttApp = (function(exports) {
   };
   function kpiPill(label, value, tone) {
     const t = KPI_TONES[tone];
-    const wrap = el$1("span", "");
+    const wrap = el$2("span", "");
     wrap.style.cssText = [
       "display:inline-flex",
       "align-items:center",
@@ -1061,10 +1075,10 @@ var NimbusGanttApp = (function(exports) {
       "font-weight:600",
       "white-space:nowrap"
     ].join(";");
-    const v = el$1("span", "");
+    const v = el$2("span", "");
     v.style.cssText = "font-weight:700";
     v.textContent = value;
-    const l = el$1("span", "");
+    const l = el$2("span", "");
     l.style.cssText = "opacity:0.85;font-weight:500";
     l.textContent = label;
     wrap.appendChild(v);
@@ -1072,10 +1086,10 @@ var NimbusGanttApp = (function(exports) {
     return wrap;
   }
   function auditIcons(audit) {
-    const wrap = el$1("span", "");
+    const wrap = el$2("span", "");
     wrap.style.cssText = "display:inline-flex;gap:4px;font-size:11px;opacity:0.75;";
     function icon(glyph, ok, title) {
-      const s = el$1("span", "");
+      const s = el$2("span", "");
       s.style.cssText = "color:" + (ok ? "#10b981" : "#94a3b8");
       s.textContent = glyph;
       s.title = title;
@@ -1393,14 +1407,14 @@ var NimbusGanttApp = (function(exports) {
         if (bucketTasks.length === 0) continue;
         const stats = bucketStats(bucketTasks);
         const isCollapsed = collapsedBuckets.has(g);
-        const section = el$1("section", "");
+        const section = el$2("section", "");
         section.style.cssText = [
           "border-radius:12px",
           "border:2px solid " + GROUP_COLORS[g] + "40",
           "background:" + GROUP_BG[g],
           "overflow:hidden"
         ].join(";");
-        const bucketHdr = el$1("div", "");
+        const bucketHdr = el$2("div", "");
         bucketHdr.style.cssText = [
           "display:flex",
           "align-items:center",
@@ -1411,21 +1425,21 @@ var NimbusGanttApp = (function(exports) {
           "cursor:pointer",
           "user-select:none"
         ].join(";");
-        const chevron = el$1("span", "");
+        const chevron = el$2("span", "");
         chevron.style.cssText = "font-size:12px;color:" + GROUP_COLORS[g];
         chevron.textContent = isCollapsed ? "▶" : "▼";
         bucketHdr.appendChild(chevron);
-        const bucketLabel = el$1("span", "");
-        bucketLabel.style.cssText = [
+        const bucketLabel2 = el$2("span", "");
+        bucketLabel2.style.cssText = [
           "font-size:13px",
           "font-weight:700",
           "letter-spacing:0.05em",
           "color:" + GROUP_COLORS[g],
           "text-transform:uppercase"
         ].join(";");
-        bucketLabel.textContent = GROUP_LABELS[g];
-        bucketHdr.appendChild(bucketLabel);
-        const bucketStatsEl = el$1("span", "");
+        bucketLabel2.textContent = GROUP_LABELS[g];
+        bucketHdr.appendChild(bucketLabel2);
+        const bucketStatsEl = el$2("span", "");
         bucketStatsEl.style.cssText = "font-size:11px;color:#64748b;font-weight:500";
         const statsParts = [
           stats.count + " item" + (stats.count === 1 ? "" : "s"),
@@ -1442,7 +1456,7 @@ var NimbusGanttApp = (function(exports) {
         });
         section.appendChild(bucketHdr);
         if (!isCollapsed) {
-          const body = el$1("div", "");
+          const body = el$2("div", "");
           body.style.cssText = "background:#ffffff";
           for (const t of bucketTasks) {
             body.appendChild(renderRow(t));
@@ -1452,19 +1466,19 @@ var NimbusGanttApp = (function(exports) {
         bodyEl.appendChild(section);
       }
       if (Array.from(grouped.values()).every((arr) => arr.length === 0)) {
-        const empty = el$1("div", "");
+        const empty = el$2("div", "");
         empty.style.cssText = [
           "padding:48px 24px",
           "text-align:center",
           "color:#64748b",
           "font-size:13px"
         ].join(";");
-        const emptyTitle = el$1("div", "");
+        const emptyTitle = el$2("div", "");
         emptyTitle.style.cssText = "font-size:16px;font-weight:600;color:#475569;margin-bottom:8px";
         emptyTitle.textContent = tasks.length === 0 ? "No tasks to audit" : "No tasks match the current filter";
         empty.appendChild(emptyTitle);
         if (tasks.length > 0 && (filterChip !== "all" || search.trim() !== "")) {
-          const clearBtn = el$1("button", "");
+          const clearBtn = el$2("button", "");
           clearBtn.style.cssText = [
             "margin-top:12px",
             "padding:6px 14px",
@@ -1494,13 +1508,13 @@ var NimbusGanttApp = (function(exports) {
         "font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif"
       ].join(";");
       const kpis = computeKpis(tasks, audits);
-      const header = el$1("div", "");
+      const header = el$2("div", "");
       header.style.cssText = [
         "background:#ffffff",
         "border-bottom:1px solid #e2e8f0",
         "box-shadow:0 1px 2px rgba(0,0,0,0.04)"
       ].join(";");
-      const headerInner = el$1("div", "");
+      const headerInner = el$2("div", "");
       headerInner.style.cssText = [
         "padding:12px 16px",
         "display:flex",
@@ -1508,18 +1522,18 @@ var NimbusGanttApp = (function(exports) {
         "align-items:center",
         "gap:12px"
       ].join(";");
-      const labelWrap = el$1("div", "");
+      const labelWrap = el$2("div", "");
       labelWrap.style.cssText = "display:flex;align-items:center;gap:8px;margin-right:8px";
-      const label = el$1("span", "");
+      const label = el$2("span", "");
       label.style.cssText = "font-size:14px;font-weight:700;color:#0f172a";
       label.textContent = "Audit view";
-      const sep = el$1("span", "");
+      const sep = el$2("span", "");
       sep.style.cssText = "color:#94a3b8;font-size:12px";
       sep.textContent = "·";
       labelWrap.appendChild(label);
       labelWrap.appendChild(sep);
       headerInner.appendChild(labelWrap);
-      const kpiWrap = el$1("div", "");
+      const kpiWrap = el$2("div", "");
       kpiWrap.style.cssText = "display:flex;flex-wrap:wrap;gap:8px;align-items:center";
       kpiWrap.appendChild(kpiPill("items", String(kpis.totalItems), "slate"));
       kpiWrap.appendChild(kpiPill("h sized", String(kpis.totalSizedHours), "slate"));
@@ -1540,10 +1554,10 @@ var NimbusGanttApp = (function(exports) {
         kpiWrap.appendChild(kpiPill("ready / " + total, String(ready), tone));
       }
       headerInner.appendChild(kpiWrap);
-      const spacer = el$1("div", "");
+      const spacer = el$2("div", "");
       spacer.style.cssText = "flex:1;min-width:8px";
       headerInner.appendChild(spacer);
-      const searchInput = el$1("input", "");
+      const searchInput = el$2("input", "");
       searchInput.type = "search";
       searchInput.placeholder = "Search title / owner / stage…";
       searchInput.value = search;
@@ -1563,7 +1577,7 @@ var NimbusGanttApp = (function(exports) {
         updateClearLinkVisibility();
       });
       headerInner.appendChild(searchInput);
-      const sortSel = el$1("select", "");
+      const sortSel = el$2("select", "");
       sortSel.setAttribute("data-nga-audit-sort", "1");
       sortSel.style.cssText = [
         "padding:6px 10px",
@@ -1574,7 +1588,7 @@ var NimbusGanttApp = (function(exports) {
         "outline:none"
       ].join(";");
       Object.keys(SORT_LABELS).forEach((k) => {
-        const opt = el$1("option", "");
+        const opt = el$2("option", "");
         opt.value = k;
         opt.textContent = SORT_LABELS[k];
         if (k === sortKey) opt.selected = true;
@@ -1587,7 +1601,7 @@ var NimbusGanttApp = (function(exports) {
       });
       headerInner.appendChild(sortSel);
       header.appendChild(headerInner);
-      const filterRow = el$1("div", "");
+      const filterRow = el$2("div", "");
       filterRow.style.cssText = [
         "display:flex",
         "flex-wrap:wrap",
@@ -1598,11 +1612,11 @@ var NimbusGanttApp = (function(exports) {
       ].join(";");
       const counts = filterCounts();
       Object.keys(FILTER_LABELS).forEach((chip) => {
-        const btn = el$1("button", "");
-        const lbl = el$1("span", "");
+        const btn = el$2("button", "");
+        const lbl = el$2("span", "");
         lbl.textContent = FILTER_LABELS[chip];
         btn.appendChild(lbl);
-        const cnt = el$1("span", "");
+        const cnt = el$2("span", "");
         cnt.textContent = String(counts[chip]);
         btn.appendChild(cnt);
         btn.addEventListener("click", () => {
@@ -1616,7 +1630,7 @@ var NimbusGanttApp = (function(exports) {
         filterPillCnts.set(chip, cnt);
         applyFilterPillStyles(chip);
       });
-      clearLink = el$1("button", "");
+      clearLink = el$2("button", "");
       clearLink.style.cssText = [
         "padding:4px 10px",
         "background:transparent",
@@ -1634,7 +1648,7 @@ var NimbusGanttApp = (function(exports) {
       updateClearLinkVisibility();
       header.appendChild(filterRow);
       host.appendChild(header);
-      bodyEl = el$1("div", "");
+      bodyEl = el$2("div", "");
       bodyEl.style.cssText = "padding:16px;display:flex;flex-direction:column;gap:14px";
       host.appendChild(bodyEl);
     }
@@ -1643,7 +1657,7 @@ var NimbusGanttApp = (function(exports) {
       const isExpanded = expandedIds.has(task.id);
       const hasErrors = audit.issues.some((i) => i.severity === "error");
       const hasWarnings = audit.issues.some((i) => i.severity === "warning");
-      const row = el$1("div", "");
+      const row = el$2("div", "");
       row.style.cssText = [
         "display:flex",
         "flex-direction:column",
@@ -1657,7 +1671,7 @@ var NimbusGanttApp = (function(exports) {
       row.addEventListener("mouseleave", () => {
         row.style.backgroundColor = "#ffffff";
       });
-      const top = el$1("div", "");
+      const top = el$2("div", "");
       top.style.cssText = [
         "display:flex",
         "align-items:center",
@@ -1665,7 +1679,7 @@ var NimbusGanttApp = (function(exports) {
         "padding:8px 14px",
         "cursor:pointer"
       ].join(";");
-      const drag = el$1("span", "");
+      const drag = el$2("span", "");
       drag.style.cssText = [
         "color:#cbd5e1",
         "font-size:14px",
@@ -1684,12 +1698,12 @@ var NimbusGanttApp = (function(exports) {
       top.appendChild(drag);
       row.setAttribute("data-list-row", "1");
       row.setAttribute("data-task-id", task.id);
-      const chev = el$1("span", "");
+      const chev = el$2("span", "");
       chev.style.cssText = "color:#64748b;font-size:11px;flex-shrink:0;width:12px;text-align:center";
       chev.textContent = isExpanded ? "▼" : "▶";
       top.appendChild(chev);
       if (!hideRecordIds) {
-        const name = el$1("code", "");
+        const name = el$2("code", "");
         name.style.cssText = [
           "font-family:SF Mono,Cascadia Code,Consolas,monospace",
           "font-size:11px",
@@ -1704,7 +1718,7 @@ var NimbusGanttApp = (function(exports) {
         name.textContent = task.name || task.id;
         top.appendChild(name);
       }
-      const title = el$1("span", "");
+      const title = el$2("span", "");
       title.style.cssText = [
         "flex:1",
         "min-width:0",
@@ -1728,7 +1742,7 @@ var NimbusGanttApp = (function(exports) {
       top.appendChild(title);
       const pct = progressOf(task);
       if (pct !== null) {
-        const pctWrap = el$1("span", "");
+        const pctWrap = el$2("span", "");
         pctWrap.style.cssText = [
           "flex-shrink:0",
           "font-size:11px",
@@ -1742,7 +1756,7 @@ var NimbusGanttApp = (function(exports) {
         pctWrap.title = "Budget Used — hours logged / hours estimated";
         top.appendChild(pctWrap);
       }
-      const hoursTxt = el$1("span", "");
+      const hoursTxt = el$2("span", "");
       hoursTxt.style.cssText = [
         "font-family:SF Mono,Cascadia Code,Consolas,monospace",
         "font-size:11px",
@@ -1759,7 +1773,7 @@ var NimbusGanttApp = (function(exports) {
         hoursTxt.textContent = "— h";
       }
       top.appendChild(hoursTxt);
-      const dates = el$1("span", "");
+      const dates = el$2("span", "");
       dates.style.cssText = [
         "font-family:SF Mono,Cascadia Code,Consolas,monospace",
         "font-size:11px",
@@ -1779,19 +1793,19 @@ var NimbusGanttApp = (function(exports) {
       row.appendChild(top);
       if (isExpanded) {
         let field = function(label, value) {
-          const f = el$1("div", "");
+          const f = el$2("div", "");
           f.style.cssText = "display:flex;flex-direction:column;gap:2px";
-          const l = el$1("span", "");
+          const l = el$2("span", "");
           l.style.cssText = "font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;font-weight:600";
           l.textContent = label;
-          const v = el$1("span", "");
+          const v = el$2("span", "");
           v.style.cssText = "font-size:12px;color:#0f172a";
           v.textContent = value || "—";
           f.appendChild(l);
           f.appendChild(v);
           grid.appendChild(f);
         };
-        const detail = el$1("div", "");
+        const detail = el$2("div", "");
         detail.style.cssText = [
           "padding:12px 14px 14px 50px",
           "background:#f8fafc",
@@ -1799,7 +1813,7 @@ var NimbusGanttApp = (function(exports) {
           "font-size:12px",
           "color:#475569"
         ].join(";");
-        const grid = el$1("div", "");
+        const grid = el$2("div", "");
         grid.style.cssText = [
           "display:grid",
           "grid-template-columns:repeat(auto-fit,minmax(180px,1fr))",
@@ -1815,7 +1829,7 @@ var NimbusGanttApp = (function(exports) {
         if (task.entityName) field("Entity", task.entityName);
         detail.appendChild(grid);
         if (audit.issues.length > 0) {
-          const issuesWrap = el$1("div", "");
+          const issuesWrap = el$2("div", "");
           issuesWrap.style.cssText = [
             "margin-top:10px",
             "padding:8px 10px",
@@ -1826,12 +1840,12 @@ var NimbusGanttApp = (function(exports) {
             "flex-direction:column",
             "gap:4px"
           ].join(";");
-          const issuesTitle = el$1("div", "");
+          const issuesTitle = el$2("div", "");
           issuesTitle.style.cssText = "font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px";
           issuesTitle.textContent = "Audit issues";
           issuesWrap.appendChild(issuesTitle);
           for (const issue of audit.issues) {
-            const issueRow = el$1("div", "");
+            const issueRow = el$2("div", "");
             issueRow.style.cssText = [
               "display:flex",
               "align-items:center",
@@ -1839,10 +1853,10 @@ var NimbusGanttApp = (function(exports) {
               "font-size:11px",
               "color:" + (issue.severity === "error" ? "#dc2626" : issue.severity === "warning" ? "#d97706" : "#64748b")
             ].join(";");
-            const dot = el$1("span", "");
+            const dot = el$2("span", "");
             dot.style.cssText = "flex-shrink:0;width:6px;height:6px;border-radius:50%;background:currentColor";
             issueRow.appendChild(dot);
-            const msg = el$1("span", "");
+            const msg = el$2("span", "");
             msg.textContent = issue.message;
             issueRow.appendChild(msg);
             issuesWrap.appendChild(issueRow);
@@ -2095,6 +2109,761 @@ var NimbusGanttApp = (function(exports) {
     }
     ctx.textBaseline = "alphabetic";
   }
+  const STYLE_ID$1 = "nga-pacing-styles";
+  const FONT = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';
+  const PACING_CSS = `
+.ngp-root{height:100%;width:100%;overflow:auto;background:#f8fafc;color:#1f2937;font-family:${FONT};box-sizing:border-box}
+.ngp-root *{box-sizing:border-box}
+.ngp-bar{background:#fff;border-bottom:1px solid #e2e8f0;padding:8px 12px;display:flex;flex-direction:column;gap:6px}
+.ngp-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.ngp-grp{display:flex;align-items:center;gap:4px}
+.ngp-lbl{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-right:2px}
+.ngp-pill{font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;border:1px solid #e2e8f0;background:#fff;color:#475569;cursor:pointer;transition:all .12s;font-family:${FONT}}
+.ngp-pill:hover{border-color:#94a3b8}
+.ngp-pill.on{background:#2563eb;color:#fff;border-color:#2563eb}
+.ngp-pill.on-slate{background:#1e293b;color:#fff;border-color:#1e293b}
+.ngp-date{font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid #e2e8f0;color:#475569;font-family:${FONT}}
+.ngp-body{padding:16px}
+.ngp-h1{font-size:18px;font-weight:800;letter-spacing:-.01em;color:#0f172a}
+.ngp-sub{font-size:12px;color:#64748b;margin-top:2px}
+.ngp-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px;margin:14px 0}
+.ngp-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px}
+.ngp-card-v{font-size:20px;font-weight:800;line-height:1.1}
+.ngp-card-l{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#64748b;margin-top:2px}
+.ngp-warn{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#92400e}
+.ngp-legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px}
+.ngp-leg{display:flex;align-items:center;gap:6px;border:0;background:none;cursor:pointer;font-size:12px;color:#1f2937;padding:2px 4px;font-family:${FONT}}
+.ngp-leg.off{opacity:.4}
+.ngp-sw{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+.ngp-chart{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px}
+.ngp-empty{font-size:12px;color:#94a3b8;text-align:center;padding:40px 0}
+.ngp-hint{font-size:11px;color:#94a3b8;margin-top:10px;text-align:center}
+.ngp-panel{background:#fff;border:1px solid #e2e8f0;border-radius:10px;margin-top:12px;overflow:hidden}
+.ngp-phead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:#f1f5f9;border-bottom:1px solid #e2e8f0}
+.ngp-ptitle{font-weight:700;font-size:13px;color:#1e293b}
+.ngp-cols{display:grid;align-items:center;gap:8px;grid-template-columns:minmax(0,2.4fr) 64px 54px 56px 56px 64px 60px}
+.ngp-colhead{padding:6px 14px;border-bottom:1px solid #f1f5f9;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#94a3b8}
+.ngp-irow{padding:8px 14px;border-bottom:1px solid #f8fafc}
+.ngp-irow.click{cursor:pointer}
+.ngp-irow.click:hover{background:#f8fafc}
+.ngp-iname{font-size:12px;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ngp-imeta{font-size:10px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
+.ngp-track{width:56px;height:6px;background:#f1f5f9;border-radius:999px;overflow:hidden;flex-shrink:0}
+.ngp-track>div{height:100%;background:#93c5fd}
+.ngp-num{text-align:right;font-size:12px;color:#475569}
+.ngp-num.strong{font-weight:700;color:#0f172a}
+.ngp-num.over{color:#dc2626;font-weight:700}
+`;
+  function injectStyles$1() {
+    if (typeof document === "undefined" || document.getElementById(STYLE_ID$1)) return;
+    const s = document.createElement("style");
+    s.id = STYLE_ID$1;
+    s.textContent = PACING_CSS;
+    document.head.appendChild(s);
+  }
+  function el$1(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function svgEl(tag, attrs) {
+    const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const k in attrs) e.setAttribute(k, String(attrs[k]));
+    return e;
+  }
+  const DAY_MS$1 = 864e5;
+  const MON$1 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function parseISO(d) {
+    if (!d) return null;
+    const t = Date.parse(d.length <= 10 ? d + "T00:00:00Z" : d);
+    return Number.isNaN(t) ? null : t;
+  }
+  const round = (n) => Math.round(n);
+  function fmtH(n) {
+    return round(n) + "h";
+  }
+  function fmtMoney(n) {
+    return "$" + round(n).toLocaleString("en-US");
+  }
+  function str(v) {
+    return v == null || v === "" ? void 0 : String(v);
+  }
+  function bucketKey(ms, size) {
+    const d = new Date(ms), y = d.getUTCFullYear();
+    if (size === "month") return y + "-" + String(d.getUTCMonth() + 1).padStart(2, "0");
+    if (size === "quarter") return y + "-Q" + (Math.floor(d.getUTCMonth() / 3) + 1);
+    const dow = (d.getUTCDay() + 6) % 7;
+    return "W" + new Date(ms - dow * DAY_MS$1).toISOString().slice(0, 10);
+  }
+  function bucketLabel(ms, size) {
+    const d = new Date(ms);
+    if (size === "month") return MON$1[d.getUTCMonth()] + " " + String(d.getUTCFullYear()).slice(2);
+    if (size === "quarter") return "Q" + (Math.floor(d.getUTCMonth() / 3) + 1) + " " + String(d.getUTCFullYear()).slice(2);
+    return MON$1[d.getUTCMonth()] + " " + d.getUTCDate();
+  }
+  function bucketStartMs(ms, size) {
+    const d = new Date(ms);
+    if (size === "month") return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1);
+    if (size === "quarter") return Date.UTC(d.getUTCFullYear(), Math.floor(d.getUTCMonth() / 3) * 3, 1);
+    const dow = (d.getUTCDay() + 6) % 7;
+    return ms - dow * DAY_MS$1;
+  }
+  function nextBucketMs(ms, size) {
+    const d = new Date(bucketStartMs(ms, size));
+    if (size === "month") return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+    if (size === "quarter") return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 3, 1);
+    return d.getTime() + 7 * DAY_MS$1;
+  }
+  function keyToMs(key) {
+    if (key[0] === "W") return parseISO(key.slice(1)) ?? 0;
+    if (key.indexOf("Q") >= 0) {
+      const [y2, q] = key.split("-Q");
+      return Date.UTC(+y2, (+q - 1) * 3, 1);
+    }
+    const [y, m] = key.split("-");
+    return Date.UTC(+y, +m - 1, 1);
+  }
+  function computeFromTasks(tasks, size) {
+    const now2 = Date.now();
+    const buckets = /* @__PURE__ */ new Map();
+    const itemMaps = /* @__PURE__ */ new Map();
+    let estTotal = 0, loggedTotal = 0, unscheduled = 0, active = 0;
+    function ensure(ms) {
+      const start = bucketStartMs(ms, size), k = bucketKey(ms, size);
+      let b = buckets.get(k);
+      if (!b) {
+        b = {
+          key: k,
+          label: bucketLabel(start, size),
+          startMs: start,
+          actual: 0,
+          forecast: 0,
+          target: 0,
+          isPast: nextBucketMs(start, size) <= now2,
+          isCurrent: start <= now2 && now2 < nextBucketMs(start, size),
+          items: []
+        };
+        buckets.set(k, b);
+        itemMaps.set(k, /* @__PURE__ */ new Map());
+      }
+      return b;
+    }
+    function addItem(bk, t, hrs, meta) {
+      const m = itemMaps.get(bk);
+      let it = m.get(t.id);
+      if (!it) {
+        it = { id: t.id, name: t.title || t.name || t.id, hours: 0, ...meta };
+        m.set(t.id, it);
+      }
+      it.hours += hrs;
+    }
+    function spread(t, a, b, amount, series, meta) {
+      const span = b - a;
+      if (span <= 0 || amount <= 0) return;
+      const perDay = amount / (span / DAY_MS$1);
+      let cur = bucketStartMs(a, size), guard = 0;
+      while (cur < b && guard++ < 800) {
+        const next = nextBucketMs(cur, size);
+        const oS = Math.max(cur, a), oE = Math.min(next, b);
+        if (oE > oS) {
+          const hrs = perDay * (oE - oS) / DAY_MS$1;
+          if (hrs > 0.01) {
+            const bkt = ensure(cur);
+            bkt[series] += hrs;
+            addItem(bkt.key, t, hrs, meta);
+          }
+        }
+        cur = next;
+      }
+    }
+    for (const t of tasks) {
+      if (t.isInactive) continue;
+      const est = Number(t.estimatedHours) || 0;
+      const logged = Number(t.loggedHours) || 0;
+      if (est <= 0 && logged <= 0) continue;
+      active++;
+      estTotal += est;
+      loggedTotal += logged;
+      const remaining = Math.max(0, est - logged);
+      const s = parseISO(t.startDate);
+      const e = parseISO(t.endDate);
+      const meta = {
+        estimatedHours: round(est),
+        loggedHours: round(logged),
+        remainingHours: round(remaining),
+        budgetUsedPct: est > 0 ? round(logged / est * 100) : 0,
+        startDate: str(t.startDate),
+        endDate: str(t.endDate),
+        assignee: str(t.assignee),
+        status: str(t.status),
+        group: str(t.groupName) || str(t.groupId)
+      };
+      if (s == null || e == null || e < s) {
+        if (remaining > 0) unscheduled += remaining;
+        continue;
+      }
+      spread(t, s, Math.min(now2, e), logged, "actual", meta);
+      const fs = Math.max(now2, s);
+      if (fs < e) spread(t, fs, e, remaining, "forecast", meta);
+      else if (remaining > 0) {
+        const bkt = ensure(now2);
+        bkt.forecast += remaining;
+        addItem(bkt.key, t, remaining, meta);
+      }
+    }
+    const ordered = Array.from(buckets.values()).sort((a, b) => a.key < b.key ? -1 : 1);
+    for (const b of ordered) {
+      b.actual = round(b.actual);
+      b.forecast = round(b.forecast);
+      const items = Array.from(itemMaps.get(b.key).values());
+      for (const it of items) {
+        it.hours = round(it.hours);
+        const span = it.remainingHours != null && it.loggedHours != null ? it.remainingHours + it.loggedHours : 0;
+        it.pctOfItem = span > 0 ? round(it.hours / span * 100) : void 0;
+      }
+      b.items = items.sort((x, y) => y.hours - x.hours);
+    }
+    const remainingTotal = Math.max(0, estTotal - loggedTotal);
+    return {
+      buckets: ordered,
+      bucket: size,
+      summary: {
+        estimatedHours: round(estTotal),
+        loggedHours: round(loggedTotal),
+        remainingHours: round(remainingTotal),
+        projectedFinalHours: round(loggedTotal + remainingTotal),
+        pacingPct: estTotal > 0 ? round(loggedTotal / estTotal * 100) : 0,
+        activeItems: active,
+        unscheduledHours: round(unscheduled)
+      },
+      authoritative: false
+    };
+  }
+  const RANGE_LABELS = {
+    all: "All",
+    ytd: "YTD",
+    thisQtr: "This Qtr",
+    next3: "Next 3",
+    next6: "Next 6",
+    rest: "Rest of yr",
+    custom: "Custom"
+  };
+  function rangeWindow(preset, size, cs, ce) {
+    const now2 = Date.now(), d = new Date(now2), y = d.getUTCFullYear();
+    if (preset === "all") return { from: null, to: null };
+    if (preset === "ytd") return { from: Date.UTC(y, 0, 1), to: now2 };
+    if (preset === "rest") return { from: bucketStartMs(now2, size), to: Date.UTC(y, 11, 31) };
+    if (preset === "thisQtr") {
+      const q = Math.floor(d.getUTCMonth() / 3);
+      return { from: Date.UTC(y, q * 3, 1), to: Date.UTC(y, q * 3 + 3, 0) };
+    }
+    if (preset === "custom") return { from: parseISO(cs), to: parseISO(ce) };
+    const n = preset === "next3" ? 3 : 6;
+    let cur = bucketStartMs(now2, size);
+    for (let i = 0; i < n; i++) cur = nextBucketMs(cur, size);
+    return { from: bucketStartMs(now2, size), to: cur };
+  }
+  const COL = { actual: "#10b981", actualOver: "#ef4444", forecast: "#93c5fd", target: "#64748b", grid: "#e2e8f0", muted: "#64748b" };
+  function renderPacingView(host, tasks, options = {}) {
+    var _a, _b, _c, _d;
+    injectStyles$1();
+    const dflt = options.defaults ?? {};
+    const ctrl = options.controls ?? {};
+    const allowDollars = ctrl.dollars !== false;
+    let bucket = dflt.bucket || ((_a = options.pacingData) == null ? void 0 : _a.bucket) || options.defaultBucket || "month";
+    let range = dflt.range || "next6";
+    let customS = dflt.customStart || "", customE = dflt.customEnd || "";
+    let measure = dflt.measure === "dollars" && allowDollars ? "dollars" : "hours";
+    let mode = dflt.mode || "period";
+    let expandedKey = null;
+    const show = {
+      actual: ((_b = dflt.series) == null ? void 0 : _b.actual) ?? true,
+      forecast: ((_c = dflt.series) == null ? void 0 : _c.forecast) ?? true,
+      target: ((_d = dflt.series) == null ? void 0 : _d.target) ?? false
+    };
+    function data() {
+      if (options.pacingData && options.pacingData.bucket === bucket) return options.pacingData;
+      return computeFromTasks(tasks, bucket);
+    }
+    const rate = (d) => d.rate ?? options.rate;
+    function pill(label, on, onClick, slate = false) {
+      const b = el$1("button", "ngp-pill" + (on ? slate ? " on-slate" : " on" : ""), label);
+      b.addEventListener("click", onClick);
+      return b;
+    }
+    function grp(label, ...kids) {
+      const g = el$1("div", "ngp-grp");
+      g.appendChild(el$1("span", "ngp-lbl", label));
+      kids.forEach((k) => g.appendChild(k));
+      return g;
+    }
+    function render() {
+      const d = data();
+      const r = rate(d);
+      const useDollars = measure === "dollars" && !!r;
+      const cum = mode === "cumulative";
+      host.innerHTML = "";
+      const root = el$1("div", "ngp-root");
+      const bar = el$1("div", "ngp-bar");
+      const row1 = el$1("div", "ngp-row");
+      let row1n = 0;
+      if (ctrl.ranges !== false) {
+        const ranges = Array.isArray(ctrl.ranges) ? ctrl.ranges : ["next3", "next6", "rest", "thisQtr", "ytd", "all", "custom"];
+        row1.appendChild(grp("Range", ...ranges.map((p) => pill(RANGE_LABELS[p], range === p, () => {
+          range = p;
+          expandedKey = null;
+          render();
+        }))));
+        row1n++;
+        if (range === "custom") {
+          const mk = (v, set) => {
+            const i = document.createElement("input");
+            i.type = "date";
+            i.value = v;
+            i.className = "ngp-date";
+            i.addEventListener("change", () => {
+              set(i.value);
+              render();
+            });
+            return i;
+          };
+          const cw = el$1("div", "ngp-grp");
+          cw.appendChild(mk(customS, (x) => customS = x));
+          cw.appendChild(el$1("span", "ngp-lbl", "→"));
+          cw.appendChild(mk(customE, (x) => customE = x));
+          row1.appendChild(cw);
+        }
+      }
+      if (ctrl.buckets !== false) {
+        const buckets = Array.isArray(ctrl.buckets) ? ctrl.buckets : ["week", "month", "quarter"];
+        row1.appendChild(grp("Bucket", ...buckets.map((b) => pill(b[0].toUpperCase() + b.slice(1), bucket === b, () => {
+          var _a2;
+          bucket = b;
+          expandedKey = null;
+          (_a2 = options.onBucketChange) == null ? void 0 : _a2.call(options, b);
+          render();
+        }, true))));
+        row1n++;
+      }
+      if (row1n > 0) bar.appendChild(row1);
+      const row2 = el$1("div", "ngp-row");
+      let row2n = 0;
+      if (ctrl.measure !== false) {
+        const measures = [pill("Hours", measure === "hours", () => {
+          measure = "hours";
+          render();
+        })];
+        if (r && allowDollars) measures.push(pill("$", measure === "dollars", () => {
+          measure = "dollars";
+          render();
+        }));
+        if (measures.length > 1) {
+          row2.appendChild(grp("Measure", ...measures));
+          row2n++;
+        }
+      }
+      if (ctrl.mode !== false) {
+        row2.appendChild(grp(
+          "Mode",
+          pill("Per period", mode === "period", () => {
+            mode = "period";
+            render();
+          }, true),
+          pill("Cumulative", mode === "cumulative", () => {
+            mode = "cumulative";
+            render();
+          }, true)
+        ));
+        row2n++;
+      }
+      if (ctrl.series !== false) {
+        const legPill = (key, label, color) => {
+          const b = el$1("button", "ngp-leg" + (show[key] ? "" : " off"));
+          b.appendChild(el$1("span", "ngp-sw")).setAttribute("style", "background:" + color);
+          b.appendChild(el$1("span", void 0, label));
+          b.addEventListener("click", () => {
+            show[key] = !show[key];
+            render();
+          });
+          return b;
+        };
+        const leg = el$1("div", "ngp-grp");
+        leg.appendChild(el$1("span", "ngp-lbl", "Series"));
+        leg.appendChild(legPill("actual", "Actual", COL.actual));
+        leg.appendChild(legPill("forecast", "Forecast", COL.forecast));
+        leg.appendChild(legPill("target", "Target", COL.target));
+        row2.appendChild(leg);
+        row2n++;
+      }
+      if (row2n > 0) bar.appendChild(row2);
+      root.appendChild(bar);
+      const body = el$1("div", "ngp-body");
+      const hd = el$1("div");
+      hd.appendChild(el$1("div", "ngp-h1", "Pacing & Forecast"));
+      const sub = (d.authoritative ? "Actuals · forecast · target" + (d.scopeLabel ? " — " + d.scopeLabel : "") : "Forecast preview — actual to date, remaining spread across scheduled dates (live from the board)") + (useDollars ? " · $ at " + fmtMoney(r) + "/hr" : "") + (cum ? " · cumulative" : "");
+      hd.appendChild(el$1("div", "ngp-sub", sub));
+      body.appendChild(hd);
+      const s = d.summary;
+      const val = (h) => useDollars ? fmtMoney(h * r) : fmtH(h);
+      const cards = el$1("div", "ngp-cards");
+      const stat = (label, value, tone) => {
+        const c = el$1("div", "ngp-card");
+        const v = el$1("div", "ngp-card-v", value);
+        if (tone) v.setAttribute("style", "color:" + tone);
+        c.appendChild(v);
+        c.appendChild(el$1("div", "ngp-card-l", label));
+        return c;
+      };
+      cards.appendChild(stat("Logged", val(s.loggedHours)));
+      cards.appendChild(stat("Estimated", val(s.estimatedHours)));
+      cards.appendChild(stat("Remaining", val(s.remainingHours), "#2563eb"));
+      cards.appendChild(stat("Projected final", val(s.projectedFinalHours)));
+      cards.appendChild(stat("Pacing", s.pacingPct + "%", s.pacingPct > 100 ? COL.actualOver : "#10b981"));
+      cards.appendChild(stat("Active items", String(s.activeItems)));
+      if (s.unscheduledHours > 0) cards.appendChild(stat("Unscheduled", val(s.unscheduledHours), "#d97706"));
+      body.appendChild(cards);
+      if (s.unscheduledHours > 0) {
+        body.appendChild(el$1(
+          "div",
+          "ngp-warn",
+          "⚠ " + fmtH(s.unscheduledHours) + " of work has an estimate but no scheduled dates — the forecast can't place it. Size + schedule those items to complete the picture."
+        ));
+      }
+      const win = rangeWindow(range, bucket, customS, customE);
+      const visible = d.buckets.filter((b) => {
+        const ms = b.startMs ?? keyToMs(b.key);
+        if (win.from != null && ms < win.from) return false;
+        if (win.to != null && ms > win.to) return false;
+        return true;
+      });
+      body.appendChild(buildChart(visible, { show, useDollars, rate: r || 0, cum, expandedKey }, (k) => {
+        expandedKey = expandedKey === k ? null : k;
+        render();
+      }));
+      if (expandedKey) {
+        const b = visible.find((x) => x.key === expandedKey) || d.buckets.find((x) => x.key === expandedKey);
+        if (b) body.appendChild(buildDrilldown(b, { useDollars, rate: r || 0 }, options));
+      } else {
+        body.appendChild(el$1("div", "ngp-hint", "Click a bar to break the period down into its work items."));
+      }
+      root.appendChild(body);
+      host.appendChild(root);
+    }
+    render();
+    return () => {
+      var _a2;
+      try {
+        (_a2 = options.onItemHover) == null ? void 0 : _a2.call(options, null, { x: 0, y: 0 });
+      } catch {
+      }
+      host.innerHTML = "";
+    };
+  }
+  function buildChart(buckets, o, onBucketClick) {
+    const wrap = el$1("div", "ngp-chart");
+    if (buckets.length === 0) {
+      wrap.appendChild(el$1("div", "ngp-empty", "No periods in this range."));
+      return wrap;
+    }
+    const mul = o.useDollars ? o.rate || 1 : 1;
+    let cA = 0, cF = 0, cT = 0;
+    const rows = buckets.map((b) => {
+      cA += b.actual;
+      cF += b.forecast;
+      cT += b.target;
+      return { b, actual: (o.cum ? cA : b.actual) * mul, forecast: (o.cum ? cF : b.forecast) * mul, target: (o.cum ? cT : b.target) * mul };
+    });
+    const W = 920, H = 300, padL = 52, padB = 34, padT = 10, padR = 10;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const n = rows.length, slot = plotW / n, barW = Math.min(46, slot * 0.62);
+    let maxV = 1;
+    for (const r of rows) maxV = Math.max(maxV, (o.show.actual ? r.actual : 0) + (o.show.forecast ? r.forecast : 0), o.show.target ? r.target : 0);
+    const niceMax = niceCeil(maxV);
+    const y = (v) => padT + plotH - v / niceMax * plotH;
+    const fmtAxis = (v) => o.useDollars ? "$" + (v >= 1e3 ? round(v / 1e3) + "k" : round(v)) : round(v) + "";
+    const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, width: "100%", height: "auto", style: "display:block" });
+    for (let i = 0; i <= 4; i++) {
+      const v = niceMax * i / 4, yy = y(v);
+      svg.appendChild(svgEl("line", { x1: padL, y1: yy, x2: W - padR, y2: yy, stroke: COL.grid, "stroke-width": 1 }));
+      const lbl = svgEl("text", { x: padL - 6, y: yy + 3, "text-anchor": "end", "font-size": 9, fill: COL.muted, "font-family": FONT });
+      lbl.textContent = fmtAxis(v);
+      svg.appendChild(lbl);
+    }
+    rows.forEach((r, i) => {
+      const cx = padL + slot * i + slot / 2, x = cx - barW / 2;
+      if (r.b.isCurrent) svg.appendChild(svgEl("rect", { x: padL + slot * i, y: padT, width: slot, height: plotH, fill: "#6366f1", opacity: 0.06 }));
+      let top = padT + plotH;
+      if (o.show.actual && r.actual > 0) {
+        const h = r.actual / niceMax * plotH;
+        top -= h;
+        svg.appendChild(svgEl("rect", { x, y: top, width: barW, height: h, rx: 2, fill: r.actual > r.target && r.target > 0 ? COL.actualOver : COL.actual }));
+      }
+      if (o.show.forecast && r.forecast > 0) {
+        const h = r.forecast / niceMax * plotH;
+        top -= h;
+        const rc = svgEl("rect", { x, y: top, width: barW, height: h, rx: 2, fill: COL.forecast });
+        if (!r.b.isPast) rc.setAttribute("opacity", "0.92");
+        svg.appendChild(rc);
+      }
+      if (o.show.target && r.target > 0) {
+        const ty = y(r.target);
+        svg.appendChild(svgEl("line", { x1: x - 3, y1: ty, x2: x + barW + 3, y2: ty, stroke: COL.target, "stroke-width": 2, "stroke-dasharray": "4 2" }));
+      }
+      const hit = svgEl("rect", { x: padL + slot * i, y: padT, width: slot, height: plotH, fill: "transparent", cursor: "pointer" });
+      const tot = round(r.actual + r.forecast);
+      hit.appendChild(svgEl("title", {})).textContent = r.b.label + " — " + (o.useDollars ? "$" + tot : tot + "h") + (o.cum ? " (cumulative)" : "");
+      hit.addEventListener("click", () => onBucketClick(r.b.key));
+      svg.appendChild(hit);
+      if (r.b.key === o.expandedKey) svg.appendChild(svgEl("rect", { x: padL + slot * i + 1, y: padT, width: slot - 2, height: plotH, fill: "none", stroke: "#6366f1", "stroke-width": 1.5, rx: 4 }));
+      if (n <= 16 || i % Math.ceil(n / 16) === 0) {
+        const lbl = svgEl("text", { x: cx, y: H - padB + 14, "text-anchor": "middle", "font-size": 9, fill: r.b.isCurrent ? "#4f46e5" : COL.muted, "font-family": FONT, "font-weight": r.b.isCurrent ? 700 : 400 });
+        lbl.textContent = r.b.label;
+        svg.appendChild(lbl);
+      }
+    });
+    wrap.appendChild(svg);
+    return wrap;
+  }
+  function buildDrilldown(b, o, options) {
+    const panel = el$1("div", "ngp-panel");
+    const total = b.actual + b.forecast;
+    const head = el$1("div", "ngp-phead");
+    head.appendChild(el$1("div", "ngp-ptitle", b.label + " — " + (o.useDollars ? fmtMoney(total * o.rate) : fmtH(total)) + " · " + b.items.length + " item" + (b.items.length === 1 ? "" : "s")));
+    if (options.onOpenReport) {
+      const rpt = el$1("button", "ngp-pill", "Open report ↗");
+      rpt.addEventListener("click", () => options.onOpenReport({ bucketKey: b.key, taskIds: b.items.map((i) => i.id) }));
+      head.appendChild(rpt);
+    }
+    panel.appendChild(head);
+    if (b.items.length === 0) {
+      panel.appendChild(el$1("div", "ngp-empty", "No itemized work in this period."));
+      return panel;
+    }
+    const fmtv = (h) => h == null ? "—" : o.useDollars ? fmtMoney(h * o.rate) : fmtH(h);
+    const hrow = el$1("div", "ngp-cols ngp-colhead");
+    ["Work item", "This period", "% of item", "Est", "Logged", "Remaining", "% used"].forEach((c, i) => hrow.appendChild(el$1("div", i === 0 ? "" : "ngp-num", c)));
+    panel.appendChild(hrow);
+    const maxH = Math.max(...b.items.map((i) => i.hours), 1);
+    for (const it of b.items) {
+      const row = el$1("div", "ngp-cols ngp-irow" + (options.onOpenItem ? " click" : ""));
+      const nameCell = el$1("div");
+      const nl = el$1("div", "ngp-grp");
+      nl.appendChild(el$1("div", "ngp-iname", it.name)).setAttribute("style", "flex:1;min-width:0");
+      const track = el$1("div", "ngp-track");
+      track.appendChild(el$1("div")).setAttribute("style", "width:" + round(it.hours / maxH * 100) + "%");
+      nl.appendChild(track);
+      nameCell.appendChild(nl);
+      const meta = [it.group, it.assignee, it.status, it.startDate && it.endDate ? it.startDate + " → " + it.endDate : null].filter(Boolean).join(" · ");
+      if (meta) nameCell.appendChild(el$1("div", "ngp-imeta", meta));
+      row.appendChild(nameCell);
+      const num = (txt, extra = "") => el$1("div", "ngp-num" + extra, txt);
+      row.appendChild(num(o.useDollars ? fmtMoney(it.hours * o.rate) : fmtH(it.hours), " strong"));
+      row.appendChild(num(it.pctOfItem != null ? it.pctOfItem + "%" : "—"));
+      row.appendChild(num(fmtv(it.estimatedHours)));
+      row.appendChild(num(fmtv(it.loggedHours)));
+      row.appendChild(num(fmtv(it.remainingHours)));
+      row.appendChild(num(it.budgetUsedPct != null ? it.budgetUsedPct + "%" : "—", it.budgetUsedPct != null && it.budgetUsedPct > 100 ? " over" : ""));
+      if (options.onOpenItem) row.addEventListener("click", () => options.onOpenItem(it.id));
+      if (options.onItemHover) {
+        row.addEventListener("mousemove", (e) => options.onItemHover(it.id, { x: e.clientX, y: e.clientY }));
+        row.addEventListener("mouseleave", () => options.onItemHover(null, { x: 0, y: 0 }));
+      }
+      panel.appendChild(row);
+    }
+    return panel;
+  }
+  function niceCeil(v) {
+    if (v <= 10) return Math.ceil(v / 2) * 2;
+    const mag = Math.pow(10, Math.floor(Math.log10(v)));
+    return Math.ceil(v / (mag / 2)) * (mag / 2);
+  }
+  const STYLE_ID = "nga-modal-styles";
+  const Z = 2147483600;
+  const MODAL_CSS = `
+.ngm-overlay{position:fixed;inset:0;z-index:${Z};display:flex;align-items:center;
+  justify-content:center;background:rgba(15,23,42,.45);backdrop-filter:blur(1px);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;}
+.ngm-panel{background:#fff;color:#0f172a;border-radius:14px;width:460px;
+  max-width:calc(100vw - 32px);max-height:calc(100vh - 64px);display:flex;
+  flex-direction:column;box-shadow:0 20px 60px rgba(2,6,23,.45);overflow:hidden;
+  animation:ngm-in .12s ease-out;}
+@keyframes ngm-in{from{transform:translateY(6px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+.ngm-head{display:flex;align-items:center;gap:12px;padding:14px 16px;
+  border-bottom:1px solid #e2e8f0;}
+.ngm-title{font-size:15px;font-weight:800;letter-spacing:-.01em;flex:1;}
+.ngm-x{appearance:none;border:0;background:transparent;cursor:pointer;
+  font-size:18px;line-height:1;color:#64748b;padding:4px;border-radius:6px;}
+.ngm-x:hover{background:#f1f5f9;color:#0f172a;}
+.ngm-body{padding:16px;overflow:auto;font-size:13px;line-height:1.5;color:#334155;}
+.ngm-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;
+  border-top:1px solid #e2e8f0;background:#f8fafc;}
+.ngm-btn{appearance:none;cursor:pointer;font-size:13px;font-weight:700;
+  padding:8px 14px;border-radius:9px;border:1px solid #cbd5e1;background:#fff;
+  color:#334155;}
+.ngm-btn:hover{background:#f1f5f9;}
+.ngm-btn-primary{border-color:#4f46e5;background:#4f46e5;color:#fff;}
+.ngm-btn-primary:hover{background:#4338ca;}
+.ngm-btn:disabled{opacity:.5;cursor:not-allowed;}
+.ngm-row{display:flex;align-items:center;gap:10px;padding:6px 0;}
+.ngm-row label{font-weight:600;color:#0f172a;}
+.ngm-num{width:84px;text-align:right;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  border:1px solid #cbd5e1;border-radius:8px;padding:6px 8px;font-size:13px;}
+.ngm-sel{border:1px solid #cbd5e1;border-radius:8px;padding:6px 8px;font-size:13px;background:#fff;}
+.ngm-note{font-size:12px;color:#64748b;margin-top:10px;}
+.ngm-stat{display:flex;gap:18px;flex-wrap:wrap;margin:4px 0 8px;}
+.ngm-stat div{font-size:12px;color:#64748b;}
+.ngm-stat b{display:block;font-size:18px;color:#0f172a;font-weight:800;}
+.ngm-tbl{width:100%;border-collapse:collapse;font-size:13px;}
+.ngm-tbl th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em;
+  color:#64748b;font-weight:800;padding:4px 6px;border-bottom:1px solid #e2e8f0;}
+.ngm-tbl td{padding:4px 6px;border-bottom:1px solid #f1f5f9;}
+.ngm-warn{color:#b91c1c;font-weight:700;}
+`;
+  function injectStyles() {
+    if (typeof document === "undefined") return;
+    if (document.getElementById(STYLE_ID)) return;
+    const s = document.createElement("style");
+    s.id = STYLE_ID;
+    s.textContent = MODAL_CSS;
+    document.head.appendChild(s);
+  }
+  function openModal(opts) {
+    injectStyles();
+    const overlay = document.createElement("div");
+    overlay.className = "ngm-overlay";
+    const panel = document.createElement("div");
+    panel.className = "ngm-panel";
+    if (opts.width) panel.style.width = opts.width + "px";
+    overlay.appendChild(panel);
+    const head = document.createElement("div");
+    head.className = "ngm-head";
+    const title = document.createElement("div");
+    title.className = "ngm-title";
+    title.textContent = opts.title;
+    const x = document.createElement("button");
+    x.className = "ngm-x";
+    x.setAttribute("aria-label", "Close");
+    x.textContent = "✕";
+    head.appendChild(title);
+    head.appendChild(x);
+    panel.appendChild(head);
+    const body = document.createElement("div");
+    body.className = "ngm-body";
+    panel.appendChild(body);
+    const foot = document.createElement("div");
+    foot.className = "ngm-foot";
+    panel.appendChild(foot);
+    let closed = false;
+    function close() {
+      var _a;
+      if (closed) return;
+      closed = true;
+      document.removeEventListener("keydown", onKey, true);
+      overlay.remove();
+      (_a = opts.onClose) == null ? void 0 : _a.call(opts);
+    }
+    function onKey(e) {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        close();
+      }
+    }
+    x.addEventListener("click", close);
+    overlay.addEventListener("mousedown", (e) => {
+      if (e.target === overlay) close();
+    });
+    document.addEventListener("keydown", onKey, true);
+    function setFooter(buttons) {
+      foot.textContent = "";
+      for (const b of buttons) {
+        const btn = document.createElement("button");
+        btn.className = "ngm-btn" + (b.primary ? " ngm-btn-primary" : "");
+        btn.textContent = b.label;
+        if (b.disabled) btn.disabled = true;
+        btn.addEventListener("click", b.onClick);
+        foot.appendChild(btn);
+      }
+    }
+    document.body.appendChild(overlay);
+    return { body, setFooter, close, panel };
+  }
+  const CLOUD_NIMBUS_PRIORITY_BUCKETS = [
+    { id: "top-priority", label: "NOW", color: "#dc2626", bgTint: "#ef4444", order: 0 },
+    { id: "active", label: "NEXT", color: "#d97706", bgTint: "#f59e0b", order: 1 },
+    { id: "follow-on", label: "PLANNED", color: "#059669", bgTint: "#10b981", order: 2 },
+    { id: "proposed", label: "PROPOSED", color: "#2563eb", bgTint: "#3b82f6", order: 3 },
+    { id: "deferred", label: "HOLD", color: "#94a3b8", bgTint: "#94a3b8", order: 4 }
+  ];
+  const PROPOSAL_STAGES = {
+    "Backlog": true,
+    "Scoping In Progress": true,
+    "Ready for Sizing": true,
+    "Ready for Development": true
+  };
+  const CLOUD_NIMBUS_FILTERS = [
+    {
+      id: "active",
+      label: "Active",
+      predicate: (t) => !DONE_STAGES[t.stage || ""] && !t.isInactive
+    },
+    {
+      id: "proposal",
+      label: "Proposal & Expansion",
+      predicate: (t) => PROPOSAL_STAGES[t.stage || ""] || t.priorityGroup === "proposed"
+    },
+    {
+      id: "done",
+      label: "Done",
+      predicate: (t) => !!DONE_STAGES[t.stage || ""]
+    },
+    {
+      id: "real",
+      label: "Real T-NNNN tickets",
+      predicate: (t) => !!(t.id && String(t.id).indexOf("T-") === 0)
+    },
+    {
+      id: "workstreams",
+      label: "Workstream rollups",
+      predicate: (t) => !!(t.id && String(t.id).indexOf("WS-") === 0)
+    },
+    {
+      id: "all",
+      label: "Everything",
+      predicate: () => true
+    }
+  ];
+  const CLOUD_NIMBUS_VIEW_MODES = [
+    { id: "gantt", label: "Gantt", icon: "▤" },
+    { id: "list", label: "List", icon: "☰" },
+    { id: "pacing", label: "Pacing", icon: "▰" },
+    { id: "treemap", label: "Treemap", icon: "▦" },
+    { id: "bubbles", label: "Bubbles", icon: "◉" },
+    { id: "calendar", label: "Calendar", icon: "▥" },
+    { id: "flow", label: "Flow", icon: "⟿" }
+  ];
+  const CLOUD_NIMBUS_VIEWS = [
+    "gantt",
+    "list",
+    "pacing",
+    "treemap",
+    "bubbles",
+    "calendar",
+    "flow"
+  ];
+  const CLOUD_NIMBUS_CATEGORIES = [
+    { category: "in-flight", label: "In Flight", color: "#10b981" },
+    { category: "next-up", label: "Next Up", color: "#3b82f6" },
+    { category: "paused", label: "Paused", color: "#94a3b8" },
+    { category: "backlog", label: "Backlog (sized)", color: "#f59e0b" },
+    { category: "expansion", label: "Expansion", color: "#a78bfa" },
+    { category: "done", label: "Done", color: "#cbd5e1" }
+  ];
+  const CLOUD_NIMBUS_POOL = [
+    { name: "Glen", role: "Principal Engineer", hoursPerMonth: 80, active: true },
+    { name: "Mahi", role: "SFDC Dev", hoursPerMonth: 50, active: true },
+    { name: "Antima", role: "SFDC Dev (PT)", hoursPerMonth: 40, active: true }
+  ];
   const registry$1 = [];
   function findIndex(name) {
     for (let i = 0; i < registry$1.length; i++) {
@@ -2594,80 +3363,6 @@ var NimbusGanttApp = (function(exports) {
     ganttSelectionRing: "#3b82f6",
     ganttDependencyLine: "#3b82f6"
   };
-  const CLOUD_NIMBUS_PRIORITY_BUCKETS = [
-    { id: "top-priority", label: "NOW", color: "#dc2626", bgTint: "#ef4444", order: 0 },
-    { id: "active", label: "NEXT", color: "#d97706", bgTint: "#f59e0b", order: 1 },
-    { id: "follow-on", label: "PLANNED", color: "#059669", bgTint: "#10b981", order: 2 },
-    { id: "proposed", label: "PROPOSED", color: "#2563eb", bgTint: "#3b82f6", order: 3 },
-    { id: "deferred", label: "HOLD", color: "#94a3b8", bgTint: "#94a3b8", order: 4 }
-  ];
-  const PROPOSAL_STAGES = {
-    "Backlog": true,
-    "Scoping In Progress": true,
-    "Ready for Sizing": true,
-    "Ready for Development": true
-  };
-  const CLOUD_NIMBUS_FILTERS = [
-    {
-      id: "active",
-      label: "Active",
-      predicate: (t) => !DONE_STAGES[t.stage || ""] && !t.isInactive
-    },
-    {
-      id: "proposal",
-      label: "Proposal & Expansion",
-      predicate: (t) => PROPOSAL_STAGES[t.stage || ""] || t.priorityGroup === "proposed"
-    },
-    {
-      id: "done",
-      label: "Done",
-      predicate: (t) => !!DONE_STAGES[t.stage || ""]
-    },
-    {
-      id: "real",
-      label: "Real T-NNNN tickets",
-      predicate: (t) => !!(t.id && String(t.id).indexOf("T-") === 0)
-    },
-    {
-      id: "workstreams",
-      label: "Workstream rollups",
-      predicate: (t) => !!(t.id && String(t.id).indexOf("WS-") === 0)
-    },
-    {
-      id: "all",
-      label: "Everything",
-      predicate: () => true
-    }
-  ];
-  const CLOUD_NIMBUS_VIEW_MODES = [
-    { id: "gantt", label: "Gantt", icon: "▤" },
-    { id: "list", label: "List", icon: "☰" },
-    { id: "treemap", label: "Treemap", icon: "▦" },
-    { id: "bubbles", label: "Bubbles", icon: "◉" },
-    { id: "calendar", label: "Calendar", icon: "▥" },
-    { id: "flow", label: "Flow", icon: "⟿" }
-  ];
-  const CLOUD_NIMBUS_VIEWS = [
-    "gantt",
-    "list",
-    "treemap",
-    "bubbles",
-    "calendar",
-    "flow"
-  ];
-  const CLOUD_NIMBUS_CATEGORIES = [
-    { category: "in-flight", label: "In Flight", color: "#10b981" },
-    { category: "next-up", label: "Next Up", color: "#3b82f6" },
-    { category: "paused", label: "Paused", color: "#94a3b8" },
-    { category: "backlog", label: "Backlog (sized)", color: "#f59e0b" },
-    { category: "expansion", label: "Expansion", color: "#a78bfa" },
-    { category: "done", label: "Done", color: "#cbd5e1" }
-  ];
-  const CLOUD_NIMBUS_POOL = [
-    { name: "Glen", role: "Principal Engineer", hoursPerMonth: 80, active: true },
-    { name: "Mahi", role: "SFDC Dev", hoursPerMonth: 50, active: true },
-    { name: "Antima", role: "SFDC Dev (PT)", hoursPerMonth: 40, active: true }
-  ];
   const CLS_TITLEBAR = "nga-titlebar bg-white border-b border-slate-200 px-3 py-1.5 flex flex-col gap-1.5 min-w-0 overflow-x-hidden";
   const CLS_TITLEBAR_ROW = "flex items-center gap-2 flex-wrap min-w-0";
   const CLS_TITLE_BRAND = "text-sm font-bold text-slate-900";
@@ -2830,7 +3525,7 @@ var NimbusGanttApp = (function(exports) {
   const CLS_V3_LINK = "text-[9px] text-slate-400 hover:text-blue-500";
   const CLS_SUPER_TAG = "ml-0.5 text-[8px] opacity-60";
   function mkSep$1() {
-    const s = el$1("span", CLS_SEP);
+    const s = el$2("span", CLS_SEP);
     s.textContent = "|";
     return s;
   }
@@ -2839,15 +3534,15 @@ var NimbusGanttApp = (function(exports) {
     return hours / hoursPerMonth;
   }
   function TitleBarVanilla$1(initial) {
-    const root = el$1("div", CLS_TITLEBAR);
+    const root = el$2("div", CLS_TITLEBAR);
     root.setAttribute("data-slot", "TitleBar");
     let currentProps = initial;
     function render(p) {
       clear(root);
       const { config, state, dispatch, data } = p;
-      const rowViews = el$1("div", CLS_TITLEBAR_ROW);
+      const rowViews = el$2("div", CLS_TITLEBAR_ROW);
       rowViews.setAttribute("data-nga-titlebar-row", "views");
-      const rowMain = el$1("div", CLS_TITLEBAR_ROW);
+      const rowMain = el$2("div", CLS_TITLEBAR_ROW);
       rowMain.setAttribute("data-nga-titlebar-row", "main");
       const enabledViews = CLOUD_NIMBUS_VIEW_MODES.filter(
         (v) => !config.views || config.views.includes(v.id)
@@ -2856,8 +3551,8 @@ var NimbusGanttApp = (function(exports) {
         enabledViews.forEach((v) => {
           const on = state.viewMode === v.id;
           const cls = CLS_PILL_BTN_BASE + " " + (on ? CLS_PILL_BTN_ACTIVE_VIOLET : CLS_PILL_BTN_IDLE_VIOLET);
-          const btn = el$1("button", cls);
-          const ico = el$1("span", "mr-1");
+          const btn = el$2("button", cls);
+          const ico = el$2("span", "mr-1");
           ico.textContent = v.icon;
           btn.appendChild(ico);
           btn.appendChild(document.createTextNode(v.label));
@@ -2866,16 +3561,16 @@ var NimbusGanttApp = (function(exports) {
         });
         root.appendChild(rowViews);
       }
-      const brand = el$1("span", CLS_TITLE_BRAND);
+      const brand = el$2("span", CLS_TITLE_BRAND);
       brand.textContent = config.title || "Pro Forma Timeline";
       rowMain.appendChild(brand);
-      const version = el$1("span", CLS_VERSION_PILL);
+      const version = el$2("span", CLS_VERSION_PILL);
       version.textContent = config.version || "v10 · Nimbus Gantt";
       rowMain.appendChild(version);
       rowMain.appendChild(mkSep$1());
       function toggleBtn(label, on, ev) {
         const cls = CLS_PILL_BTN_BASE + " " + (on ? CLS_PILL_BTN_ACTIVE_BLUE : CLS_PILL_BTN_IDLE_BLUE);
-        const b = el$1("button", cls);
+        const b = el$2("button", cls);
         b.textContent = label;
         b.addEventListener("click", ev);
         return b;
@@ -2892,14 +3587,14 @@ var NimbusGanttApp = (function(exports) {
       ZOOMS$2.forEach((z) => {
         const on = state.zoom === z;
         const cls = CLS_PILL_BTN_BASE + " " + (on ? CLS_PILL_BTN_ACTIVE_SLATE : CLS_PILL_BTN_IDLE_SLATE);
-        const b = el$1("button", cls);
+        const b = el$2("button", cls);
         b.textContent = z.charAt(0).toUpperCase() + z.slice(1);
         b.addEventListener("click", () => dispatch({ type: "SET_ZOOM", zoom: z }));
         rowMain.appendChild(b);
       });
       if (config.features.groupByToggle) {
         rowMain.appendChild(mkSep$1());
-        const gLbl = el$1("span", CLS_GROUP_LABEL);
+        const gLbl = el$2("span", CLS_GROUP_LABEL);
         gLbl.textContent = "Group:";
         gLbl.title = "Left-click = Gantt · Right-click = Sidebar";
         rowMain.appendChild(gLbl);
@@ -2911,15 +3606,15 @@ var NimbusGanttApp = (function(exports) {
           else if (isGantt) variant = CLS_GROUP_GANTT;
           else if (isSide) variant = CLS_GROUP_SIDE;
           const cls = CLS_PILL_BTN_BASE + " " + variant;
-          const b = el$1("button", cls);
+          const b = el$2("button", cls);
           b.textContent = g === "priority" ? "Priority" : "Epics";
           b.title = "Left-click: Gantt → " + g + " · Right-click: Sidebar → " + g;
           if (isGantt && !isSide) {
-            const sup = el$1("span", CLS_SUPER_TAG);
+            const sup = el$2("span", CLS_SUPER_TAG);
             sup.textContent = "G";
             b.appendChild(sup);
           } else if (isSide && !isGantt) {
-            const sup = el$1("span", CLS_SUPER_TAG);
+            const sup = el$2("span", CLS_SUPER_TAG);
             sup.textContent = "S";
             b.appendChild(sup);
           }
@@ -2931,7 +3626,7 @@ var NimbusGanttApp = (function(exports) {
           rowMain.appendChild(b);
         });
       }
-      const fill = el$1("div", CLS_TB_FILL);
+      const fill = el$2("div", CLS_TB_FILL);
       rowMain.appendChild(fill);
       const hoursHigh = data.stats.est;
       const hoursLow = data.stats.estLow || data.stats.est;
@@ -2940,10 +3635,10 @@ var NimbusGanttApp = (function(exports) {
       const mHigh = monthsToComplete(hoursHigh, totalCap);
       const mLowS = isFinite(mLow) ? mLow.toFixed(1) : "∞";
       const mHighS = isFinite(mHigh) ? mHigh.toFixed(1) : "∞";
-      const summary = el$1("span", CLS_TB_SUMMARY);
+      const summary = el$2("span", CLS_TB_SUMMARY);
       summary.textContent = data.stats.scheduled + " scheduled · " + hoursLow + "–" + hoursHigh + "h · " + mLowS + "–" + mHighS + " mo";
       rowMain.appendChild(summary);
-      const unpinBtn = el$1(
+      const unpinBtn = el$2(
         "button",
         CLS_PILL_BTN_BASE + " " + CLS_RIGHT_UNPIN_OFF
       );
@@ -2961,7 +3656,7 @@ var NimbusGanttApp = (function(exports) {
       const hostBtns = config.titleBarButtons || [];
       hostBtns.forEach((b) => {
         const cls = CLS_PILL_BTN_BASE + " " + (b.pressed ? CLS_PILL_BTN_ACTIVE_BLUE : CLS_PILL_BTN_IDLE_BLUE);
-        const btn = el$1("button", cls);
+        const btn = el$2("button", cls);
         btn.type = "button";
         btn.textContent = b.label;
         if (b.title) btn.title = b.title;
@@ -2982,7 +3677,7 @@ var NimbusGanttApp = (function(exports) {
         const useFsApi = !fsUrl && !hostExit && !!fsApi;
         const fsApiActive = !!(fsApi && fsApi.element());
         const active = state.fullscreen || hostExit || fsApiActive;
-        const fsBtn = el$1(
+        const fsBtn = el$2(
           "button",
           CLS_PILL_BTN_BASE + " " + (active ? CLS_RIGHT_FS_ON : CLS_RIGHT_FS_OFF)
         );
@@ -3023,7 +3718,7 @@ var NimbusGanttApp = (function(exports) {
         rowMain.appendChild(fsBtn);
       }
       const adminOn = !!state.adminOpen;
-      const adminBtn = el$1(
+      const adminBtn = el$2(
         "button",
         CLS_PILL_BTN_BASE + " " + (adminOn ? CLS_RIGHT_ADMIN_ON : CLS_RIGHT_ADMIN_OFF)
       );
@@ -3034,7 +3729,7 @@ var NimbusGanttApp = (function(exports) {
       });
       rowMain.appendChild(adminBtn);
       const advisorOn = !!state.advisorOpen;
-      const advisorBtn = el$1(
+      const advisorBtn = el$2(
         "button",
         CLS_PILL_BTN_BASE + " " + (advisorOn ? CLS_RIGHT_ADVISOR_ON : CLS_RIGHT_ADVISOR_OFF)
       );
@@ -3045,7 +3740,7 @@ var NimbusGanttApp = (function(exports) {
       });
       rowMain.appendChild(advisorBtn);
       if (config.apiDocsUrl) {
-        const apiDocs = el$1(
+        const apiDocs = el$2(
           "a",
           "text-[10px] text-slate-500 hover:text-fuchsia-600 underline decoration-dotted shrink-0"
         );
@@ -3055,12 +3750,12 @@ var NimbusGanttApp = (function(exports) {
         apiDocs.textContent = "API docs";
         rowMain.appendChild(apiDocs);
       }
-      const v3 = el$1("a", CLS_V3_LINK);
+      const v3 = el$2("a", CLS_V3_LINK);
       v3.href = "#";
       v3.textContent = "v3 (Canvas)";
       rowMain.appendChild(v3);
       root.appendChild(rowMain);
-      const legend = el$1("div", "flex items-center gap-3 px-3 py-1 text-[10px] text-slate-500 border-t border-slate-100");
+      const legend = el$2("div", "flex items-center gap-3 px-3 py-1 text-[10px] text-slate-500 border-t border-slate-100");
       legend.setAttribute("data-slot-part", "status-legend");
       const legendItems = [
         { label: "In Flight", color: "#10b981" },
@@ -3070,15 +3765,15 @@ var NimbusGanttApp = (function(exports) {
         { label: "Paused", color: "#94a3b8" },
         { label: "Done", color: "#cbd5e1" }
       ];
-      const legendLabel = el$1("span", "text-[9px] text-slate-400 uppercase tracking-wide");
+      const legendLabel = el$2("span", "text-[9px] text-slate-400 uppercase tracking-wide");
       legendLabel.textContent = "Status";
       legend.appendChild(legendLabel);
       for (const item of legendItems) {
-        const chip = el$1("span", "flex items-center gap-1");
-        const dot = el$1("span", "");
+        const chip = el$2("span", "flex items-center gap-1");
+        const dot = el$2("span", "");
         dot.style.cssText = `width:8px;height:8px;border-radius:50%;background:${item.color};display:inline-block`;
         chip.appendChild(dot);
-        const lbl = el$1("span", "");
+        const lbl = el$2("span", "");
         lbl.textContent = item.label;
         chip.appendChild(lbl);
         legend.appendChild(chip);
@@ -3100,14 +3795,14 @@ var NimbusGanttApp = (function(exports) {
   }
   const ZOOMS$1 = ["day", "week", "month", "quarter"];
   function ZoomBarVanilla$1(initial) {
-    const root = el$1("div", CLS_ZOOMBAR);
+    const root = el$2("div", CLS_ZOOMBAR);
     root.setAttribute("data-slot", "ZoomBar");
     function render(p) {
       clear(root);
       ZOOMS$1.forEach((z) => {
         const on = p.state.zoom === z;
         const cls = CLS_PILL_BTN_BASE + " " + (on ? CLS_PILL_BTN_ACTIVE_SLATE : CLS_PILL_BTN_IDLE_SLATE);
-        const b = el$1("button", cls);
+        const b = el$2("button", cls);
         b.textContent = z.charAt(0).toUpperCase() + z.slice(1);
         b.addEventListener("click", () => p.dispatch({ type: "SET_ZOOM", zoom: z }));
         root.appendChild(b);
@@ -3124,16 +3819,16 @@ var NimbusGanttApp = (function(exports) {
     };
   }
   function mkSep() {
-    const s = el$1("span", CLS_SEP + " mx-1");
+    const s = el$2("span", CLS_SEP + " mx-1");
     s.textContent = "|";
     return s;
   }
   function FilterBarVanilla(initial) {
-    const root = el$1("div", CLS_FILTERBAR);
+    const root = el$2("div", CLS_FILTERBAR);
     root.setAttribute("data-slot", "FilterBar");
-    const inner = el$1("div", CLS_FILTERBAR_INNER);
+    const inner = el$2("div", CLS_FILTERBAR_INNER);
     root.appendChild(inner);
-    const searchInput = el$1("input", CLS_SEARCH_INPUT);
+    const searchInput = el$2("input", CLS_SEARCH_INPUT);
     searchInput.setAttribute("data-testid", "gantt-search-input");
     searchInput.type = "text";
     searchInput.placeholder = "Search T-NNNN, title, owner…";
@@ -3150,20 +3845,20 @@ var NimbusGanttApp = (function(exports) {
       const selEnd = hadSearchFocus ? searchInput.selectionEnd : null;
       clear(inner);
       const { config, state, dispatch, data } = p;
-      const viewLbl = el$1("span", CLS_FILTERBAR_LABEL);
+      const viewLbl = el$2("span", CLS_FILTERBAR_LABEL);
       viewLbl.textContent = "View:";
       inner.appendChild(viewLbl);
       config.filters.forEach((f) => {
         const on = state.filter === f.id;
         const cls = CLS_FILTER_BTN_BASE + " " + (on ? CLS_PILL_BTN_ACTIVE_BLUE : CLS_PILL_BTN_IDLE_BLUE);
-        const b = el$1("button", cls);
+        const b = el$2("button", cls);
         b.textContent = f.label;
         b.addEventListener("click", () => dispatch({ type: "SET_FILTER", id: f.id }));
         inner.appendChild(b);
       });
       inner.appendChild(mkSep());
-      const sw = el$1("div", CLS_SEARCH_WRAP);
-      const icon = el$1("span", CLS_SEARCH_ICON);
+      const sw = el$2("div", CLS_SEARCH_WRAP);
+      const icon = el$2("span", CLS_SEARCH_ICON);
       icon.textContent = "🔎";
       sw.appendChild(icon);
       if (searchInput.value !== state.search) {
@@ -3172,7 +3867,7 @@ var NimbusGanttApp = (function(exports) {
       searchInput.oninput = (e) => dispatch({ type: "SET_SEARCH", q: e.target.value });
       sw.appendChild(searchInput);
       if (state.search) {
-        const clr = el$1("button", CLS_SEARCH_CLEAR);
+        const clr = el$2("button", CLS_SEARCH_CLEAR);
         clr.textContent = "×";
         clr.title = "Clear search";
         clr.setAttribute("aria-label", "Clear search");
@@ -3181,17 +3876,17 @@ var NimbusGanttApp = (function(exports) {
       }
       inner.appendChild(sw);
       inner.appendChild(mkSep());
-      const clrLbl = el$1("span", CLS_FILTERBAR_LABEL);
+      const clrLbl = el$2("span", CLS_FILTERBAR_LABEL);
       clrLbl.textContent = "Colors:";
       inner.appendChild(clrLbl);
       CLOUD_NIMBUS_CATEGORIES.forEach((cat) => {
         const n = data.stats.categoryCounts[cat.label] || 0;
         if (n <= 0) return;
-        const chip = el$1("span", CLS_LEGEND_CHIP);
-        const sw2 = el$1("span", CLS_LEGEND_SWATCH);
+        const chip = el$2("span", CLS_LEGEND_CHIP);
+        const sw2 = el$2("span", CLS_LEGEND_SWATCH);
         sw2.style.background = cat.color;
         chip.appendChild(sw2);
-        const txt = el$1("span", CLS_LEGEND_TEXT);
+        const txt = el$2("span", CLS_LEGEND_TEXT);
         txt.textContent = cat.label + " (" + n + ")";
         chip.appendChild(txt);
         inner.appendChild(chip);
@@ -3199,36 +3894,36 @@ var NimbusGanttApp = (function(exports) {
       inner.appendChild(mkSep());
       const active = CLOUD_NIMBUS_POOL.filter((m) => m.active !== false);
       const totalH = active.reduce((s, m) => s + m.hoursPerMonth, 0);
-      const teamWrap = el$1("span", "inline-flex items-center gap-1");
-      const teamBtn = el$1("button", CLS_TEAM_PILL);
+      const teamWrap = el$2("span", "inline-flex items-center gap-1");
+      const teamBtn = el$2("button", CLS_TEAM_PILL);
       teamBtn.title = "Edit team resource capacity";
       const tLbl = document.createElement("span");
       tLbl.textContent = "Team";
       teamBtn.appendChild(tLbl);
-      const tCnt = el$1("span", "font-mono text-indigo-500");
+      const tCnt = el$2("span", "font-mono text-indigo-500");
       tCnt.textContent = active.length + "×";
       teamBtn.appendChild(tCnt);
       teamBtn.addEventListener("click", () => {
-        console.log("[FilterBar] open resource panel (placeholder)");
+        p.dispatch({ type: "TEAM_OPEN" });
       });
       teamWrap.appendChild(teamBtn);
-      const cap = el$1("span", CLS_CAPACITY_TEXT);
+      const cap = el$2("span", CLS_CAPACITY_TEXT);
       cap.textContent = totalH + "h/mo";
       teamWrap.appendChild(cap);
       inner.appendChild(teamWrap);
-      const autoBtn = el$1("button", CLS_AUTO_SCHED_BTN);
+      const autoBtn = el$2("button", CLS_AUTO_SCHED_BTN);
       autoBtn.textContent = "Auto-Schedule";
       autoBtn.addEventListener("click", () => {
-        console.log("[FilterBar] auto-schedule (placeholder)");
+        p.dispatch({ type: "AUTOSCHEDULE_OPEN" });
       });
       inner.appendChild(autoBtn);
-      const spacer = el$1("div", "flex-1");
+      const spacer = el$2("div", "flex-1");
       inner.appendChild(spacer);
-      const count = el$1("span", CLS_COUNT_LABEL);
+      const count = el$2("span", CLS_COUNT_LABEL);
       count.textContent = data.stats.total + " items · " + data.stats.scheduled + " scheduled · " + data.stats.needDates + " need dates";
       inner.appendChild(count);
       if (state.pendingPatchCount > 0) {
-        const rst = el$1("button", CLS_RESET_LINK);
+        const rst = el$2("button", CLS_RESET_LINK);
         rst.textContent = "Reset changes";
         rst.addEventListener("click", () => dispatch({ type: "RESET_PATCHES" }));
         inner.appendChild(rst);
@@ -3258,24 +3953,24 @@ var NimbusGanttApp = (function(exports) {
   }
   function kpiCard(label, value, tone, hint) {
     const t = STATS_TONE[tone] || STATS_TONE.slate;
-    const card = el$1("div", CLS_KPI_CARD_BASE + " " + t.border);
-    const lbl = el$1("p", CLS_KPI_LABEL + " " + t.label);
+    const card = el$2("div", CLS_KPI_CARD_BASE + " " + t.border);
+    const lbl = el$2("p", CLS_KPI_LABEL + " " + t.label);
     lbl.textContent = label;
-    const val = el$1("p", CLS_KPI_VALUE + " " + t.value);
+    const val = el$2("p", CLS_KPI_VALUE + " " + t.value);
     val.textContent = value;
     card.appendChild(lbl);
     card.appendChild(val);
     if (hint) {
-      const h = el$1("p", CLS_KPI_HINT);
+      const h = el$2("p", CLS_KPI_HINT);
       h.textContent = hint;
       card.appendChild(h);
     }
     return card;
   }
   function StatsPanelVanilla(initial) {
-    const root = el$1("div", CLS_STATS_PANEL + " flex-shrink-0");
+    const root = el$2("div", CLS_STATS_PANEL + " flex-shrink-0");
     root.setAttribute("data-slot", "StatsPanel");
-    const grid = el$1("div", CLS_STATS_GRID);
+    const grid = el$2("div", CLS_STATS_GRID);
     root.appendChild(grid);
     let hoursPerMonth = 120;
     function render(p) {
@@ -3297,17 +3992,17 @@ var NimbusGanttApp = (function(exports) {
       grid.appendChild(kpiCard("Scheduled", String(s.scheduled), "blue", "of " + s.total + " total"));
       grid.appendChild(kpiCard("Hours Logged", logged + "h", "purple", "Actuals"));
       grid.appendChild(kpiCard("Hours Range", hrsRange, "amber", "Estimate envelope"));
-      const mcard = el$1("div", CLS_KPI_CARD_BASE + " border-indigo-200");
-      const mlbl = el$1("p", CLS_KPI_LABEL + " text-indigo-700");
+      const mcard = el$2("div", CLS_KPI_CARD_BASE + " border-indigo-200");
+      const mlbl = el$2("p", CLS_KPI_LABEL + " text-indigo-700");
       mlbl.textContent = "Months to complete";
       mcard.appendChild(mlbl);
-      const mval = el$1("p", CLS_KPI_VALUE + " text-indigo-700");
+      const mval = el$2("p", CLS_KPI_VALUE + " text-indigo-700");
       mval.textContent = moLow + "–" + moHigh;
       mcard.appendChild(mval);
-      const row = el$1("div", "mt-0.5 flex items-center gap-1");
-      const atSpan = el$1("span", "text-[9px] text-indigo-700");
+      const row = el$2("div", "mt-0.5 flex items-center gap-1");
+      const atSpan = el$2("span", "text-[9px] text-indigo-700");
       atSpan.textContent = "at";
-      const input = el$1(
+      const input = el$2(
         "input",
         "w-12 text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded px-1 py-0.5 text-center"
       );
@@ -3321,7 +4016,7 @@ var NimbusGanttApp = (function(exports) {
         const newHigh = hrsHigh > 0 ? (hrsHigh / hoursPerMonth).toFixed(1) : "0.0";
         mval.textContent = newLow + "–" + newHigh;
       });
-      const unit = el$1("span", "text-[9px] text-indigo-700");
+      const unit = el$2("span", "text-[9px] text-indigo-700");
       unit.textContent = "h/mo";
       row.appendChild(atSpan);
       row.appendChild(input);
@@ -3349,7 +4044,7 @@ var NimbusGanttApp = (function(exports) {
     return "in-flight";
   }
   function SidebarVanilla(initial) {
-    const root = el$1("aside", CLS_SIDEBAR);
+    const root = el$2("aside", CLS_SIDEBAR);
     root.setAttribute("data-slot", "Sidebar");
     let capacity = 120;
     let currentProps = initial;
@@ -3487,29 +4182,29 @@ var NimbusGanttApp = (function(exports) {
       clear(root);
       const { config, data, dispatch, state } = p;
       const isDirty = state.pendingPatchCount > 0;
-      const hdr = el$1("div", CLS_SIDEBAR_HEADER);
-      const hdrRow = el$1("div", CLS_SIDEBAR_HEADER_ROW);
-      const titleWrap = el$1("div");
-      const big = el$1("p", CLS_SIDEBAR_LABEL_BIG);
+      const hdr = el$2("div", CLS_SIDEBAR_HEADER);
+      const hdrRow = el$2("div", CLS_SIDEBAR_HEADER_ROW);
+      const titleWrap = el$2("div");
+      const big = el$2("p", CLS_SIDEBAR_LABEL_BIG);
       big.textContent = "Priority Groups";
       titleWrap.appendChild(big);
-      const sm = el$1("p", CLS_SIDEBAR_LABEL_SM);
+      const sm = el$2("p", CLS_SIDEBAR_LABEL_SM);
       sm.textContent = "Drag ☰ to move between buckets";
       titleWrap.appendChild(sm);
       hdrRow.appendChild(titleWrap);
       if (isDirty) {
-        const rst = el$1("button", CLS_SIDEBAR_RESET);
+        const rst = el$2("button", CLS_SIDEBAR_RESET);
         rst.textContent = "Reset";
         rst.addEventListener("click", () => dispatch({ type: "RESET_PATCHES" }));
         hdrRow.appendChild(rst);
       }
       hdr.appendChild(hdrRow);
-      const ctrls = el$1("div", CLS_SIDEBAR_CTRLS);
-      const capRow = el$1("div", CLS_SIDEBAR_CAP_ROW);
-      const capLbl = el$1("span", CLS_SIDEBAR_CAP_LBL);
+      const ctrls = el$2("div", CLS_SIDEBAR_CTRLS);
+      const capRow = el$2("div", CLS_SIDEBAR_CAP_ROW);
+      const capLbl = el$2("span", CLS_SIDEBAR_CAP_LBL);
       capLbl.textContent = "Capacity";
       capRow.appendChild(capLbl);
-      const capInput = el$1("input", CLS_CAPACITY_INPUT);
+      const capInput = el$2("input", CLS_CAPACITY_INPUT);
       capInput.type = "number";
       capInput.min = "1";
       capInput.value = String(capacity);
@@ -3518,11 +4213,11 @@ var NimbusGanttApp = (function(exports) {
         capacity = v;
       });
       capRow.appendChild(capInput);
-      const capSuf = el$1("span", CLS_SIDEBAR_CAP_SUF);
+      const capSuf = el$2("span", CLS_SIDEBAR_CAP_SUF);
       capSuf.textContent = "h/mo";
       capRow.appendChild(capSuf);
       ctrls.appendChild(capRow);
-      const autoBtn = el$1("button", CLS_SIDEBAR_AUTO_BTN);
+      const autoBtn = el$2("button", CLS_SIDEBAR_AUTO_BTN);
       autoBtn.textContent = "Auto-Schedule";
       autoBtn.addEventListener("click", () => {
         dispatch({ type: "TOGGLE_STATS" });
@@ -3531,7 +4226,7 @@ var NimbusGanttApp = (function(exports) {
       ctrls.appendChild(autoBtn);
       hdr.appendChild(ctrls);
       root.appendChild(hdr);
-      const scroll = el$1("div", CLS_SIDEBAR_SCROLL);
+      const scroll = el$2("div", CLS_SIDEBAR_SCROLL);
       root.appendChild(scroll);
       config.buckets.forEach((b) => {
         const members = data.tasks.filter(
@@ -3543,27 +4238,27 @@ var NimbusGanttApp = (function(exports) {
         );
         const meta = BUCKET_META[b.id] || BUCKET_META.deferred;
         const isHover = hoverGroup === b.id;
-        const sec = el$1(
+        const sec = el$2(
           "div",
           CLS_BUCKET_SECTION_BASE + " " + meta.border + (isHover ? " " + meta.activeBg : "")
         );
         sec.setAttribute("data-group-id", b.id);
-        const bhdr = el$1("div", CLS_BUCKET_HEADER + " " + meta.bg);
-        const blbl = el$1("span", CLS_BUCKET_LABEL + " " + meta.text);
+        const bhdr = el$2("div", CLS_BUCKET_HEADER + " " + meta.bg);
+        const blbl = el$2("span", CLS_BUCKET_LABEL + " " + meta.text);
         blbl.textContent = meta.label;
         bhdr.appendChild(blbl);
-        const bcnt = el$1("span", CLS_BUCKET_COUNT);
+        const bcnt = el$2("span", CLS_BUCKET_COUNT);
         bcnt.textContent = members.length + " · " + Math.round(totalHours) + "h";
         bhdr.appendChild(bcnt);
         sec.appendChild(bhdr);
         if (members.length === 0) {
-          const emptyInd = el$1(
+          const emptyInd = el$2(
             "div",
             CLS_BUCKET_EMPTY_INDICATOR_BASE + " " + (isHover ? CLS_BUCKET_EMPTY_INDICATOR_ON : CLS_BUCKET_EMPTY_INDICATOR_OFF)
           );
           sec.appendChild(emptyInd);
           if (!isHover) {
-            const empty = el$1("div", CLS_BUCKET_EMPTY_TEXT);
+            const empty = el$2("div", CLS_BUCKET_EMPTY_TEXT);
             empty.textContent = "Drop items here";
             sec.appendChild(empty);
           }
@@ -3571,12 +4266,12 @@ var NimbusGanttApp = (function(exports) {
           members.forEach((it) => {
             const itemId = String(it.id);
             if (indicatorGroup === b.id && indicatorBeforeId === itemId) {
-              const indLine = el$1("div", CLS_BUCKET_INDICATOR);
+              const indLine = el$2("div", CLS_BUCKET_INDICATOR);
               sec.appendChild(indLine);
             }
             const cat = stageToCategory(it.stage);
             const dotColor = CATEGORY_DOT[cat] || "#94a3b8";
-            const row = el$1("div", CLS_ITEM_ROW);
+            const row = el$2("div", CLS_ITEM_ROW);
             row.setAttribute("data-item-id", itemId);
             row.setAttribute("data-item-title", it.title);
             row.addEventListener("click", (ev) => {
@@ -3584,24 +4279,24 @@ var NimbusGanttApp = (function(exports) {
               if (tgt.closest("[data-drag-handle]")) return;
               dispatch({ type: "TOGGLE_DETAIL", taskId: itemId });
             });
-            const handle = el$1("span", CLS_DRAG_HANDLE);
+            const handle = el$2("span", CLS_DRAG_HANDLE);
             handle.setAttribute("data-drag-handle", "1");
             handle.setAttribute("title", "Drag to reorder or move to a different bucket");
             handle.innerHTML = "&#x2630;";
             row.appendChild(handle);
-            const dot = el$1("span", CLS_CAT_DOT);
+            const dot = el$2("span", CLS_CAT_DOT);
             dot.style.background = dotColor;
             row.appendChild(dot);
-            const title = el$1("span", CLS_ITEM_TITLE);
+            const title = el$2("span", CLS_ITEM_TITLE);
             title.textContent = it.title;
             row.appendChild(title);
-            const hrs = el$1("span", CLS_ITEM_HOURS);
+            const hrs = el$2("span", CLS_ITEM_HOURS);
             hrs.textContent = (Number(it.estimatedHours) || 0) + "h";
             row.appendChild(hrs);
             sec.appendChild(row);
           });
           if (indicatorGroup === b.id && indicatorBeforeId === null) {
-            const trailInd = el$1("div", CLS_BUCKET_INDICATOR);
+            const trailInd = el$2("div", CLS_BUCKET_INDICATOR);
             sec.appendChild(trailInd);
           }
         }
@@ -3626,7 +4321,7 @@ var NimbusGanttApp = (function(exports) {
     };
   }
   function DetailPanelVanilla(initial, forTaskId) {
-    const root = el$1("div", CLS_DETAIL);
+    const root = el$2("div", CLS_DETAIL);
     root.setAttribute("data-slot", "DetailPanel");
     if (forTaskId) root.setAttribute("data-task-id", forTaskId);
     let drafts = {};
@@ -3701,7 +4396,7 @@ var NimbusGanttApp = (function(exports) {
         }
         lastRenderedKey = renderKey;
       }
-      const header = el$1("div", CLS_DETAIL_HEADER);
+      const header = el$2("div", CLS_DETAIL_HEADER);
       header.style.background = catColor + "15";
       header.style.cursor = "move";
       header.style.userSelect = "none";
@@ -3726,8 +4421,8 @@ var NimbusGanttApp = (function(exports) {
         window.addEventListener("mousemove", onHeaderDragMove);
         window.addEventListener("mouseup", onHeaderDragEnd);
       });
-      const lwrap = el$1("div", "flex items-center gap-2 min-w-0");
-      const dot = el$1("span", "w-2.5 h-2.5 rounded-full flex-shrink-0");
+      const lwrap = el$2("div", "flex items-center gap-2 min-w-0");
+      const dot = el$2("span", "w-2.5 h-2.5 rounded-full flex-shrink-0");
       dot.style.background = catColor;
       lwrap.appendChild(dot);
       const urlTemplate = (_a = p.config) == null ? void 0 : _a.recordUrlTemplate;
@@ -3744,11 +4439,11 @@ var NimbusGanttApp = (function(exports) {
         });
         idEl = a;
       } else {
-        idEl = el$1("span", "text-[10px] font-mono font-bold text-slate-500 flex-shrink-0");
+        idEl = el$2("span", "text-[10px] font-mono font-bold text-slate-500 flex-shrink-0");
         idEl.textContent = String(task.id);
       }
       lwrap.appendChild(idEl);
-      const titleSp = el$1("span", "text-xs font-bold text-slate-900 truncate");
+      const titleSp = el$2("span", "text-xs font-bold text-slate-900 truncate");
       let dirty = false;
       if (editing) {
         const dirtyKeys = schema && schema.length ? schema.filter((f) => !f.readOnly).map((f) => f.key) : ["startDate", "endDate"];
@@ -3766,8 +4461,8 @@ var NimbusGanttApp = (function(exports) {
       titleSp.textContent = (dirty ? "• " : "") + task.title;
       lwrap.appendChild(titleSp);
       header.appendChild(lwrap);
-      const rwrap = el$1("div", "flex items-center gap-1 flex-shrink-0 ml-2");
-      const editBtn = el$1(
+      const rwrap = el$2("div", "flex items-center gap-1 flex-shrink-0 ml-2");
+      const editBtn = el$2(
         "button",
         editing ? "text-fuchsia-600 hover:text-fuchsia-800 text-sm px-1 transition-colors" : "text-slate-400 hover:text-slate-700 text-sm px-1 transition-colors"
       );
@@ -3779,7 +4474,7 @@ var NimbusGanttApp = (function(exports) {
         dispatch({ type: "SET_DETAIL_MODE", mode: editing ? "view" : "edit" });
       });
       rwrap.appendChild(editBtn);
-      const closeBtn = el$1("button", "text-slate-400 hover:text-slate-700 text-sm px-1 transition-colors");
+      const closeBtn = el$2("button", "text-slate-400 hover:text-slate-700 text-sm px-1 transition-colors");
       closeBtn.textContent = "×";
       closeBtn.setAttribute("title", "Close");
       closeBtn.addEventListener("click", () => {
@@ -3789,20 +4484,20 @@ var NimbusGanttApp = (function(exports) {
       rwrap.appendChild(closeBtn);
       header.appendChild(rwrap);
       root.appendChild(header);
-      const body = el$1("div", CLS_DETAIL_BODY);
-      const pill = el$1("span", CLS_CATEGORY_PILL);
+      const body = el$2("div", CLS_DETAIL_BODY);
+      const pill = el$2("span", CLS_CATEGORY_PILL);
       pill.style.background = catColor + "20";
       pill.style.color = catColor;
       pill.textContent = task.stage || "—";
-      const pillWrap = el$1("div", "flex items-center gap-2");
+      const pillWrap = el$2("div", "flex items-center gap-2");
       pillWrap.appendChild(pill);
       body.appendChild(pillWrap);
-      const grid = el$1("div", "grid grid-cols-2 gap-x-4 gap-y-1.5 pt-1");
+      const grid = el$2("div", "grid grid-cols-2 gap-x-4 gap-y-1.5 pt-1");
       function fld(label, value, fullWidth = false) {
-        const w = el$1("div", fullWidth ? "col-span-2" : "");
-        const l = el$1("p", "text-[9px] text-slate-400 uppercase tracking-wide");
+        const w = el$2("div", fullWidth ? "col-span-2" : "");
+        const l = el$2("p", "text-[9px] text-slate-400 uppercase tracking-wide");
         l.textContent = label;
-        const v = el$1("p", "text-slate-900 whitespace-pre-wrap");
+        const v = el$2("p", "text-slate-900 whitespace-pre-wrap");
         v.textContent = value;
         w.appendChild(l);
         w.appendChild(v);
@@ -3818,8 +4513,8 @@ var NimbusGanttApp = (function(exports) {
           fld(desc.label, displayVal, fullWidth);
           return;
         }
-        const w = el$1("div", fullWidth ? "col-span-2" : "");
-        const l = el$1("p", "text-[9px] text-slate-400 uppercase tracking-wide");
+        const w = el$2("div", fullWidth ? "col-span-2" : "");
+        const l = el$2("p", "text-[9px] text-slate-400 uppercase tracking-wide");
         l.textContent = desc.label;
         w.appendChild(l);
         const inputCls = "w-full px-1.5 py-0.5 text-xs text-slate-900 border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-fuchsia-400";
@@ -3886,8 +4581,8 @@ var NimbusGanttApp = (function(exports) {
       }
       body.appendChild(grid);
       if (editing) {
-        const actions = el$1("div", "pt-2 border-t border-slate-100 flex gap-2");
-        const saveBtn = el$1(
+        const actions = el$2("div", "pt-2 border-t border-slate-100 flex gap-2");
+        const saveBtn = el$2(
           "button",
           "flex-1 text-[10px] font-bold uppercase px-2 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
         );
@@ -3909,7 +4604,7 @@ var NimbusGanttApp = (function(exports) {
           dispatch({ type: "SET_DETAIL_MODE", mode: "view" });
         });
         actions.appendChild(saveBtn);
-        const cancelBtn = el$1(
+        const cancelBtn = el$2(
           "button",
           "flex-1 text-[10px] font-bold uppercase px-2 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
         );
@@ -3945,9 +4640,9 @@ var NimbusGanttApp = (function(exports) {
     };
   }
   function ContentAreaVanilla$1(initial) {
-    const root = el$1("div", CLS_CONTENT_OUTER);
+    const root = el$2("div", CLS_CONTENT_OUTER);
     root.setAttribute("data-slot", "ContentArea");
-    const host = el$1("div", CLS_CONTENT);
+    const host = el$2("div", CLS_CONTENT);
     host.setAttribute("data-nga-gantt-host", "1");
     let sidebarInst = null;
     const detailInsts = /* @__PURE__ */ new Map();
@@ -3956,11 +4651,11 @@ var NimbusGanttApp = (function(exports) {
       if (p.state.sidebarOpen && p.config.features.sidebar) {
         if (!sidebarInst) sidebarInst = SidebarVanilla(p);
         else sidebarInst.update(p);
-        const wrap = el$1("div", CLS_SIDEBAR_WRAP);
+        const wrap = el$2("div", CLS_SIDEBAR_WRAP);
         wrap.style.width = "280px";
         wrap.appendChild(sidebarInst.el);
         root.appendChild(wrap);
-        const resizer = el$1("div", CLS_RESIZER);
+        const resizer = el$2("div", CLS_RESIZER);
         root.appendChild(resizer);
       } else if (sidebarInst) {
         sidebarInst.destroy();
@@ -4005,7 +4700,7 @@ var NimbusGanttApp = (function(exports) {
     };
   }
   function AuditPanelVanilla(initial) {
-    const root = el$1("div", CLS_AUDIT);
+    const root = el$2("div", CLS_AUDIT);
     root.setAttribute("data-slot", "AuditPanel");
     root.setAttribute("data-testid", "audit-panel");
     let note = "";
@@ -4020,14 +4715,14 @@ var NimbusGanttApp = (function(exports) {
       root.style.display = p.state.auditPanelOpen ? "" : "none";
       if (!p.state.auditPanelOpen) return;
       const dirty = (p.config.isDirty ?? false) || p.state.pendingPatchCount > 0;
-      const inner = el$1("div", "flex flex-wrap items-center gap-2");
-      const lbl = el$1("span", CLS_AUDIT_LABEL);
+      const inner = el$2("div", "flex flex-wrap items-center gap-2");
+      const lbl = el$2("span", CLS_AUDIT_LABEL);
       lbl.textContent = "📤 Audit pass";
       inner.appendChild(lbl);
-      const stat = el$1("span", dirty ? CLS_AUDIT_STATUS_DIRTY : CLS_AUDIT_STATUS_CLEAN);
+      const stat = el$2("span", dirty ? CLS_AUDIT_STATUS_DIRTY : CLS_AUDIT_STATUS_CLEAN);
       stat.textContent = dirty ? "unsaved changes" : "clean";
       inner.appendChild(stat);
-      const input = el$1("input", CLS_AUDIT_INPUT);
+      const input = el$2("input", CLS_AUDIT_INPUT);
       input.type = "text";
       input.placeholder = "commit note (optional - auto-summarized if empty)";
       input.value = note;
@@ -4038,14 +4733,14 @@ var NimbusGanttApp = (function(exports) {
       });
       inputEl = input;
       inner.appendChild(input);
-      const sb = el$1("button", CLS_AUDIT_SUBMIT);
+      const sb = el$2("button", CLS_AUDIT_SUBMIT);
       sb.type = "button";
       sb.textContent = submitting ? "Committing..." : "📤 Submit + commit";
       sb.setAttribute("data-testid", "audit-submit-btn");
       sb.disabled = !dirty || submitting;
       sb.addEventListener("click", onSubmitClick);
       inner.appendChild(sb);
-      const rst = el$1("button", CLS_AUDIT_RESET);
+      const rst = el$2("button", CLS_AUDIT_RESET);
       rst.type = "button";
       rst.textContent = "↺ Reset";
       rst.setAttribute("data-testid", "audit-reset-btn");
@@ -4060,11 +4755,11 @@ var NimbusGanttApp = (function(exports) {
       inner.appendChild(rst);
       root.appendChild(inner);
       if (lastResult) {
-        const r = el$1("div", `mt-1.5 text-[11px] ${lastResult.ok ? "text-emerald-700" : "text-rose-700"}`);
+        const r = el$2("div", `mt-1.5 text-[11px] ${lastResult.ok ? "text-emerald-700" : "text-rose-700"}`);
         r.setAttribute("data-testid", "audit-result");
         r.textContent = (lastResult.ok ? "✓ " : "✗ ") + lastResult.msg;
         if (lastResult.sha) {
-          const sha = el$1("code", "ml-2 font-mono bg-slate-100 px-1 rounded");
+          const sha = el$2("code", "ml-2 font-mono bg-slate-100 px-1 rounded");
           sha.textContent = lastResult.sha;
           r.appendChild(sha);
         }
@@ -4308,7 +5003,7 @@ var NimbusGanttApp = (function(exports) {
     return weeks.map((w) => ({ label: w.label, hours: Math.round(w.hours), isCurrent: w.isCurrent }));
   }
   function HrsWkStripVanilla(initial) {
-    const root = el$1("div", CLS_HRSWK);
+    const root = el$2("div", CLS_HRSWK);
     root.setAttribute("data-slot", "HrsWkStrip");
     function render(p) {
       clear(root);
@@ -4317,28 +5012,28 @@ var NimbusGanttApp = (function(exports) {
       const weeks = computeWeeks(p.data.tasks);
       const totalHours = weeks.reduce((s, w) => s + w.hours, 0);
       const maxH = Math.max(1, ...weeks.map((w) => w.hours));
-      const lbl = el$1("span", CLS_HRSWK_LABEL);
+      const lbl = el$2("span", CLS_HRSWK_LABEL);
       lbl.textContent = "HRS/WK";
       root.appendChild(lbl);
       if (totalHours === 0) {
-        const empty = el$1("span", "text-[9px] text-slate-400 italic ml-2");
+        const empty = el$2("span", "text-[9px] text-slate-400 italic ml-2");
         empty.textContent = "No scheduled hours";
         root.appendChild(empty);
         return;
       }
       weeks.forEach((w) => {
         const pct = Math.round(w.hours / maxH * 100);
-        const col = el$1("div", CLS_HRSWK_COL);
-        const hrsLbl = el$1("span", "text-[9px] font-mono " + (w.isCurrent ? "text-indigo-600 font-bold" : "text-slate-500"));
+        const col = el$2("div", CLS_HRSWK_COL);
+        const hrsLbl = el$2("span", "text-[9px] font-mono " + (w.isCurrent ? "text-indigo-600 font-bold" : "text-slate-500"));
         hrsLbl.textContent = w.hours + "h";
         col.appendChild(hrsLbl);
-        const track = el$1("div", "w-full rounded-sm overflow-hidden bg-slate-200 relative");
+        const track = el$2("div", "w-full rounded-sm overflow-hidden bg-slate-200 relative");
         track.style.height = TRACK_PX + "px";
-        const fill = el$1("div", "absolute bottom-0 left-0 right-0 rounded-sm " + (w.isCurrent ? "bg-indigo-500" : "bg-slate-400"));
+        const fill = el$2("div", "absolute bottom-0 left-0 right-0 rounded-sm " + (w.isCurrent ? "bg-indigo-500" : "bg-slate-400"));
         fill.style.height = pct + "%";
         track.appendChild(fill);
         col.appendChild(track);
-        const dLbl = el$1("span", "text-[9px] " + (w.isCurrent ? "text-indigo-500 font-semibold" : "text-slate-500"));
+        const dLbl = el$2("span", "text-[9px] " + (w.isCurrent ? "text-indigo-500 font-semibold" : "text-slate-500"));
         dLbl.textContent = w.label;
         col.appendChild(dLbl);
         root.appendChild(col);
@@ -4442,14 +5137,14 @@ var NimbusGanttApp = (function(exports) {
   };
   const VIEWS = ["gantt", "list"];
   function TitleBarVanilla(initial) {
-    const root = el$1("div", "nga-titlebar");
+    const root = el$2("div", "nga-titlebar");
     root.setAttribute("data-slot", "TitleBar");
     function render(p) {
       clear(root);
       const strong = document.createElement("strong");
       strong.textContent = p.config.title || "Nimbus Gantt";
       root.appendChild(strong);
-      const spacer = el$1("span");
+      const spacer = el$2("span");
       spacer.style.flex = "1";
       root.appendChild(spacer);
       VIEWS.forEach((v) => {
@@ -4473,7 +5168,7 @@ var NimbusGanttApp = (function(exports) {
   }
   const ZOOMS = ["day", "week", "month", "quarter"];
   function ZoomBarVanilla(initial) {
-    const root = el$1("div", "nga-zoombar");
+    const root = el$2("div", "nga-zoombar");
     root.setAttribute("data-slot", "ZoomBar");
     function render(p) {
       clear(root);
@@ -4497,9 +5192,9 @@ var NimbusGanttApp = (function(exports) {
     };
   }
   function ContentAreaVanilla(_initial) {
-    const root = el$1("div", "nga-content-outer");
+    const root = el$2("div", "nga-content-outer");
     root.setAttribute("data-slot", "ContentArea");
-    const host = el$1("div", "nga-content");
+    const host = el$2("div", "nga-content");
     host.setAttribute("data-nga-gantt-host", "1");
     root.appendChild(host);
     return {
@@ -4946,7 +5641,7 @@ var NimbusGanttApp = (function(exports) {
   }
   class IIFEApp {
     static mount(container, options) {
-      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l;
+      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
       const mountStartedAt = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
       IIFEApp.unmount(container);
       const templateName = options.template || "cloudnimbus";
@@ -5031,7 +5726,7 @@ var NimbusGanttApp = (function(exports) {
           }, destroy: () => IIFEApp.unmount(container) };
         }
         injectLegacyNgCss();
-        let allTasks2 = options.tasks || [];
+        let allTasks2 = applyHoursBridge(options.tasks || [], options.hoursPerDay);
         let allDependencies2 = normalizeDependencies(options.dependencies);
         const state2 = { ...INITIAL_STATE };
         const depthMap2 = buildDepthMap(allTasks2);
@@ -5193,6 +5888,13 @@ var NimbusGanttApp = (function(exports) {
           } catch (_e2) {
           }
         }
+        if (options.autoSchedule !== false && typeof ((_l = tplConfig.engine) == null ? void 0 : _l.AutoSchedulePlugin) === "function") {
+          try {
+            const asOpts = typeof options.autoSchedule === "object" ? { autoRun: false, ...options.autoSchedule } : { autoRun: false };
+            inst.use(tplConfig.engine.AutoSchedulePlugin(asOpts));
+          } catch (_e2) {
+          }
+        }
         inst.setData(gtasks, allDependencies2);
         try {
           inst.expandAll();
@@ -5248,7 +5950,7 @@ var NimbusGanttApp = (function(exports) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           gantt: inst,
           setTasks(tasks) {
-            allTasks2 = tasks;
+            allTasks2 = applyHoursBridge(tasks, options.hoursPerDay);
             _syncToCanvas();
           },
           /** 0.185.27 — full replace of tasks AND dependencies. Pass the
@@ -5257,7 +5959,7 @@ var NimbusGanttApp = (function(exports) {
            *  parallel). Passing `undefined` leaves the existing deps alone
            *  — equivalent to `setTasks(tasks)`. */
           setData(tasks, dependencies) {
-            allTasks2 = tasks;
+            allTasks2 = applyHoursBridge(tasks, options.hoursPerDay);
             if (dependencies !== void 0) allDependencies2 = normalizeDependencies(dependencies);
             _syncToCanvas();
           },
@@ -5274,7 +5976,7 @@ var NimbusGanttApp = (function(exports) {
             if (typeof gi.pushRemoteEvent === "function") {
               gi.pushRemoteEvent(event);
               if (event && event.kind === "bulk.replace" && Array.isArray(event.tasks)) {
-                allTasks2 = event.tasks;
+                allTasks2 = applyHoursBridge(event.tasks, options.hoursPerDay);
                 if (Array.isArray(event.deps)) {
                   allDependencies2 = normalizeDependencies(event.deps);
                 }
@@ -5354,10 +6056,10 @@ var NimbusGanttApp = (function(exports) {
         };
       }
       let state = { ...INITIAL_STATE };
-      if ((_l = options.initialViewport) == null ? void 0 : _l.zoom) {
+      if ((_m = options.initialViewport) == null ? void 0 : _m.zoom) {
         state = { ...state, zoom: options.initialViewport.zoom };
       }
-      let allTasks = options.tasks || [];
+      let allTasks = applyHoursBridge(options.tasks || [], options.hoursPerDay);
       let allDependencies = normalizeDependencies(options.dependencies);
       const patchLog = [];
       const _viewportEmitTimer = { t: null };
@@ -5513,14 +6215,36 @@ var NimbusGanttApp = (function(exports) {
         if (idx === -1) return;
         const u = { ...allTasks[idx] };
         if (p.kind === "edit") {
-          if (p.original.startDate !== void 0) u.startDate = p.original.startDate;
-          if (p.original.endDate !== void 0) u.endDate = p.original.endDate;
+          const ch = p.changes || {};
+          const ur = u;
+          for (const k of Object.keys(ch)) {
+            if (p.original[k] !== void 0) ur[k] = p.original[k];
+          }
         } else {
           if (p.original.priorityGroup !== void 0) u.priorityGroup = p.original.priorityGroup;
           if (p.original.parentId !== void 0) u.parentWorkItemId = p.original.parentId;
           if (p.original.sortOrder !== void 0) u.sortOrder = p.original.sortOrder;
         }
         allTasks[idx] = u;
+      }
+      const PENDING_FIELD_LABEL = {
+        startDate: "start",
+        endDate: "end",
+        title: "title",
+        name: "name",
+        stage: "status",
+        status: "status",
+        assignee: "assignee",
+        progress: "progress",
+        priorityGroup: "group",
+        sortOrder: "sortOrder",
+        parentId: "parent",
+        estimatedHours: "estimate",
+        loggedHours: "logged"
+      };
+      function fmtPendingVal(v) {
+        if (v === null || v === void 0 || v === "") return "none";
+        return String(v);
       }
       function buildPendingChangesFromBuffer() {
         if (pendingBuffer.size === 0) return [];
@@ -5534,13 +6258,10 @@ var NimbusGanttApp = (function(exports) {
             byTask.set(p.taskId, entry);
           }
           if (p.kind === "edit" && p.changes) {
-            if (p.changes.startDate !== void 0) {
-              entry.fields.push("startDate");
-              entry.descs.push("start: " + (p.original.startDate || "?") + " → " + p.changes.startDate);
-            }
-            if (p.changes.endDate !== void 0) {
-              entry.fields.push("endDate");
-              entry.descs.push("end: " + (p.original.endDate || "?") + " → " + p.changes.endDate);
+            for (const k of Object.keys(p.changes)) {
+              if (p.changes[k] === void 0) continue;
+              entry.fields.push(k);
+              entry.descs.push((PENDING_FIELD_LABEL[k] || k) + ": " + fmtPendingVal(p.original[k]) + " → " + fmtPendingVal(p.changes[k]));
             }
           }
           if (p.kind === "reorder" && p.reorderPayload) {
@@ -5865,14 +6586,19 @@ var NimbusGanttApp = (function(exports) {
       }
       function onTaskPatch(patch) {
         const idx = allTasks.findIndex((t) => t.id === patch.id);
-        if (idx !== -1) {
-          const t = allTasks[idx];
-          const u = { ...t };
+        const prev = idx !== -1 ? allTasks[idx] : void 0;
+        if (idx !== -1 && prev) {
+          const u = { ...prev };
           if (patch.priorityGroup !== void 0) u.priorityGroup = patch.priorityGroup;
           if (patch.sortOrder !== void 0) u.sortOrder = patch.sortOrder;
           if ("parentId" in patch) u.parentWorkItemId = patch.parentId ?? null;
           if (patch.startDate !== void 0) u.startDate = patch.startDate;
           if (patch.endDate !== void 0) u.endDate = patch.endDate;
+          const ur = u;
+          for (const k of Object.keys(patch)) {
+            if (k === "id" || k === "priorityGroup" || k === "sortOrder" || k === "parentId" || k === "startDate" || k === "endDate") continue;
+            ur[k] = patch[k];
+          }
           allTasks[idx] = u;
         }
         const task = allTasks.find((t) => t.id === patch.id);
@@ -5886,6 +6612,35 @@ var NimbusGanttApp = (function(exports) {
           patchLog.unshift({ ts: /* @__PURE__ */ new Date(), desc: title + ": " + parts.join(", ") });
           if (patchLog.length > 50) patchLog.pop();
         }
+        if (options.batchMode && prev) {
+          const STRUCT = /* @__PURE__ */ new Set(["priorityGroup", "sortOrder", "parentId"]);
+          const pr = prev;
+          const editChanges = {};
+          const editOrig = {};
+          const reorderChanges = {};
+          const reorderOrig = {};
+          for (const k of Object.keys(patch)) {
+            if (k === "id") continue;
+            const val = patch[k];
+            if (STRUCT.has(k)) {
+              reorderChanges[k] = val;
+              reorderOrig[k] = k === "parentId" ? prev.parentWorkItemId ?? null : pr[k];
+            } else {
+              editChanges[k] = val;
+              editOrig[k] = pr[k];
+            }
+          }
+          if (Object.keys(editChanges).length) bufferEdit(patch.id, "edit", editChanges, editOrig);
+          if (Object.keys(reorderChanges).length) bufferEdit(patch.id, "reorder", reorderChanges, reorderOrig);
+          dirtyTaskIds.add(patch.id);
+          syncPendingChanges();
+          if (_patchRefreshTimer.t) clearTimeout(_patchRefreshTimer.t);
+          _patchRefreshTimer.t = setTimeout(() => {
+            _patchRefreshTimer.t = null;
+            refreshGantt();
+          }, 50);
+          return;
+        }
         rawOnPatch(patch);
         if (_patchRefreshTimer.t) clearTimeout(_patchRefreshTimer.t);
         _patchRefreshTimer.t = setTimeout(() => {
@@ -5896,6 +6651,14 @@ var NimbusGanttApp = (function(exports) {
       function dispatch(ev) {
         if (ev.type === "PATCH") {
           onTaskPatch(ev.patch);
+          return;
+        }
+        if (ev.type === "AUTOSCHEDULE_OPEN") {
+          openAutoScheduleModal();
+          return;
+        }
+        if (ev.type === "TEAM_OPEN") {
+          openTeamModal();
           return;
         }
         const nextState = reduceAppState(state, ev);
@@ -5916,6 +6679,205 @@ var NimbusGanttApp = (function(exports) {
             emitViewport();
           }
         }
+      }
+      function mk(tag, cls, text) {
+        const e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text != null) e.textContent = text;
+        return e;
+      }
+      function readNum(t, keys) {
+        for (const k of keys) {
+          if (typeof t[k] === "number") return t[k];
+          const meta = t["metadata"];
+          if (meta && typeof meta[k] === "number") return meta[k];
+        }
+        return 0;
+      }
+      function openAutoScheduleModal() {
+        const gi = ganttInst;
+        const hasEmit = !!gi && typeof gi.emit === "function";
+        const m = openModal({ title: "Auto-Schedule — review changes", width: 560 });
+        if (!hasEmit) {
+          m.body.appendChild(mk(
+            "div",
+            "ngm-note ngm-warn",
+            "Auto-schedule needs the core engine 0.196.1+ (the preview trigger). Re-copy the core bundle, then reload."
+          ));
+          m.setFooter([{ label: "Close", primary: true, onClick: () => m.close() }]);
+          return;
+        }
+        m.body.appendChild(mk(
+          "div",
+          void 0,
+          "Reflow start/end dates from dependencies (ASAP / critical-path). Review the proposed changes below — nothing is committed until you Apply."
+        ));
+        const loading = mk("div", "ngm-note", "Computing proposed schedule…");
+        m.body.appendChild(loading);
+        gi.emit("autoSchedule:preview", (raw) => {
+          const result = raw || {};
+          const byId = new Map(allTasks.map((t) => [t.id, t]));
+          const changes = [];
+          if (result.scheduledTasks) {
+            for (const [taskId, sc] of result.scheduledTasks) {
+              const t = byId.get(taskId);
+              if (!t) continue;
+              if (t.startDate !== sc.startDate || t.endDate !== sc.endDate) {
+                changes.push({
+                  id: taskId,
+                  name: t.title || t.name || taskId,
+                  startDate: sc.startDate,
+                  endDate: sc.endDate,
+                  previousStartDate: t.startDate ?? void 0,
+                  previousEndDate: t.endDate ?? void 0
+                });
+              }
+            }
+          }
+          renderReview(changes, result.violations ?? []);
+        });
+        function renderReview(changes, violations) {
+          m.body.textContent = "";
+          if (!changes.length) {
+            m.body.appendChild(mk("div", void 0, "No date changes proposed — the schedule already satisfies the dependencies."));
+            m.setFooter([{ label: "Close", primary: true, onClick: () => m.close() }]);
+            return;
+          }
+          const summary = mk("div", "ngm-stat");
+          const a = mk("div");
+          a.appendChild(mk("b", void 0, String(changes.length)));
+          a.appendChild(document.createTextNode("proposed changes"));
+          summary.appendChild(a);
+          if (violations.length) {
+            const v = mk("div");
+            v.appendChild(mk("b", void 0, String(violations.length)));
+            v.appendChild(document.createTextNode("violations"));
+            summary.appendChild(v);
+          }
+          m.body.appendChild(summary);
+          const tbl = mk("table", "ngm-tbl");
+          const hr = mk("tr");
+          ["Work item", "Start", "End"].forEach((h) => hr.appendChild(mk("th", void 0, h)));
+          const thd = mk("thead");
+          thd.appendChild(hr);
+          tbl.appendChild(thd);
+          const tb = mk("tbody");
+          changes.slice(0, 200).forEach((c) => {
+            const tr = mk("tr");
+            tr.appendChild(mk("td", void 0, c.name || c.id));
+            const sCell = mk("td");
+            sCell.textContent = (c.previousStartDate || "—") + " → " + c.startDate;
+            tr.appendChild(sCell);
+            const eCell = mk("td");
+            eCell.textContent = (c.previousEndDate || "—") + " → " + c.endDate;
+            tr.appendChild(eCell);
+            tb.appendChild(tr);
+          });
+          tbl.appendChild(tb);
+          m.body.appendChild(tbl);
+          const usingHost = !!options.onAutoSchedule || !!options.onPatch;
+          m.body.appendChild(mk("div", "ngm-note", usingHost ? "Apply sends these to the host to stage for review before any DML — nothing is written to the org until you commit them there." : "Standalone: Apply updates this session only (use Undo to revert)."));
+          m.setFooter([
+            { label: "Cancel", onClick: () => m.close() },
+            { label: `Apply ${changes.length} change${changes.length === 1 ? "" : "s"}`, primary: true, onClick: () => {
+              if (options.onAutoSchedule) {
+                options.onAutoSchedule({ changes });
+              } else if (options.onPatch) {
+                changes.forEach((c) => options.onPatch({ id: c.id, startDate: c.startDate, endDate: c.endDate }));
+              } else {
+                gi.emit("autoSchedule:run");
+              }
+              m.close();
+            } }
+          ]);
+        }
+      }
+      function openTeamModal() {
+        if (options.onEditTeam) {
+          options.onEditTeam();
+          return;
+        }
+        const usingDefault = !(options.team && options.team.length);
+        const pool = (usingDefault ? CLOUD_NIMBUS_POOL : options.team).map((p) => ({ ...p }));
+        const m = openModal({ title: "Team capacity", width: 540 });
+        const remaining = allTasks.reduce((sum, t) => {
+          const est = readNum(t, ["estimatedHours", "estimateHours", "hours", "hoursHigh"]);
+          const logged = readNum(t, ["loggedHours", "actualHours", "hoursLogged"]);
+          return sum + Math.max(0, est - logged);
+        }, 0);
+        const capLine = mk("div", "ngm-stat");
+        m.body.appendChild(capLine);
+        const tbl = mk("table", "ngm-tbl");
+        const thead = mk("tr");
+        ["Member", "Role", "Hours/mo", "Active"].forEach((h) => thead.appendChild(mk("th", void 0, h)));
+        const thd = mk("thead");
+        thd.appendChild(thead);
+        tbl.appendChild(thd);
+        const tb = mk("tbody");
+        pool.forEach((member, i) => {
+          const tr = mk("tr");
+          tr.appendChild(mk("td", void 0, member.name));
+          tr.appendChild(mk("td", void 0, member.role || ""));
+          const hCell = mk("td");
+          const hInput = document.createElement("input");
+          hInput.type = "number";
+          hInput.className = "ngm-num";
+          hInput.value = String(member.hoursPerMonth);
+          hInput.addEventListener("input", () => {
+            pool[i].hoursPerMonth = parseFloat(hInput.value) || 0;
+            recompute();
+          });
+          hCell.appendChild(hInput);
+          tr.appendChild(hCell);
+          const aCell = mk("td");
+          const aInput = document.createElement("input");
+          aInput.type = "checkbox";
+          aInput.checked = member.active !== false;
+          aInput.addEventListener("change", () => {
+            pool[i].active = aInput.checked;
+            recompute();
+          });
+          aCell.appendChild(aInput);
+          tr.appendChild(aCell);
+          tb.appendChild(tr);
+        });
+        tbl.appendChild(tb);
+        m.body.appendChild(tbl);
+        const proj = mk("div", "ngm-note");
+        m.body.appendChild(proj);
+        m.body.appendChild(mk(
+          "div",
+          "ngm-note",
+          "Capacity drives this projection today; feeding it into the auto-scheduler (resource leveling) is the next step."
+        ));
+        function recompute() {
+          const capacity = pool.filter((p) => p.active !== false).reduce((s, p) => s + (p.hoursPerMonth || 0), 0);
+          capLine.textContent = "";
+          const c1 = mk("div");
+          c1.appendChild(mk("b", void 0, capacity + " h/mo"));
+          c1.appendChild(document.createTextNode("team capacity"));
+          capLine.appendChild(c1);
+          const c2 = mk("div");
+          c2.appendChild(mk("b", void 0, Math.round(remaining) + " h"));
+          c2.appendChild(document.createTextNode("remaining backlog"));
+          capLine.appendChild(c2);
+          const months = capacity > 0 ? remaining / capacity : 0;
+          proj.textContent = capacity > 0 ? `At ${capacity} h/mo, the ${Math.round(remaining)} h of remaining estimated work is ≈ ${months.toFixed(1)} months of runway.` : "Set a capacity above to project runway.";
+        }
+        recompute();
+        m.setFooter([
+          { label: "Cancel", onClick: () => m.close() },
+          { label: "Save", primary: true, onClick: () => {
+            var _a2;
+            if (usingDefault) {
+              CLOUD_NIMBUS_POOL.length = 0;
+              pool.forEach((p) => CLOUD_NIMBUS_POOL.push(p));
+            }
+            (_a2 = options.onTeamChange) == null ? void 0 : _a2.call(options, pool);
+            renderSlots();
+            m.close();
+          } }
+        ]);
       }
       const FEATURE_DEFAULTS = {};
       function snapshotFeatureDefaults() {
@@ -5993,7 +6955,7 @@ var NimbusGanttApp = (function(exports) {
         return null;
       }
       function initGantt(host) {
-        var _a2, _b2, _c2, _d2, _e2, _f2, _g2;
+        var _a2, _b2, _c2, _d2, _e2, _f2, _g2, _h2;
         const eng = resolveEngine();
         if (!eng || !eng.NimbusGantt) {
           host.style.cssText = "padding:20px;color:#b91c1c;font-size:13px";
@@ -6271,13 +7233,20 @@ var NimbusGanttApp = (function(exports) {
           } catch (_e3) {
           }
         }
+        if (options.autoSchedule !== false && typeof ((_h2 = tplConfig.engine) == null ? void 0 : _h2.AutoSchedulePlugin) === "function") {
+          try {
+            const asOpts = typeof options.autoSchedule === "object" ? { autoRun: false, ...options.autoSchedule } : { autoRun: false };
+            ganttInst.use(tplConfig.engine.AutoSchedulePlugin(asOpts));
+          } catch (_e3) {
+          }
+        }
         ganttInst.setData(gtasks, allDependencies);
         try {
           ganttInst.expandAll();
         } catch (_e3) {
         }
         setTimeout(() => {
-          var _a3, _b3, _c3, _d3, _e3, _f3, _g3, _h2, _i2, _j2, _k2, _l2, _m;
+          var _a3, _b3, _c3, _d3, _e3, _f3, _g3, _h3, _i2, _j2, _k2, _l2, _m2;
           try {
             const gi = ganttInst;
             const iv = options.initialViewport;
@@ -6295,11 +7264,11 @@ var NimbusGanttApp = (function(exports) {
               if (parsed) {
                 const snapped = snapDateToZoomPeriod(parsed, state.zoom);
                 const x = (_g3 = (_f3 = gi.timeScale) == null ? void 0 : _f3.dateToX) == null ? void 0 : _g3.call(_f3, snapped);
-                if (typeof x === "number") (_i2 = (_h2 = gi.scrollManager) == null ? void 0 : _h2.scrollToX) == null ? void 0 : _i2.call(_h2, Math.max(0, x));
+                if (typeof x === "number") (_i2 = (_h3 = gi.scrollManager) == null ? void 0 : _h3.scrollToX) == null ? void 0 : _i2.call(_h3, Math.max(0, x));
               }
             } else {
               const x = (_k2 = (_j2 = gi.timeScale) == null ? void 0 : _j2.dateToX) == null ? void 0 : _k2.call(_j2, new Date(Date.now() - INITIAL_VIEWPORT_OFFSET_MS));
-              if (typeof x === "number") (_m = (_l2 = gi.scrollManager) == null ? void 0 : _l2.scrollToX) == null ? void 0 : _m.call(_l2, Math.max(0, x));
+              if (typeof x === "number") (_m2 = (_l2 = gi.scrollManager) == null ? void 0 : _l2.scrollToX) == null ? void 0 : _m2.call(_l2, Math.max(0, x));
             }
           } catch (_e4) {
           }
@@ -6385,6 +7354,24 @@ var NimbusGanttApp = (function(exports) {
             state.viewMode === "treemap" ? renderTreemap : renderBubble,
             ((_a2 = options.config) == null ? void 0 : _a2.colorMap) || { ...STAGE_COLORS, ...STAGE_TO_CATEGORY_COLOR }
           );
+        } else if (state.viewMode === "pacing") {
+          {
+            const pc = options.config ?? {};
+            const pacingCfg = pc.pacing ?? {};
+            renderPacingView(ganttHost, allTasks, {
+              // Drill-down item click reuses the existing host nav contract.
+              onOpenItem: options.onItemClick ? (taskId) => options.onItemClick(taskId) : void 0,
+              // Row hover → host tooltip/mouseover (DH's richer detail card).
+              onItemHover: options.onItemHover ? (taskId, pos) => options.onItemHover(taskId, pos) : void 0,
+              // Bucket "Open report ↗" → host-owned destination (no URLs in NG).
+              onOpenReport: options.onOpenReport ? (ctx) => options.onOpenReport(ctx) : void 0,
+              rate: pc.rate,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              defaults: pacingCfg.defaults,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              controls: pacingCfg.controls
+            });
+          }
         } else {
           const labelMap = {
             calendar: "Calendar",
@@ -6517,7 +7504,7 @@ var NimbusGanttApp = (function(exports) {
           return ganttInst;
         },
         setTasks(tasks) {
-          allTasks = tasks;
+          allTasks = applyHoursBridge(tasks, options.hoursPerDay);
           depthMap = buildDepthMap(allTasks);
           const live = tplConfig.features.liveDataUpdate !== false;
           if (live && ganttInst && state.viewMode === "gantt") {
@@ -6533,7 +7520,7 @@ var NimbusGanttApp = (function(exports) {
          *  equivalent to calling `setTasks(tasks)` alone. Routes through the
          *  same liveDataUpdate-gated refresh path as setTasks. */
         setData(tasks, dependencies) {
-          allTasks = tasks;
+          allTasks = applyHoursBridge(tasks, options.hoursPerDay);
           if (dependencies !== void 0) allDependencies = normalizeDependencies(dependencies);
           depthMap = buildDepthMap(allTasks);
           const live = tplConfig.features.liveDataUpdate !== false;
@@ -6564,7 +7551,7 @@ var NimbusGanttApp = (function(exports) {
           if (typeof gi.pushRemoteEvent !== "function") return;
           gi.pushRemoteEvent(event);
           if (event && event.kind === "bulk.replace" && Array.isArray(event.tasks)) {
-            allTasks = event.tasks;
+            allTasks = applyHoursBridge(event.tasks, options.hoursPerDay);
             if (Array.isArray(event.deps)) {
               allDependencies = normalizeDependencies(event.deps);
             }
@@ -6598,6 +7585,21 @@ var NimbusGanttApp = (function(exports) {
          *  toggles share one code path. */
         toggleChrome(visible) {
           runToggleChrome(visible);
+        },
+        /** 0.196.2 — runtime mode toggle. 'gather' = batchMode ON (every edit
+         *  buffers into the review/audit list as a potential DML; commit later);
+         *  'wired' = batchMode OFF (edits run the DML as made). Lets DH/CN expose
+         *  the setting and flip it live. Switching to 'wired' does NOT auto-commit
+         *  or discard pending edits — call commitEdits()/discardEdits() first if
+         *  you want a clean switch. Returns the new mode. */
+        setMode(mode2) {
+          options.batchMode = mode2 === "gather";
+          syncPendingChanges();
+          return mode2;
+        },
+        /** 0.196.2 — current mode (mirrors the batchMode flag). */
+        getMode() {
+          return options.batchMode ? "gather" : "wired";
         },
         /** 0.185 — snapshot of the batch buffer. Empty array when batchMode
          *  is off or the buffer is clean. Insertion-order preserved across

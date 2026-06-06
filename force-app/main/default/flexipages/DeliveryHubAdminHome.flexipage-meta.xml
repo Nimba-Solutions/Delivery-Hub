@@ -23,6 +23,12 @@
                 <identifier>c_deliveryPacingForecast</identifier>
             </componentInstance>
         </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryCartCheckout</componentName>
+                <identifier>c_deliveryCartCheckout</identifier>
+            </componentInstance>
+        </itemInstances>
         <name>top</name>
         <type>Region</type>
     </flexiPageRegions>
