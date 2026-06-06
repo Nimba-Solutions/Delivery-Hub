@@ -513,4 +513,58 @@ private class DeliveryHoursAnalyticsControllerTest {
         System.assertEquals(0, totalLogged(dto), 'No logged hours');
         System.assertEquals(false, dto.hasEstimate, 'No estimate');
     }
+
+    // ────────────────────────────────────────────────────────────────────
+    // getPacing — PacingData JSON serialization for the NG in-gantt subtab
+    // ────────────────────────────────────────────────────────────────────
+
+    @SuppressWarnings('PMD.ApexUnitTestClassShouldHaveAsserts')
+    @IsTest
+    static void testGetPacingSerializesPacingDataShape() {
+        WorkItem__c root = insertWi('PacingRoot', 80, Date.today().addMonths(-2), Date.today().addMonths(2), null);
+        insert new List<WorkLog__c>{
+            buildLog(root.Id, 6, Date.today()),
+            buildLog(root.Id, 4, Date.today().addMonths(-1))
+        };
+
+        Test.startTest();
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Week', 6, 6);
+        Test.stopTest();
+
+        System.assertNotEquals(null, pacingJson, 'getPacing returns a JSON string');
+        Map<String, Object> data = (Map<String, Object>) JSON.deserializeUntyped(pacingJson);
+        System.assertEquals('week', (String) data.get('bucket'), 'Granularity Week -> bucket "week"');
+        System.assertEquals(true, (Boolean) data.get('authoritative'), 'PacingData marked authoritative');
+
+        List<Object> buckets = (List<Object>) data.get('buckets');
+        System.assertNotEquals(null, buckets, 'buckets present');
+        System.assert(!buckets.isEmpty(), 'at least one bucket built');
+        Map<String, Object> b0 = (Map<String, Object>) buckets[0];
+        // Contract keys NG's renderer reads.
+        System.assert(b0.containsKey('key'), 'bucket has key');
+        System.assert(b0.containsKey('actual'), 'bucket has actual');
+        System.assert(b0.containsKey('forecast'), 'bucket has forecast');
+        System.assert(b0.containsKey('target'), 'bucket has target');
+        System.assert(b0.containsKey('isPast'), 'bucket has isPast');
+        System.assert(b0.containsKey('items'), 'bucket has items[] (empty — NG hybrid fills)');
+
+        Map<String, Object> summary = (Map<String, Object>) data.get('summary');
+        System.assertNotEquals(null, summary, 'summary present');
+        System.assertEquals(80, ((Decimal) summary.get('estimatedHours')), 'estimate summed');
+        System.assertEquals(10, ((Decimal) summary.get('loggedHours')), 'logged summed (6 + 4)');
+        System.assertEquals(1, ((Integer) summary.get('activeItems')), 'one active root');
+    }
+
+    @IsTest
+    static void testGetPacingEmptyOrgStillReturnsJson() {
+        Test.startTest();
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertNotEquals(null, pacingJson, 'JSON returned even with no data');
+        Map<String, Object> data = (Map<String, Object>) JSON.deserializeUntyped(pacingJson);
+        System.assertEquals('month', (String) data.get('bucket'), 'default-ish month bucket');
+        Map<String, Object> summary = (Map<String, Object>) data.get('summary');
+        System.assertEquals(0, ((Integer) summary.get('activeItems')), 'no active roots');
+    }
 }
