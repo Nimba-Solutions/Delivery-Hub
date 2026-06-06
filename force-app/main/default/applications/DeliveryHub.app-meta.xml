@@ -214,6 +214,7 @@
     <tabs>WorkItem__c</tabs>
     <tabs>WorkItemComment__c</tabs>
     <tabs>Delivery_Guide</tabs>
+    <tabs>Delivery_Cart</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>DeliveryHubUtilityBar</utilityBar>
 </CustomApplication>

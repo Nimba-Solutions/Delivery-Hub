@@ -225,6 +225,7 @@
     <tabs>Delivery_Permission_Analyzer</tabs>
     <tabs>DeliveryHubSettings</tabs>
     <tabs>Delivery_Guide</tabs>
+    <tabs>Delivery_Cart</tabs>
     <tabs>standard-report</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>DeliveryHubAdmin_UtilityBar</utilityBar>

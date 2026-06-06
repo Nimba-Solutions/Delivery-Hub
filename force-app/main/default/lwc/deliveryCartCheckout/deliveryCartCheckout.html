@@ -1,0 +1,117 @@
+<template>
+    <div class="cart-card">
+
+        <div class="cart-header">
+            <div class="cart-header-left">
+                <lightning-icon icon-name="utility:cart" alternative-text="Checkout cart" size="small" class="cart-header-icon"></lightning-icon>
+                <div>
+                    <h2 class="cart-title">Checkout Cart</h2>
+                    <p class="cart-subtitle">The org-wide basket — review, sequence, and check out committed work.</p>
+                </div>
+            </div>
+            <div class="cart-controls">
+                <c-delivery-info-popover component-name="deliveryCartCheckout"></c-delivery-info-popover>
+            </div>
+        </div>
+
+        <template lwc:if={isLoading}>
+            <div class="cart-loading">
+                <lightning-spinner alternative-text="Loading cart" size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <template lwc:if={hasError}>
+            <div class="cart-error">{errorMessage}</div>
+        </template>
+
+        <template lwc:if={isEmpty}>
+            <div class="cart-empty">The cart is empty. Add work via the Cart Builder to get started.</div>
+        </template>
+
+        <template lwc:if={hasData}>
+
+            <!-- Summary header -->
+            <div class="cart-summary">
+                <div class="cart-summary-metric">
+                    <span class="cart-summary-value">{willDoHoursLabel}h</span>
+                    <span class="cart-summary-label">Will Do hours ({willDoCountLabel})</span>
+                </div>
+                <template lwc:if={showDollars}>
+                    <div class="cart-summary-metric">
+                        <span class="cart-summary-value">{willDoCostLabel}</span>
+                        <span class="cart-summary-label">Will Do cost</span>
+                    </div>
+                </template>
+                <div class="cart-summary-metric">
+                    <span class="cart-summary-value cart-summary-value--muted">{sizingOnlyHoursLabel}h</span>
+                    <span class="cart-summary-label">Sizing Only hours ({sizingOnlyCountLabel})</span>
+                </div>
+            </div>
+
+            <template lwc:if={hasMonthSpread}>
+                <p class="cart-forecast">{monthSpreadLabel}</p>
+            </template>
+
+            <!-- Will Do (committed) section -->
+            <template lwc:if={hasWillDo}>
+                <div class="cart-section">
+                    <h3 class="cart-section-title cart-section-title--commit">Will Do — committed</h3>
+                    <template for:each={willDoLines} for:item="line">
+                        <div key={line.workItemId} class="cart-line" data-record-id={line.workItemId} onclick={handleRowClick}>
+                            <div class="cart-line-main">
+                                <span class="cart-line-name">{line.name}</span>
+                                <span class="cart-line-meta">{line.stageLabel} · Priority {line.priorityLabel} · {line.developerLabel}</span>
+                            </div>
+                            <div class="cart-line-figures">
+                                <span class="cart-line-hours">{line.hoursLabel}h</span>
+                                <template lwc:if={showDollars}>
+                                    <span class="cart-line-cost">{line.costLabel}</span>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Sizing Only (exploring) section -->
+            <template lwc:if={hasSizingOnly}>
+                <div class="cart-section">
+                    <h3 class="cart-section-title cart-section-title--sizing">Sizing Only — exploring</h3>
+                    <template for:each={sizingOnlyLines} for:item="line">
+                        <div key={line.workItemId} class="cart-line cart-line--muted" data-record-id={line.workItemId} onclick={handleRowClick}>
+                            <div class="cart-line-main">
+                                <span class="cart-line-name">{line.name}</span>
+                                <span class="cart-line-meta">{line.stageLabel} · {line.priorityLabel} · {line.developerLabel}</span>
+                            </div>
+                            <div class="cart-line-figures">
+                                <span class="cart-line-hours">{line.hoursLabel}h</span>
+                                <template lwc:if={showDollars}>
+                                    <span class="cart-line-cost">{line.costLabel}</span>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Checkout control -->
+            <div class="cart-actions">
+                <lightning-button
+                    variant="brand"
+                    label={checkoutLabel}
+                    disabled={checkoutDisabled}
+                    onclick={handleCheckout}
+                    class="cart-checkout-button">
+                </lightning-button>
+                <template lwc:if={isCheckingOut}>
+                    <lightning-spinner alternative-text="Checking out" size="small"></lightning-spinner>
+                </template>
+            </div>
+
+            <template lwc:if={checkoutMessage}>
+                <p class="cart-checkout-message">{checkoutMessage}</p>
+            </template>
+
+        </template>
+    </div>
+</template>
