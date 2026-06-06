@@ -1459,6 +1459,10 @@
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>
+        <tab>Delivery_Cart</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
         <tab>Delivery_Guide</tab>
         <visibility>Visible</visibility>
     </tabSettings>

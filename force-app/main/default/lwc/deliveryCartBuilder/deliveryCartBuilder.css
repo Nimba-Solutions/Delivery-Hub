@@ -1,0 +1,166 @@
+.builder-card {
+    padding: 1rem 1.25rem 1.25rem;
+}
+
+.builder-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.builder-header-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.builder-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.builder-subtitle {
+    font-size: 0.78rem;
+    color: #5c5c5c;
+    margin: 0.1rem 0 0;
+}
+
+.builder-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.builder-total {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid #ececec;
+    border-bottom: 1px solid #ececec;
+    margin-bottom: 0.75rem;
+}
+
+.builder-total-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #0b5cab;
+}
+
+.builder-total-cost {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0b5cab;
+}
+
+.builder-total-label {
+    font-size: 0.75rem;
+    color: #706e6b;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.builder-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: flex-end;
+    margin-bottom: 0.5rem;
+}
+
+.builder-input {
+    flex: 1 1 12rem;
+}
+
+.builder-input--hours {
+    flex: 0 0 8rem;
+}
+
+.builder-form-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.builder-status {
+    margin: 0.25rem 0 0.5rem;
+    font-size: 0.8rem;
+    color: #2e844a;
+}
+
+.builder-error {
+    color: #c23934;
+    padding: 0.5rem 0;
+}
+
+.builder-loading,
+.builder-empty {
+    text-align: center;
+    color: #706e6b;
+    padding: 0.75rem;
+}
+
+.builder-line {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0.25rem;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.builder-line-main {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.builder-line-name {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.builder-line-tag {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-weight: 700;
+}
+
+.builder-line-tag--commit {
+    color: #2e844a;
+}
+
+.builder-line-tag--sizing {
+    color: #706e6b;
+}
+
+.builder-line-figures {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    white-space: nowrap;
+}
+
+.builder-line-hours {
+    font-weight: 700;
+}
+
+.builder-line-cost {
+    font-size: 0.78rem;
+    color: #0b5cab;
+}
+
+.builder-line-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.builder-priority {
+    width: 7rem;
+}
