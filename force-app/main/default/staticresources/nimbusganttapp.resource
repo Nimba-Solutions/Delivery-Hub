@@ -2215,6 +2215,34 @@ var NimbusGanttApp = (function(exports) {
     if (size === "quarter") return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 3, 1);
     return d.getTime() + 7 * DAY_MS$1;
   }
+  function prevBucketMs(ms, size) {
+    const d = new Date(bucketStartMs(ms, size));
+    if (size === "month") return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1);
+    if (size === "quarter") return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 3, 1);
+    return d.getTime() - 7 * DAY_MS$1;
+  }
+  function stepBuckets(ms, size, n) {
+    let cur = bucketStartMs(ms, size);
+    const step = n >= 0 ? nextBucketMs : prevBucketMs;
+    for (let i = 0; i < Math.abs(n); i++) cur = step(cur, size);
+    return cur;
+  }
+  const isoOf = (ms) => new Date(ms).toISOString().slice(0, 10);
+  const PACING_PREFS_KEY = "nga.pacing.prefs.v1";
+  function loadPacingPrefs() {
+    try {
+      const raw = typeof localStorage !== "undefined" ? localStorage.getItem(PACING_PREFS_KEY) : null;
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+  function savePacingPrefs(p) {
+    try {
+      if (typeof localStorage !== "undefined") localStorage.setItem(PACING_PREFS_KEY, JSON.stringify(p));
+    } catch {
+    }
+  }
   function keyToMs(key) {
     if (key[0] === "W") return parseISO(key.slice(1)) ?? 0;
     if (key.indexOf("Q") >= 0) {
@@ -2344,10 +2372,12 @@ var NimbusGanttApp = (function(exports) {
     all: "All",
     ytd: "YTD",
     thisQtr: "This Qtr",
-    next3: "Next 3",
-    next6: "Next 6",
+    span3: "±3",
+    span6: "±6",
     rest: "Rest of yr",
-    custom: "Custom"
+    custom: "Custom",
+    next3: "±3",
+    next6: "±6"
   };
   function rangeWindow(preset, size, cs, ce) {
     const now2 = Date.now(), d = new Date(now2), y = d.getUTCFullYear();
@@ -2359,32 +2389,74 @@ var NimbusGanttApp = (function(exports) {
       return { from: Date.UTC(y, q * 3, 1), to: Date.UTC(y, q * 3 + 3, 0) };
     }
     if (preset === "custom") return { from: parseISO(cs), to: parseISO(ce) };
-    const n = preset === "next3" ? 3 : 6;
-    let cur = bucketStartMs(now2, size);
-    for (let i = 0; i < n; i++) cur = nextBucketMs(cur, size);
-    return { from: bucketStartMs(now2, size), to: cur };
+    const n = preset === "span3" || preset === "next3" ? 3 : 6;
+    const cur = bucketStartMs(now2, size);
+    let from = cur;
+    for (let i = 0; i < n; i++) from = prevBucketMs(from, size);
+    let to = cur;
+    for (let i = 0; i <= n; i++) to = nextBucketMs(to, size);
+    return { from, to };
   }
   const COL = { actual: "#10b981", actualOver: "#ef4444", forecast: "#93c5fd", target: "#64748b", grid: "#e2e8f0", muted: "#64748b" };
   function renderPacingView(host, tasks, options = {}) {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e, _f, _g;
     injectStyles$1();
     const dflt = options.defaults ?? {};
     const ctrl = options.controls ?? {};
     const allowDollars = ctrl.dollars !== false;
-    let bucket = dflt.bucket || ((_a = options.pacingData) == null ? void 0 : _a.bucket) || options.defaultBucket || "month";
-    let range = dflt.range || "next6";
-    let customS = dflt.customStart || "", customE = dflt.customEnd || "";
-    let measure = dflt.measure === "dollars" && allowDollars ? "dollars" : "hours";
-    let mode = dflt.mode || "period";
+    const saved = loadPacingPrefs() ?? {};
+    let bucket = saved.bucket || dflt.bucket || ((_a = options.pacingData) == null ? void 0 : _a.bucket) || options.defaultBucket || "week";
+    let range = saved.range || dflt.range || "span6";
+    let customS = saved.customS ?? dflt.customStart ?? "";
+    let customE = saved.customE ?? dflt.customEnd ?? "";
+    let measure = (saved.measure || dflt.measure) === "dollars" && allowDollars ? "dollars" : "hours";
+    let mode = saved.mode || dflt.mode || "period";
     let expandedKey = null;
     const show = {
-      actual: ((_b = dflt.series) == null ? void 0 : _b.actual) ?? true,
-      forecast: ((_c = dflt.series) == null ? void 0 : _c.forecast) ?? true,
-      target: ((_d = dflt.series) == null ? void 0 : _d.target) ?? false
+      actual: ((_b = saved.show) == null ? void 0 : _b.actual) ?? ((_c = dflt.series) == null ? void 0 : _c.actual) ?? true,
+      forecast: ((_d = saved.show) == null ? void 0 : _d.forecast) ?? ((_e = dflt.series) == null ? void 0 : _e.forecast) ?? true,
+      target: ((_f = saved.show) == null ? void 0 : _f.target) ?? ((_g = dflt.series) == null ? void 0 : _g.target) ?? false
     };
+    function persistPrefs() {
+      savePacingPrefs({ range, bucket, customS, customE, measure, mode, show: { ...show } });
+    }
+    function stepWindow(end, dirBuckets) {
+      if (range !== "custom" || !customS || !customE) {
+        const w = rangeWindow(range, bucket, customS, customE);
+        const baseFrom = w.from ?? bucketStartMs(Date.now(), bucket);
+        const baseTo = w.to ?? nextBucketMs(bucketStartMs(Date.now(), bucket), bucket);
+        customS = isoOf(baseFrom);
+        customE = isoOf(baseTo);
+        range = "custom";
+      }
+      if (end === "start") {
+        const cand = isoOf(stepBuckets(parseISO(customS) ?? Date.now(), bucket, dirBuckets));
+        if ((parseISO(cand) ?? 0) < (parseISO(customE) ?? 0)) customS = cand;
+      } else {
+        const cand = isoOf(stepBuckets(parseISO(customE) ?? Date.now(), bucket, dirBuckets));
+        if ((parseISO(cand) ?? 0) > (parseISO(customS) ?? 0)) customE = cand;
+      }
+      expandedKey = null;
+      render();
+    }
     function data() {
-      if (options.pacingData && options.pacingData.bucket === bucket) return options.pacingData;
+      if (options.pacingData && options.pacingData.bucket === bucket) {
+        return mergeLocalItems(options.pacingData);
+      }
       return computeFromTasks(tasks, bucket);
+    }
+    function mergeLocalItems(d) {
+      if (!d.buckets.some((b) => !b.items || b.items.length === 0)) return d;
+      const local = computeFromTasks(tasks, d.bucket);
+      const byKey = new Map(local.buckets.map((b) => [b.key, b]));
+      return {
+        ...d,
+        buckets: d.buckets.map((b) => {
+          if (b.items && b.items.length) return b;
+          const lb = byKey.get(b.key) || local.buckets.find((x) => b.startMs != null && x.startMs === b.startMs || x.label === b.label);
+          return { ...b, items: lb ? lb.items : [] };
+        })
+      };
     }
     const rate = (d) => d.rate ?? options.rate;
     function pill(label, on, onClick, slate = false) {
@@ -2399,6 +2471,7 @@ var NimbusGanttApp = (function(exports) {
       return g;
     }
     function render() {
+      persistPrefs();
       const d = data();
       const r = rate(d);
       const useDollars = measure === "dollars" && !!r;
@@ -2409,13 +2482,28 @@ var NimbusGanttApp = (function(exports) {
       const row1 = el$1("div", "ngp-row");
       let row1n = 0;
       if (ctrl.ranges !== false) {
-        const ranges = Array.isArray(ctrl.ranges) ? ctrl.ranges : ["next3", "next6", "rest", "thisQtr", "ytd", "all", "custom"];
+        const ranges = Array.isArray(ctrl.ranges) ? ctrl.ranges : ["span3", "span6", "rest", "thisQtr", "ytd", "all", "custom"];
         row1.appendChild(grp("Range", ...ranges.map((p) => pill(RANGE_LABELS[p], range === p, () => {
           range = p;
           expandedKey = null;
           render();
         }))));
         row1n++;
+        const u = bucket === "week" ? "wk" : bucket === "quarter" ? "qtr" : "mo";
+        row1.appendChild(grp(
+          "Earlier",
+          pill("−", false, () => stepWindow("start", 1), true),
+          // trim oldest
+          pill("+" + u, false, () => stepWindow("start", -1), true)
+          // add a past bucket
+        ));
+        row1.appendChild(grp(
+          "Later",
+          pill("+" + u, false, () => stepWindow("end", 1), true),
+          // add a future bucket
+          pill("−", false, () => stepWindow("end", -1), true)
+          // trim newest
+        ));
         if (range === "custom") {
           const mk = (v, set) => {
             const i = document.createElement("input");
@@ -6945,6 +7033,7 @@ var NimbusGanttApp = (function(exports) {
       }
       let ganttInst = null;
       let cleanupShading = null;
+      let hostPacingData = null;
       let cleanupDrag = null;
       let depthMap = buildDepthMap(allTasks);
       let chromeTaskAt = null;
@@ -7358,7 +7447,9 @@ var NimbusGanttApp = (function(exports) {
           {
             const pc = options.config ?? {};
             const pacingCfg = pc.pacing ?? {};
+            if (hostPacingData == null && pacingCfg.data) hostPacingData = pacingCfg.data;
             renderPacingView(ganttHost, allTasks, {
+              pacingData: hostPacingData ?? void 0,
               // Drill-down item click reuses the existing host nav contract.
               onOpenItem: options.onItemClick ? (taskId) => options.onItemClick(taskId) : void 0,
               // Row hover → host tooltip/mouseover (DH's richer detail card).
@@ -7600,6 +7691,15 @@ var NimbusGanttApp = (function(exports) {
         /** 0.196.2 — current mode (mirrors the batchMode flag). */
         getMode() {
           return options.batchMode ? "gather" : "wired";
+        },
+        /** 0.197.0 — push authoritative PacingData (DH's getPortfolioPacing,
+         *  adapted via portfolioPacingToPacingData) into the pacing view. Live,
+         *  no reload — if the Pacing tab is showing, it re-renders immediately;
+         *  otherwise the data is held for the next switch to Pacing. This is the
+         *  "DH recomputes → pushes back to the NG view" loop. */
+        setPacingData(data) {
+          hostPacingData = data;
+          if (state.viewMode === "pacing") rebuildView();
         },
         /** 0.185 — snapshot of the batch buffer. Empty array when batchMode
          *  is off or the buffer is clean. Insertion-order preserved across
