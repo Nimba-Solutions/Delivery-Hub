@@ -286,13 +286,10 @@ global with sharing class DeliveryCartService {
                 StageNamePk__c = 'Backlog'
                 // ActivatedDateTime__c intentionally left NULL — cart line, not live.
             );
-            // System-mode DML: every cart surface (LWC + Cart tab + this Apex class)
-            // is permset-gated, and that permset grants edit-FLS on these fields — so
-            // only users who already have FLS can reach this path. stripInaccessible
-            // here only broke the namespaced packaging test (no permset on the test
-            // user → fields silently stripped), the DML twin of the WITH USER_MODE rule.
-            insert wi;
-            return wi.Id;
+            SObjectAccessDecision decision = Security.stripInaccessible(
+                AccessType.CREATABLE, new List<WorkItem__c>{ wi });
+            insert decision.getRecords();
+            return decision.getRecords()[0].Id;
         } catch (Exception e) {
             throw toAura(e);
         }
@@ -304,8 +301,9 @@ global with sharing class DeliveryCartService {
     }
 
     private static void persist(WorkItem__c wi) {
-        // System-mode DML — see note in createCartItem (permset-gated surfaces).
-        update wi;
+        SObjectAccessDecision decision = Security.stripInaccessible(
+            AccessType.UPDATABLE, new List<WorkItem__c>{ wi });
+        update decision.getRecords();
     }
 
     // ── Checkout ─────────────────────────────────────────────────────────
@@ -356,8 +354,9 @@ global with sharing class DeliveryCartService {
             for (WorkItem__c wi : willDo) {
                 toActivate.add(new WorkItem__c(Id = wi.Id, ActivatedDateTime__c = now));
             }
-            // System-mode DML — see note in createCartItem (permset-gated surfaces).
-            update toActivate;
+            SObjectAccessDecision decision = Security.stripInaccessible(
+                AccessType.UPDATABLE, toActivate);
+            update decision.getRecords();
             result.activatedCount = toActivate.size();
 
             routeCheckout(mode, willDo, result);

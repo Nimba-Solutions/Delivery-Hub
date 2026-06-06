@@ -15,6 +15,44 @@
 private class DeliveryCartServiceTest {
 
     /**
+     * @description Creates a permset-assigned user so the stripInaccessible-guarded
+     *              service writes have edit-FLS in the namespaced packaging test
+     *              context (the package-version-create test user has no permset, so
+     *              the fields would otherwise be silently stripped). @TestSetup runs
+     *              in its own transaction, so there is no MIXED_DML with the WorkItem
+     *              DML the test methods do.
+     */
+    @TestSetup
+    static void makeCartUser() {
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        User u = new User(
+            Alias = 'cartu',
+            Email = 'cart.test@example.com',
+            EmailEncodingKey = 'UTF-8',
+            LastName = 'CartTest',
+            LanguageLocaleKey = 'en_US',
+            LocaleSidKey = 'en_US',
+            ProfileId = p.Id,
+            TimeZoneSidKey = 'America/Los_Angeles',
+            UserName = 'cart.test.user.' + System.currentTimeMillis() + '@example.com.dhcart'
+        );
+        insert u;
+        PermissionSet ps = [
+            SELECT Id FROM PermissionSet WHERE Name = 'DeliveryHubAdmin_App' LIMIT 1
+        ];
+        insert new PermissionSetAssignment(AssigneeId = u.Id, PermissionSetId = ps.Id);
+    }
+
+    /** @description The permset-assigned cart test user (see makeCartUser). */
+    private static User cartUser() {
+        return [
+            SELECT Id FROM User
+            WHERE UserName LIKE 'cart.test.user.%@example.com.dhcart'
+            ORDER BY CreatedDate DESC LIMIT 1
+        ];
+    }
+
+    /**
      * @description Helper: a non-activated cart WorkItem with the given intention.
      * @param intention The ClientIntentionPk__c value to set.
      * @param hours The EstimatedHoursNumber__c value to set.
@@ -64,10 +102,13 @@ private class DeliveryCartServiceTest {
     @IsTest
     static void addRemoveAndReorderUpdateIntentionAndPriority() {
         WorkItem__c wi = cartItem('Sizing Only', 4);
+        User u = cartUser();
 
         Test.startTest();
-        DeliveryCartService.addToCart(wi.Id, 'Will Do');
-        DeliveryCartService.reorder(wi.Id, 'High');
+        System.runAs(u) {
+            DeliveryCartService.addToCart(wi.Id, 'Will Do');
+            DeliveryCartService.reorder(wi.Id, 'High');
+        }
         Test.stopTest();
 
         WorkItem__c after = [
@@ -76,7 +117,9 @@ private class DeliveryCartServiceTest {
         System.assertEquals('Will Do', after.ClientIntentionPk__c, 'Intention promoted to Will Do.');
         System.assertEquals('High', after.PriorityPk__c, 'Priority reordered.');
 
-        DeliveryCartService.removeFromCart(wi.Id);
+        System.runAs(u) {
+            DeliveryCartService.removeFromCart(wi.Id);
+        }
         WorkItem__c removed = [SELECT ClientIntentionPk__c FROM WorkItem__c WHERE Id = :wi.Id];
         System.assertEquals('Deferred', removed.ClientIntentionPk__c, 'Remove sets Deferred (out of cart).');
     }
@@ -97,8 +140,12 @@ private class DeliveryCartServiceTest {
 
     @IsTest
     static void createCartItemAddsNonActivatedLine() {
+        User u = cartUser();
         Test.startTest();
-        Id newId = DeliveryCartService.createCartItem('New cart work', 7, 'Sizing Only');
+        Id newId;
+        System.runAs(u) {
+            newId = DeliveryCartService.createCartItem('New cart work', 7, 'Sizing Only');
+        }
         Test.stopTest();
 
         WorkItem__c created = [
@@ -129,9 +176,13 @@ private class DeliveryCartServiceTest {
     static void checkoutActivatesWillDoOnlyNotSizingOnly() {
         WorkItem__c willDo = cartItem('Will Do', 12);
         WorkItem__c sizing = cartItem('Sizing Only', 6);
+        User u = cartUser();
 
         Test.startTest();
-        DeliveryCartService.CheckoutResultDTO result = DeliveryCartService.checkout();
+        DeliveryCartService.CheckoutResultDTO result;
+        System.runAs(u) {
+            result = DeliveryCartService.checkout();
+        }
         Test.stopTest();
 
         System.assertEquals(1, result.activatedCount, 'Only the Will Do line activates.');
