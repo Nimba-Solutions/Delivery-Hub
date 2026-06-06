@@ -1005,7 +1005,7 @@ var NimbusGanttApp = (function(exports) {
       score: hasOwner && hasDates && hasHours ? 100 : 50
     };
   }
-  function computeKpis(tasks, audits) {
+  function computeKpis(tasks, audits, dupeIds) {
     let totalSizedHours = 0;
     let needsAttention = 0;
     let proposalReady = 0;
@@ -1028,7 +1028,7 @@ var NimbusGanttApp = (function(exports) {
       totalItems: tasks.length,
       totalSizedHours: Math.round(totalSizedHours),
       needsAttention,
-      dupeCount: 0,
+      dupeCount: dupeIds.size,
       proposalReady,
       proposalTotal
     };
@@ -1111,7 +1111,21 @@ var NimbusGanttApp = (function(exports) {
     const onReorder = options == null ? void 0 : options.onReorder;
     const audits = /* @__PURE__ */ new Map();
     for (const t of tasks) audits.set(t.id, auditTask(t));
-    const dupeIds = /* @__PURE__ */ new Set();
+    const dupeIds = (() => {
+      const byTitle = /* @__PURE__ */ new Map();
+      for (const t of tasks) {
+        const key = (t.title || t.name || "").trim().toLowerCase();
+        if (!key) continue;
+        const ids = byTitle.get(key);
+        if (ids) ids.push(t.id);
+        else byTitle.set(key, [t.id]);
+      }
+      const dupes = /* @__PURE__ */ new Set();
+      for (const ids of byTitle.values()) {
+        if (ids.length > 1) for (const id of ids) dupes.add(id);
+      }
+      return dupes;
+    })();
     function getFilteredTasks() {
       let result = tasks;
       if (search.trim()) {
@@ -1507,7 +1521,7 @@ var NimbusGanttApp = (function(exports) {
         "color:#0f172a",
         "font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif"
       ].join(";");
-      const kpis = computeKpis(tasks, audits);
+      const kpis = computeKpis(tasks, audits, dupeIds);
       const header = el$2("div", "");
       header.style.cssText = [
         "background:#ffffff",
@@ -1545,7 +1559,7 @@ var NimbusGanttApp = (function(exports) {
       kpiWrap.appendChild(kpiPill(
         "dupes",
         String(kpis.dupeCount),
-        "emerald"
+        kpis.dupeCount > 0 ? "rose" : "emerald"
       ));
       if (kpis.proposalTotal > 0) {
         const ready = kpis.proposalReady;
@@ -2243,6 +2257,19 @@ var NimbusGanttApp = (function(exports) {
     } catch {
     }
   }
+  function getPacingPrefs() {
+    return loadPacingPrefs();
+  }
+  function setPacingPrefs(p) {
+    if (p == null) {
+      try {
+        if (typeof localStorage !== "undefined") localStorage.removeItem(PACING_PREFS_KEY);
+      } catch {
+      }
+      return;
+    }
+    savePacingPrefs(p);
+  }
   function keyToMs(key) {
     if (key[0] === "W") return parseISO(key.slice(1)) ?? 0;
     if (key.indexOf("Q") >= 0) {
@@ -2766,6 +2793,38 @@ var NimbusGanttApp = (function(exports) {
     const mag = Math.pow(10, Math.floor(Math.log10(v)));
     return Math.ceil(v / (mag / 2)) * (mag / 2);
   }
+  const VIEWS_KEY = "nga.views.v1";
+  const EMPTY = { views: [], defaultId: null, last: null };
+  function loadViewsStore() {
+    try {
+      const raw = typeof localStorage !== "undefined" ? localStorage.getItem(VIEWS_KEY) : null;
+      if (!raw) return { ...EMPTY };
+      const parsed = JSON.parse(raw);
+      return {
+        views: Array.isArray(parsed.views) ? parsed.views : [],
+        defaultId: typeof parsed.defaultId === "string" ? parsed.defaultId : null,
+        last: parsed.last && typeof parsed.last === "object" ? parsed.last : null
+      };
+    } catch {
+      return { ...EMPTY };
+    }
+  }
+  function saveViewsStore(store) {
+    try {
+      if (typeof localStorage !== "undefined") localStorage.setItem(VIEWS_KEY, JSON.stringify(store));
+    } catch {
+    }
+  }
+  function newViewId(existing) {
+    let n = existing.length + 1;
+    const ids = new Set(existing.map((v) => v.id));
+    let id = "view-" + n;
+    while (ids.has(id)) {
+      n += 1;
+      id = "view-" + n;
+    }
+    return id;
+  }
   const STYLE_ID = "nga-modal-styles";
   const Z = 2147483600;
   const MODAL_CSS = `
@@ -2935,9 +2994,12 @@ var NimbusGanttApp = (function(exports) {
     "list",
     "pacing",
     "treemap",
-    "bubbles",
-    "calendar",
-    "flow"
+    "bubbles"
+    // 0.198.1 — Calendar/Flow pulled from the pill list: they only ever routed
+    // to renderComingSoon ("coming in 0.183") and shipping dead tabs is worse UX
+    // than absence. The ViewMode union, renderComingSoon, and the rebuildView
+    // catch-all all stay intact, so a future port is just re-adding the id here
+    // plus a real renderer branch (follow the 'pacing' pattern in IIFEApp).
   ];
   const CLOUD_NIMBUS_CATEGORIES = [
     { category: "in-flight", label: "In Flight", color: "#10b981" },
@@ -3195,12 +3257,17 @@ var NimbusGanttApp = (function(exports) {
     adminOpen: false,
     advisorOpen: false,
     featureOverrides: {},
-    openDetailTaskIds: []
+    openDetailTaskIds: [],
+    savedViews: [],
+    defaultViewId: null,
+    activeViewId: null
   };
   function reduceAppState(state, event) {
     switch (event.type) {
+      // 0.199.0 — a manual view-mode switch diverges from any applied saved view,
+      // so clear activeViewId (the Views menu falls back to its "Views" label).
       case "SET_VIEW":
-        return { ...state, viewMode: event.mode };
+        return { ...state, viewMode: event.mode, activeViewId: null };
       case "SET_FILTER":
         return { ...state, filter: event.id };
       case "SET_SEARCH":
@@ -3625,6 +3692,7 @@ var NimbusGanttApp = (function(exports) {
     const root = el$2("div", CLS_TITLEBAR);
     root.setAttribute("data-slot", "TitleBar");
     let currentProps = initial;
+    let viewsMenuOpen = false;
     function render(p) {
       clear(root);
       const { config, state, dispatch, data } = p;
@@ -3647,8 +3715,11 @@ var NimbusGanttApp = (function(exports) {
           btn.addEventListener("click", () => dispatch({ type: "SET_VIEW", mode: v.id }));
           rowViews.appendChild(btn);
         });
-        root.appendChild(rowViews);
       }
+      if (config.viewsManager !== false) {
+        rowViews.appendChild(buildViewsMenu(state, dispatch));
+      }
+      if (rowViews.childNodes.length > 0) root.appendChild(rowViews);
       const brand = el$2("span", CLS_TITLE_BRAND);
       brand.textContent = config.title || "Pro Forma Timeline";
       rowMain.appendChild(brand);
@@ -3867,6 +3938,102 @@ var NimbusGanttApp = (function(exports) {
         legend.appendChild(chip);
       }
       root.appendChild(legend);
+    }
+    function buildViewsMenu(state, dispatch) {
+      var _a;
+      const wrap = el$2("span", "");
+      wrap.style.cssText = "position:relative;display:inline-block;";
+      const activeName = state.activeViewId ? ((_a = state.savedViews.find((v) => v.id === state.activeViewId)) == null ? void 0 : _a.name) ?? null : null;
+      const trigger = el$2("button", CLS_PILL_BTN_BASE + " " + CLS_PILL_BTN_IDLE_VIOLET);
+      trigger.textContent = "☰ " + (activeName || "Views") + " ▾";
+      trigger.title = "Saved views";
+      trigger.addEventListener("click", () => {
+        viewsMenuOpen = !viewsMenuOpen;
+        render(currentProps);
+      });
+      wrap.appendChild(trigger);
+      if (!viewsMenuOpen) return wrap;
+      const menu = el$2("div", "");
+      menu.style.cssText = [
+        "position:absolute",
+        "z-index:60",
+        "top:calc(100% + 4px)",
+        "left:0",
+        "min-width:248px",
+        "background:#ffffff",
+        "border:1px solid #e2e8f0",
+        "border-radius:8px",
+        "box-shadow:0 10px 28px rgba(15,23,42,.16)",
+        "padding:6px",
+        "font-size:13px",
+        "color:#0f172a"
+      ].join(";");
+      if (state.savedViews.length === 0) {
+        const empty = el$2("div", "");
+        empty.style.cssText = "padding:8px 10px;color:#94a3b8;";
+        empty.textContent = "No saved views yet — save the current layout below.";
+        menu.appendChild(empty);
+      } else {
+        state.savedViews.forEach((v) => {
+          const isDefault = state.defaultViewId === v.id;
+          const isActive = state.activeViewId === v.id;
+          const row = el$2("div", "");
+          row.style.cssText = "display:flex;align-items:center;gap:2px;padding:3px 4px;border-radius:6px;";
+          const name = el$2("button", "");
+          name.style.cssText = "flex:1;text-align:left;background:none;border:none;cursor:pointer;padding:4px 6px;color:" + (isActive ? "#7c3aed" : "#0f172a") + ";font-weight:" + (isActive ? "600" : "400") + ";";
+          name.textContent = (isDefault ? "★ " : "") + v.name;
+          name.title = "Apply this view";
+          name.addEventListener("click", () => {
+            viewsMenuOpen = false;
+            dispatch({ type: "APPLY_VIEW", id: v.id });
+          });
+          const star = el$2("button", "");
+          star.style.cssText = "background:none;border:none;cursor:pointer;padding:4px 6px;color:" + (isDefault ? "#f59e0b" : "#cbd5e1") + ";";
+          star.textContent = "★";
+          star.title = isDefault ? "Default view (opens on load) — click to unset" : "Set as default view";
+          star.addEventListener("click", () => dispatch({ type: "SET_DEFAULT_VIEW", id: v.id }));
+          const del = el$2("button", "");
+          del.style.cssText = "background:none;border:none;cursor:pointer;padding:4px 6px;color:#cbd5e1;";
+          del.textContent = "✕";
+          del.title = "Delete view";
+          del.addEventListener("click", () => dispatch({ type: "DELETE_VIEW", id: v.id }));
+          row.appendChild(name);
+          row.appendChild(star);
+          row.appendChild(del);
+          menu.appendChild(row);
+        });
+      }
+      const divider = el$2("div", "");
+      divider.style.cssText = "border-top:1px solid #f1f5f9;margin:6px 0;";
+      menu.appendChild(divider);
+      const saveRow = el$2("div", "");
+      saveRow.style.cssText = "display:flex;gap:4px;padding:2px 4px;";
+      const input = el$2("input", "");
+      input.type = "text";
+      input.placeholder = "Save current view as…";
+      input.style.cssText = "flex:1;border:1px solid #e2e8f0;border-radius:6px;padding:5px 8px;font-size:13px;outline:none;";
+      const saveBtn = el$2("button", "");
+      saveBtn.textContent = "Save";
+      saveBtn.style.cssText = "background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-weight:600;";
+      const doSave = () => {
+        const n = input.value.trim();
+        if (!n) {
+          input.focus();
+          return;
+        }
+        viewsMenuOpen = false;
+        dispatch({ type: "SAVE_VIEW", name: n });
+      };
+      saveBtn.addEventListener("click", doSave);
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") doSave();
+      });
+      input.addEventListener("click", (e) => e.stopPropagation());
+      saveRow.appendChild(input);
+      saveRow.appendChild(saveBtn);
+      menu.appendChild(saveRow);
+      wrap.appendChild(menu);
+      return wrap;
     }
     render(initial);
     return {
@@ -6147,6 +6314,20 @@ var NimbusGanttApp = (function(exports) {
       if ((_m = options.initialViewport) == null ? void 0 : _m.zoom) {
         state = { ...state, zoom: options.initialViewport.zoom };
       }
+      {
+        const cfgAny = options.config ?? {};
+        const store = loadViewsStore();
+        const views = store.views.length ? store.views : cfgAny.savedViews ?? [];
+        const defaultViewId = store.defaultId ?? cfgAny.defaultViewId ?? null;
+        state = { ...state, savedViews: views, defaultViewId, activeViewId: null };
+        const def = defaultViewId ? views.find((v) => v.id === defaultViewId) : null;
+        if (def) {
+          applyViewState(def);
+          state = { ...state, activeViewId: def.id };
+        } else if (store.last) {
+          applyViewState(store.last);
+        }
+      }
       let allTasks = applyHoursBridge(options.tasks || [], options.hoursPerDay);
       let allDependencies = normalizeDependencies(options.dependencies);
       const patchLog = [];
@@ -6736,6 +6917,73 @@ var NimbusGanttApp = (function(exports) {
           refreshGantt();
         }, 50);
       }
+      function snapshotCurrentView() {
+        const snap = {
+          viewMode: state.viewMode,
+          filter: String(state.filter),
+          search: state.search,
+          zoom: String(state.zoom),
+          groupBy: String(state.groupBy),
+          hideCompleted: state.hideCompleted
+        };
+        if (state.viewMode === "pacing") {
+          const p = getPacingPrefs();
+          if (p) snap.pacing = p;
+        }
+        return snap;
+      }
+      function applyViewState(v) {
+        if (v.pacing !== void 0) setPacingPrefs(v.pacing);
+        state = {
+          ...state,
+          viewMode: v.viewMode ?? state.viewMode,
+          filter: v.filter ?? state.filter,
+          search: v.search ?? state.search,
+          zoom: v.zoom ?? state.zoom,
+          groupBy: v.groupBy ?? state.groupBy,
+          hideCompleted: v.hideCompleted ?? state.hideCompleted
+        };
+      }
+      function persistViewsStore() {
+        saveViewsStore({
+          views: state.savedViews,
+          defaultId: state.defaultViewId,
+          last: snapshotCurrentView()
+        });
+      }
+      function handleSaveView(name) {
+        const id = newViewId(state.savedViews);
+        const view = { id, name: name.trim() || "View " + (state.savedViews.length + 1), ...snapshotCurrentView() };
+        state = { ...state, savedViews: [...state.savedViews, view], activeViewId: id };
+        persistViewsStore();
+        renderSlots();
+        return id;
+      }
+      function handleApplyView(id) {
+        const v = state.savedViews.find((x) => x.id === id);
+        if (!v) return;
+        applyViewState(v);
+        state = { ...state, activeViewId: id };
+        reconcileFeatureOverrides();
+        renderSlots();
+        rebuildView();
+        persistViewsStore();
+      }
+      function handleDeleteView(id) {
+        state = {
+          ...state,
+          savedViews: state.savedViews.filter((x) => x.id !== id),
+          defaultViewId: state.defaultViewId === id ? null : state.defaultViewId,
+          activeViewId: state.activeViewId === id ? null : state.activeViewId
+        };
+        persistViewsStore();
+        renderSlots();
+      }
+      function handleSetDefaultView(id) {
+        state = { ...state, defaultViewId: state.defaultViewId === id ? null : id };
+        persistViewsStore();
+        renderSlots();
+      }
       function dispatch(ev) {
         if (ev.type === "PATCH") {
           onTaskPatch(ev.patch);
@@ -6749,6 +6997,22 @@ var NimbusGanttApp = (function(exports) {
           openTeamModal();
           return;
         }
+        if (ev.type === "SAVE_VIEW") {
+          handleSaveView(ev.name);
+          return;
+        }
+        if (ev.type === "APPLY_VIEW") {
+          handleApplyView(ev.id);
+          return;
+        }
+        if (ev.type === "DELETE_VIEW") {
+          handleDeleteView(ev.id);
+          return;
+        }
+        if (ev.type === "SET_DEFAULT_VIEW") {
+          handleSetDefaultView(ev.id);
+          return;
+        }
         const nextState = reduceAppState(state, ev);
         const stateChanged = nextState !== state;
         state = nextState;
@@ -6760,6 +7024,7 @@ var NimbusGanttApp = (function(exports) {
           const viewChangingEvents = ["SET_VIEW", "SET_GROUP_BY", "SET_FILTER", "SET_SEARCH", "TOGGLE_HIDE_COMPLETED"];
           if (viewChangingEvents.indexOf(ev.type) >= 0) {
             rebuildView();
+            if (ev.type === "SET_VIEW") persistViewsStore();
           } else if (ev.type === "TOGGLE_FEATURE") {
             rebuildView();
           } else if (ev.type === "SET_ZOOM") {
@@ -7471,6 +7736,21 @@ var NimbusGanttApp = (function(exports) {
           renderComingSoon(ganttHost, labelMap[state.viewMode] || state.viewMode);
         }
         renderSlots();
+        if (state.viewMode === "gantt" && ganttInst && typeof requestAnimationFrame === "function") {
+          const inst = ganttInst;
+          const host = ganttHost;
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              try {
+                const canvas = host.querySelector("canvas");
+                if (canvas && (canvas.width === 0 || canvas.height === 0)) {
+                  inst.resize();
+                }
+              } catch (_e2) {
+              }
+            });
+          });
+        }
       }
       snapshotFeatureDefaults();
       renderSlots();
@@ -7484,7 +7764,10 @@ var NimbusGanttApp = (function(exports) {
         });
       } catch (_e2) {
       }
-      if (ganttHost) initGantt(ganttHost);
+      if (ganttHost) {
+        if (state.viewMode === "gantt") initGantt(ganttHost);
+        else rebuildView();
+      }
       try {
         const raf = typeof requestAnimationFrame === "function" ? requestAnimationFrame : (fn) => setTimeout(() => fn(Date.now()), 16);
         raf(() => {
@@ -7593,6 +7876,27 @@ var NimbusGanttApp = (function(exports) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         get gantt() {
           return ganttInst;
+        },
+        // 0.199.0 — Saved Views programmatic API. Hosts can read/seed/drive the
+        // saved-view list and default without touching the UI (e.g. provision a
+        // "Client forecast" view per org, or set which view opens on load).
+        getSavedViews() {
+          return state.savedViews.map((v) => ({ ...v }));
+        },
+        saveView(name) {
+          return handleSaveView(name);
+        },
+        applyView(id) {
+          dispatch({ type: "APPLY_VIEW", id });
+        },
+        deleteView(id) {
+          dispatch({ type: "DELETE_VIEW", id });
+        },
+        setDefaultView(id) {
+          dispatch({ type: "SET_DEFAULT_VIEW", id });
+        },
+        getDefaultView() {
+          return state.defaultViewId;
         },
         setTasks(tasks) {
           allTasks = applyHoursBridge(tasks, options.hoursPerDay);
