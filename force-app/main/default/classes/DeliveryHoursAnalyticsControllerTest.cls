@@ -528,11 +528,11 @@ private class DeliveryHoursAnalyticsControllerTest {
         };
 
         Test.startTest();
-        String json = DeliveryHoursAnalyticsController.getPacing('Week', 6, 6);
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Week', 6, 6);
         Test.stopTest();
 
-        System.assertNotEquals(null, json, 'getPacing returns a JSON string');
-        Map<String, Object> data = (Map<String, Object>) JSON.deserializeUntyped(json);
+        System.assertNotEquals(null, pacingJson, 'getPacing returns a JSON string');
+        Map<String, Object> data = (Map<String, Object>) JSON.deserializeUntyped(pacingJson);
         System.assertEquals('week', (String) data.get('bucket'), 'Granularity Week -> bucket "week"');
         System.assertEquals(true, (Boolean) data.get('authoritative'), 'PacingData marked authoritative');
 
@@ -558,11 +558,11 @@ private class DeliveryHoursAnalyticsControllerTest {
     @IsTest
     static void testGetPacingEmptyOrgStillReturnsJson() {
         Test.startTest();
-        String json = DeliveryHoursAnalyticsController.getPacing('Month', 6, 3);
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 3);
         Test.stopTest();
 
-        System.assertNotEquals(null, json, 'JSON returned even with no data');
-        Map<String, Object> data = (Map<String, Object>) JSON.deserializeUntyped(json);
+        System.assertNotEquals(null, pacingJson, 'JSON returned even with no data');
+        Map<String, Object> data = (Map<String, Object>) JSON.deserializeUntyped(pacingJson);
         System.assertEquals('month', (String) data.get('bucket'), 'default-ish month bucket');
         Map<String, Object> summary = (Map<String, Object>) data.get('summary');
         System.assertEquals(0, ((Integer) summary.get('activeItems')), 'no active roots');
