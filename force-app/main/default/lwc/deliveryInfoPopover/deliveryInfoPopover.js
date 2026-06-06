@@ -236,6 +236,24 @@ const INFO_REGISTRY = {
         keyFields:
             'WorkItem__c.EstimatedHoursNumber__c, WorkItem__c.EstimatedStartDevDate__c, WorkItem__c.EstimatedEndDevDate__c, WorkItem__c.TotalLoggedHoursSum__c, WorkLog__c.HoursLoggedNumber__c, WorkLog__c.WorkDateDate__c, NetworkEntity__c.DefaultHourlyRateCurrency__c'
     },
+    deliveryCartCheckout: {
+        dataSource:
+            'Calls DeliveryCartService.getCart, which returns the org-wide cart — WorkItem__c rows where ClientIntentionPk__c is Will Do or Sizing Only AND ActivatedDateTime__c is null — sequenced by PriorityGroupPk__c then PriorityPk__c. Per-line projected cost comes from the child WorkRequest__c ProjectedCostCurrency__c (QuotedHoursNumber__c x HourlyRateCurrency__c). The forecast month-spread reuses DeliveryHoursAnalyticsController.getPortfolioPacing. Checkout calls DeliveryCartService.checkout, which stamps ActivatedDateTime__c on the Will Do lines only and branches on the configured checkout mode (Invoice / Stripe / Approve).',
+        description:
+            'The org-wide procurement basket review surface. Shows committed (Will Do) vs exploring (Sizing Only) lines with hours — and dollars when the org opts in — a summary header, and a forecast of which months the work lands in. One Checkout button activates the committed lines into the live pipeline.',
+        friendlyName: 'Checkout Cart',
+        keyFields:
+            'WorkItem__c.ClientIntentionPk__c, WorkItem__c.ActivatedDateTime__c, WorkItem__c.EstimatedHoursNumber__c, WorkItem__c.PriorityPk__c, WorkItem__c.PriorityGroupPk__c, WorkRequest__c.ProjectedCostCurrency__c, DeliveryHubSettings__c.EnableCartDollarsDateTime__c, DeliveryHubSettings__c.CheckoutModeTxt__c'
+    },
+    deliveryCartBuilder: {
+        dataSource:
+            'Calls DeliveryCartService.getCart for the running total and current lines, and DeliveryCartService.createCartItem to freeform-add a new pre-activation WorkItem__c carrying ClientIntentionPk__c (Sizing Only or Will Do) with ActivatedDateTime__c left null. Inline actions call addToCart (promote to Will Do), removeFromCart (set Deferred), and reorder (write PriorityPk__c). Dollars on the running total appear only when a single blended NetworkEntity__c rate is resolvable and the org has opted in.',
+        description:
+            'The add-to-cart surface. A purchaser adds scoped work as Sizing Only (explore) or Will Do (commit), watches a running hours/dollars total, and promotes, removes, or reorders cart lines inline — all without leaving the procurement basket.',
+        friendlyName: 'Cart Builder',
+        keyFields:
+            'WorkItem__c.ClientIntentionPk__c, WorkItem__c.ActivatedDateTime__c, WorkItem__c.EstimatedHoursNumber__c, WorkItem__c.PriorityPk__c, WorkItem__c.BriefDescriptionTxt__c, NetworkEntity__c.DefaultHourlyRateCurrency__c'
+    },
     deliveryWatcherSetup: {
         dataSource:
             'Calls DeliveryWatcherSetupController.getSettings to load the Watcher digest configuration from DeliveryHubSettings__c, and saveSettings to persist it. Flipping the master toggle stamps EnableWatcherDigestDateTime__c; the recipient list is validated against active Users and stored in WatcherDigestRecipientUserIdsTxt__c; an optional Slack webhook override updates the org-wide webhook used by escalations and forecasts.',

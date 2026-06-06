@@ -648,6 +648,45 @@
                 </div>
             </div>
 
+            <div class="form-section">
+                <h3 class="slds-text-heading_small slds-p-horizontal_small slds-p-top_small">Checkout Cart</h3>
+                <div class="slds-grid slds-wrap slds-gutters_small" style="padding: 0.75rem;">
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            type="toggle"
+                            label="Show dollars in cart"
+                            checked={cartDollarsEnabled}
+                            onchange={handleCartDollarsChange}>
+                        </lightning-input>
+                        <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                            Show dollar amounts in the Checkout Cart (requires a single resolvable blended rate). Off = hours-only.
+                        </p>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-input
+                            type="toggle"
+                            label="Clients self-serve the cart"
+                            checked={cartSelfServeEnabled}
+                            onchange={handleCartSelfServeChange}>
+                        </lightning-input>
+                        <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                            Let clients assemble and check out their own cart. Off = admin assembles.
+                        </p>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2 slds-p-bottom_small">
+                        <lightning-combobox
+                            label="Checkout mode"
+                            value={checkoutMode}
+                            options={checkoutModeOptions}
+                            onchange={handleCheckoutModeChange}>
+                        </lightning-combobox>
+                        <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small">
+                            How checkout routes committed lines once they are activated.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             <div class="form-section" style="padding: 0 0.75rem;">
                 <lightning-input
                     type="text"

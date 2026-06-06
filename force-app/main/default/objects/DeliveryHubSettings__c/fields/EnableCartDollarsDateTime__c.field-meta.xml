@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableCartDollarsDateTime__c</fullName>
+    <description>When non-null, the Checkout Cart surfaces dollar amounts ($ per line + totals) in addition to hours, provided a single blended rate is resolvable. Null = hours-only (default; MF behavior). Self-serve orgs opt in.</description>
+    <inlineHelpText>Set to show dollars in the Checkout Cart (requires a single resolvable blended rate). Leave blank for hours-only.</inlineHelpText>
+    <label>Enable Cart Dollars</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
