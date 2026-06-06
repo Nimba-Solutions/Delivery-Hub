@@ -55,6 +55,11 @@ import deleteWorkItemDependency from '@salesforce/apex/%%%NAMESPACE_DOT%%%Delive
 import updateWorkItemFields from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemFields';
 import isBypassAuditPassEnabled from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.isBypassAuditPassEnabled';
 import commitGanttPatches from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.commitGanttPatches';
+// NG 0.197.0+ Pacing subtab — DH is the forecast brain, NG renders. getPacing
+// serializes DeliveryHoursAnalyticsController.getPortfolioPacing into NG's
+// render-ready PacingData JSON; fed at mount via config.pacing.data so the
+// in-gantt Pacing subtab shows DH's authoritative numbers, not NG's fallback.
+import getPacing from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHoursAnalyticsController.getPacing';
 
 // Tab DeveloperNames used by the fullscreen nav pair. Centralized here so the
 // names are discoverable from a single search.
@@ -109,6 +114,9 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     _mounted = false;
     _tasks = [];
     _dependencies = [];
+    // NG 0.197.0+ authoritative PacingData (parsed from getPacing). Null until
+    // _fetchPacingData resolves; null => NG draws its task-derived preview.
+    _pacingData = null;
     _mountHandle = null;
     _refetchTimer = null;
     _viewportWriteTimer = null;
@@ -552,6 +560,67 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         }
     }
 
+    /**
+     * NG 0.196.1 onAutoSchedule({ changes }). NG computed an auto-schedule
+     * preview and the operator clicked Apply; NG hands us the proposed batch
+     * and writes nothing itself. Each change row is
+     * { id, name, startDate, endDate, previousStartDate, previousEndDate }.
+     * We route each into the SAME audit pendingBuffer manual drag-edits use
+     * (autoScheduleDispatcher -> handle.dispatch PATCH), so the moves show up
+     * in the review list and commit via the existing Submit -> onAuditSubmit
+     * -> commitGanttPatches flow. Nothing hits the org until the operator
+     * submits. Wrapped defensively so a bad batch never breaks the board.
+     */
+    _handleAutoSchedule(changes) {
+        const list = Array.isArray(changes) ? changes : [];
+        let staged = 0;
+        list.forEach((c) => {
+            if (!c || !c.id) return;
+            const next = {};
+            if (c.startDate !== undefined) next.startDate = c.startDate;
+            if (c.endDate !== undefined) next.endDate = c.endDate;
+            // Only stage rows that actually move a date.
+            if (Object.keys(next).length === 0) return;
+            try {
+                this.autoScheduleDispatcher({ taskId: c.id, changes: next });
+                staged += 1;
+            } catch (err) {
+                // eslint-disable-next-line no-console
+                console.error('[deliveryProFormaTimeline] onAutoSchedule stage failed for', c.id, err);
+            }
+        });
+        if (staged > 0) {
+            this.dispatchEvent(new ShowToastEvent({
+                title: 'Auto-Schedule staged',
+                message: `${staged} change${staged === 1 ? '' : 's'} staged in the audit buffer. Click Submit to commit.`,
+                variant: 'success',
+            }));
+        }
+    }
+
+    /**
+     * Fetches DH's authoritative pacing (getPacing serializes
+     * getPortfolioPacing into NG's PacingData JSON) and caches the parsed
+     * object on _pacingData. Graceful: on any failure we leave _pacingData
+     * null so NG falls back to its task-derived preview — the board still
+     * mounts. Uses NG 0.198's default granularity window (week) so the
+     * authoritative buckets line up with NG's built-in default cut.
+     */
+    async _fetchPacingData() {
+        try {
+            const json = await getPacing({
+                granularity: 'Week',
+                periodsBack: 6,
+                periodsForward: 6,
+            });
+            this._pacingData = json ? JSON.parse(json) : null;
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.warn('[deliveryProFormaTimeline] getPacing failed; NG pacing falls back to preview', error);
+            this._pacingData = null;
+        }
+    }
+
     // Flips the SLDS page-header hide-CSS and re-pushes the TitleBar
     // buttons so NG updates the button label + pressed state in place.
     _toggleHeaderChrome() {
@@ -587,6 +656,11 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 getProFormaTimelineData({ showCompleted: false }),
                 getGanttDependencies({ showCompleted: true }),
                 isBypassAuditPassEnabled(),
+                // Pacing data is best-effort and self-guarded — it resolves to
+                // null on failure (NG then draws its preview). Awaited in the
+                // same batch so config.pacing.data is ready at mount, but its
+                // failure never rejects this Promise.all (handled inside).
+                this._fetchPacingData(),
             ]);
             this._tasks = data || [];
             this._dependencies = this._mapDependenciesForNg(deps);
@@ -771,6 +845,27 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 onDateAction: (action, date, pos) => this._handleCtxDateAction(action, date, pos),
                 onDependencyAction: (action, depId, pos) => this._handleCtxDependencyAction(action, depId, pos),
             },
+            // NG 0.197.0+ Pacing subtab config. `data` is DH's authoritative
+            // PacingData (set below once getPacing resolves — see _pacingData).
+            // `controls.dollars:false` hides the $ measure (MF runs hours-only;
+            // the contract gates $ on this flag — dispatch-pacing-view-0195.md).
+            // `defaults` left to NG's 0.198 built-in (week + span6) so we don't
+            // fight the new default; saved-prefs precedence still wins per user.
+            config: {
+                pacing: {
+                    data: this._pacingData || undefined,
+                    controls: { dollars: false },
+                },
+            },
+            // NG 0.196.1 Auto-Schedule review-before-DML. When NG computes an
+            // auto-schedule preview and the operator clicks Apply, NG hands the
+            // proposed batch here (it writes NOTHING itself). Route each change
+            // through the SAME audit pendingBuffer the manual edits / the DH
+            // auto-schedule modal use (autoScheduleDispatcher -> handle.dispatch
+            // PATCH), so auto-schedule moves get reviewed + committed via the
+            // existing Submit -> onAuditSubmit -> commitGanttPatches flow instead
+            // of being applied silently. See _handleAutoSchedule.
+            onAutoSchedule: ({ changes } = {}) => this._handleAutoSchedule(changes),
         };
 
         // Audit-pass wiring: when DeliveryHubSettings__c.BypassAuditPassDateTime__c
@@ -991,6 +1086,19 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 }));
             } catch (e) { /* dispatchEvent unavailable */ }
             this._mounted = true;
+            // NG 0.197.0+ live push — if the handle exposes setPacingData and we
+            // have authoritative data, push it (covers the case where the data
+            // resolved after mount or config.pacing.data wasn't honored). Pure
+            // additive; no-op when the method or data is absent. Never throws.
+            try {
+                if (this._pacingData && this._mountHandle
+                    && typeof this._mountHandle.setPacingData === 'function') {
+                    this._mountHandle.setPacingData(this._pacingData);
+                }
+            } catch (e) {
+                // eslint-disable-next-line no-console
+                console.warn('[deliveryProFormaTimeline] setPacingData push failed (preview retained)', e);
+            }
             this._installCnEditBridge();
             // Subscribe to DeliveryWorkItemChange__e — on `task_upsert` events
             // (other clients' writes), schedule a debounced refetch through

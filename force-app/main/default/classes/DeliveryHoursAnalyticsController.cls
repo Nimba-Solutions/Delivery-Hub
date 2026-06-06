@@ -363,6 +363,134 @@ global with sharing class DeliveryHoursAnalyticsController {
         }
     }
 
+    /**
+     * @description Serializes getPortfolioPacing into nimbus-gantt's render-ready
+     *              PacingData shape (the DH->NG forecast contract,
+     *              nimbus-gantt/docs/dispatch-pacing-view-0195.md) and returns it
+     *              as a JSON string the deliveryProFormaTimeline LWC feeds to the
+     *              NG mount via config.pacing.data. Mirrors NG's
+     *              portfolioPacingToPacingData adapter 1:1 (period totals ->
+     *              actual/forecast/target, granularity -> bucket, blendedRate ->
+     *              rate, summary from totals) so the in-gantt Pacing subtab shows
+     *              DH's authoritative dated actuals / $ / scope instead of NG's
+     *              task-derived fallback preview. Per-period items[] are left empty
+     *              -- NG's items-hybrid fills the drill-down from the task buckets.
+     *              Returned as JSON to avoid adding new global packaged DTO types.
+     * @param granularity 'Week' | 'Month' | 'Quarter'. Defaults to 'Month'.
+     * @param periodsBack History periods to include. Forwarded to getPortfolioPacing
+     *                    (clamped there). Null defaults to 6.
+     * @param periodsForward Forecast periods to project. Forwarded to
+     *                    getPortfolioPacing (clamped there). Null defaults to 3.
+     * @return JSON String of the NG PacingData object (buckets + bucket size +
+     *         summary + optional rate, authoritative=true).
+     */
+    @AuraEnabled(cacheable=true)
+    global static String getPacing(String granularity, Integer periodsBack, Integer periodsForward) {
+        try {
+            PortfolioPacingDTO dto = getPortfolioPacing(granularity, periodsBack, periodsForward);
+            return JSON.serialize(toPacingData(dto), true);
+        } catch (AuraHandledException ahe) {
+            throw ahe;
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
+        }
+    }
+
+    /**
+     * @description Maps a PortfolioPacingDTO to the NG PacingData shape as a plain
+     *              Map (serialized by getPacing). Kept in lock-step with NG's
+     *              portfolioPacingToPacingData(dto) so the Home card, the email,
+     *              and the in-gantt subtab cannot disagree.
+     * @param dto The portfolio pacing result from getPortfolioPacing.
+     * @return Map<String, Object> matching NG's PacingData interface.
+     */
+    private static Map<String, Object> toPacingData(PortfolioPacingDTO dto) {
+        Date today = Date.today();
+        String g = (dto != null && dto.granularity != null) ? dto.granularity.toLowerCase() : 'month';
+        String bucketSize = g.startsWith('week') ? 'week' : (g.startsWith('quart') ? 'quarter' : 'month');
+
+        Decimal est = numOrZero(dto == null ? null : dto.totalEstimatedHours);
+        Decimal logged = numOrZero(dto == null ? null : dto.totalLoggedHours);
+
+        List<Object> buckets = new List<Object>();
+        if (dto != null && dto.periods != null) {
+            for (PacingPeriodDTO p : dto.periods) {
+                Boolean isForecast = (p.isForecast == true);
+                Boolean isCurrent = (p.startDate != null && p.endDate != null
+                    && today >= p.startDate && today <= p.endDate);
+                Boolean isPast = (!isForecast && p.endDate != null && p.endDate < today);
+                String key = (p.startDate != null) ? isoDate(p.startDate)
+                    : (p.label != null ? p.label : '');
+                Map<String, Object> b = new Map<String, Object>{
+                    'key' => key,
+                    'label' => (p.label != null ? p.label : (p.startDate != null ? isoDate(p.startDate) : '')),
+                    'actual' => numOrZero(p.loggedHours),
+                    'forecast' => numOrZero(p.forecastHours),
+                    'target' => numOrZero(p.targetHours),
+                    'isPast' => isPast,
+                    'isCurrent' => isCurrent,
+                    'items' => new List<Object>()
+                };
+                if (p.startDate != null) {
+                    b.put('startMs', dateToMs(p.startDate));
+                }
+                buckets.add(b);
+            }
+        }
+
+        Decimal remaining = (est - logged) > 0 ? (est - logged) : 0;
+        Decimal projected = numOrZero(dto == null ? null : dto.projectedFinalHours);
+        Map<String, Object> summary = new Map<String, Object>{
+            'estimatedHours' => est,
+            'loggedHours' => logged,
+            'remainingHours' => remaining,
+            'projectedFinalHours' => projected != 0 ? projected : est,
+            'pacingPct' => est > 0 ? Math.round((logged / est) * 100) : 0,
+            'activeItems' => (dto != null && dto.rootCount != null) ? dto.rootCount : 0,
+            'unscheduledHours' => 0
+        };
+
+        Map<String, Object> out = new Map<String, Object>{
+            'buckets' => buckets,
+            'bucket' => bucketSize,
+            'summary' => summary,
+            'authoritative' => true
+        };
+        if (dto != null && dto.blendedRate != null) {
+            out.put('rate', dto.blendedRate);
+        }
+        return out;
+    }
+
+    /**
+     * @description Null-safe numeric coalesce to 0 (mirrors NG's _num helper).
+     * @param v Possibly-null Decimal.
+     * @return v when non-null, else 0.
+     */
+    private static Decimal numOrZero(Decimal v) {
+        return (v == null) ? 0 : v;
+    }
+
+    /**
+     * @description Formats a Date as an ISO yyyy-MM-dd string (PacingBucket.key).
+     * @param d The date to format.
+     * @return ISO yyyy-MM-dd date string.
+     */
+    private static String isoDate(Date d) {
+        return DateTime.newInstance(d.year(), d.month(), d.day()).format('yyyy-MM-dd');
+    }
+
+    /**
+     * @description UTC epoch millis at midnight for a Date (PacingBucket.startMs).
+     * @param d The date to convert.
+     * @return Epoch milliseconds (GMT midnight).
+     */
+    private static Long dateToMs(Date d) {
+        return DateTime.newInstanceGmt(d.year(), d.month(), d.day(), 0, 0, 0).getTime();
+    }
+
     private static String normalizeGranularity(String granularity) {
         if (String.isBlank(granularity)) {
             return 'Month';
