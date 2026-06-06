@@ -161,7 +161,7 @@ global with sharing class DeliveryCartService {
                    StageNamePk__c, EstimatedStartDevDate__c, EstimatedEndDevDate__c,
                    DeveloperLookup__r.Name,
                    (SELECT Id, ProjectedCostCurrency__c, QuotedHoursNumber__c
-                    FROM Requests
+                    FROM Requests__r
                     ORDER BY CreatedDate DESC
                     LIMIT 1)
             FROM WorkItem__c
@@ -191,8 +191,8 @@ global with sharing class DeliveryCartService {
         if (wi.DeveloperLookup__r != null) {
             line.developerName = wi.DeveloperLookup__r.Name;
         }
-        if (wi.Requests != null && !wi.Requests.isEmpty()) {
-            line.projectedCost = wi.Requests[0].ProjectedCostCurrency__c;
+        if (wi.Requests__r != null && !wi.Requests__r.isEmpty()) {
+            line.projectedCost = wi.Requests__r[0].ProjectedCostCurrency__c;
         }
         return line;
     }
