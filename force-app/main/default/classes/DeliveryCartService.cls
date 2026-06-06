@@ -286,10 +286,20 @@ global with sharing class DeliveryCartService {
                 StageNamePk__c = 'Backlog'
                 // ActivatedDateTime__c intentionally left NULL — cart line, not live.
             );
-            SObjectAccessDecision decision = Security.stripInaccessible(
-                AccessType.CREATABLE, new List<WorkItem__c>{ wi });
-            insert decision.getRecords();
-            return decision.getRecords()[0].Id;
+            // Suppress the WorkItem before-insert auto-activation (handleBeforeInsert
+            // stamps ActivatedDateTime__c = now() on every non-sync insert) so a
+            // freeform cart line is genuinely NON-activated (ActivatedDateTime stays
+            // NULL until checkout). Restored in finally so nothing else is affected.
+            Boolean priorDisabled = DeliveryWorkItemTriggerHandler.triggerDisabled;
+            try {
+                DeliveryWorkItemTriggerHandler.triggerDisabled = true;
+                SObjectAccessDecision decision = Security.stripInaccessible(
+                    AccessType.CREATABLE, new List<WorkItem__c>{ wi });
+                insert decision.getRecords();
+                return decision.getRecords()[0].Id;
+            } finally {
+                DeliveryWorkItemTriggerHandler.triggerDisabled = priorDisabled;
+            }
         } catch (Exception e) {
             throw toAura(e);
         }
