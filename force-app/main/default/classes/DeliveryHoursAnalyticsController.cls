@@ -411,25 +411,54 @@ global with sharing class DeliveryHoursAnalyticsController {
     }
 
     /**
-     * @description Expands the active roots into their full descendant trees via
-     *              a level-by-level BFS (capped at MAX_TREE_DEPTH), bulk across all
+     * @description Expands the active roots into their descendant trees via a
+     *              level-by-level BFS (capped at MAX_TREE_DEPTH), bulk across all
      *              roots so each depth level is ONE query — no per-root loop.
+     *
+     *              Descendants are filtered to the board's canonical "Active"
+     *              definition — `ActivatedDateTime__c != NULL AND
+     *              TemplateMarkedDateTime__c = NULL` — so the pacing item
+     *              universe matches exactly what the gantt board draws
+     *              (DeliveryGanttController.getProFormaTimelineData with
+     *              showCompleted=false). Before this gate, the BFS pulled in
+     *              EVERY child regardless of activation/template state, so the
+     *              forecast's active-item universe drifted ABOVE the board count
+     *              (e.g. 99 in Pacing vs 95 on the board on MF prod) — the extra
+     *              records were non-activated / template descendants the board
+     *              never shows. The number the forecast totals + the consumer's
+     *              activeItems count are derived from must equal the client-
+     *              visible board, or it raises questions in the client review.
+     *
+     *              Note: traversal of the frontier uses the raw parent link
+     *              (every child is followed so the walk is never cut short by a
+     *              non-active mid-tree parent), but a child is only ADDED to the
+     *              returned scope when it is itself board-active. This keeps an
+     *              activated grandchild reachable under a non-activated parent —
+     *              matching the board's flat (parent-state-independent) view —
+     *              while excluding the non-active records themselves.
      */
     private static Set<Id> collectPortfolioTree(Set<Id> rootIds) {
         Set<Id> collected = new Set<Id>(rootIds);
+        Set<Id> visited = new Set<Id>(rootIds);
         Set<Id> frontier = new Set<Id>(rootIds);
         for (Integer depth = 0; depth < MAX_TREE_DEPTH && !frontier.isEmpty(); depth++) {
             Set<Id> next = new Set<Id>();
             for (WorkItem__c child : [
-                SELECT Id
+                SELECT Id, ActivatedDateTime__c, TemplateMarkedDateTime__c
                 FROM WorkItem__c
                 WHERE ParentWorkItemLookup__c IN :frontier
                 WITH SYSTEM_MODE
                 LIMIT 50000
             ]) {
-                if (!collected.contains(child.Id)) {
+                if (visited.contains(child.Id)) {
+                    continue;
+                }
+                visited.add(child.Id);
+                next.add(child.Id);
+                // Board-active gate: only activated, non-template descendants
+                // join the scope — mirrors getProFormaTimelineData(false).
+                if (child.ActivatedDateTime__c != null && child.TemplateMarkedDateTime__c == null) {
                     collected.add(child.Id);
-                    next.add(child.Id);
                 }
             }
             frontier = next;
