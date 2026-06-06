@@ -6,6 +6,7 @@
         <target>lightning__AppPage</target>
         <target>lightning__HomePage</target>
         <target>lightning__RecordPage</target>
+        <target>lightning__Tab</target>
     </targets>
     <masterLabel>Delivery Checkout Cart</masterLabel>
     <description>Org-wide procurement basket review: Will Do (committed) vs Sizing Only lines with hours (and dollars when enabled), a forecast month-spread, and a Checkout button that activates the committed lines per the configured checkout mode.</description>
