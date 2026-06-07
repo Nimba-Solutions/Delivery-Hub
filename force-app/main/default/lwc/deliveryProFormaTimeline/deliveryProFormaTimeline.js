@@ -621,6 +621,48 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         }
     }
 
+    /**
+     * NG 0.199.5 onPacingParamsChange({ bucket, range, customStart, customEnd }).
+     * The user changed a Pacing parameter (bucket Week/Month/Quarter, range
+     * preset, or custom window). NG previously fetched getPacing ONCE at mount
+     * with Week granularity and never re-fetched, so switching the bucket to
+     * Month/Quarter silently reverted to NG's task-derived preview. This recomputes
+     * DH's authoritative PacingData at the new granularity and pushes it back via
+     * handle.setPacingData so the bars keep showing DH's numbers.
+     *
+     * NG windows the displayed range CLIENT-SIDE (renderPacingView filters the
+     * supplied buckets through rangeWindow()), so DH does NOT need to mirror the
+     * range/custom window in the fetch — it only needs to supply ENOUGH buckets at
+     * the chosen granularity for every preset (±6 spans, This-Qtr, YTD, Rest-of-yr,
+     * All, Custom) to have data to slice from. We fetch a generous back 26 / forward
+     * 52 buckets in the chosen granularity to cover the widest presets.
+     *
+     * Graceful: on any failure we leave the current _pacingData in place (no push),
+     * so the view keeps whatever it last showed rather than blanking.
+     */
+    async _handlePacingParamsChange(params) {
+        const bucket = (params && params.bucket) || 'week';
+        const granularity = bucket === 'month' ? 'Month'
+            : bucket === 'quarter' ? 'Quarter'
+            : 'Week';
+        try {
+            const json = await getPacing({
+                granularity,
+                periodsBack: 26,
+                periodsForward: 52,
+            });
+            const parsed = json ? JSON.parse(json) : null;
+            if (!parsed) return; // keep current data — don't blank the view
+            this._pacingData = parsed;
+            if (this._mountHandle && typeof this._mountHandle.setPacingData === 'function') {
+                this._mountHandle.setPacingData(parsed);
+            }
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.warn('[deliveryProFormaTimeline] getPacing (params change) failed; keeping current pacing data', error);
+        }
+    }
+
     // Flips the SLDS page-header hide-CSS and re-pushes the TitleBar
     // buttons so NG updates the button label + pressed state in place.
     _toggleHeaderChrome() {
@@ -866,6 +908,13 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             // existing Submit -> onAuditSubmit -> commitGanttPatches flow instead
             // of being applied silently. See _handleAutoSchedule.
             onAutoSchedule: ({ changes } = {}) => this._handleAutoSchedule(changes),
+            // NG 0.199.5 Pacing onParamsChange. Fired when the user changes the
+            // Pacing bucket (Week/Month/Quarter), range preset, or custom window.
+            // We re-fetch DH's authoritative PacingData at the new granularity and
+            // push it back via setPacingData — without this, switching to
+            // Month/Quarter silently reverts to NG's task-derived preview (the
+            // Week-only-revert bug). See _handlePacingParamsChange.
+            onPacingParamsChange: (params) => this._handlePacingParamsChange(params),
         };
 
         // Audit-pass wiring: when DeliveryHubSettings__c.BypassAuditPassDateTime__c
