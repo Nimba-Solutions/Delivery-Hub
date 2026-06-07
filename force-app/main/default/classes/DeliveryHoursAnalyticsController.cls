@@ -12,11 +12,12 @@
  *              Also exposes getPortfolioPacing — an account/org-level pacing +
  *              forecast across ALL active root WorkItems (not a single record),
  *              bucketed at Week/Month/Quarter granularity, with per-period
- *              targets and a portfolio run-rate forecast. Backs the
+ *              targets and a schedule-based forecast (each in-flight item's
+ *              remaining estimate spread across its own planned dates). Backs the
  *              deliveryPacingForecast HomePage LWC. ZERO new objects/fields.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexDoc,PMD.AvoidGlobalModifier,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity,PMD.OperationWithLimitsInLoop')
+@SuppressWarnings('PMD.ApexDoc,PMD.AvoidGlobalModifier,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity,PMD.OperationWithLimitsInLoop,PMD.ExcessiveClassLength')
 global with sharing class DeliveryHoursAnalyticsController {
 
     /**
@@ -27,6 +28,23 @@ global with sharing class DeliveryHoursAnalyticsController {
      *              counts. Not a DTO field (the serialized PacingData shape is fixed).
      */
     private static Decimal totalRemainingHours = 0;
+
+    /**
+     * @description Per in-scope item {estimate, logged, start, end} captured in
+     *              rollupPortfolioTotals and consumed by applyPortfolioForecast to
+     *              spread each item's REMAINING work across its OWN scheduled future
+     *              span (schedule-based forecast). Same private-static pattern as
+     *              totalRemainingHours — not a serialized DTO field.
+     */
+    private static List<ItemSchedule> portfolioItemSchedules = new List<ItemSchedule>();
+
+    /** @description Lightweight per-item schedule + work struct (internal, not packaged). */
+    private class ItemSchedule {
+        Decimal estimate;
+        Decimal logged;
+        Date startDate;
+        Date endDate;
+    }
 
     /** @description Hard cap on recursion depth when walking the WI parent-child tree. */
     private static final Integer MAX_TREE_DEPTH = 10;
@@ -311,6 +329,7 @@ global with sharing class DeliveryHoursAnalyticsController {
         @AuraEnabled global Decimal totalLoggedHours;
         @AuraEnabled global Decimal projectedFinalHours;
         @AuraEnabled global Decimal runRateHoursPerPeriod;
+        @AuraEnabled global Decimal unscheduledRemainingHours;
         @AuraEnabled global Decimal blendedRate;
         @AuraEnabled global Boolean hasEstimate;
         @AuraEnabled global Boolean isOverBudgetTrajectory;
@@ -458,7 +477,7 @@ global with sharing class DeliveryHoursAnalyticsController {
             'projectedFinalHours' => projected != 0 ? projected : est,
             'pacingPct' => est > 0 ? Math.round((logged / est) * 100) : 0,
             'activeItems' => (dto != null && dto.rootCount != null) ? dto.rootCount : 0,
-            'unscheduledHours' => 0
+            'unscheduledHours' => numOrZero(dto == null ? null : dto.unscheduledRemainingHours)
         };
 
         Map<String, Object> out = new Map<String, Object>{
@@ -590,6 +609,7 @@ global with sharing class DeliveryHoursAnalyticsController {
         dto.earliestStart = null;
         dto.latestEnd = null;
         totalRemainingHours = 0;
+        portfolioItemSchedules = new List<ItemSchedule>();
         if (portfolioIds.isEmpty()) {
             dto.hasEstimate = false;
             return;
@@ -610,6 +630,13 @@ global with sharing class DeliveryHoursAnalyticsController {
             if (itemRemaining > 0) {
                 totalRemainingHours += itemRemaining;
             }
+            // Capture per-item schedule + work for the schedule-based forecast spread.
+            ItemSchedule sched = new ItemSchedule();
+            sched.estimate = estimate;
+            sched.logged = logged;
+            sched.startDate = wi.EstimatedStartDevDate__c;
+            sched.endDate = wi.EstimatedEndDevDate__c;
+            portfolioItemSchedules.add(sched);
             Date s = wi.EstimatedStartDevDate__c;
             if (s != null && (dto.earliestStart == null || s < dto.earliestStart)) {
                 dto.earliestStart = s;
@@ -850,59 +877,95 @@ global with sharing class DeliveryHoursAnalyticsController {
     }
 
     /**
-     * @description Projects forward periods at the portfolio run-rate (average
-     *              logged hours over the last RUN_RATE_WINDOW history periods),
-     *              cumulatively capped at remaining estimate — these windowed
-     *              per-period forecastHours drive the chart bars and are NOT the
-     *              headline. The headline projectedFinalHours is logged + the FULL
-     *              remaining work across ALL in-scope items (totalRemainingHours,
-     *              computed in rollupPortfolioTotals), independent of the display
-     *              window, so it equals the estimate when on-budget and only exceeds
-     *              it for genuinely over-budget items. Also sets runRateHoursPerPeriod
-     *              and the over-budget-trajectory flag.
+     * @description Builds the per-period forecast bars from the PLAN (schedule-based),
+     *              not historical velocity: each in-flight item's REMAINING estimate is
+     *              spread linearly across its OWN future scheduled span (see
+     *              spreadScheduleBasedForecast). Items that can't be placed on the
+     *              future timeline (no dates / overdue with work remaining) go to
+     *              unscheduledRemainingHours. The headline projectedFinalHours stays
+     *              logged + the FULL remaining work across ALL in-scope items
+     *              (totalRemainingHours, computed in rollupPortfolioTotals), independent
+     *              of the display window, so it equals the estimate when on-budget and
+     *              only exceeds it for genuinely over-budget items. runRateHoursPerPeriod
+     *              is still reported (historical velocity signal) but no longer drives
+     *              the bars. Also sets the over-budget-trajectory flag.
      */
     private static void applyPortfolioForecast(List<PacingPeriodDTO> periods, PortfolioPacingDTO dto, Integer back) {
         dto.runRateHoursPerPeriod = 0;
         dto.projectedFinalHours = dto.totalLoggedHours;
+        dto.unscheduledRemainingHours = 0;
         dto.isOverBudgetTrajectory = false;
 
+        // Run-rate retained for reporting (historical velocity signal) — it no longer
+        // drives the bars, which now come from each item's PLAN, not its velocity.
         Decimal runRate = computeRunRate(periods, back);
         dto.runRateHoursPerPeriod = runRate.setScale(2, System.RoundingMode.HALF_UP);
 
-        // Per-period forecast spread (chart bars): run-rate, cumulatively capped at the
-        // portfolio remaining estimate. Unchanged — the windowed bars are correct as-is.
-        Decimal remaining = null;
-        if (dto.hasEstimate) {
-            remaining = dto.totalEstimatedHours - dto.totalLoggedHours;
-            if (remaining < 0) {
-                remaining = 0;
-            }
-        }
-
-        Decimal cumulativeForecast = 0;
-        for (Integer i = back; i < periods.size(); i++) {
-            PacingPeriodDTO p = periods[i];
-            Decimal thisPeriod = runRate;
-            if (remaining != null) {
-                Decimal headroom = remaining - cumulativeForecast;
-                if (headroom <= 0) {
-                    thisPeriod = 0;
-                } else if (thisPeriod > headroom) {
-                    thisPeriod = headroom;
-                }
-            }
-            p.forecastHours = thisPeriod.setScale(2, System.RoundingMode.HALF_UP);
-            cumulativeForecast += thisPeriod;
-        }
+        spreadScheduleBasedForecast(periods, dto, back);
 
         // Headline: logged + ALL remaining work (per-item max(0, estimate − logged)),
-        // NOT the windowed cumulativeForecast — out-of-window remaining work still counts.
+        // independent of the display window — out-of-window remaining still counts and
+        // stays consistent with the placed bars + unscheduled (≈ total remaining).
         Decimal remainingAll = (totalRemainingHours == null) ? 0 : totalRemainingHours;
         dto.projectedFinalHours = (dto.totalLoggedHours + remainingAll)
             .setScale(2, System.RoundingMode.HALF_UP);
         if (dto.hasEstimate) {
             dto.isOverBudgetTrajectory = dto.projectedFinalHours > dto.totalEstimatedHours;
         }
+    }
+
+    /**
+     * @description Schedule-based per-period forecast bars: for each in-scope item
+     *              with remaining work, spread its REMAINING estimate linearly across
+     *              its OWN future span [max(today, itemStart) .. itemEnd] using the
+     *              same overlapDays + per-day-rate amortization as applyPortfolioTargets,
+     *              but per item and over the not-yet-elapsed portion only. Items with
+     *              no start/end, or whose planned end is already past while work remains
+     *              (overdue), can't be placed on the future timeline — their remaining
+     *              accumulates into unscheduledRemainingHours instead of fabricating a
+     *              period bar. Resets every forecast period's forecastHours to 0 first.
+     */
+    private static void spreadScheduleBasedForecast(List<PacingPeriodDTO> periods, PortfolioPacingDTO dto, Integer back) {
+        // Reset every forecast period before accumulating.
+        for (Integer i = back; i < periods.size(); i++) {
+            periods[i].forecastHours = 0;
+        }
+
+        Date today = Date.today();
+        Decimal unscheduled = 0;
+        for (ItemSchedule sched : portfolioItemSchedules) {
+            Decimal itemRemaining = sched.estimate - sched.logged;
+            if (itemRemaining == null || itemRemaining <= 0) {
+                continue;
+            }
+            // No dates, or planned window already elapsed → can't place on the timeline.
+            if (sched.startDate == null || sched.endDate == null || sched.endDate < today) {
+                unscheduled += itemRemaining;
+                continue;
+            }
+            Date futureStart = (sched.startDate > today) ? sched.startDate : today;
+            Date futureEnd = sched.endDate;
+            Integer spanDays = futureStart.daysBetween(futureEnd) + 1;
+            if (spanDays <= 0) {
+                unscheduled += itemRemaining;
+                continue;
+            }
+            Decimal perDay = itemRemaining / spanDays;
+            for (Integer i = back; i < periods.size(); i++) {
+                PacingPeriodDTO p = periods[i];
+                Integer overlap = overlapDays(p.startDate, p.endDate, futureStart, futureEnd);
+                if (overlap <= 0) {
+                    continue;
+                }
+                p.forecastHours = p.forecastHours + (perDay * overlap);
+            }
+        }
+
+        // Round the accumulated bars at the end.
+        for (Integer i = back; i < periods.size(); i++) {
+            periods[i].forecastHours = periods[i].forecastHours.setScale(2, System.RoundingMode.HALF_UP);
+        }
+        dto.unscheduledRemainingHours = unscheduled.setScale(2, System.RoundingMode.HALF_UP);
     }
 
     /**

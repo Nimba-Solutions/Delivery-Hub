@@ -586,6 +586,144 @@ private class DeliveryHoursAnalyticsControllerTest {
     }
 
     // ────────────────────────────────────────────────────────────────────
+    // Schedule-based forecast — each item's remaining spread over its OWN dates
+    // ────────────────────────────────────────────────────────────────────
+
+    /** @description Sum of forecastHours across the forecast periods. */
+    private static Decimal totalForecast(DeliveryHoursAnalyticsController.PortfolioPacingDTO dto) {
+        Decimal sum = 0;
+        for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
+            if (p.isForecast) {
+                sum += p.forecastHours;
+            }
+        }
+        return sum;
+    }
+
+    @IsTest
+    static void testScheduleForecastSpreadsRemainingOverOwnFutureDates() {
+        // Item planned to start at the first of NEXT month and run for exactly 3
+        // forecast months. With back=6, forecast periods are indices 6,7,8 (next,
+        // +2, +3 months) and we request 4 forward so index 9 (+4 months) sits BEYOND
+        // the item's end. No logs → full estimate is the remaining work to spread.
+        Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = nextMonthStart.addMonths(3).addDays(-1); // covers next 3 months
+        WorkItem__c root = insertWi('SchedRoot', 90, nextMonthStart, spanEnd, null);
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 4);
+        Test.stopTest();
+
+        // Index map: 0-5 history (5 = current month), 6/7/8 = next/+2/+3, 9 = +4.
+        List<DeliveryHoursAnalyticsController.PacingPeriodDTO> periods = dto.periods;
+        System.assertEquals(10, periods.size(), '6 history + 4 forecast = 10 periods');
+
+        // The first three forecast periods (overlapping the span) each carry a positive
+        // proportional share; the fourth (beyond the item's end) carries ~0.
+        System.assert(periods[6].forecastHours > 0, 'Next month overlaps span → forecast > 0');
+        System.assert(periods[7].forecastHours > 0, '+2 months overlaps span → forecast > 0');
+        System.assert(periods[8].forecastHours > 0, '+3 months overlaps span → forecast > 0');
+        System.assertEquals(0, periods[9].forecastHours,
+            'Period beyond the item end carries no forecast (NOT a flat run-rate spread)');
+
+        // Sum of placed forecast ≈ the full 90h remaining (current month is the FIRST
+        // of the planned span, but the item starts next month so nothing is lost to the
+        // current/history period — the whole span lands in forecast periods).
+        Decimal placed = totalForecast(dto);
+        System.assert(placed >= 89.9 && placed <= 90.1,
+            'Placed forecast sums to ~90h remaining across the 3 overlapping periods, got ' + placed);
+
+        // Nothing unscheduled — the item has dates and its window is in the future.
+        System.assertEquals(0, dto.unscheduledRemainingHours,
+            'Dated, future-windowed item is fully scheduled');
+    }
+
+    @IsTest
+    static void testScheduleForecastPartialLoggedSpreadsOnlyRemaining() {
+        // Estimate 100, 40 already logged → 60 remaining spread over the item's future.
+        Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = nextMonthStart.addMonths(2).addDays(-1); // next 2 months
+        WorkItem__c root = insertWi('PartialRoot', 100, nextMonthStart, spanEnd, null);
+        insert buildLog(root.Id, 40, Date.today());
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 4);
+        Test.stopTest();
+
+        Decimal placed = totalForecast(dto);
+        System.assert(placed >= 59.9 && placed <= 60.1,
+            'Only the 60h REMAINING is spread (not the full 100h estimate), got ' + placed);
+        System.assertEquals(0, dto.unscheduledRemainingHours, 'Future-dated item is scheduled');
+    }
+
+    @IsTest
+    static void testNoDatesItemRemainingGoesToUnscheduledNotBars() {
+        // Item with an estimate + remaining work but NO start/end dates cannot be
+        // placed on the future timeline → its remaining goes to unscheduled, NOT bars.
+        insertWi('NoDatesRoot', 50, null, null, null);
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 4);
+        Test.stopTest();
+
+        System.assertEquals(0, totalForecast(dto),
+            'No-date item contributes nothing to period bars');
+        System.assertEquals(50, dto.unscheduledRemainingHours,
+            'Full 50h remaining accrues to the unscheduled total');
+    }
+
+    @IsTest
+    static void testOverdueItemRemainingGoesToUnscheduled() {
+        // Item whose planned end is already in the PAST while work remains (overdue):
+        // its window has elapsed, so remaining can't sit on the future timeline.
+        Date pastStart = Date.today().toStartOfMonth().addMonths(-4);
+        Date pastEnd = Date.today().toStartOfMonth().addMonths(-2).addDays(-1);
+        insertWi('OverdueRoot', 80, pastStart, pastEnd, null);
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 4);
+        Test.stopTest();
+
+        System.assertEquals(0, totalForecast(dto),
+            'Overdue item (end < today) contributes nothing to FUTURE bars');
+        System.assertEquals(80, dto.unscheduledRemainingHours,
+            'Overdue remaining accrues to the unscheduled total');
+    }
+
+    @IsTest
+    static void testPlacedForecastPlusUnscheduledApproximatesTotalRemaining() {
+        // Mix: one future-dated item (spreads onto bars) + one no-date item
+        // (unscheduled). placed + unscheduled ≈ total remaining (within rounding).
+        Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = nextMonthStart.addMonths(2).addDays(-1);
+        WorkItem__c scheduled = insertWi('MixSched', 90, nextMonthStart, spanEnd, null);
+        insertWi('MixNoDate', 30, null, null, null);
+        // 20h logged on the scheduled item → its remaining is 70; no-date remaining 30.
+        insert buildLog(scheduled.Id, 20, Date.today());
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 4);
+        Test.stopTest();
+
+        Decimal placed = totalForecast(dto);
+        Decimal unscheduled = dto.unscheduledRemainingHours;
+        // Total remaining = (90-20) + 30 = 100.
+        Decimal totalRemaining = (dto.totalEstimatedHours - dto.totalLoggedHours);
+        System.assertEquals(120, dto.totalEstimatedHours, '90 + 30 estimate');
+        System.assertEquals(20, dto.totalLoggedHours, '20h logged');
+        System.assertEquals(100, totalRemaining, 'remaining = 100');
+        System.assert(unscheduled >= 29.95 && unscheduled <= 30.05,
+            'No-date item 30h is unscheduled, got ' + unscheduled);
+        System.assert((placed + unscheduled) >= 99.9 && (placed + unscheduled) <= 100.1,
+            'placed(' + placed + ') + unscheduled(' + unscheduled + ') ≈ total remaining(100)');
+    }
+
+    // ────────────────────────────────────────────────────────────────────
     // getPacing — PacingData JSON serialization for the NG in-gantt subtab
     // ────────────────────────────────────────────────────────────────────
 
@@ -624,6 +762,21 @@ private class DeliveryHoursAnalyticsControllerTest {
         System.assertEquals(80, ((Decimal) summary.get('estimatedHours')), 'estimate summed');
         System.assertEquals(10, ((Decimal) summary.get('loggedHours')), 'logged summed (6 + 4)');
         System.assertEquals(1, ((Integer) summary.get('activeItems')), 'one active root');
+    }
+
+    @IsTest
+    static void testGetPacingSurfacesUnscheduledHours() {
+        // A no-date item with remaining work must surface in summary.unscheduledHours.
+        insertWi('JsonNoDate', 45, null, null, null);
+
+        Test.startTest();
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 3);
+        Test.stopTest();
+
+        Map<String, Object> data = (Map<String, Object>) JSON.deserializeUntyped(pacingJson);
+        Map<String, Object> summary = (Map<String, Object>) data.get('summary');
+        System.assertEquals(45, ((Decimal) summary.get('unscheduledHours')),
+            'No-date remaining work surfaces as summary.unscheduledHours');
     }
 
     @IsTest
