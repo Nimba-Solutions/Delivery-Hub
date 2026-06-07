@@ -38,12 +38,39 @@ global with sharing class DeliveryHoursAnalyticsController {
      */
     private static List<ItemSchedule> portfolioItemSchedules = new List<ItemSchedule>();
 
-    /** @description Lightweight per-item schedule + work struct (internal, not packaged). */
+    /**
+     * @description Per-period drill-down composition for the schedule-based forecast,
+     *              indexed PARALLEL to the period list (forecastItemsByPeriod[i] holds
+     *              the items contributing to periods[i]). Populated in
+     *              spreadScheduleBasedForecast as each item is placed, and serialized
+     *              into each bucket's items[] by toPacingData so NG's forecast bucket
+     *              drill-down lists the work composing the bar instead of "No itemized
+     *              work in this period". Internal static (same pattern as
+     *              portfolioItemSchedules) — not a serialized DTO field.
+     */
+    private static List<Map<Id, ForecastItemAccum>> forecastItemsByPeriod;
+
+    /** @description Lightweight per-item schedule + work + meta struct (internal, not packaged). */
     private class ItemSchedule {
+        Id workItemId;
+        String name;
+        String stage;
+        String assignee;
         Decimal estimate;
         Decimal logged;
         Date startDate;
         Date endDate;
+    }
+
+    /**
+     * @description Accumulator for one work item's drill-down contribution to a single
+     *              forecast period (hours summed across the period's overlap with the
+     *              item's future span). Internal — toPacingData converts it to the NG
+     *              PacingBucketItem Map shape.
+     */
+    private class ForecastItemAccum {
+        ItemSchedule sched;
+        Decimal hoursThisPeriod = 0;
     }
 
     /** @description Hard cap on recursion depth when walking the WI parent-child tree. */
@@ -444,7 +471,8 @@ global with sharing class DeliveryHoursAnalyticsController {
 
         List<Object> buckets = new List<Object>();
         if (dto != null && dto.periods != null) {
-            for (PacingPeriodDTO p : dto.periods) {
+            for (Integer idx = 0; idx < dto.periods.size(); idx++) {
+                PacingPeriodDTO p = dto.periods[idx];
                 Boolean isForecast = (p.isForecast == true);
                 Boolean isCurrent = (p.startDate != null && p.endDate != null
                     && today >= p.startDate && today <= p.endDate);
@@ -459,7 +487,7 @@ global with sharing class DeliveryHoursAnalyticsController {
                     'target' => numOrZero(p.targetHours),
                     'isPast' => isPast,
                     'isCurrent' => isCurrent,
-                    'items' => new List<Object>()
+                    'items' => buildBucketItems(idx)
                 };
                 if (p.startDate != null) {
                     b.put('startMs', dateToMs(p.startDate));
@@ -490,6 +518,72 @@ global with sharing class DeliveryHoursAnalyticsController {
             out.put('rate', dto.blendedRate);
         }
         return out;
+    }
+
+    /**
+     * @description Composes a forecast period's drill-down rows in NG's PacingBucketItem
+     *              shape from the per-period accumulator built during the schedule-based
+     *              spread. Each entry carries id + name + hours (this period) + the
+     *              estimate/logged/remaining/budgetUsedPct + pctOfItem + start/end/stage/
+     *              assignee meta NG renders. History (non-forecast) periods have no
+     *              accumulator entries, so they get an empty list (unchanged behavior).
+     *              Sorted by hours desc to match NG's own ordering. Unscheduled/overdue
+     *              items are never placed on any period, so they never appear here.
+     * @param periodIndex Index into forecastItemsByPeriod (parallel to dto.periods).
+     * @return List of Map<String,Object> matching NG's PacingBucketItem interface.
+     */
+    private static List<Object> buildBucketItems(Integer periodIndex) {
+        List<Object> items = new List<Object>();
+        if (forecastItemsByPeriod == null
+            || periodIndex < 0 || periodIndex >= forecastItemsByPeriod.size()) {
+            return items;
+        }
+        List<ForecastItemAccum> accs = forecastItemsByPeriod[periodIndex].values();
+        // Sort by hoursThisPeriod desc (mirrors NG's items.sort by hours desc).
+        for (Integer i = 0; i < accs.size(); i++) {
+            for (Integer j = i + 1; j < accs.size(); j++) {
+                if (accs[j].hoursThisPeriod > accs[i].hoursThisPeriod) {
+                    ForecastItemAccum tmp = accs[i];
+                    accs[i] = accs[j];
+                    accs[j] = tmp;
+                }
+            }
+        }
+        for (ForecastItemAccum acc : accs) {
+            ItemSchedule s = acc.sched;
+            Decimal est = numOrZero(s.estimate);
+            Decimal logged = numOrZero(s.logged);
+            Decimal remaining = (est - logged) > 0 ? (est - logged) : 0;
+            Decimal hoursThisPeriod = acc.hoursThisPeriod.setScale(2, System.RoundingMode.HALF_UP);
+            // pctOfItem = this bucket's hours ÷ the item's spread total (its remaining).
+            Long pctOfItem = (remaining > 0)
+                ? Math.round((hoursThisPeriod / remaining) * 100) : 0L;
+            Long budgetUsedPct = (est > 0) ? Math.round((logged / est) * 100) : 0L;
+            Map<String, Object> item = new Map<String, Object>{
+                'id' => s.workItemId,
+                'name' => (s.name != null) ? s.name : String.valueOf(s.workItemId),
+                'hours' => hoursThisPeriod,
+                'pctOfItem' => pctOfItem,
+                'estimatedHours' => est,
+                'loggedHours' => logged,
+                'remainingHours' => remaining,
+                'budgetUsedPct' => budgetUsedPct
+            };
+            if (s.startDate != null) {
+                item.put('startDate', isoDate(s.startDate));
+            }
+            if (s.endDate != null) {
+                item.put('endDate', isoDate(s.endDate));
+            }
+            if (String.isNotBlank(s.stage)) {
+                item.put('status', s.stage);
+            }
+            if (String.isNotBlank(s.assignee)) {
+                item.put('assignee', s.assignee);
+            }
+            items.add(item);
+        }
+        return items;
     }
 
     /**
@@ -616,7 +710,8 @@ global with sharing class DeliveryHoursAnalyticsController {
         }
         Map<Id, Decimal> loggedByItem = loggedHoursByItem(portfolioIds);
         for (WorkItem__c wi : [
-            SELECT EstimatedHoursNumber__c,
+            SELECT Id, BriefDescriptionTxt__c, StageNamePk__c, DeveloperLookup__r.Name,
+                   EstimatedHoursNumber__c,
                    EstimatedStartDevDate__c, EstimatedEndDevDate__c
             FROM WorkItem__c
             WHERE Id IN :portfolioIds
@@ -630,8 +725,13 @@ global with sharing class DeliveryHoursAnalyticsController {
             if (itemRemaining > 0) {
                 totalRemainingHours += itemRemaining;
             }
-            // Capture per-item schedule + work for the schedule-based forecast spread.
+            // Capture per-item schedule + work + meta for the schedule-based forecast
+            // spread AND the per-period drill-down composition (toPacingData items[]).
             ItemSchedule sched = new ItemSchedule();
+            sched.workItemId = wi.Id;
+            sched.name = wi.BriefDescriptionTxt__c;
+            sched.stage = wi.StageNamePk__c;
+            sched.assignee = (wi.DeveloperLookup__r != null) ? wi.DeveloperLookup__r.Name : null;
             sched.estimate = estimate;
             sched.logged = logged;
             sched.startDate = wi.EstimatedStartDevDate__c;
@@ -926,9 +1026,14 @@ global with sharing class DeliveryHoursAnalyticsController {
      *              period bar. Resets every forecast period's forecastHours to 0 first.
      */
     private static void spreadScheduleBasedForecast(List<PacingPeriodDTO> periods, PortfolioPacingDTO dto, Integer back) {
-        // Reset every forecast period before accumulating.
-        for (Integer i = back; i < periods.size(); i++) {
-            periods[i].forecastHours = 0;
+        // Reset every forecast period (bars) and prime a per-period drill-down map
+        // parallel to the period list so toPacingData can compose each bucket's items[].
+        forecastItemsByPeriod = new List<Map<Id, ForecastItemAccum>>();
+        for (Integer i = 0; i < periods.size(); i++) {
+            forecastItemsByPeriod.add(new Map<Id, ForecastItemAccum>());
+            if (i >= back) {
+                periods[i].forecastHours = 0;
+            }
         }
 
         Date today = Date.today();
@@ -957,7 +1062,9 @@ global with sharing class DeliveryHoursAnalyticsController {
                 if (overlap <= 0) {
                     continue;
                 }
-                p.forecastHours = p.forecastHours + (perDay * overlap);
+                Decimal hoursThisPeriod = perDay * overlap;
+                p.forecastHours = p.forecastHours + hoursThisPeriod;
+                recordForecastItem(i, sched, hoursThisPeriod);
             }
         }
 
@@ -966,6 +1073,30 @@ global with sharing class DeliveryHoursAnalyticsController {
             periods[i].forecastHours = periods[i].forecastHours.setScale(2, System.RoundingMode.HALF_UP);
         }
         dto.unscheduledRemainingHours = unscheduled.setScale(2, System.RoundingMode.HALF_UP);
+    }
+
+    /**
+     * @description Accumulates one item's drill-down contribution to a forecast period
+     *              (summed across multiple overlap fragments of the same item+period).
+     *              Skips items with no Id (defensive — every in-scope item is queried
+     *              with Id). Keyed by WorkItem Id so a re-entered item adds to its
+     *              existing per-period total.
+     * @param periodIndex Index into forecastItemsByPeriod (parallel to the period list).
+     * @param sched The item's captured schedule + meta.
+     * @param hoursThisPeriod Hours this fragment places on the period.
+     */
+    private static void recordForecastItem(Integer periodIndex, ItemSchedule sched, Decimal hoursThisPeriod) {
+        if (sched.workItemId == null) {
+            return;
+        }
+        Map<Id, ForecastItemAccum> byItem = forecastItemsByPeriod[periodIndex];
+        ForecastItemAccum acc = byItem.get(sched.workItemId);
+        if (acc == null) {
+            acc = new ForecastItemAccum();
+            acc.sched = sched;
+            byItem.put(sched.workItemId, acc);
+        }
+        acc.hoursThisPeriod += hoursThisPeriod;
     }
 
     /**

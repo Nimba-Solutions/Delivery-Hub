@@ -2452,6 +2452,10 @@ var NimbusGanttApp = (function(exports) {
     function persistPrefs() {
       savePacingPrefs({ range, bucket, customS, customE, measure, mode, show: { ...show } });
     }
+    function notifyParams() {
+      var _a2;
+      (_a2 = options.onParamsChange) == null ? void 0 : _a2.call(options, { bucket, range, customStart: customS || void 0, customEnd: customE || void 0 });
+    }
     function stepWindow(end, dirBuckets) {
       if (range !== "custom" || !customS || !customE) {
         const w = rangeWindow(range, bucket, customS, customE);
@@ -2469,6 +2473,7 @@ var NimbusGanttApp = (function(exports) {
         if ((parseISO(cand) ?? 0) > (parseISO(customS) ?? 0)) customE = cand;
       }
       expandedKey = null;
+      notifyParams();
       render();
     }
     function data() {
@@ -2518,6 +2523,7 @@ var NimbusGanttApp = (function(exports) {
         row1.appendChild(grp("Range", ...ranges.map((p) => pill(RANGE_LABELS[p], range === p, () => {
           range = p;
           expandedKey = null;
+          notifyParams();
           render();
         }))));
         row1n++;
@@ -2544,6 +2550,7 @@ var NimbusGanttApp = (function(exports) {
             i.className = "ngp-date";
             i.addEventListener("change", () => {
               set(i.value);
+              notifyParams();
               render();
             });
             return i;
@@ -2562,6 +2569,7 @@ var NimbusGanttApp = (function(exports) {
           bucket = b;
           expandedKey = null;
           (_a2 = options.onBucketChange) == null ? void 0 : _a2.call(options, b);
+          notifyParams();
           render();
         }, true))));
         row1n++;
@@ -7799,6 +7807,12 @@ var NimbusGanttApp = (function(exports) {
               onItemHover: options.onItemHover ? (taskId, pos) => options.onItemHover(taskId, pos) : void 0,
               // Bucket "Open report ↗" → host-owned destination (no URLs in NG).
               onOpenReport: options.onOpenReport ? (ctx) => options.onOpenReport(ctx) : void 0,
+              // 0.199.5 — bucket / range / custom-window change → host recompute.
+              // DH recomputes authoritative PacingData for the new params and pushes
+              // it back via handle.setPacingData; without this a host that fed only
+              // one granularity silently falls back to the preview on Month/Quarter
+              // or a range change (the Week-only-revert + inert-range-presets bugs).
+              onParamsChange: options.onPacingParamsChange ? (p) => options.onPacingParamsChange(p) : void 0,
               rate: pc.rate,
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               defaults: pacingCfg.defaults,
