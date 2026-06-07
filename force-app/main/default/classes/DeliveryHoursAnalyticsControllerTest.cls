@@ -755,7 +755,7 @@ private class DeliveryHoursAnalyticsControllerTest {
         System.assert(b0.containsKey('forecast'), 'bucket has forecast');
         System.assert(b0.containsKey('target'), 'bucket has target');
         System.assert(b0.containsKey('isPast'), 'bucket has isPast');
-        System.assert(b0.containsKey('items'), 'bucket has items[] (empty — NG hybrid fills)');
+        System.assert(b0.containsKey('items'), 'bucket has items[] (forecast periods composed server-side)');
 
         Map<String, Object> summary = (Map<String, Object>) data.get('summary');
         System.assertNotEquals(null, summary, 'summary present');
@@ -790,5 +790,130 @@ private class DeliveryHoursAnalyticsControllerTest {
         System.assertEquals('month', (String) data.get('bucket'), 'default-ish month bucket');
         Map<String, Object> summary = (Map<String, Object>) data.get('summary');
         System.assertEquals(0, ((Integer) summary.get('activeItems')), 'no active roots');
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // getPacing — per-period drill-down items[] (schedule-based composition)
+    // ────────────────────────────────────────────────────────────────────
+
+    /** @description Pulls the buckets list out of a getPacing JSON payload. */
+    private static List<Object> bucketsOf(String pacingJson) {
+        Map<String, Object> data = (Map<String, Object>) JSON.deserializeUntyped(pacingJson);
+        return (List<Object>) data.get('buckets');
+    }
+
+    /** @description Sums the items[] forecast hours across a bucket. */
+    private static Decimal sumBucketItemHours(Map<String, Object> bucket) {
+        Decimal sum = 0;
+        for (Object o : (List<Object>) bucket.get('items')) {
+            sum += (Decimal) ((Map<String, Object>) o).get('hours');
+        }
+        return sum;
+    }
+
+    @IsTest
+    static void testForecastBucketHasNonEmptyItemsWithRequiredKeys() {
+        // Future-dated item spanning the next 3 months → its forecast buckets carry
+        // a per-item drill-down row (the fix: no more "0 items" on a forecast bucket).
+        Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = nextMonthStart.addMonths(3).addDays(-1);
+        insertWi('DrillItem', 90, nextMonthStart, spanEnd, null);
+
+        Test.startTest();
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
+        Test.stopTest();
+
+        Boolean sawForecastWithItems = false;
+        for (Object o : bucketsOf(pacingJson)) {
+            Map<String, Object> b = (Map<String, Object>) o;
+            Decimal forecast = (Decimal) b.get('forecast');
+            List<Object> items = (List<Object>) b.get('items');
+            if (forecast != null && forecast > 0) {
+                System.assert(!items.isEmpty(),
+                    'A forecast (forecast>0) bucket now carries a non-empty items[] drill-down');
+                sawForecastWithItems = true;
+                Map<String, Object> first = (Map<String, Object>) items[0];
+                System.assertNotEquals(null, first.get('id'), 'item carries id (WorkItem Id)');
+                System.assertNotEquals(null, first.get('hours'), 'item carries hours (this period)');
+                System.assertNotEquals(null, first.get('estimatedHours'), 'item carries estimate');
+                System.assertNotEquals(null, first.get('loggedHours'), 'item carries logged');
+                System.assertNotEquals(null, first.get('remainingHours'), 'item carries remaining');
+                System.assertEquals(90, (Decimal) first.get('estimatedHours'), 'estimate echoed');
+                System.assertEquals(0, (Decimal) first.get('loggedHours'), 'no logs → 0 logged');
+                System.assertEquals(90, (Decimal) first.get('remainingHours'),
+                    'remaining = max(0, est − logged)');
+            }
+        }
+        System.assert(sawForecastWithItems, 'At least one forecast bucket had drill-down items');
+    }
+
+    @IsTest
+    static void testItemAppearsOnlyInPeriodsItSpans() {
+        // Item spans EXACTLY the next 3 forecast months (indices 6,7,8 with back=6).
+        // It must NOT appear on a forecast period beyond its end (index 9).
+        Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = nextMonthStart.addMonths(3).addDays(-1);
+        insertWi('SpanItem', 60, nextMonthStart, spanEnd, null);
+
+        Test.startTest();
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
+        Test.stopTest();
+
+        List<Object> buckets = bucketsOf(pacingJson);
+        System.assertEquals(10, buckets.size(), '6 history + 4 forecast = 10 buckets');
+        // Indices 6,7,8 overlap the span → have the item; 9 is beyond end → empty.
+        for (Integer i = 6; i <= 8; i++) {
+            List<Object> items = (List<Object>) ((Map<String, Object>) buckets[i]).get('items');
+            System.assert(!items.isEmpty(),
+                'Forecast period ' + i + ' overlaps the span → item present');
+        }
+        List<Object> beyond = (List<Object>) ((Map<String, Object>) buckets[9]).get('items');
+        System.assert(beyond.isEmpty(),
+            'Forecast period beyond the item end carries no items[]');
+        // History periods (0-5) carry no schedule-based forecast items either.
+        for (Integer i = 0; i <= 5; i++) {
+            List<Object> items = (List<Object>) ((Map<String, Object>) buckets[i]).get('items');
+            System.assert(items.isEmpty(), 'History period ' + i + ' has no forecast items[]');
+        }
+    }
+
+    @IsTest
+    static void testSumOfItemHoursAcrossPeriodsMatchesPlacedRemaining() {
+        // One item, partially logged: Σ hoursThisPeriod across its buckets ≈ its
+        // placed REMAINING (estimate − logged), within rounding tolerance.
+        Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = nextMonthStart.addMonths(2).addDays(-1);
+        WorkItem__c wi = insertWi('SumItem', 100, nextMonthStart, spanEnd, null);
+        insert buildLog(wi.Id, 40, Date.today()); // remaining = 60
+
+        Test.startTest();
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
+        Test.stopTest();
+
+        Decimal totalItemHours = 0;
+        for (Object o : bucketsOf(pacingJson)) {
+            totalItemHours += sumBucketItemHours((Map<String, Object>) o);
+        }
+        System.assert(totalItemHours >= 59.8 && totalItemHours <= 60.2,
+            'Σ item hoursThisPeriod ≈ placed remaining (60h), got ' + totalItemHours);
+    }
+
+    @IsTest
+    static void testUnscheduledItemNeverAppearsInAnyBucketItems() {
+        // A no-date item with remaining work is unscheduled — it must NOT show up in
+        // any period's items[] (it is only counted in summary.unscheduledHours).
+        insertWi('UnschedDrill', 45, null, null, null);
+
+        Test.startTest();
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 3);
+        Test.stopTest();
+
+        Decimal totalItemHours = 0;
+        for (Object o : bucketsOf(pacingJson)) {
+            List<Object> items = (List<Object>) ((Map<String, Object>) o).get('items');
+            System.assert(items.isEmpty(), 'Unscheduled item produces no bucket items[]');
+            totalItemHours += sumBucketItemHours((Map<String, Object>) o);
+        }
+        System.assertEquals(0, totalItemHours, 'No placed item hours for an unscheduled item');
     }
 }
