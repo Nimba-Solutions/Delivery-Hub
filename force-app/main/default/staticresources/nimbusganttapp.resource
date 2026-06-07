@@ -2145,6 +2145,11 @@ var NimbusGanttApp = (function(exports) {
 .ngp-card-v{font-size:20px;font-weight:800;line-height:1.1}
 .ngp-card-l{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#64748b;margin-top:2px}
 .ngp-warn{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#92400e}
+.ngp-scope{display:flex;gap:8px;align-items:flex-start;border-radius:8px;padding:7px 12px;margin-bottom:12px;font-size:12px;line-height:1.45}
+.ngp-scope.auth{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
+.ngp-scope.preview{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412}
+.ngp-scope .ngp-scope-ico{font-size:13px;line-height:1.2}
+.ngp-scope b{font-weight:700}
 .ngp-legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px}
 .ngp-leg{display:flex;align-items:center;gap:6px;border:0;background:none;cursor:pointer;font-size:12px;color:#1f2937;padding:2px 4px;font-family:${FONT}}
 .ngp-leg.off{opacity:.4}
@@ -2619,6 +2624,24 @@ var NimbusGanttApp = (function(exports) {
       const sub = (d.authoritative ? "Actuals · forecast · target" + (d.scopeLabel ? " — " + d.scopeLabel : "") : "Forecast preview — actual to date, remaining spread across scheduled dates (live from the board)") + (useDollars ? " · $ at " + fmtMoney(r) + "/hr" : "") + (cum ? " · cumulative" : "");
       hd.appendChild(el$1("div", "ngp-sub", sub));
       body.appendChild(hd);
+      {
+        const auth = !!d.authoritative;
+        const scope = el$1("div", "ngp-scope " + (auth ? "auth" : "preview"));
+        scope.appendChild(el$1("span", "ngp-scope-ico", auth ? "ⓘ" : "⚠"));
+        const txt = el$1("span");
+        if (auth) {
+          const n = d.summary.activeItems;
+          const what = d.scopeLabel || n + " active item" + (n === 1 ? "" : "s");
+          txt.appendChild(document.createTextNode("Authoritative forecast · scope: "));
+          txt.appendChild(el$1("b", void 0, what));
+          txt.appendChild(document.createTextNode(". From the host’s system of record — may not match the board’s current filter or search."));
+        } else {
+          txt.appendChild(el$1("b", void 0, "Preview forecast"));
+          txt.appendChild(document.createTextNode(" — derived from the board’s task dates + estimates, not an authoritative feed. Numbers can differ from the live view (e.g. this bucket/filter has no authoritative data)."));
+        }
+        scope.appendChild(txt);
+        body.appendChild(scope);
+      }
       const s = d.summary;
       const val = (h) => useDollars ? fmtMoney(h * r) : fmtH(h);
       const cards = el$1("div", "ngp-cards");
@@ -3693,6 +3716,7 @@ var NimbusGanttApp = (function(exports) {
     root.setAttribute("data-slot", "TitleBar");
     let currentProps = initial;
     let viewsMenuOpen = false;
+    let viewsDismiss = null;
     function render(p) {
       clear(root);
       const { config, state, dispatch, data } = p;
@@ -3941,8 +3965,12 @@ var NimbusGanttApp = (function(exports) {
     }
     function buildViewsMenu(state, dispatch) {
       var _a;
+      if (viewsDismiss) {
+        viewsDismiss();
+        viewsDismiss = null;
+      }
       const wrap = el$2("span", "");
-      wrap.style.cssText = "position:relative;display:inline-block;";
+      wrap.style.cssText = "display:inline-block;";
       const activeName = state.activeViewId ? ((_a = state.savedViews.find((v) => v.id === state.activeViewId)) == null ? void 0 : _a.name) ?? null : null;
       const trigger = el$2("button", CLS_PILL_BTN_BASE + " " + CLS_PILL_BTN_IDLE_VIOLET);
       trigger.textContent = "☰ " + (activeName || "Views") + " ▾";
@@ -3955,11 +3983,14 @@ var NimbusGanttApp = (function(exports) {
       if (!viewsMenuOpen) return wrap;
       const menu = el$2("div", "");
       menu.style.cssText = [
-        "position:absolute",
-        "z-index:60",
-        "top:calc(100% + 4px)",
+        "position:fixed",
+        "z-index:9999",
+        "top:0",
         "left:0",
+        "visibility:hidden",
         "min-width:248px",
+        "max-height:70vh",
+        "overflow:auto",
         "background:#ffffff",
         "border:1px solid #e2e8f0",
         "border-radius:8px",
@@ -4033,6 +4064,48 @@ var NimbusGanttApp = (function(exports) {
       saveRow.appendChild(saveBtn);
       menu.appendChild(saveRow);
       wrap.appendChild(menu);
+      const closeViews = () => {
+        if (viewsDismiss) {
+          viewsDismiss();
+          viewsDismiss = null;
+        }
+        viewsMenuOpen = false;
+        render(currentProps);
+      };
+      const onDocDown = (e) => {
+        const tgt = e.target;
+        if (tgt && wrap.contains(tgt)) return;
+        closeViews();
+      };
+      const onKey = (e) => {
+        if (e.key === "Escape") closeViews();
+      };
+      try {
+        document.addEventListener("pointerdown", onDocDown, true);
+        document.addEventListener("keydown", onKey, true);
+        viewsDismiss = () => {
+          try {
+            document.removeEventListener("pointerdown", onDocDown, true);
+            document.removeEventListener("keydown", onKey, true);
+          } catch {
+          }
+        };
+      } catch {
+      }
+      const place = () => {
+        try {
+          const r = trigger.getBoundingClientRect();
+          const vw = typeof window !== "undefined" && window.innerWidth || 1280;
+          const left = Math.max(8, Math.min(r.left, vw - menu.offsetWidth - 8));
+          menu.style.top = r.bottom + 4 + "px";
+          menu.style.left = left + "px";
+          menu.style.visibility = "visible";
+        } catch {
+          menu.style.visibility = "visible";
+        }
+      };
+      if (typeof requestAnimationFrame === "function") requestAnimationFrame(place);
+      else place();
       return wrap;
     }
     render(initial);
@@ -4043,6 +4116,10 @@ var NimbusGanttApp = (function(exports) {
         render(p);
       },
       destroy() {
+        if (viewsDismiss) {
+          viewsDismiss();
+          viewsDismiss = null;
+        }
         clear(root);
         if (root.parentNode) root.parentNode.removeChild(root);
       }
@@ -4206,6 +4283,7 @@ var NimbusGanttApp = (function(exports) {
       }
     };
   }
+  const DEFAULT_HOURS_PER_MONTH = CLOUD_NIMBUS_POOL.filter((m) => m.active !== false).reduce((s, m) => s + (m.hoursPerMonth || 0), 0) || 120;
   function kpiCard(label, value, tone, hint) {
     const t = STATS_TONE[tone] || STATS_TONE.slate;
     const card = el$2("div", CLS_KPI_CARD_BASE + " " + t.border);
@@ -4227,7 +4305,7 @@ var NimbusGanttApp = (function(exports) {
     root.setAttribute("data-slot", "StatsPanel");
     const grid = el$2("div", CLS_STATS_GRID);
     root.appendChild(grid);
-    let hoursPerMonth = 120;
+    let hoursPerMonth = DEFAULT_HOURS_PER_MONTH;
     function render(p) {
       root.style.display = p.state.statsOpen ? "" : "none";
       clear(grid);
@@ -4265,7 +4343,7 @@ var NimbusGanttApp = (function(exports) {
       input.min = "1";
       input.value = String(hoursPerMonth);
       input.addEventListener("input", () => {
-        const n = Math.max(1, Number(input.value) || 120);
+        const n = Math.max(1, Number(input.value) || DEFAULT_HOURS_PER_MONTH);
         hoursPerMonth = n;
         const newLow = hrsLow > 0 ? (hrsLow / hoursPerMonth).toFixed(1) : "0.0";
         const newHigh = hrsHigh > 0 ? (hrsHigh / hoursPerMonth).toFixed(1) : "0.0";
