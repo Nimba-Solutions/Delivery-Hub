@@ -361,6 +361,77 @@ private class DeliveryHoursAnalyticsControllerTest {
     }
 
     @IsTest
+    static void testProjectedFinalCountsRemainingBeyondWindow() {
+        // Large estimate with most remaining work falling FAR beyond the 3-period
+        // forward window. Recent logs are small, so the windowed run-rate forecast
+        // can only spread a few hours across the 3 forward periods — the OLD headline
+        // (logged + windowed cumulativeForecast) would badly undercount. The FIXED
+        // headline = logged + ALL remaining = ~estimate when on-budget.
+        WorkItem__c root = insertWi('LongRunRoot', 1000, Date.today().addMonths(-1), Date.today().addMonths(24), null);
+        insert new List<WorkLog__c>{
+            buildLog(root.Id, 30, Date.today()),
+            buildLog(root.Id, 20, Date.today().addMonths(-1))
+        };
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        // 50h logged, estimate 1000 → remaining 950 → on-budget projected ≈ estimate.
+        System.assertEquals(50, dto.totalLoggedHours, '30 + 20 = 50h logged');
+        System.assertEquals(1000, dto.totalEstimatedHours, 'Single 1000h estimate');
+
+        // Headline must count the full out-of-window remaining (950h), NOT just the
+        // 3-period windowed forecast — so projected ≈ logged + remaining ≈ estimate.
+        System.assertEquals(1000, dto.projectedFinalHours,
+            'Projected final = logged(50) + all remaining(950) = 1000 ≈ estimate, ' +
+            'independent of the 3-period display window');
+        System.assertEquals(false, dto.isOverBudgetTrajectory,
+            'On-budget (projected == estimate) is NOT an over-budget trajectory');
+
+        // Sanity: the windowed forecast bars are a tiny fraction of remaining — proving
+        // the headline did NOT come from cumulativeForecast (the old, buggy source).
+        Decimal forwardForecast = 0;
+        for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
+            if (p.isForecast) {
+                forwardForecast += p.forecastHours;
+            }
+        }
+        System.assert(dto.projectedFinalHours > dto.totalLoggedHours + forwardForecast,
+            'Headline exceeds logged + windowed forecast, confirming out-of-window ' +
+            'remaining is counted (was the bug: ' + forwardForecast + ' windowed vs 950 total)');
+    }
+
+    @IsTest
+    static void testProjectedFinalExceedsEstimateOnlyWhenOverBudget() {
+        // One on-budget item (200 est / 50 logged → 150 remaining) plus one genuinely
+        // over-budget item (40 est / 100 logged → 0 remaining, floored). Projected =
+        // logged(150) + remaining(150 + 0) = 300; estimate = 240 → over-budget because
+        // the over-budget item's logged is already counted while its remaining floors at 0.
+        WorkItem__c onBudget = insertWi('OnBudget', 200, Date.today().addMonths(-1), Date.today().addMonths(6), null);
+        WorkItem__c overBudget = insertWi('OverBudget', 40, Date.today().addMonths(-1), Date.today().addMonths(1), null);
+        insert new List<WorkLog__c>{
+            buildLog(onBudget.Id, 50, Date.today()),
+            buildLog(overBudget.Id, 100, Date.today())
+        };
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertEquals(150, dto.totalLoggedHours, '50 + 100 = 150h logged');
+        System.assertEquals(240, dto.totalEstimatedHours, '200 + 40 = 240h estimate');
+        // remaining = max(0, 200-50) + max(0, 40-100) = 150 + 0 = 150.
+        System.assertEquals(300, dto.projectedFinalHours,
+            'logged(150) + remaining(150) = 300 — over-budget item floors remaining at 0 ' +
+            'but its logged still counts');
+        System.assertEquals(true, dto.isOverBudgetTrajectory,
+            'Projected 300 > estimate 240 → over-budget trajectory');
+    }
+
+    @IsTest
     static void testPortfolioPacingQuarterGranularity() {
         WorkItem__c root = insertWi('QRoot', 90, Date.today().addMonths(-6), Date.today().addMonths(6), null);
         insert new List<WorkLog__c>{

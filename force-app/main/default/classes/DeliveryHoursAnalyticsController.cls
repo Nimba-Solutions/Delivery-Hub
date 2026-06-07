@@ -19,6 +19,15 @@
 @SuppressWarnings('PMD.ApexDoc,PMD.AvoidGlobalModifier,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity,PMD.OperationWithLimitsInLoop')
 global with sharing class DeliveryHoursAnalyticsController {
 
+    /**
+     * @description Portfolio remaining work = SUM(max(0, estimate − logged)) across ALL
+     *              in-scope items, independent of the display window. Computed in
+     *              rollupPortfolioTotals and consumed by applyPortfolioForecast for the
+     *              headline projectedFinalHours so out-of-window remaining work still
+     *              counts. Not a DTO field (the serialized PacingData shape is fixed).
+     */
+    private static Decimal totalRemainingHours = 0;
+
     /** @description Hard cap on recursion depth when walking the WI parent-child tree. */
     private static final Integer MAX_TREE_DEPTH = 10;
 
@@ -570,17 +579,22 @@ global with sharing class DeliveryHoursAnalyticsController {
      *              WorkItem tree (one query), and the all-time logged hours straight
      *              from WorkLog (one aggregate). Logged hours are read from WorkLog
      *              directly — NOT the TotalLoggedHoursSum__c roll-up — so the headline
-     *              stays correct regardless of roll-up recalc timing.
+     *              stays correct regardless of roll-up recalc timing. Also computes
+     *              totalRemainingHours = SUM(max(0, estimate − logged)) per item,
+     *              independent of any display window, so the headline Projected Final
+     *              can count remaining work that falls beyond the windowed forecast.
      */
     private static void rollupPortfolioTotals(PortfolioPacingDTO dto, Set<Id> portfolioIds) {
         dto.totalEstimatedHours = 0;
         dto.totalLoggedHours = 0;
         dto.earliestStart = null;
         dto.latestEnd = null;
+        totalRemainingHours = 0;
         if (portfolioIds.isEmpty()) {
             dto.hasEstimate = false;
             return;
         }
+        Map<Id, Decimal> loggedByItem = loggedHoursByItem(portfolioIds);
         for (WorkItem__c wi : [
             SELECT EstimatedHoursNumber__c,
                    EstimatedStartDevDate__c, EstimatedEndDevDate__c
@@ -589,8 +603,12 @@ global with sharing class DeliveryHoursAnalyticsController {
             WITH SYSTEM_MODE
             LIMIT 50000
         ]) {
-            if (wi.EstimatedHoursNumber__c != null) {
-                dto.totalEstimatedHours += wi.EstimatedHoursNumber__c;
+            Decimal estimate = (wi.EstimatedHoursNumber__c == null) ? 0 : wi.EstimatedHoursNumber__c;
+            dto.totalEstimatedHours += estimate;
+            Decimal logged = loggedByItem.containsKey(wi.Id) ? loggedByItem.get(wi.Id) : 0;
+            Decimal itemRemaining = estimate - logged;
+            if (itemRemaining > 0) {
+                totalRemainingHours += itemRemaining;
             }
             Date s = wi.EstimatedStartDevDate__c;
             if (s != null && (dto.earliestStart == null || s < dto.earliestStart)) {
@@ -601,32 +619,40 @@ global with sharing class DeliveryHoursAnalyticsController {
                 dto.latestEnd = e;
             }
         }
-        dto.totalLoggedHours = sumPortfolioLoggedHours(portfolioIds);
+        Decimal loggedTotal = 0;
+        for (Decimal v : loggedByItem.values()) {
+            loggedTotal += v;
+        }
+        dto.totalLoggedHours = loggedTotal;
         dto.hasEstimate = dto.totalEstimatedHours > 0;
     }
 
     /**
-     * @description All-time logged hours across the portfolio, read from WorkLog.
-     *              Grouped by WorkItemLookup__c (a bare aggregate with no GROUP BY
-     *              fails to compile with "Non-grouped query that uses an aggregate
-     *              function") and summed in Apex.
+     * @description All-time logged hours across the portfolio, read from WorkLog,
+     *              keyed per WorkItem. Grouped by WorkItemLookup__c (a bare aggregate
+     *              with no GROUP BY fails to compile with "Non-grouped query that uses
+     *              an aggregate function"). Callers sum the values for the portfolio
+     *              total and read per-item entries for per-item remaining work.
+     * @param portfolioIds The in-scope WorkItem ids.
+     * @return Map of WorkItem id → its all-time logged hours (items with no logs absent).
      */
-    private static Decimal sumPortfolioLoggedHours(Set<Id> portfolioIds) {
-        Decimal total = 0;
+    private static Map<Id, Decimal> loggedHoursByItem(Set<Id> portfolioIds) {
+        Map<Id, Decimal> byItem = new Map<Id, Decimal>();
         for (AggregateResult ar : [
-            SELECT SUM(HoursLoggedNumber__c) total
+            SELECT WorkItemLookup__c wid, SUM(HoursLoggedNumber__c) total
             FROM WorkLog__c
             WHERE WorkItemLookup__c IN :portfolioIds
             WITH SYSTEM_MODE
             GROUP BY WorkItemLookup__c
             LIMIT 5000
         ]) {
+            Object widObj = ar.get('wid');
             Object totalObj = ar.get('total');
-            if (totalObj != null) {
-                total += (Decimal) totalObj;
+            if (widObj != null && totalObj != null) {
+                byItem.put((Id) widObj, (Decimal) totalObj);
             }
         }
-        return total;
+        return byItem;
     }
 
     /**
@@ -826,9 +852,14 @@ global with sharing class DeliveryHoursAnalyticsController {
     /**
      * @description Projects forward periods at the portfolio run-rate (average
      *              logged hours over the last RUN_RATE_WINDOW history periods),
-     *              cumulatively capped at remaining estimate. Sets headline
-     *              projectedFinalHours, runRateHoursPerPeriod, and the
-     *              over-budget-trajectory flag.
+     *              cumulatively capped at remaining estimate — these windowed
+     *              per-period forecastHours drive the chart bars and are NOT the
+     *              headline. The headline projectedFinalHours is logged + the FULL
+     *              remaining work across ALL in-scope items (totalRemainingHours,
+     *              computed in rollupPortfolioTotals), independent of the display
+     *              window, so it equals the estimate when on-budget and only exceeds
+     *              it for genuinely over-budget items. Also sets runRateHoursPerPeriod
+     *              and the over-budget-trajectory flag.
      */
     private static void applyPortfolioForecast(List<PacingPeriodDTO> periods, PortfolioPacingDTO dto, Integer back) {
         dto.runRateHoursPerPeriod = 0;
@@ -838,6 +869,8 @@ global with sharing class DeliveryHoursAnalyticsController {
         Decimal runRate = computeRunRate(periods, back);
         dto.runRateHoursPerPeriod = runRate.setScale(2, System.RoundingMode.HALF_UP);
 
+        // Per-period forecast spread (chart bars): run-rate, cumulatively capped at the
+        // portfolio remaining estimate. Unchanged — the windowed bars are correct as-is.
         Decimal remaining = null;
         if (dto.hasEstimate) {
             remaining = dto.totalEstimatedHours - dto.totalLoggedHours;
@@ -862,7 +895,10 @@ global with sharing class DeliveryHoursAnalyticsController {
             cumulativeForecast += thisPeriod;
         }
 
-        dto.projectedFinalHours = (dto.totalLoggedHours + cumulativeForecast)
+        // Headline: logged + ALL remaining work (per-item max(0, estimate − logged)),
+        // NOT the windowed cumulativeForecast — out-of-window remaining work still counts.
+        Decimal remainingAll = (totalRemainingHours == null) ? 0 : totalRemainingHours;
+        dto.projectedFinalHours = (dto.totalLoggedHours + remainingAll)
             .setScale(2, System.RoundingMode.HALF_UP);
         if (dto.hasEstimate) {
             dto.isOverBudgetTrajectory = dto.projectedFinalHours > dto.totalEstimatedHours;

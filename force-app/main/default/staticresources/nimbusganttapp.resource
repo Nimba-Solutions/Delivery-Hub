@@ -3942,7 +3942,7 @@ var NimbusGanttApp = (function(exports) {
     function buildViewsMenu(state, dispatch) {
       var _a;
       const wrap = el$2("span", "");
-      wrap.style.cssText = "position:relative;display:inline-block;";
+      wrap.style.cssText = "display:inline-block;";
       const activeName = state.activeViewId ? ((_a = state.savedViews.find((v) => v.id === state.activeViewId)) == null ? void 0 : _a.name) ?? null : null;
       const trigger = el$2("button", CLS_PILL_BTN_BASE + " " + CLS_PILL_BTN_IDLE_VIOLET);
       trigger.textContent = "☰ " + (activeName || "Views") + " ▾";
@@ -3955,11 +3955,14 @@ var NimbusGanttApp = (function(exports) {
       if (!viewsMenuOpen) return wrap;
       const menu = el$2("div", "");
       menu.style.cssText = [
-        "position:absolute",
-        "z-index:60",
-        "top:calc(100% + 4px)",
+        "position:fixed",
+        "z-index:9999",
+        "top:0",
         "left:0",
+        "visibility:hidden",
         "min-width:248px",
+        "max-height:70vh",
+        "overflow:auto",
         "background:#ffffff",
         "border:1px solid #e2e8f0",
         "border-radius:8px",
@@ -4033,6 +4036,20 @@ var NimbusGanttApp = (function(exports) {
       saveRow.appendChild(saveBtn);
       menu.appendChild(saveRow);
       wrap.appendChild(menu);
+      const place = () => {
+        try {
+          const r = trigger.getBoundingClientRect();
+          const vw = typeof window !== "undefined" && window.innerWidth || 1280;
+          const left = Math.max(8, Math.min(r.left, vw - menu.offsetWidth - 8));
+          menu.style.top = r.bottom + 4 + "px";
+          menu.style.left = left + "px";
+          menu.style.visibility = "visible";
+        } catch {
+          menu.style.visibility = "visible";
+        }
+      };
+      if (typeof requestAnimationFrame === "function") requestAnimationFrame(place);
+      else place();
       return wrap;
     }
     render(initial);
