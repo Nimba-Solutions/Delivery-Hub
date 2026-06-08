@@ -533,7 +533,7 @@ global with sharing class DeliveryHoursAnalyticsController {
         // 0.268 — accumulate which commitment tiers actually carry hours so the top-level
         // segments[] defs only advertise non-empty tiers (mirrors NG's own legend filter).
         Set<String> tiersWithHours = new Set<String>();
-        Decimal recurring = resolveRecurringHoursPerPeriod();
+        Decimal recurring = resolveRecurringHoursPerPeriod(bucketSize);
         if (dto != null && dto.periods != null) {
             for (Integer idx = 0; idx < dto.periods.size(); idx++) {
                 PacingPeriodDTO p = dto.periods[idx];
@@ -722,13 +722,28 @@ global with sharing class DeliveryHoursAnalyticsController {
      *              intake tier — the ~N small inbounds that always land regardless of the
      *              dated backlog. Added uniformly to every forecast bucket as its own tier
      *              so the curve extends to the right beyond scheduled work.
-     *              SEAM: returns 0 today (tier absent, prod unchanged). Wire MF's
-     *              history-derived run-rate here once it lands — scaling it to the chosen
-     *              granularity (per-week vs per-month vs per-quarter) at the call site.
+     *              Sourced per-org from DeliveryHubSettings__c.RecurringHoursPerMonthNumber__c
+     *              (a MONTHLY rate), scaled here to the requested bucket. Default/blank/<=0 =
+     *              tier off (prod unchanged until an org sets it) — so MF can set ~69 without
+     *              injecting phantom recurring work into other subscriber orgs' forecasts.
+     * @param bucketSize 'week' | 'month' | 'quarter' — the period the hours are scaled to.
      * @return Recurring hours per forecast period (0 = tier off).
      */
-    private static Decimal resolveRecurringHoursPerPeriod() {
-        return 0;
+    private static Decimal resolveRecurringHoursPerPeriod(String bucketSize) {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        Decimal perMonth = (settings == null || settings.RecurringHoursPerMonthNumber__c == null)
+            ? 0 : settings.RecurringHoursPerMonthNumber__c;
+        if (perMonth <= 0) {
+            return 0;
+        }
+        if (bucketSize == 'week') {
+            // 12 months / 52 weeks — average monthly rate spread per week.
+            return (perMonth * 12 / 52).setScale(2, System.RoundingMode.HALF_UP);
+        }
+        if (bucketSize == 'quarter') {
+            return (perMonth * MONTHS_PER_QUARTER).setScale(2, System.RoundingMode.HALF_UP);
+        }
+        return perMonth.setScale(2, System.RoundingMode.HALF_UP);
     }
 
     /**
@@ -854,15 +869,35 @@ global with sharing class DeliveryHoursAnalyticsController {
             return;
         }
         Map<Id, Decimal> loggedByItem = loggedHoursByItem(portfolioIds);
-        for (WorkItem__c wi : [
+        List<WorkItem__c> items = [
             SELECT Id, BriefDescriptionTxt__c, StageNamePk__c, DeveloperLookup__r.Name,
-                   EstimatedHoursNumber__c, PriorityGroupPk__c,
+                   EstimatedHoursNumber__c, PriorityGroupPk__c, ParentWorkItemLookup__c,
                    EstimatedStartDevDate__c, EstimatedEndDevDate__c
             FROM WorkItem__c
             WHERE Id IN :portfolioIds
             WITH SYSTEM_MODE
             LIMIT 50000
-        ]) {
+        ];
+        // 0.269 — LEAF-ONLY counting. A WorkItem that is the PARENT of another in-scope item
+        // is a CONTAINER whose EstimatedHoursNumber__c is a planning rollup of its children
+        // (verified on MF-Prod: RR-ENGINE-PARENT 200h == its children RR-ENG-1/2/3 = 80+70+50).
+        // Counting BOTH the parent and its children double-counts the same work, inflating
+        // estimate / remaining / forecast above the real total (the Pacing-2,640h-vs-board-
+        // 1,460h credibility gap). So estimate, remaining, and the schedule-based spread count
+        // LEAVES only (items with no in-scope child). Logged stays INCLUSIVE — a WorkLog is
+        // recorded against one specific item (never a parent↔child rollup), so it can't
+        // double-count, and dropping a parent's direct logs would lose real history.
+        Set<Id> parentIds = new Set<Id>();
+        for (WorkItem__c wi : items) {
+            if (wi.ParentWorkItemLookup__c != null) {
+                parentIds.add(wi.ParentWorkItemLookup__c);
+            }
+        }
+        for (WorkItem__c wi : items) {
+            // Skip container parents — their work is counted via their (leaf) children.
+            if (parentIds.contains(wi.Id)) {
+                continue;
+            }
             // Terminal-stage items (Done/Cancelled/Closed/Rejected) are dead work: their
             // already-LOGGED hours are real history (kept in totalLoggedHours + the actual
             // series, both sourced from WorkLog independent of stage), but their REMAINING
