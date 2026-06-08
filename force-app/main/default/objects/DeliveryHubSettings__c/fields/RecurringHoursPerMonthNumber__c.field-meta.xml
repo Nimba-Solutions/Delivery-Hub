@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>RecurringHoursPerMonthNumber__c</fullName>
+    <description>Synthetic steady-state intake hours per MONTH for the forecast's "Recurring" commitment tier — the ongoing small inbounds that always land regardless of the dated backlog. Per-org: 0 (default) hides the tier; set it to your historical monthly intake rate to extend the forecast curve to the right. Scaled to the chosen bucket (week/month/quarter) at render time.</description>
+    <externalId>false</externalId>
+    <label>Recurring Hours / Month</label>
+    <precision>9</precision>
+    <required>false</required>
+    <scale>2</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>
