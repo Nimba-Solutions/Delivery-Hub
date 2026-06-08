@@ -1066,7 +1066,12 @@ private class DeliveryHoursAnalyticsControllerTest {
         // actual series.
         Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
         Date spanEnd = nextMonthStart.addMonths(2).addDays(-1);
-        WorkItem__c root = insertWi('TermRoot', 100, nextMonthStart, spanEnd, null);
+        // 0-estimate container root (its work lives in the children) — mirrors the
+        // sibling testTerminalRootSiblingExcludedFromForecastButLoggedKept pattern. A
+        // non-zero root estimate would contribute its own remaining and is orthogonal to
+        // what this test isolates (terminal-stage exclusion); the projected math below
+        // assumes the root adds nothing.
+        WorkItem__c root = insertWi('TermRoot', 0, nextMonthStart, spanEnd, null);
         WorkItem__c activeChild = insertWi('TermActiveChild', 60, nextMonthStart, spanEnd, root.Id);
         // Cancelled child: scheduled in the future with positive remaining, so absent the
         // fix it WOULD spread 40h onto the forecast bars.

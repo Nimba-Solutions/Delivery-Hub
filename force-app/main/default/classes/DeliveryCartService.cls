@@ -100,7 +100,7 @@ global with sharing class DeliveryCartService {
      *              header and the resolved CartExperienceProfile.
      * @return CartDTO render-ready payload.
      */
-    @AuraEnabled
+    @AuraEnabled(cacheable=true)
     global static CartDTO getCart() {
         try {
             CartExperienceProfile profile = CartExperienceProfile.resolve();
