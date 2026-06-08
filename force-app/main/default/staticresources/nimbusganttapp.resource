@@ -1050,9 +1050,8 @@ var NimbusGanttApp = (function(exports) {
   function progressOf(task) {
     const high = task.estimatedHours || 0;
     const logged = task.loggedHours || 0;
-    if (DONE_STAGES[task.stage || ""]) return 100;
     if (!high) return null;
-    return Math.min(100, Math.round(logged / high * 100));
+    return Math.round(logged / high * 100);
   }
   const KPI_TONES = {
     slate: { bg: "#f1f5f9", text: "#475569" },
@@ -1760,7 +1759,10 @@ var NimbusGanttApp = (function(exports) {
         pctWrap.style.cssText = [
           "flex-shrink:0",
           "font-size:11px",
-          "color:" + (pct === 100 ? "#10b981" : pct > 50 ? "#d97706" : "#64748b"),
+          // 0.199.6 — budget-risk ramp: over budget (red) / approaching (amber) /
+          // comfortable (slate). Replaces the old "exactly 100 = green" which went
+          // green for Done's forced-100 and never flagged over-runs.
+          "color:" + (pct > 100 ? "#dc2626" : pct >= 75 ? "#d97706" : "#64748b"),
           "font-weight:600",
           "text-align:right",
           "white-space:nowrap"
@@ -2123,6 +2125,60 @@ var NimbusGanttApp = (function(exports) {
     }
     ctx.textBaseline = "alphabetic";
   }
+  const PACING_SEGMENT_DEFAULTS = [
+    { id: "greenlit", label: "Greenlit", color: "#059669", style: "solid", order: 0 },
+    { id: "predicted", label: "Predicted", color: "#2563eb", style: "solid", order: 1 },
+    { id: "ready", label: "Ready to approve", color: "#d97706", style: "dotted", order: 2 }
+  ];
+  const PACING_LANE_TO_SEGMENT = {
+    "top-priority": "greenlit",
+    "active": "greenlit",
+    "follow-on": "predicted",
+    "proposed": "ready"
+  };
+  const PACING_SEG_RAMP = ["#2563eb", "#7dabf5", "#c3dafc", "#1e40af", "#93c5fd", "#1d4ed8"];
+  let pacingHatchSeq = 0;
+  function pacingBreakoutKey(it, dim) {
+    if (dim === "workItem") return { id: "wi:" + it.id, label: it.name || it.id };
+    if (dim === "epic") return { id: "ep:" + (it.group || "__none"), label: it.group || "No epic / group" };
+    if (dim === "owner") return { id: "ow:" + (it.assignee || "__none"), label: it.assignee || "Unassigned" };
+    return null;
+  }
+  function applyBreakout(d, dim) {
+    if (!dim || dim === "cohort") return d;
+    const totals = /* @__PURE__ */ new Map();
+    for (const b of d.buckets) for (const it of b.items || []) {
+      if ((it.hours || 0) <= 0) continue;
+      const k = pacingBreakoutKey(it, dim);
+      if (!k) continue;
+      const e = totals.get(k.id) || { label: k.label, total: 0 };
+      e.total += it.hours;
+      totals.set(k.id, e);
+    }
+    const ranked = [...totals.entries()].sort((a, b) => b[1].total - a[1].total);
+    const CAP = 6;
+    const top = ranked.slice(0, CAP);
+    const topIds = new Set(top.map(([id]) => id));
+    const segments = top.map(([id, v], i) => ({ id, label: v.label, color: PACING_SEG_RAMP[i % PACING_SEG_RAMP.length], style: "solid", order: i }));
+    if (ranked.length > CAP) segments.push({ id: "__other", label: "Other", color: "#94a3b8", style: "solid", order: CAP });
+    const buckets = d.buckets.map((b) => {
+      const seg = {};
+      for (const it of b.items || []) {
+        if ((it.hours || 0) <= 0) continue;
+        const k = pacingBreakoutKey(it, dim);
+        if (!k) continue;
+        const sid = topIds.has(k.id) ? k.id : "__other";
+        seg[sid] = (seg[sid] || 0) + it.hours;
+      }
+      let sum = 0;
+      for (const k in seg) {
+        seg[k] = round(seg[k]);
+        sum += seg[k];
+      }
+      return { ...b, actual: 0, forecast: round(sum), segments: seg };
+    });
+    return { ...d, segments, buckets };
+  }
   const STYLE_ID$1 = "nga-pacing-styles";
   const FONT = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';
   const PACING_CSS = `
@@ -2318,7 +2374,7 @@ var NimbusGanttApp = (function(exports) {
       }
       it.hours += hrs;
     }
-    function spread(t, a, b, amount, series, meta) {
+    function spread(t, a, b, amount, series, meta, segId) {
       const span = b - a;
       if (span <= 0 || amount <= 0) return;
       const perDay = amount / (span / DAY_MS$1);
@@ -2331,6 +2387,10 @@ var NimbusGanttApp = (function(exports) {
           if (hrs > 0.01) {
             const bkt = ensure(cur);
             bkt[series] += hrs;
+            if (series === "forecast" && segId) {
+              if (!bkt.segments) bkt.segments = {};
+              bkt.segments[segId] = (bkt.segments[segId] || 0) + hrs;
+            }
             addItem(bkt.key, t, hrs, meta);
           }
         }
@@ -2338,7 +2398,7 @@ var NimbusGanttApp = (function(exports) {
       }
     }
     for (const t of tasks) {
-      if (t.isInactive) continue;
+      if (t.isInactive || DONE_STAGES[t.stage || ""]) continue;
       const est = Number(t.estimatedHours) || 0;
       const logged = Number(t.loggedHours) || 0;
       if (est <= 0 && logged <= 0) continue;
@@ -2348,6 +2408,8 @@ var NimbusGanttApp = (function(exports) {
       const remaining = Math.max(0, est - logged);
       const s = parseISO(t.startDate);
       const e = parseISO(t.endDate);
+      const lane = t.priorityGroup || "";
+      const segId = lane === "deferred" ? null : PACING_LANE_TO_SEGMENT[lane] || "greenlit";
       const meta = {
         estimatedHours: round(est),
         loggedHours: round(logged),
@@ -2357,25 +2419,31 @@ var NimbusGanttApp = (function(exports) {
         endDate: str(t.endDate),
         assignee: str(t.assignee),
         status: str(t.status),
-        group: str(t.groupName) || str(t.groupId)
+        group: str(t.groupName) || str(t.groupId),
+        tier: segId || (lane || void 0)
       };
       if (s == null || e == null || e < s) {
         if (remaining > 0) unscheduled += remaining;
         continue;
       }
       spread(t, s, Math.min(now2, e), logged, "actual", meta);
-      const fs = Math.max(now2, s);
-      if (fs < e) spread(t, fs, e, remaining, "forecast", meta);
-      else if (remaining > 0) {
-        const bkt = ensure(now2);
-        bkt.forecast += remaining;
-        addItem(bkt.key, t, remaining, meta);
+      if (segId) {
+        const fs = Math.max(now2, s);
+        if (fs < e) spread(t, fs, e, remaining, "forecast", meta, segId);
+        else if (remaining > 0) {
+          const bkt = ensure(now2);
+          bkt.forecast += remaining;
+          if (!bkt.segments) bkt.segments = {};
+          bkt.segments[segId] = (bkt.segments[segId] || 0) + remaining;
+          addItem(bkt.key, t, remaining, meta);
+        }
       }
     }
     const ordered = Array.from(buckets.values()).sort((a, b) => a.key < b.key ? -1 : 1);
     for (const b of ordered) {
       b.actual = round(b.actual);
       b.forecast = round(b.forecast);
+      if (b.segments) for (const k in b.segments) b.segments[k] = round(b.segments[k]);
       const items = Array.from(itemMaps.get(b.key).values());
       for (const it of items) {
         it.hours = round(it.hours);
@@ -2397,7 +2465,10 @@ var NimbusGanttApp = (function(exports) {
         activeItems: active,
         unscheduledHours: round(unscheduled)
       },
-      authoritative: false
+      authoritative: false,
+      // 0.200.0 — only advertise tiers that actually carry hours, so the legend
+      // doesn't show empty toggles on a board with no PROPOSED/PLANNED work.
+      segments: PACING_SEGMENT_DEFAULTS.filter((seg) => ordered.some((b) => b.segments && (b.segments[seg.id] || 0) > 0))
     };
   }
   const RANGE_LABELS = {
@@ -2431,7 +2502,7 @@ var NimbusGanttApp = (function(exports) {
   }
   const COL = { actual: "#10b981", actualOver: "#ef4444", forecast: "#93c5fd", target: "#64748b", grid: "#e2e8f0", muted: "#64748b" };
   function renderPacingView(host, tasks, options = {}) {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
     injectStyles$1();
     const dflt = options.defaults ?? {};
     const ctrl = options.controls ?? {};
@@ -2447,10 +2518,15 @@ var NimbusGanttApp = (function(exports) {
     const show = {
       actual: ((_b = saved.show) == null ? void 0 : _b.actual) ?? ((_c = dflt.series) == null ? void 0 : _c.actual) ?? true,
       forecast: ((_d = saved.show) == null ? void 0 : _d.forecast) ?? ((_e = dflt.series) == null ? void 0 : _e.forecast) ?? true,
-      target: ((_f = saved.show) == null ? void 0 : _f.target) ?? ((_g = dflt.series) == null ? void 0 : _g.target) ?? false
+      target: ((_f = saved.show) == null ? void 0 : _f.target) ?? ((_g = dflt.series) == null ? void 0 : _g.target) ?? false,
+      // 0.200.0 — per-segment visibility for the stacked forecast tiers. Absent =
+      // visible; toggled off entries persist here. Keyed by PacingSegment.id.
+      seg: { ...((_h = saved.show) == null ? void 0 : _h.seg) ?? {} }
     };
+    const segOn = (id) => show.seg[id] !== false;
+    let breakout = saved.breakout || ((_j = (_i = options.pacingData) == null ? void 0 : _i.breakout) == null ? void 0 : _j.dimension) || "cohort";
     function persistPrefs() {
-      savePacingPrefs({ range, bucket, customS, customE, measure, mode, show: { ...show } });
+      savePacingPrefs({ range, bucket, customS, customE, measure, mode, show: { ...show }, breakout });
     }
     function notifyParams() {
       var _a2;
@@ -2483,15 +2559,28 @@ var NimbusGanttApp = (function(exports) {
       return computeFromTasks(tasks, bucket);
     }
     function mergeLocalItems(d) {
-      if (!d.buckets.some((b) => !b.items || b.items.length === 0)) return d;
+      const needItems = d.buckets.some((b) => !b.items || b.items.length === 0);
+      const needSegs = !d.segments || d.segments.length === 0;
+      if (!needItems && !needSegs) return d;
       const local = computeFromTasks(tasks, d.bucket);
       const byKey = new Map(local.buckets.map((b) => [b.key, b]));
+      const matchLocal = (b) => byKey.get(b.key) || local.buckets.find((x) => b.startMs != null && x.startMs === b.startMs || x.label === b.label);
       return {
         ...d,
+        segments: needSegs ? local.segments : d.segments,
         buckets: d.buckets.map((b) => {
-          if (b.items && b.items.length) return b;
-          const lb = byKey.get(b.key) || local.buckets.find((x) => b.startMs != null && x.startMs === b.startMs || x.label === b.label);
-          return { ...b, items: lb ? lb.items : [] };
+          const lb = matchLocal(b);
+          const items = b.items && b.items.length ? b.items : lb ? lb.items : [];
+          let segments = b.segments;
+          if (needSegs && !segments && lb && lb.segments) {
+            const localTot = Object.keys(lb.segments).reduce((s, k) => s + (lb.segments[k] || 0), 0);
+            if (localTot > 0) {
+              const scale = b.forecast / localTot;
+              segments = {};
+              for (const k in lb.segments) segments[k] = round(lb.segments[k] * scale);
+            }
+          }
+          return { ...b, items, segments };
         })
       };
     }
@@ -2510,6 +2599,7 @@ var NimbusGanttApp = (function(exports) {
     function render() {
       persistPrefs();
       const d = data();
+      const dd = applyBreakout(d, breakout);
       const r = rate(d);
       const useDollars = measure === "dollars" && !!r;
       const cum = mode === "cumulative";
@@ -2605,6 +2695,21 @@ var NimbusGanttApp = (function(exports) {
         ));
         row2n++;
       }
+      if (ctrl.breakout !== false) {
+        const bset = (dim) => () => {
+          breakout = dim;
+          expandedKey = null;
+          render();
+        };
+        row2.appendChild(grp(
+          "Breakout",
+          pill("Cohort", breakout === "cohort", bset("cohort"), true),
+          pill("Epic", breakout === "epic", bset("epic"), true),
+          pill("Owner", breakout === "owner", bset("owner"), true),
+          pill("Item", breakout === "workItem", bset("workItem"), true)
+        ));
+        row2n++;
+      }
       if (ctrl.series !== false) {
         const legPill = (key, label, color) => {
           const b = el$1("button", "ngp-leg" + (show[key] ? "" : " off"));
@@ -2616,10 +2721,24 @@ var NimbusGanttApp = (function(exports) {
           });
           return b;
         };
+        const segPill = (seg, i) => {
+          const b = el$1("button", "ngp-leg" + (segOn(seg.id) ? "" : " off"));
+          const c = seg.color || PACING_SEG_RAMP[i % PACING_SEG_RAMP.length];
+          const sw = seg.style === "dotted" ? "background:" + c + "33;border:1px dashed " + c : seg.style === "outline" ? "background:" + c + "14;border:1px solid " + c : seg.style === "hatched" ? "background:repeating-linear-gradient(45deg," + c + "22 0 2px,transparent 2px 4px);border:1px solid " + c : "background:" + c;
+          b.appendChild(el$1("span", "ngp-sw")).setAttribute("style", sw);
+          b.appendChild(el$1("span", void 0, seg.label));
+          b.addEventListener("click", () => {
+            show.seg[seg.id] = !segOn(seg.id);
+            render();
+          });
+          return b;
+        };
+        const segs = dd.segments && dd.segments.length ? [...dd.segments].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)) : null;
         const leg = el$1("div", "ngp-grp");
         leg.appendChild(el$1("span", "ngp-lbl", "Series"));
-        leg.appendChild(legPill("actual", "Actual", COL.actual));
-        leg.appendChild(legPill("forecast", "Forecast", COL.forecast));
+        if (breakout === "cohort") leg.appendChild(legPill("actual", "Actual", COL.actual));
+        if (segs) segs.forEach((seg, i) => leg.appendChild(segPill(seg, i)));
+        else leg.appendChild(legPill("forecast", "Forecast", COL.forecast));
         leg.appendChild(legPill("target", "Target", COL.target));
         row2.appendChild(leg);
         row2n++;
@@ -2677,19 +2796,19 @@ var NimbusGanttApp = (function(exports) {
         ));
       }
       const win = rangeWindow(range, bucket, customS, customE);
-      const visible = d.buckets.filter((b) => {
+      const visible = dd.buckets.filter((b) => {
         const ms = b.startMs ?? keyToMs(b.key);
         if (win.from != null && ms < win.from) return false;
         if (win.to != null && ms > win.to) return false;
         return true;
       });
-      body.appendChild(buildChart(visible, { show, useDollars, rate: r || 0, cum, expandedKey }, (k) => {
+      body.appendChild(buildChart(visible, { show, segments: dd.segments, useDollars, rate: r || 0, cum, expandedKey }, (k) => {
         expandedKey = expandedKey === k ? null : k;
         render();
       }));
       if (expandedKey) {
-        const b = visible.find((x) => x.key === expandedKey) || d.buckets.find((x) => x.key === expandedKey);
-        if (b) body.appendChild(buildDrilldown(b, { useDollars, rate: r || 0 }, options));
+        const b = visible.find((x) => x.key === expandedKey) || dd.buckets.find((x) => x.key === expandedKey);
+        if (b) body.appendChild(buildDrilldown(b, { useDollars, rate: r || 0 }, options, dd.segments, breakout));
       } else {
         body.appendChild(el$1("div", "ngp-hint", "Click a bar to break the period down into its work items."));
       }
@@ -2713,22 +2832,49 @@ var NimbusGanttApp = (function(exports) {
       return wrap;
     }
     const mul = o.useDollars ? o.rate || 1 : 1;
+    const segDefs = o.segments && o.segments.length ? [...o.segments].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)) : null;
+    const visSegs = segDefs ? segDefs.filter((s) => o.show.seg[s.id] !== false) : null;
     let cA = 0, cF = 0, cT = 0;
+    const cSeg = {};
     const rows = buckets.map((b) => {
       cA += b.actual;
       cF += b.forecast;
       cT += b.target;
-      return { b, actual: (o.cum ? cA : b.actual) * mul, forecast: (o.cum ? cF : b.forecast) * mul, target: (o.cum ? cT : b.target) * mul };
+      const segVals = {};
+      if (segDefs) for (const sd of segDefs) {
+        const v = b.segments && b.segments[sd.id] || 0;
+        cSeg[sd.id] = (cSeg[sd.id] || 0) + v;
+        segVals[sd.id] = (o.cum ? cSeg[sd.id] : v) * mul;
+      }
+      return { b, actual: (o.cum ? cA : b.actual) * mul, forecast: (o.cum ? cF : b.forecast) * mul, target: (o.cum ? cT : b.target) * mul, segVals };
     });
     const W = 920, H = 300, padL = 52, padB = 34, padT = 10, padR = 10;
     const plotW = W - padL - padR, plotH = H - padT - padB;
     const n = rows.length, slot = plotW / n, barW = Math.min(46, slot * 0.62);
     let maxV = 1;
-    for (const r of rows) maxV = Math.max(maxV, (o.show.actual ? r.actual : 0) + (o.show.forecast ? r.forecast : 0), o.show.target ? r.target : 0);
+    for (const r of rows) {
+      const segSum = visSegs ? visSegs.reduce((s, sd) => s + (r.segVals[sd.id] || 0), 0) : o.show.forecast ? r.forecast : 0;
+      maxV = Math.max(maxV, (o.show.actual ? r.actual : 0) + segSum, o.show.target ? r.target : 0);
+    }
     const niceMax = niceCeil(maxV);
     const y = (v) => padT + plotH - v / niceMax * plotH;
     const fmtAxis = (v) => o.useDollars ? "$" + (v >= 1e3 ? round(v / 1e3) + "k" : round(v)) : round(v) + "";
     const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, width: "100%", height: "auto", style: "display:block" });
+    const defs = svgEl("defs", {});
+    svg.appendChild(defs);
+    const hatchCache = /* @__PURE__ */ new Map();
+    const hatchUrl = (color) => {
+      let id = hatchCache.get(color);
+      if (!id) {
+        id = "ngp-hx-" + pacingHatchSeq++;
+        const p = svgEl("pattern", { id, patternUnits: "userSpaceOnUse", width: 5, height: 5, patternTransform: "rotate(45)" });
+        p.appendChild(svgEl("rect", { width: 5, height: 5, fill: color, opacity: 0.12 }));
+        p.appendChild(svgEl("line", { x1: 0, y1: 0, x2: 0, y2: 5, stroke: color, "stroke-width": 1.4 }));
+        defs.appendChild(p);
+        hatchCache.set(color, id);
+      }
+      return "url(#" + id + ")";
+    };
     for (let i = 0; i <= 4; i++) {
       const v = niceMax * i / 4, yy = y(v);
       svg.appendChild(svgEl("line", { x1: padL, y1: yy, x2: W - padR, y2: yy, stroke: COL.grid, "stroke-width": 1 }));
@@ -2745,7 +2891,36 @@ var NimbusGanttApp = (function(exports) {
         top -= h;
         svg.appendChild(svgEl("rect", { x, y: top, width: barW, height: h, rx: 2, fill: r.actual > r.target && r.target > 0 ? COL.actualOver : COL.actual }));
       }
-      if (o.show.forecast && r.forecast > 0) {
+      if (visSegs) {
+        visSegs.forEach((sd, si) => {
+          const v = r.segVals[sd.id] || 0;
+          if (v <= 0) return;
+          const h = v / niceMax * plotH;
+          top -= h;
+          const c = sd.color || PACING_SEG_RAMP[si % PACING_SEG_RAMP.length];
+          const attrs = { x, y: top, width: barW, height: h, rx: 2 };
+          const st = sd.style || "solid";
+          if (st === "dotted") {
+            attrs.fill = c + "33";
+            attrs.stroke = c;
+            attrs["stroke-width"] = 1.2;
+            attrs["stroke-dasharray"] = "3 2";
+          } else if (st === "outline") {
+            attrs.fill = c + "14";
+            attrs.stroke = c;
+            attrs["stroke-width"] = 1.4;
+          } else if (st === "hatched") {
+            attrs.fill = hatchUrl(c);
+            attrs.stroke = c;
+            attrs["stroke-width"] = 1;
+          } else {
+            attrs.fill = c;
+            if (!r.b.isPast) attrs.opacity = 0.95;
+          }
+          if (sd.opacity != null) attrs.opacity = sd.opacity;
+          svg.appendChild(svgEl("rect", attrs));
+        });
+      } else if (o.show.forecast && r.forecast > 0) {
         const h = r.forecast / niceMax * plotH;
         top -= h;
         const rc = svgEl("rect", { x, y: top, width: barW, height: h, rx: 2, fill: COL.forecast });
@@ -2771,18 +2946,20 @@ var NimbusGanttApp = (function(exports) {
     wrap.appendChild(svg);
     return wrap;
   }
-  function buildDrilldown(b, o, options) {
+  function buildDrilldown(b, o, options, segments, dim) {
+    var _a;
     const panel = el$1("div", "ngp-panel");
     const total = b.actual + b.forecast;
+    const items = b.items.filter((i) => (i.hours || 0) > 0);
     const head = el$1("div", "ngp-phead");
-    head.appendChild(el$1("div", "ngp-ptitle", b.label + " — " + (o.useDollars ? fmtMoney(total * o.rate) : fmtH(total)) + " · " + b.items.length + " item" + (b.items.length === 1 ? "" : "s")));
+    head.appendChild(el$1("div", "ngp-ptitle", b.label + " — " + (o.useDollars ? fmtMoney(total * o.rate) : fmtH(total)) + " · " + items.length + " item" + (items.length === 1 ? "" : "s")));
     if (options.onOpenReport) {
       const rpt = el$1("button", "ngp-pill", "Open report ↗");
-      rpt.addEventListener("click", () => options.onOpenReport({ bucketKey: b.key, taskIds: b.items.map((i) => i.id) }));
+      rpt.addEventListener("click", () => options.onOpenReport({ bucketKey: b.key, taskIds: items.map((i) => i.id) }));
       head.appendChild(rpt);
     }
     panel.appendChild(head);
-    if (b.items.length === 0) {
+    if (items.length === 0) {
       panel.appendChild(el$1("div", "ngp-empty", "No itemized work in this period."));
       return panel;
     }
@@ -2790,8 +2967,8 @@ var NimbusGanttApp = (function(exports) {
     const hrow = el$1("div", "ngp-cols ngp-colhead");
     ["Work item", "This period", "% of item", "Est", "Logged", "Remaining", "% used"].forEach((c, i) => hrow.appendChild(el$1("div", i === 0 ? "" : "ngp-num", c)));
     panel.appendChild(hrow);
-    const maxH = Math.max(...b.items.map((i) => i.hours), 1);
-    for (const it of b.items) {
+    const maxH = Math.max(...items.map((i) => i.hours), 1);
+    const makeRow = (it) => {
       const row = el$1("div", "ngp-cols ngp-irow" + (options.onOpenItem ? " click" : ""));
       const nameCell = el$1("div");
       const nl = el$1("div", "ngp-grp");
@@ -2815,7 +2992,41 @@ var NimbusGanttApp = (function(exports) {
         row.addEventListener("mousemove", (e) => options.onItemHover(it.id, { x: e.clientX, y: e.clientY }));
         row.addEventListener("mouseleave", () => options.onItemHover(null, { x: 0, y: 0 }));
       }
-      panel.appendChild(row);
+      return row;
+    };
+    const defs = segments && segments.length && dim !== "workItem" ? [...segments].sort((a, c) => (a.order ?? 0) - (c.order ?? 0)) : null;
+    if (defs) {
+      const known = new Set(defs.map((s) => s.id));
+      const keyOf = (it) => {
+        if (dim && dim !== "cohort") {
+          const k = pacingBreakoutKey(it, dim);
+          const id = k ? k.id : null;
+          if (id && known.has(id)) return id;
+          return known.has("__other") ? "__other" : null;
+        }
+        return it.tier && known.has(it.tier) ? it.tier : null;
+      };
+      const groups = defs.map((seg) => ({ seg, rows: items.filter((it) => keyOf(it) === seg.id) }));
+      const other = items.filter((it) => keyOf(it) === null);
+      if (other.length) groups.push({ seg: null, rows: other });
+      for (const g of groups) {
+        if (!g.rows.length) continue;
+        const c = g.seg ? g.seg.color || "#94a3b8" : "#94a3b8";
+        const st = (_a = g.seg) == null ? void 0 : _a.style;
+        const sub = g.rows.reduce((s, it) => s + it.hours, 0);
+        const hdr = el$1("div", "");
+        hdr.setAttribute("style", "display:flex;align-items:center;gap:7px;margin:11px 0 3px;font-size:11.5px;font-weight:700;color:#0f172a");
+        const sw = st === "dotted" ? "background:" + c + "33;border:1px dashed " + c : st === "outline" ? "background:" + c + "14;border:1px solid " + c : st === "hatched" ? "background:repeating-linear-gradient(45deg," + c + "22 0 2px,transparent 2px 4px);border:1px solid " + c : "background:" + c;
+        hdr.appendChild(el$1("span", "ngp-sw")).setAttribute("style", sw);
+        hdr.appendChild(el$1("span", void 0, g.seg ? g.seg.label : "Other"));
+        const meta = el$1("span", "", g.rows.length + " item" + (g.rows.length === 1 ? "" : "s") + " · " + (o.useDollars ? fmtMoney(sub * o.rate) : fmtH(sub)));
+        meta.setAttribute("style", "font-weight:400;color:#64748b");
+        hdr.appendChild(meta);
+        panel.appendChild(hdr);
+        for (const it of g.rows) panel.appendChild(makeRow(it));
+      }
+    } else {
+      for (const it of items) panel.appendChild(makeRow(it));
     }
     return panel;
   }
@@ -2979,6 +3190,7 @@ var NimbusGanttApp = (function(exports) {
     "Ready for Sizing": true,
     "Ready for Development": true
   };
+  const hasTicketPrefix = (t, prefix) => [t.id, t.title, t.name].some((v) => !!v && String(v).indexOf(prefix) === 0);
   const CLOUD_NIMBUS_FILTERS = [
     {
       id: "active",
@@ -2998,12 +3210,12 @@ var NimbusGanttApp = (function(exports) {
     {
       id: "real",
       label: "Real T-NNNN tickets",
-      predicate: (t) => !!(t.id && String(t.id).indexOf("T-") === 0)
+      predicate: (t) => hasTicketPrefix(t, "T-")
     },
     {
       id: "workstreams",
       label: "Workstream rollups",
-      predicate: (t) => !!(t.id && String(t.id).indexOf("WS-") === 0)
+      predicate: (t) => hasTicketPrefix(t, "WS-")
     },
     {
       id: "all",
@@ -7777,7 +7989,8 @@ var NimbusGanttApp = (function(exports) {
         if (state.viewMode === "gantt") {
           initGantt(ganttHost);
         } else if (state.viewMode === "list") {
-          renderAuditListView(ganttHost, allTasks, {
+          const auditTasks = applyFilter(allTasks, state.filter, state.search);
+          renderAuditListView(ganttHost, auditTasks, {
             progressLabel: tplConfig.progressLabel,
             hideRecordIds: tplConfig.hideRecordIds,
             // 0.185.5 — forward the host's onItemReorder contract so the
