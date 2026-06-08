@@ -898,6 +898,269 @@ private class DeliveryHoursAnalyticsControllerTest {
             'Σ item hoursThisPeriod ≈ placed remaining (60h), got ' + totalItemHours);
     }
 
+    // ────────────────────────────────────────────────────────────────────
+    // getPacing — cohort/commitment-tier split (the stacked hockey-stick).
+    // PriorityGroupPk__c → segment id: active/top-priority→greenlit,
+    // follow-on→predicted, proposed/deferred→ready. Per-bucket `segments`
+    // sum to forecast; items carry `tier`; top-level segments[] advertises
+    // only tiers that carry hours.
+    // ────────────────────────────────────────────────────────────────────
+
+    /** @description Active future-dated root WorkItem with an explicit priority lane. */
+    private static WorkItem__c insertTieredWi(String briefDesc, Decimal estimate, Date startDate, Date endDate, String priorityGroup) {
+        return TestDataFactory.createWorkItem(new Map<String, Object>{
+            'BriefDescriptionTxt__c' => briefDesc,
+            'EstimatedHoursNumber__c' => estimate,
+            'EstimatedStartDevDate__c' => startDate,
+            'EstimatedEndDevDate__c' => endDate,
+            'PriorityGroupPk__c' => priorityGroup,
+            'ActivatedDateTime__c' => System.now()
+        });
+    }
+
+    /** @description Pulls the top-level segments[] defs out of a getPacing payload. */
+    private static List<Object> segmentDefsOf(String pacingJson) {
+        Map<String, Object> data = (Map<String, Object>) JSON.deserializeUntyped(pacingJson);
+        return (List<Object>) data.get('segments');
+    }
+
+    @IsTest
+    static void testCohortSplitTiersBucketsAndItems() {
+        // Three active roots over the SAME future window → their forecast buckets carry
+        // all three commitment tiers, mapped from PriorityGroupPk__c.
+        Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = nextMonthStart.addMonths(3).addDays(-1);
+        insertTieredWi('CommittedWI', 90, nextMonthStart, spanEnd, 'active');     // → greenlit
+        insertTieredWi('PredictedWI', 60, nextMonthStart, spanEnd, 'follow-on');  // → predicted
+        insertTieredWi('ProposedWI',  30, nextMonthStart, spanEnd, 'proposed');   // → ready
+
+        Test.startTest();
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
+        Test.stopTest();
+
+        // Top-level segment defs: greenlit/predicted/ready present, in stack order, no recurring.
+        List<Object> defs = segmentDefsOf(pacingJson);
+        System.assertNotEquals(null, defs, 'segments[] defs are emitted when tiers carry hours');
+        List<String> ids = new List<String>();
+        for (Object o : defs) {
+            ids.add((String) ((Map<String, Object>) o).get('id'));
+        }
+        System.assertEquals(new List<String>{ 'greenlit', 'predicted', 'ready' }, ids,
+            'segment defs are the three non-empty tiers in stack order (no recurring — seam off)');
+        Map<String, Object> firstDef = (Map<String, Object>) defs[0];
+        System.assertEquals('Committed', firstDef.get('label'), 'greenlit labelled Committed');
+        System.assertEquals('#059669', firstDef.get('color'), 'greenlit color matches NG default');
+
+        // A forecast bucket overlapping the span: segments map sums to the bucket forecast,
+        // and every drill-down item carries the tier its lane maps to.
+        Boolean checkedABucket = false;
+        for (Object o : bucketsOf(pacingJson)) {
+            Map<String, Object> b = (Map<String, Object>) o;
+            Decimal forecast = (Decimal) b.get('forecast');
+            if (forecast == null || forecast <= 0) {
+                continue;
+            }
+            Map<String, Object> segs = (Map<String, Object>) b.get('segments');
+            System.assertNotEquals(null, segs, 'a forecast bucket carries a segments map');
+            Decimal segSum = 0;
+            for (Object v : segs.values()) {
+                segSum += (Decimal) v;
+            }
+            System.assert(Math.abs(segSum - forecast) <= 0.2,
+                'Σ per-tier segment hours (' + segSum + ') ≈ bucket forecast (' + forecast + ')');
+            System.assert(segs.containsKey('greenlit') && segs.containsKey('predicted')
+                && segs.containsKey('ready'), 'all three tiers contribute to the overlapping bucket');
+
+            for (Object io : (List<Object>) b.get('items')) {
+                Map<String, Object> item = (Map<String, Object>) io;
+                String name = (String) item.get('name');
+                String tier = (String) item.get('tier');
+                if (name == 'CommittedWI') {
+                    System.assertEquals('greenlit', tier, 'active lane → greenlit');
+                } else if (name == 'PredictedWI') {
+                    System.assertEquals('predicted', tier, 'follow-on lane → predicted');
+                } else if (name == 'ProposedWI') {
+                    System.assertEquals('ready', tier, 'proposed lane → ready');
+                }
+            }
+            checkedABucket = true;
+        }
+        System.assert(checkedABucket, 'at least one forecast bucket was asserted');
+    }
+
+    @IsTest
+    static void testBlankLaneFallsBackToGreenlitNoVanish() {
+        // A future-dated item with NO priority lane must still land in a tier (greenlit),
+        // so its forecast hours never vanish from the stack (Σ segments == forecast).
+        Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = nextMonthStart.addMonths(2).addDays(-1);
+        insertTieredWi('NoLaneWI', 50, nextMonthStart, spanEnd, null);
+
+        Test.startTest();
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
+        Test.stopTest();
+
+        List<String> ids = new List<String>();
+        for (Object o : segmentDefsOf(pacingJson)) {
+            ids.add((String) ((Map<String, Object>) o).get('id'));
+        }
+        System.assertEquals(new List<String>{ 'greenlit' }, ids,
+            'blank lane folds into the single greenlit tier (no-vanish fallback)');
+        for (Object o : bucketsOf(pacingJson)) {
+            Map<String, Object> b = (Map<String, Object>) o;
+            Decimal forecast = (Decimal) b.get('forecast');
+            if (forecast != null && forecast > 0) {
+                Map<String, Object> segs = (Map<String, Object>) b.get('segments');
+                System.assertEquals(forecast, (Decimal) segs.get('greenlit'),
+                    'all forecast hours land in greenlit when no lane is set');
+            }
+        }
+    }
+
+    @IsTest
+    static void testHistoryBucketsCarryNoSegments() {
+        // History (non-forecast) buckets must not emit a segments map — actuals aren't tiered.
+        insertTieredWi('HistWI', 40, Date.today().addMonths(-1), Date.today().addMonths(2), 'active');
+
+        Test.startTest();
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
+        Test.stopTest();
+
+        for (Object o : bucketsOf(pacingJson)) {
+            Map<String, Object> b = (Map<String, Object>) o;
+            if (((Boolean) b.get('isPast')) == true) {
+                System.assertEquals(null, b.get('segments'),
+                    'history/past buckets carry no segments map');
+            }
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // Terminal-stage descendants — dead work must NOT contribute remaining /
+    // forecast / projectedFinal, but its already-logged actuals stay counted.
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Flips a WorkItem's stage via a trigger-bypassed update so the test
+     *              isolates the analytics from auto-WR / sync side effects (mirrors the
+     *              pattern in testPortfolioExcludesTerminalAndArchivedRoots).
+     */
+    private static void setStage(WorkItem__c wi, String stage) {
+        Boolean prev = DeliveryWorkItemTriggerHandler.triggerDisabled;
+        DeliveryWorkItemTriggerHandler.triggerDisabled = true;
+        try {
+            wi.StageNamePk__c = stage;
+            update wi;
+        } finally {
+            DeliveryWorkItemTriggerHandler.triggerDisabled = prev;
+        }
+    }
+
+    @IsTest
+    static void testTerminalDescendantContributesNoRemainingOrForecast() {
+        // Active root (Backlog) with a future-dated active child AND a Cancelled child
+        // that has POSITIVE remaining (estimate 50 > logged 10). The Cancelled child's
+        // 50h estimate / 40h remaining is dead work — it must NOT inflate
+        // totalRemainingHours, projectedFinalHours, the forecast bars, or unscheduled —
+        // but its 10h LOGGED is real history and must stay in totalLoggedHours + the
+        // actual series.
+        Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = nextMonthStart.addMonths(2).addDays(-1);
+        // 0-estimate container root (its work lives in the children) — mirrors the
+        // sibling testTerminalRootSiblingExcludedFromForecastButLoggedKept pattern. A
+        // non-zero root estimate would contribute its own remaining and is orthogonal to
+        // what this test isolates (terminal-stage exclusion); the projected math below
+        // assumes the root adds nothing.
+        WorkItem__c root = insertWi('TermRoot', 0, nextMonthStart, spanEnd, null);
+        WorkItem__c activeChild = insertWi('TermActiveChild', 60, nextMonthStart, spanEnd, root.Id);
+        // Cancelled child: scheduled in the future with positive remaining, so absent the
+        // fix it WOULD spread 40h onto the forecast bars.
+        WorkItem__c cancelledChild = insertWi('TermCancelledChild', 50, nextMonthStart, spanEnd, root.Id);
+
+        insert new List<WorkLog__c>{
+            buildLog(activeChild.Id, 10, Date.today()),
+            buildLog(cancelledChild.Id, 10, Date.today())
+        };
+        setStage(cancelledChild, 'Cancelled');
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 4);
+        Test.stopTest();
+
+        // LOGGED actuals: both children's 10h logged stays counted (20h total) — the
+        // Cancelled child's history is NOT dropped.
+        System.assertEquals(20, dto.totalLoggedHours,
+            'Terminal child logged actuals stay counted: 10 (active) + 10 (cancelled) = 20');
+        System.assertEquals(20, totalLogged(dto),
+            'Both children appear in the actual series (period logged sum)');
+
+        // REMAINING / forecast / projected: only the ACTIVE child contributes remaining.
+        // Active child remaining = 60 - 10 = 50; Cancelled child remaining (40) excluded.
+        // Projected = logged(20) + remaining(50) = 70.
+        System.assertEquals(70, dto.projectedFinalHours,
+            'Projected = logged(20) + active-child remaining(50); cancelled remaining excluded');
+
+        // Forecast bars: spread the 50h ACTIVE remaining only (not 90 = 50+40).
+        Decimal placed = totalForecast(dto);
+        System.assert(placed >= 49.8 && placed <= 50.2,
+            'Forecast bars spread ONLY the active child remaining (~50h), not the ' +
+            'cancelled child (would be ~90h with the bug), got ' + placed);
+        System.assertEquals(0, dto.unscheduledRemainingHours,
+            'Both children are future-dated; cancelled remaining is excluded, not unscheduled');
+    }
+
+    @IsTest
+    static void testTerminalRootSiblingExcludedFromForecastButLoggedKept() {
+        // Belt-and-suspenders at the per-item-stage level: a terminal-stage item that
+        // somehow enters the portfolio id set (here as a Done CHILD under an active root)
+        // still has its logged kept and its remaining zeroed.
+        WorkItem__c root = insertWi('DoneChildRoot', 0, null, null, null);
+        WorkItem__c doneChild = insertWi('DoneChild', 80,
+            Date.today().toStartOfMonth().addMonths(1),
+            Date.today().toStartOfMonth().addMonths(3).addDays(-1), root.Id);
+        insert buildLog(doneChild.Id, 15, Date.today());
+        setStage(doneChild, 'Done');
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 4);
+        Test.stopTest();
+
+        System.assertEquals(15, dto.totalLoggedHours, 'Done child 15h logged stays counted');
+        System.assertEquals(0, totalForecast(dto),
+            'Done child contributes no forecast bars (dead remaining)');
+        System.assertEquals(0, dto.unscheduledRemainingHours,
+            'Done child remaining is excluded, not pushed to unscheduled');
+        // Projected = logged(15) + remaining(0) = 15. Root has 0 estimate.
+        System.assertEquals(15, dto.projectedFinalHours,
+            'Projected = logged only; no remaining from the Done child');
+    }
+
+    @IsTest
+    static void testNoDrillDownItemHasZeroOrNegativeHours() {
+        // Every items[] drill-down row across every bucket must carry hours > 0 — no
+        // 0h noise rows (the second fix).
+        Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = nextMonthStart.addMonths(3).addDays(-1);
+        insertWi('DrillNonZero', 90, nextMonthStart, spanEnd, null);
+
+        Test.startTest();
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
+        Test.stopTest();
+
+        Integer rowsSeen = 0;
+        for (Object o : bucketsOf(pacingJson)) {
+            for (Object io : (List<Object>) ((Map<String, Object>) o).get('items')) {
+                Decimal hrs = (Decimal) ((Map<String, Object>) io).get('hours');
+                System.assert(hrs != null && hrs > 0,
+                    'No drill-down item may have this-period hours <= 0, got ' + hrs);
+                rowsSeen++;
+            }
+        }
+        System.assert(rowsSeen > 0, 'Sanity: the scheduled item produced at least one drill row');
+    }
+
     @IsTest
     static void testUnscheduledItemNeverAppearsInAnyBucketItems() {
         // A no-date item with remaining work is unscheduled — it must NOT show up in
