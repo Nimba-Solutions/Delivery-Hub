@@ -899,6 +899,143 @@ private class DeliveryHoursAnalyticsControllerTest {
     }
 
     // ────────────────────────────────────────────────────────────────────
+    // getPacing — cohort/commitment-tier split (the stacked hockey-stick).
+    // PriorityGroupPk__c → segment id: active/top-priority→greenlit,
+    // follow-on→predicted, proposed/deferred→ready. Per-bucket `segments`
+    // sum to forecast; items carry `tier`; top-level segments[] advertises
+    // only tiers that carry hours.
+    // ────────────────────────────────────────────────────────────────────
+
+    /** @description Active future-dated root WorkItem with an explicit priority lane. */
+    private static WorkItem__c insertTieredWi(String briefDesc, Decimal estimate, Date startDate, Date endDate, String priorityGroup) {
+        return TestDataFactory.createWorkItem(new Map<String, Object>{
+            'BriefDescriptionTxt__c' => briefDesc,
+            'EstimatedHoursNumber__c' => estimate,
+            'EstimatedStartDevDate__c' => startDate,
+            'EstimatedEndDevDate__c' => endDate,
+            'PriorityGroupPk__c' => priorityGroup,
+            'ActivatedDateTime__c' => System.now()
+        });
+    }
+
+    /** @description Pulls the top-level segments[] defs out of a getPacing payload. */
+    private static List<Object> segmentDefsOf(String pacingJson) {
+        Map<String, Object> data = (Map<String, Object>) JSON.deserializeUntyped(pacingJson);
+        return (List<Object>) data.get('segments');
+    }
+
+    @IsTest
+    static void testCohortSplitTiersBucketsAndItems() {
+        // Three active roots over the SAME future window → their forecast buckets carry
+        // all three commitment tiers, mapped from PriorityGroupPk__c.
+        Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = nextMonthStart.addMonths(3).addDays(-1);
+        insertTieredWi('CommittedWI', 90, nextMonthStart, spanEnd, 'active');     // → greenlit
+        insertTieredWi('PredictedWI', 60, nextMonthStart, spanEnd, 'follow-on');  // → predicted
+        insertTieredWi('ProposedWI',  30, nextMonthStart, spanEnd, 'proposed');   // → ready
+
+        Test.startTest();
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
+        Test.stopTest();
+
+        // Top-level segment defs: greenlit/predicted/ready present, in stack order, no recurring.
+        List<Object> defs = segmentDefsOf(pacingJson);
+        System.assertNotEquals(null, defs, 'segments[] defs are emitted when tiers carry hours');
+        List<String> ids = new List<String>();
+        for (Object o : defs) {
+            ids.add((String) ((Map<String, Object>) o).get('id'));
+        }
+        System.assertEquals(new List<String>{ 'greenlit', 'predicted', 'ready' }, ids,
+            'segment defs are the three non-empty tiers in stack order (no recurring — seam off)');
+        Map<String, Object> firstDef = (Map<String, Object>) defs[0];
+        System.assertEquals('Committed', firstDef.get('label'), 'greenlit labelled Committed');
+        System.assertEquals('#059669', firstDef.get('color'), 'greenlit color matches NG default');
+
+        // A forecast bucket overlapping the span: segments map sums to the bucket forecast,
+        // and every drill-down item carries the tier its lane maps to.
+        Boolean checkedABucket = false;
+        for (Object o : bucketsOf(pacingJson)) {
+            Map<String, Object> b = (Map<String, Object>) o;
+            Decimal forecast = (Decimal) b.get('forecast');
+            if (forecast == null || forecast <= 0) {
+                continue;
+            }
+            Map<String, Object> segs = (Map<String, Object>) b.get('segments');
+            System.assertNotEquals(null, segs, 'a forecast bucket carries a segments map');
+            Decimal segSum = 0;
+            for (Object v : segs.values()) {
+                segSum += (Decimal) v;
+            }
+            System.assert(Math.abs(segSum - forecast) <= 0.2,
+                'Σ per-tier segment hours (' + segSum + ') ≈ bucket forecast (' + forecast + ')');
+            System.assert(segs.containsKey('greenlit') && segs.containsKey('predicted')
+                && segs.containsKey('ready'), 'all three tiers contribute to the overlapping bucket');
+
+            for (Object io : (List<Object>) b.get('items')) {
+                Map<String, Object> item = (Map<String, Object>) io;
+                String name = (String) item.get('name');
+                String tier = (String) item.get('tier');
+                if (name == 'CommittedWI') {
+                    System.assertEquals('greenlit', tier, 'active lane → greenlit');
+                } else if (name == 'PredictedWI') {
+                    System.assertEquals('predicted', tier, 'follow-on lane → predicted');
+                } else if (name == 'ProposedWI') {
+                    System.assertEquals('ready', tier, 'proposed lane → ready');
+                }
+            }
+            checkedABucket = true;
+        }
+        System.assert(checkedABucket, 'at least one forecast bucket was asserted');
+    }
+
+    @IsTest
+    static void testBlankLaneFallsBackToGreenlitNoVanish() {
+        // A future-dated item with NO priority lane must still land in a tier (greenlit),
+        // so its forecast hours never vanish from the stack (Σ segments == forecast).
+        Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = nextMonthStart.addMonths(2).addDays(-1);
+        insertTieredWi('NoLaneWI', 50, nextMonthStart, spanEnd, null);
+
+        Test.startTest();
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
+        Test.stopTest();
+
+        List<String> ids = new List<String>();
+        for (Object o : segmentDefsOf(pacingJson)) {
+            ids.add((String) ((Map<String, Object>) o).get('id'));
+        }
+        System.assertEquals(new List<String>{ 'greenlit' }, ids,
+            'blank lane folds into the single greenlit tier (no-vanish fallback)');
+        for (Object o : bucketsOf(pacingJson)) {
+            Map<String, Object> b = (Map<String, Object>) o;
+            Decimal forecast = (Decimal) b.get('forecast');
+            if (forecast != null && forecast > 0) {
+                Map<String, Object> segs = (Map<String, Object>) b.get('segments');
+                System.assertEquals(forecast, (Decimal) segs.get('greenlit'),
+                    'all forecast hours land in greenlit when no lane is set');
+            }
+        }
+    }
+
+    @IsTest
+    static void testHistoryBucketsCarryNoSegments() {
+        // History (non-forecast) buckets must not emit a segments map — actuals aren't tiered.
+        insertTieredWi('HistWI', 40, Date.today().addMonths(-1), Date.today().addMonths(2), 'active');
+
+        Test.startTest();
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
+        Test.stopTest();
+
+        for (Object o : bucketsOf(pacingJson)) {
+            Map<String, Object> b = (Map<String, Object>) o;
+            if (((Boolean) b.get('isPast')) == true) {
+                System.assertEquals(null, b.get('segments'),
+                    'history/past buckets carry no segments map');
+            }
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────────
     // Terminal-stage descendants — dead work must NOT contribute remaining /
     // forecast / projectedFinal, but its already-logged actuals stay counted.
     // ────────────────────────────────────────────────────────────────────
