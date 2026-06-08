@@ -298,9 +298,13 @@ private class DeliveryHoursAnalyticsControllerTest {
         }
         System.assertEquals(3, forecastCount, 'Last 3 periods flagged as forecast');
 
-        // 5 + 3 + 7 = 15h logged across the window.
+        // 5 + 3 + 7 = 15h logged across the window (logged stays INCLUSIVE — real WorkLog
+        // history is never a parent↔child rollup, so it isn't leaf-filtered).
         System.assertEquals(15, totalLogged(dto), 'Portfolio logged hours summed across roots + descendants');
-        System.assertEquals(140, dto.totalEstimatedHours, 'Estimate summed across the portfolio tree');
+        // Leaf-only (0.269): rootA (80h) is a CONTAINER parent of childA, so its rollup
+        // estimate is excluded; only leaves count = childA(20) + rootB(40) = 60.
+        System.assertEquals(60, dto.totalEstimatedHours,
+            'Leaf-only: container parent rootA excluded; childA 20 + rootB 40 = 60');
     }
 
     @IsTest
@@ -1032,6 +1036,107 @@ private class DeliveryHoursAnalyticsControllerTest {
                 System.assertEquals(null, b.get('segments'),
                     'history/past buckets carry no segments map');
             }
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // Leaf-only counting — a container parent's rollup estimate must NOT be
+    // double-counted with its children's estimates.
+    // ────────────────────────────────────────────────────────────────────
+
+    @IsTest
+    static void testLeafOnlyExcludesParentRollupEstimate() {
+        // Container parent (200h) whose three leaf children sum to the same 200h — the
+        // live MF-Prod RR-ENGINE-PARENT shape. Counting both = 400h double-count.
+        Date start = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = start.addMonths(2).addDays(-1);
+        WorkItem__c parent = insertWi('RollupParent', 200, start, spanEnd, null);
+        insertWi('Leaf1', 80, start, spanEnd, parent.Id);
+        insertWi('Leaf2', 70, start, spanEnd, parent.Id);
+        insertWi('Leaf3', 50, start, spanEnd, parent.Id);
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 4);
+        Test.stopTest();
+
+        System.assertEquals(200, dto.totalEstimatedHours,
+            'Leaf-only: 3 children (80+70+50) count; parent rollup excluded — not 400');
+        System.assertEquals(200, dto.projectedFinalHours,
+            'Projected = 0 logged + 200 leaf remaining; parent 200 not double-counted');
+        Decimal placed = totalForecast(dto);
+        System.assert(placed >= 199.5 && placed <= 200.5,
+            'Forecast bars spread the 200h of leaf work once, got ' + placed);
+    }
+
+    @IsTest
+    static void testParentWithNoChildrenStillCounts() {
+        // A childless root is itself a leaf — its estimate must still count (the fix only
+        // strips parents that HAVE in-scope children).
+        Date start = Date.today().toStartOfMonth().addMonths(1);
+        insertWi('SoloLeaf', 90, start, start.addMonths(2).addDays(-1), null);
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 4);
+        Test.stopTest();
+
+        System.assertEquals(90, dto.totalEstimatedHours,
+            'A childless item is a leaf — its estimate is counted, not dropped');
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // Recurring tier — synthetic steady-state intake from the per-org setting.
+    // ────────────────────────────────────────────────────────────────────
+
+    @IsTest
+    static void testRecurringTierFromSettingScaledByBucket() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        settings.RecurringHoursPerMonthNumber__c = 69;
+        upsert settings;
+        Date start = Date.today().toStartOfMonth().addMonths(1);
+        insertTieredWi('RecBase', 40, start, start.addMonths(2).addDays(-1), 'active');
+
+        Test.startTest();
+        String monthJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
+        Test.stopTest();
+
+        Boolean sawRecurringDef = false;
+        for (Object o : segmentDefsOf(monthJson)) {
+            if ('recurring' == (String) ((Map<String, Object>) o).get('id')) {
+                sawRecurringDef = true;
+            }
+        }
+        System.assert(sawRecurringDef, 'recurring tier advertised when the setting is > 0');
+        Boolean sawRecurringBucket = false;
+        for (Object o : bucketsOf(monthJson)) {
+            Map<String, Object> b = (Map<String, Object>) o;
+            if (((Boolean) b.get('isPast')) == true) {
+                continue;
+            }
+            Map<String, Object> segs = (Map<String, Object>) b.get('segments');
+            if (segs != null && segs.containsKey('recurring')) {
+                System.assertEquals(69, (Decimal) segs.get('recurring'),
+                    'Month bucket recurring = the monthly rate (69)');
+                sawRecurringBucket = true;
+            }
+        }
+        System.assert(sawRecurringBucket, 'at least one forecast bucket carries the recurring tier');
+    }
+
+    @IsTest
+    static void testRecurringTierAbsentWhenSettingZero() {
+        // Default (no setting) → recurring tier off, prod behavior unchanged.
+        Date start = Date.today().toStartOfMonth().addMonths(1);
+        insertTieredWi('NoRec', 40, start, start.addMonths(2).addDays(-1), 'active');
+
+        Test.startTest();
+        String json = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
+        Test.stopTest();
+
+        for (Object o : segmentDefsOf(json)) {
+            System.assertNotEquals('recurring', (String) ((Map<String, Object>) o).get('id'),
+                'recurring tier absent when the setting is unset/0');
         }
     }
 
