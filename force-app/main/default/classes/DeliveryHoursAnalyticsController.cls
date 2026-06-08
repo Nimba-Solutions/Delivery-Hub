@@ -60,6 +60,10 @@ global with sharing class DeliveryHoursAnalyticsController {
         Decimal logged;
         Date startDate;
         Date endDate;
+        /** 0.268 — the stacked-forecast commitment tier (PacingSegment.id) this item
+         *  belongs to, derived once from PriorityGroupPk__c via tierForGroup(). Drives
+         *  both the per-bucket `segments` sums and each drill-down item's `tier`. */
+        String tier;
     }
 
     /**
@@ -336,6 +340,62 @@ global with sharing class DeliveryHoursAnalyticsController {
         'Done', 'Cancelled', 'Closed', 'Rejected'
     };
 
+    /**
+     * @description Maps a WorkItem `PriorityGroupPk__c` lane onto the NG stacked-forecast
+     *              commitment tier (PacingSegment.id). Mirrors NG's PACING_LANE_TO_SEGMENT
+     *              (packages/app/src/renderers/pacing.ts) 1:1 so DH's AUTHORITATIVE per-tier
+     *              split reconciles with NG's task-derived PREVIEW split — same lane, same
+     *              tier, no drift. DH's lane values (top-priority/active/follow-on/proposed/
+     *              deferred — see DeliveryGanttController) ARE NG's keys, so no translation.
+     *              Fallbacks preserve the "no work silently vanishes" invariant: every
+     *              forecasted item lands in a tier, so the per-bucket segments always sum to
+     *              the bucket forecast (NG renders bar = actual + Σ segments and ignores
+     *              `forecast` once segments are present). Blank/unknown → 'greenlit' (matches
+     *              NG); 'deferred' (on-hold) → 'ready' (the speculative/dotted upside tier)
+     *              rather than NG's exclude, because DH's schedule spread already counts
+     *              on-hold remaining and dropping its tier would shrink the bar.
+     */
+    private static final Map<String, String> PRIORITY_GROUP_TO_TIER = new Map<String, String>{
+        'top-priority' => 'greenlit',
+        'active'       => 'greenlit',
+        'follow-on'    => 'predicted',
+        'proposed'     => 'ready',
+        'deferred'     => 'ready'
+    };
+
+    /** @description Fallback tier for blank/unknown lanes (no-vanish — see above). */
+    private static final String DEFAULT_TIER = 'greenlit';
+
+    /**
+     * @description The DH-declared stacked-forecast tier definitions, in stack order, in
+     *              NG's PacingSegment shape. Colors/style match NG's PACING_SEGMENT_DEFAULTS
+     *              (and the MF prototype: committed green / predicted blue / ready amber-
+     *              dotted) so the legend, palette, and tier-grouped drill-down render
+     *              identically whether DH feeds segments or NG falls back to its preview.
+     *              toPacingData only advertises the tiers that actually carry hours.
+     */
+    private static final Map<String, Map<String, Object>> SEGMENT_DEFS = new Map<String, Map<String, Object>>{
+        'greenlit'  => new Map<String, Object>{ 'id' => 'greenlit',  'label' => 'Committed',         'color' => '#059669', 'style' => 'solid',   'order' => 0 },
+        'predicted' => new Map<String, Object>{ 'id' => 'predicted', 'label' => 'Predicted',         'color' => '#2563eb', 'style' => 'solid',   'order' => 1 },
+        'ready'     => new Map<String, Object>{ 'id' => 'ready',     'label' => 'Ready to approve',  'color' => '#d97706', 'style' => 'dotted',  'order' => 2 },
+        'recurring' => new Map<String, Object>{ 'id' => 'recurring', 'label' => 'Recurring intake',  'color' => '#7c3aed', 'style' => 'hatched', 'order' => 3 }
+    };
+
+    /** @description Tier order for emitting the segment-def array (matches SEGMENT_DEFS order). */
+    private static final List<String> TIER_ORDER = new List<String>{ 'greenlit', 'predicted', 'ready', 'recurring' };
+
+    /**
+     * @description Resolves a WorkItem lane to its forecast tier (see PRIORITY_GROUP_TO_TIER).
+     * @param lane The WorkItem `PriorityGroupPk__c` value (may be blank).
+     * @return A PacingSegment.id — never null (blank/unknown fall back to DEFAULT_TIER).
+     */
+    private static String tierForGroup(String lane) {
+        if (String.isNotBlank(lane) && PRIORITY_GROUP_TO_TIER.containsKey(lane)) {
+            return PRIORITY_GROUP_TO_TIER.get(lane);
+        }
+        return DEFAULT_TIER;
+    }
+
     /** @description One period (history or forecast) on the pacing timeline. */
     global class PacingPeriodDTO {
         @AuraEnabled global String label;
@@ -470,6 +530,10 @@ global with sharing class DeliveryHoursAnalyticsController {
         Decimal logged = numOrZero(dto == null ? null : dto.totalLoggedHours);
 
         List<Object> buckets = new List<Object>();
+        // 0.268 — accumulate which commitment tiers actually carry hours so the top-level
+        // segments[] defs only advertise non-empty tiers (mirrors NG's own legend filter).
+        Set<String> tiersWithHours = new Set<String>();
+        Decimal recurring = resolveRecurringHoursPerPeriod();
         if (dto != null && dto.periods != null) {
             for (Integer idx = 0; idx < dto.periods.size(); idx++) {
                 PacingPeriodDTO p = dto.periods[idx];
@@ -491,6 +555,18 @@ global with sharing class DeliveryHoursAnalyticsController {
                 };
                 if (p.startDate != null) {
                     b.put('startMs', dateToMs(p.startDate));
+                }
+                // 0.268 — per-period commitment-tier split (the stacked hockey-stick).
+                // Only forecast buckets have scheduled work; recurring rides on forecast
+                // buckets as a synthetic tier (inert until resolveRecurringHoursPerPeriod
+                // returns > 0).
+                Map<String, Decimal> segs = buildBucketSegments(idx);
+                if (isForecast && recurring > 0) {
+                    segs.put('recurring', recurring);
+                }
+                if (!segs.isEmpty()) {
+                    b.put('segments', segs);
+                    tiersWithHours.addAll(segs.keySet());
                 }
                 buckets.add(b);
             }
@@ -514,6 +590,20 @@ global with sharing class DeliveryHoursAnalyticsController {
             'summary' => summary,
             'authoritative' => true
         };
+        // 0.268 — declare the stacked-forecast tier definitions (NG PacingData.segments),
+        // in stack order, for only the tiers that carry hours. NG renders the legend + the
+        // tier-grouped drill-down from these; absent → NG falls back to its preview split.
+        if (!tiersWithHours.isEmpty()) {
+            List<Object> segmentDefs = new List<Object>();
+            for (String t : TIER_ORDER) {
+                if (tiersWithHours.contains(t) && SEGMENT_DEFS.containsKey(t)) {
+                    segmentDefs.add(SEGMENT_DEFS.get(t));
+                }
+            }
+            if (!segmentDefs.isEmpty()) {
+                out.put('segments', segmentDefs);
+            }
+        }
         if (dto != null && dto.blendedRate != null) {
             out.put('rate', dto.blendedRate);
         }
@@ -550,6 +640,11 @@ global with sharing class DeliveryHoursAnalyticsController {
             }
         }
         for (ForecastItemAccum acc : accs) {
+            // Drop drill-down rows that contribute 0h (or less) to this period — they're
+            // noise in the bucket's items[] list.
+            if (acc.hoursThisPeriod == null || acc.hoursThisPeriod <= 0) {
+                continue;
+            }
             ItemSchedule s = acc.sched;
             Decimal est = numOrZero(s.estimate);
             Decimal logged = numOrZero(s.logged);
@@ -581,9 +676,59 @@ global with sharing class DeliveryHoursAnalyticsController {
             if (String.isNotBlank(s.assignee)) {
                 item.put('assignee', s.assignee);
             }
+            if (String.isNotBlank(s.tier)) {
+                item.put('tier', s.tier);
+            }
             items.add(item);
         }
         return items;
+    }
+
+    /**
+     * @description Sums a forecast period's scheduled hours BY COMMITMENT TIER, from the
+     *              same per-period accumulator that backs buildBucketItems. Produces NG's
+     *              `PacingBucket.segments` map (segId → hours) so the forecast bar renders
+     *              as a STACKED hockey-stick (Committed / Predicted / Ready). Because every
+     *              forecasted item carries a tier (tierForGroup never returns null), these
+     *              per-tier sums add up to the bucket's `forecast` total — NG draws the bar
+     *              as actual + Σ segments and ignores `forecast` when segments are present,
+     *              so the stack height equals the un-split bar (no regression). History
+     *              periods have no accumulator entries → empty map (no segments emitted).
+     * @param periodIndex Index into forecastItemsByPeriod (parallel to dto.periods).
+     * @return Map of PacingSegment.id → hours for this period (rounded; empty for history).
+     */
+    private static Map<String, Decimal> buildBucketSegments(Integer periodIndex) {
+        Map<String, Decimal> segs = new Map<String, Decimal>();
+        if (forecastItemsByPeriod == null
+            || periodIndex < 0 || periodIndex >= forecastItemsByPeriod.size()) {
+            return segs;
+        }
+        for (ForecastItemAccum acc : forecastItemsByPeriod[periodIndex].values()) {
+            if (acc.hoursThisPeriod == null || acc.hoursThisPeriod <= 0) {
+                continue;
+            }
+            String tier = String.isNotBlank(acc.sched.tier) ? acc.sched.tier : DEFAULT_TIER;
+            Decimal running = segs.containsKey(tier) ? segs.get(tier) : 0;
+            segs.put(tier, running + acc.hoursThisPeriod);
+        }
+        for (String k : new List<String>(segs.keySet())) {
+            segs.put(k, segs.get(k).setScale(2, System.RoundingMode.HALF_UP));
+        }
+        return segs;
+    }
+
+    /**
+     * @description Hours per forecast period for the SYNTHETIC 'recurring' steady-state
+     *              intake tier — the ~N small inbounds that always land regardless of the
+     *              dated backlog. Added uniformly to every forecast bucket as its own tier
+     *              so the curve extends to the right beyond scheduled work.
+     *              SEAM: returns 0 today (tier absent, prod unchanged). Wire MF's
+     *              history-derived run-rate here once it lands — scaling it to the chosen
+     *              granularity (per-week vs per-month vs per-quarter) at the call site.
+     * @return Recurring hours per forecast period (0 = tier off).
+     */
+    private static Decimal resolveRecurringHoursPerPeriod() {
+        return 0;
     }
 
     /**
@@ -711,18 +856,27 @@ global with sharing class DeliveryHoursAnalyticsController {
         Map<Id, Decimal> loggedByItem = loggedHoursByItem(portfolioIds);
         for (WorkItem__c wi : [
             SELECT Id, BriefDescriptionTxt__c, StageNamePk__c, DeveloperLookup__r.Name,
-                   EstimatedHoursNumber__c,
+                   EstimatedHoursNumber__c, PriorityGroupPk__c,
                    EstimatedStartDevDate__c, EstimatedEndDevDate__c
             FROM WorkItem__c
             WHERE Id IN :portfolioIds
             WITH SYSTEM_MODE
             LIMIT 50000
         ]) {
+            // Terminal-stage items (Done/Cancelled/Closed/Rejected) are dead work: their
+            // already-LOGGED hours are real history (kept in totalLoggedHours + the actual
+            // series, both sourced from WorkLog independent of stage), but their REMAINING
+            // (estimate − logged) must NOT contribute to totalRemainingHours / forecast /
+            // projectedFinal / the schedule-based spread / the unscheduled bucket. We skip
+            // their remaining here and in spreadScheduleBasedForecast via the same stage
+            // flag (carried on ItemSchedule.stage).
+            Boolean isTerminal = String.isNotBlank(wi.StageNamePk__c)
+                && TERMINAL_STAGES.contains(wi.StageNamePk__c);
             Decimal estimate = (wi.EstimatedHoursNumber__c == null) ? 0 : wi.EstimatedHoursNumber__c;
             dto.totalEstimatedHours += estimate;
             Decimal logged = loggedByItem.containsKey(wi.Id) ? loggedByItem.get(wi.Id) : 0;
             Decimal itemRemaining = estimate - logged;
-            if (itemRemaining > 0) {
+            if (!isTerminal && itemRemaining > 0) {
                 totalRemainingHours += itemRemaining;
             }
             // Capture per-item schedule + work + meta for the schedule-based forecast
@@ -736,6 +890,7 @@ global with sharing class DeliveryHoursAnalyticsController {
             sched.logged = logged;
             sched.startDate = wi.EstimatedStartDevDate__c;
             sched.endDate = wi.EstimatedEndDevDate__c;
+            sched.tier = tierForGroup(wi.PriorityGroupPk__c);
             portfolioItemSchedules.add(sched);
             Date s = wi.EstimatedStartDevDate__c;
             if (s != null && (dto.earliestStart == null || s < dto.earliestStart)) {
@@ -1039,6 +1194,11 @@ global with sharing class DeliveryHoursAnalyticsController {
         Date today = Date.today();
         Decimal unscheduled = 0;
         for (ItemSchedule sched : portfolioItemSchedules) {
+            // Terminal-stage items contribute 0 remaining — never spread onto a forecast
+            // bar and never pushed into the unscheduled bucket (dead work isn't forecast).
+            if (String.isNotBlank(sched.stage) && TERMINAL_STAGES.contains(sched.stage)) {
+                continue;
+            }
             Decimal itemRemaining = sched.estimate - sched.logged;
             if (itemRemaining == null || itemRemaining <= 0) {
                 continue;
