@@ -898,6 +898,127 @@ private class DeliveryHoursAnalyticsControllerTest {
             'Σ item hoursThisPeriod ≈ placed remaining (60h), got ' + totalItemHours);
     }
 
+    // ────────────────────────────────────────────────────────────────────
+    // Terminal-stage descendants — dead work must NOT contribute remaining /
+    // forecast / projectedFinal, but its already-logged actuals stay counted.
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Flips a WorkItem's stage via a trigger-bypassed update so the test
+     *              isolates the analytics from auto-WR / sync side effects (mirrors the
+     *              pattern in testPortfolioExcludesTerminalAndArchivedRoots).
+     */
+    private static void setStage(WorkItem__c wi, String stage) {
+        Boolean prev = DeliveryWorkItemTriggerHandler.triggerDisabled;
+        DeliveryWorkItemTriggerHandler.triggerDisabled = true;
+        try {
+            wi.StageNamePk__c = stage;
+            update wi;
+        } finally {
+            DeliveryWorkItemTriggerHandler.triggerDisabled = prev;
+        }
+    }
+
+    @IsTest
+    static void testTerminalDescendantContributesNoRemainingOrForecast() {
+        // Active root (Backlog) with a future-dated active child AND a Cancelled child
+        // that has POSITIVE remaining (estimate 50 > logged 10). The Cancelled child's
+        // 50h estimate / 40h remaining is dead work — it must NOT inflate
+        // totalRemainingHours, projectedFinalHours, the forecast bars, or unscheduled —
+        // but its 10h LOGGED is real history and must stay in totalLoggedHours + the
+        // actual series.
+        Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = nextMonthStart.addMonths(2).addDays(-1);
+        WorkItem__c root = insertWi('TermRoot', 100, nextMonthStart, spanEnd, null);
+        WorkItem__c activeChild = insertWi('TermActiveChild', 60, nextMonthStart, spanEnd, root.Id);
+        // Cancelled child: scheduled in the future with positive remaining, so absent the
+        // fix it WOULD spread 40h onto the forecast bars.
+        WorkItem__c cancelledChild = insertWi('TermCancelledChild', 50, nextMonthStart, spanEnd, root.Id);
+
+        insert new List<WorkLog__c>{
+            buildLog(activeChild.Id, 10, Date.today()),
+            buildLog(cancelledChild.Id, 10, Date.today())
+        };
+        setStage(cancelledChild, 'Cancelled');
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 4);
+        Test.stopTest();
+
+        // LOGGED actuals: both children's 10h logged stays counted (20h total) — the
+        // Cancelled child's history is NOT dropped.
+        System.assertEquals(20, dto.totalLoggedHours,
+            'Terminal child logged actuals stay counted: 10 (active) + 10 (cancelled) = 20');
+        System.assertEquals(20, totalLogged(dto),
+            'Both children appear in the actual series (period logged sum)');
+
+        // REMAINING / forecast / projected: only the ACTIVE child contributes remaining.
+        // Active child remaining = 60 - 10 = 50; Cancelled child remaining (40) excluded.
+        // Projected = logged(20) + remaining(50) = 70.
+        System.assertEquals(70, dto.projectedFinalHours,
+            'Projected = logged(20) + active-child remaining(50); cancelled remaining excluded');
+
+        // Forecast bars: spread the 50h ACTIVE remaining only (not 90 = 50+40).
+        Decimal placed = totalForecast(dto);
+        System.assert(placed >= 49.8 && placed <= 50.2,
+            'Forecast bars spread ONLY the active child remaining (~50h), not the ' +
+            'cancelled child (would be ~90h with the bug), got ' + placed);
+        System.assertEquals(0, dto.unscheduledRemainingHours,
+            'Both children are future-dated; cancelled remaining is excluded, not unscheduled');
+    }
+
+    @IsTest
+    static void testTerminalRootSiblingExcludedFromForecastButLoggedKept() {
+        // Belt-and-suspenders at the per-item-stage level: a terminal-stage item that
+        // somehow enters the portfolio id set (here as a Done CHILD under an active root)
+        // still has its logged kept and its remaining zeroed.
+        WorkItem__c root = insertWi('DoneChildRoot', 0, null, null, null);
+        WorkItem__c doneChild = insertWi('DoneChild', 80,
+            Date.today().toStartOfMonth().addMonths(1),
+            Date.today().toStartOfMonth().addMonths(3).addDays(-1), root.Id);
+        insert buildLog(doneChild.Id, 15, Date.today());
+        setStage(doneChild, 'Done');
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 4);
+        Test.stopTest();
+
+        System.assertEquals(15, dto.totalLoggedHours, 'Done child 15h logged stays counted');
+        System.assertEquals(0, totalForecast(dto),
+            'Done child contributes no forecast bars (dead remaining)');
+        System.assertEquals(0, dto.unscheduledRemainingHours,
+            'Done child remaining is excluded, not pushed to unscheduled');
+        // Projected = logged(15) + remaining(0) = 15. Root has 0 estimate.
+        System.assertEquals(15, dto.projectedFinalHours,
+            'Projected = logged only; no remaining from the Done child');
+    }
+
+    @IsTest
+    static void testNoDrillDownItemHasZeroOrNegativeHours() {
+        // Every items[] drill-down row across every bucket must carry hours > 0 — no
+        // 0h noise rows (the second fix).
+        Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = nextMonthStart.addMonths(3).addDays(-1);
+        insertWi('DrillNonZero', 90, nextMonthStart, spanEnd, null);
+
+        Test.startTest();
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
+        Test.stopTest();
+
+        Integer rowsSeen = 0;
+        for (Object o : bucketsOf(pacingJson)) {
+            for (Object io : (List<Object>) ((Map<String, Object>) o).get('items')) {
+                Decimal hrs = (Decimal) ((Map<String, Object>) io).get('hours');
+                System.assert(hrs != null && hrs > 0,
+                    'No drill-down item may have this-period hours <= 0, got ' + hrs);
+                rowsSeen++;
+            }
+        }
+        System.assert(rowsSeen > 0, 'Sanity: the scheduled item produced at least one drill row');
+    }
+
     @IsTest
     static void testUnscheduledItemNeverAppearsInAnyBucketItems() {
         // A no-date item with remaining work is unscheduled — it must NOT show up in

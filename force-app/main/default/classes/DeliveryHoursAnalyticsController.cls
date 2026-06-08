@@ -550,6 +550,11 @@ global with sharing class DeliveryHoursAnalyticsController {
             }
         }
         for (ForecastItemAccum acc : accs) {
+            // Drop drill-down rows that contribute 0h (or less) to this period — they're
+            // noise in the bucket's items[] list.
+            if (acc.hoursThisPeriod == null || acc.hoursThisPeriod <= 0) {
+                continue;
+            }
             ItemSchedule s = acc.sched;
             Decimal est = numOrZero(s.estimate);
             Decimal logged = numOrZero(s.logged);
@@ -718,11 +723,20 @@ global with sharing class DeliveryHoursAnalyticsController {
             WITH SYSTEM_MODE
             LIMIT 50000
         ]) {
+            // Terminal-stage items (Done/Cancelled/Closed/Rejected) are dead work: their
+            // already-LOGGED hours are real history (kept in totalLoggedHours + the actual
+            // series, both sourced from WorkLog independent of stage), but their REMAINING
+            // (estimate − logged) must NOT contribute to totalRemainingHours / forecast /
+            // projectedFinal / the schedule-based spread / the unscheduled bucket. We skip
+            // their remaining here and in spreadScheduleBasedForecast via the same stage
+            // flag (carried on ItemSchedule.stage).
+            Boolean isTerminal = String.isNotBlank(wi.StageNamePk__c)
+                && TERMINAL_STAGES.contains(wi.StageNamePk__c);
             Decimal estimate = (wi.EstimatedHoursNumber__c == null) ? 0 : wi.EstimatedHoursNumber__c;
             dto.totalEstimatedHours += estimate;
             Decimal logged = loggedByItem.containsKey(wi.Id) ? loggedByItem.get(wi.Id) : 0;
             Decimal itemRemaining = estimate - logged;
-            if (itemRemaining > 0) {
+            if (!isTerminal && itemRemaining > 0) {
                 totalRemainingHours += itemRemaining;
             }
             // Capture per-item schedule + work + meta for the schedule-based forecast
@@ -1039,6 +1053,11 @@ global with sharing class DeliveryHoursAnalyticsController {
         Date today = Date.today();
         Decimal unscheduled = 0;
         for (ItemSchedule sched : portfolioItemSchedules) {
+            // Terminal-stage items contribute 0 remaining — never spread onto a forecast
+            // bar and never pushed into the unscheduled bucket (dead work isn't forecast).
+            if (String.isNotBlank(sched.stage) && TERMINAL_STAGES.contains(sched.stage)) {
+                continue;
+            }
             Decimal itemRemaining = sched.estimate - sched.logged;
             if (itemRemaining == null || itemRemaining <= 0) {
                 continue;
