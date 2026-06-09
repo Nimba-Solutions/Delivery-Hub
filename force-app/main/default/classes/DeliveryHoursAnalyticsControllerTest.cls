@@ -1141,6 +1141,62 @@ private class DeliveryHoursAnalyticsControllerTest {
     }
 
     // ────────────────────────────────────────────────────────────────────
+    // Drill-down name fallback + scope label (0.271).
+    // ────────────────────────────────────────────────────────────────────
+
+    @IsTest
+    static void testDrillDownNameFallsBackToWorkItemNameNotRawId() {
+        // A future-dated active item with NO brief description (like the CF big rocks) must
+        // render its WorkItem Name (auto-number) in the drill-down, never the raw 18-char Id.
+        Date start = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = start.addMonths(2).addDays(-1);
+        WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'BriefDescriptionTxt__c' => null,
+            'EstimatedHoursNumber__c' => 60,
+            'EstimatedStartDevDate__c' => start,
+            'EstimatedEndDevDate__c' => spanEnd,
+            'ActivatedDateTime__c' => System.now()
+        });
+        WorkItem__c refreshed = [SELECT Name FROM WorkItem__c WHERE Id = :wi.Id];
+
+        Test.startTest();
+        String json = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
+        Test.stopTest();
+
+        Boolean checked = false;
+        for (Object o : bucketsOf(json)) {
+            for (Object io : (List<Object>) ((Map<String, Object>) o).get('items')) {
+                Map<String, Object> item = (Map<String, Object>) io;
+                if (String.valueOf(wi.Id) == (String) item.get('id')) {
+                    System.assertEquals(refreshed.Name, (String) item.get('name'),
+                        'blank brief → name is the WorkItem Name, not the raw Id');
+                    System.assertNotEquals(String.valueOf(wi.Id), (String) item.get('name'),
+                        'drill-down never renders the raw 18-char Id');
+                    checked = true;
+                }
+            }
+        }
+        System.assert(checked, 'the no-brief item appeared in a forecast bucket and was asserted');
+    }
+
+    @IsTest
+    static void testSummaryCarriesScopeLabel() {
+        Date start = Date.today().toStartOfMonth().addMonths(1);
+        insertTieredWi('ScopeItem', 40, start, start.addMonths(2).addDays(-1), 'active');
+
+        Test.startTest();
+        // NB: local var is NOT named 'json' — Apex identifiers are case-insensitive, so a
+        // local 'json' shadows the System.JSON class and breaks JSON.deserializeUntyped(...).
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
+        Test.stopTest();
+
+        Map<String, Object> data = (Map<String, Object>) JSON.deserializeUntyped(pacingJson);
+        Map<String, Object> summary = (Map<String, Object>) data.get('summary');
+        System.assert(String.isNotBlank((String) summary.get('scopeLabel')),
+            'summary carries a scopeLabel for NG\'s pacing scope banner');
+    }
+
+    // ────────────────────────────────────────────────────────────────────
     // Terminal-stage descendants — dead work must NOT contribute remaining /
     // forecast / projectedFinal, but its already-logged actuals stay counted.
     // ────────────────────────────────────────────────────────────────────
