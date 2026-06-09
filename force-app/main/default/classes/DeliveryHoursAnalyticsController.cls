@@ -499,7 +499,12 @@ global with sharing class DeliveryHoursAnalyticsController {
      * @return JSON String of the NG PacingData object (buckets + bucket size +
      *         summary + optional rate, authoritative=true).
      */
-    @AuraEnabled(cacheable=true)
+    // 0.271 — NOT cacheable. The forecast must reflect live WorkItem edits (dates/estimates/
+    // logs) and a fresh recompute right after a package install; the LDS client cache served
+    // stale numbers until a hard reload (a live-demo landmine). getPacing is called only
+    // imperatively (deliveryProFormaTimeline), so dropping cacheable is safe — no @wire depends
+    // on it. getPortfolioPacing stays cacheable for the cart's @wire.
+    @AuraEnabled
     global static String getPacing(String granularity, Integer periodsBack, Integer periodsForward) {
         try {
             PortfolioPacingDTO dto = getPortfolioPacing(granularity, periodsBack, periodsForward);
@@ -581,7 +586,11 @@ global with sharing class DeliveryHoursAnalyticsController {
             'projectedFinalHours' => projected != 0 ? projected : est,
             'pacingPct' => est > 0 ? Math.round((logged / est) * 100) : 0,
             'activeItems' => (dto != null && dto.rootCount != null) ? dto.rootCount : 0,
-            'unscheduledHours' => numOrZero(dto == null ? null : dto.unscheduledRemainingHours)
+            'unscheduledHours' => numOrZero(dto == null ? null : dto.unscheduledRemainingHours),
+            // 0.271 — scope designation for NG's pacing banner, so the active-portfolio scope
+            // (active roots + descendants, incl. proposed) reads as deliberate rather than a
+            // mismatch against the board's flat VIEW-filtered count.
+            'scopeLabel' => 'Active portfolio (roots + descendants; may differ from the board view filter)'
         };
 
         Map<String, Object> out = new Map<String, Object>{
@@ -870,7 +879,7 @@ global with sharing class DeliveryHoursAnalyticsController {
         }
         Map<Id, Decimal> loggedByItem = loggedHoursByItem(portfolioIds);
         List<WorkItem__c> items = [
-            SELECT Id, BriefDescriptionTxt__c, StageNamePk__c, DeveloperLookup__r.Name,
+            SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, DeveloperLookup__r.Name,
                    EstimatedHoursNumber__c, PriorityGroupPk__c, ParentWorkItemLookup__c,
                    EstimatedStartDevDate__c, EstimatedEndDevDate__c
             FROM WorkItem__c
@@ -918,7 +927,12 @@ global with sharing class DeliveryHoursAnalyticsController {
             // spread AND the per-period drill-down composition (toPacingData items[]).
             ItemSchedule sched = new ItemSchedule();
             sched.workItemId = wi.Id;
-            sched.name = wi.BriefDescriptionTxt__c;
+            // 0.271 — drill-down name: brief description, else the WorkItem Name (the
+            // auto-number T-NNNN the board shows), else (guarded downstream) the Id. The big
+            // CF rocks have a blank BriefDescriptionTxt__c, so without the Name fallback the
+            // forecast drill-down rendered raw 18-char Ids for the most important line items.
+            // Mirrors DeliveryCartService.toLine.
+            sched.name = String.isNotBlank(wi.BriefDescriptionTxt__c) ? wi.BriefDescriptionTxt__c : wi.Name;
             sched.stage = wi.StageNamePk__c;
             sched.assignee = (wi.DeveloperLookup__r != null) ? wi.DeveloperLookup__r.Name : null;
             sched.estimate = estimate;

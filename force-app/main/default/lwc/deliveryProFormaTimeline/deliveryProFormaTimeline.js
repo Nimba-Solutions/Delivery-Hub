@@ -897,6 +897,13 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 pacing: {
                     data: this._pacingData || undefined,
                     controls: { dollars: false },
+                    // 0.271 — make Pacing drill-down rows clickable. NG fires onOpenItem
+                    // with the WorkItem id; navigate to the record (same path the gantt
+                    // bar/right-click menu uses). Without this the drill-down rows render
+                    // but aren't clickable (NG only adds the pointer cursor + click
+                    // handler when onOpenItem is wired) — Glen flagged "can't click into
+                    // any of the actual records" from the forecast drill-down.
+                    onOpenItem: (taskId) => this._navigateRecord(taskId),
                 },
             },
             // NG 0.196.1 Auto-Schedule review-before-DML. When NG computes an

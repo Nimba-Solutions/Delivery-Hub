@@ -2139,7 +2139,7 @@ var NimbusGanttApp = (function(exports) {
   const PACING_SEG_RAMP = ["#2563eb", "#7dabf5", "#c3dafc", "#1e40af", "#93c5fd", "#1d4ed8"];
   let pacingHatchSeq = 0;
   function pacingBreakoutKey(it, dim) {
-    if (dim === "workItem") return { id: "wi:" + it.id, label: it.name || it.id };
+    if (dim === "workItem") return { id: "wi:" + it.id, label: cleanItemName(it) };
     if (dim === "epic") return { id: "ep:" + (it.group || "__none"), label: it.group || "No epic / group" };
     if (dim === "owner") return { id: "ow:" + (it.assignee || "__none"), label: it.assignee || "Unassigned" };
     return null;
@@ -2178,6 +2178,77 @@ var NimbusGanttApp = (function(exports) {
       return { ...b, actual: 0, forecast: round(sum), segments: seg };
     });
     return { ...d, segments, buckets };
+  }
+  function levelForecast(d, capPerBucket) {
+    if (!(capPerBucket > 0) || !d.buckets.length) return d;
+    const size = d.bucket;
+    const order = new Map((d.segments || []).map((s, i) => [s.id, s.order ?? i]));
+    const tierOrd = (t) => order.has(t) ? order.get(t) : 99;
+    const fallbackTier = d.segments && d.segments.length ? d.segments[0].id : "__none";
+    const kept = /* @__PURE__ */ new Map();
+    const units = [];
+    let firstFc = Infinity;
+    for (const b of d.buckets) {
+      const startMs = b.startMs ?? keyToMs(b.key);
+      const tot = b.actual + b.forecast;
+      const fShare = tot > 0 ? b.forecast / tot : 0;
+      const keptItems = [];
+      for (const it of b.items || []) {
+        const aH = it.hours * (1 - fShare);
+        if (aH > 0.01) keptItems.push({ ...it, hours: aH });
+      }
+      kept.set(b.key, { ...b, forecast: 0, segments: {}, items: keptItems });
+      if (b.forecast > 0.01) {
+        firstFc = Math.min(firstFc, startMs);
+        for (const it of b.items || []) {
+          const fH = it.hours * fShare;
+          if (fH > 0.01) units.push({ tier: it.tier || fallbackTier, hours: fH, item: it, ord: startMs });
+        }
+      }
+    }
+    if (!units.length) return d;
+    units.sort((a, b) => a.ord - b.ord || tierOrd(a.tier) - tierOrd(b.tier));
+    const out = new Map(kept);
+    const ensure = (ms) => {
+      const start = bucketStartMs(ms, size), k = bucketKey(ms, size);
+      let b = out.get(k);
+      if (!b) {
+        b = { key: k, label: bucketLabel(start, size), startMs: start, actual: 0, forecast: 0, target: 0, isPast: false, isCurrent: false, items: [], segments: {} };
+        out.set(k, b);
+      }
+      return b;
+    };
+    let cur = bucketStartMs(firstFc, size), qi = 0, guard = 0;
+    while (qi < units.length && guard++ < 5e3) {
+      const b = ensure(cur);
+      let cap = capPerBucket - b.actual;
+      while (qi < units.length && cap > 0.01) {
+        const u = units[qi];
+        const take = Math.min(u.hours, cap);
+        b.forecast += take;
+        b.segments[u.tier] = (b.segments[u.tier] || 0) + take;
+        const ex = b.items.find((x) => x.id === u.item.id);
+        if (ex) ex.hours += take;
+        else b.items.push({ ...u.item, hours: take });
+        cap -= take;
+        u.hours -= take;
+        if (u.hours <= 0.01) qi++;
+      }
+      cur = nextBucketMs(cur, size);
+    }
+    const buckets = Array.from(out.values()).sort((a, b) => (a.startMs ?? 0) - (b.startMs ?? 0));
+    for (const b of buckets) {
+      b.actual = round(b.actual);
+      b.forecast = round(b.forecast);
+      if (b.segments) for (const k in b.segments) b.segments[k] = round(b.segments[k]);
+      for (const it of b.items) it.hours = round(it.hours);
+      b.items.sort((x, y) => y.hours - x.hours);
+    }
+    return { ...d, buckets };
+  }
+  function capacityPerBucket(hoursPerMonth, size, pace) {
+    const factor = size === "week" ? 12 / 52 : size === "quarter" ? 3 : 1;
+    return hoursPerMonth * factor * pace;
   }
   const STYLE_ID$1 = "nga-pacing-styles";
   const FONT = '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';
@@ -2263,6 +2334,12 @@ var NimbusGanttApp = (function(exports) {
   }
   function str(v) {
     return v == null || v === "" ? void 0 : String(v);
+  }
+  const SF_ID_RE = /^[a-zA-Z0-9]{15}([a-zA-Z0-9]{3})?$/;
+  function cleanItemName(it) {
+    const n = it.name;
+    if (!n || n === it.id && SF_ID_RE.test(n)) return "Untitled item";
+    return n;
   }
   function bucketKey(ms, size) {
     const d = new Date(ms), y = d.getUTCFullYear();
@@ -2502,7 +2579,7 @@ var NimbusGanttApp = (function(exports) {
   }
   const COL = { actual: "#10b981", actualOver: "#ef4444", forecast: "#93c5fd", target: "#64748b", grid: "#e2e8f0", muted: "#64748b" };
   function renderPacingView(host, tasks, options = {}) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
     injectStyles$1();
     const dflt = options.defaults ?? {};
     const ctrl = options.controls ?? {};
@@ -2525,8 +2602,11 @@ var NimbusGanttApp = (function(exports) {
     };
     const segOn = (id) => show.seg[id] !== false;
     let breakout = saved.breakout || ((_j = (_i = options.pacingData) == null ? void 0 : _i.breakout) == null ? void 0 : _j.dimension) || "cohort";
+    const capHpm = ((_k = options.capacity) == null ? void 0 : _k.hoursPerMonth) && options.capacity.hoursPerMonth > 0 ? options.capacity.hoursPerMonth : 0;
+    const showPace = capHpm > 0 && ctrl.pace !== false;
+    let levelPace = saved.levelPace ?? (showPace ? 1 : 0);
     function persistPrefs() {
-      savePacingPrefs({ range, bucket, customS, customE, measure, mode, show: { ...show }, breakout });
+      savePacingPrefs({ range, bucket, customS, customE, measure, mode, show: { ...show }, breakout, levelPace });
     }
     function notifyParams() {
       var _a2;
@@ -2598,7 +2678,9 @@ var NimbusGanttApp = (function(exports) {
     }
     function render() {
       persistPrefs();
-      const d = data();
+      const raw = data();
+      const ceil = capHpm > 0 && levelPace > 0 ? capacityPerBucket(capHpm, bucket, levelPace) : 0;
+      const d = ceil > 0 ? levelForecast(raw, ceil) : raw;
       const dd = applyBreakout(d, breakout);
       const r = rate(d);
       const useDollars = measure === "dollars" && !!r;
@@ -2710,6 +2792,21 @@ var NimbusGanttApp = (function(exports) {
         ));
         row2n++;
       }
+      if (showPace) {
+        const pset = (p) => () => {
+          levelPace = p;
+          expandedKey = null;
+          render();
+        };
+        row2.appendChild(grp(
+          "Pace",
+          pill("Off", levelPace === 0, pset(0), true),
+          pill("1×", levelPace === 1, pset(1), true),
+          pill("2×", levelPace === 2, pset(2), true),
+          pill("3×", levelPace === 3, pset(3), true)
+        ));
+        row2n++;
+      }
       if (ctrl.series !== false) {
         const legPill = (key, label, color) => {
           const b = el$1("button", "ngp-leg" + (show[key] ? "" : " off"));
@@ -2748,7 +2845,7 @@ var NimbusGanttApp = (function(exports) {
       const body = el$1("div", "ngp-body");
       const hd = el$1("div");
       hd.appendChild(el$1("div", "ngp-h1", "Pacing & Forecast"));
-      const sub = (d.authoritative ? "Actuals · forecast · target" + (d.scopeLabel ? " — " + d.scopeLabel : "") : "Forecast preview — actual to date, remaining spread across scheduled dates (live from the board)") + (useDollars ? " · $ at " + fmtMoney(r) + "/hr" : "") + (cum ? " · cumulative" : "");
+      const sub = (d.authoritative ? "Actuals · forecast · target" + (d.scopeLabel ? " — " + d.scopeLabel : "") : "Forecast preview — actual to date, remaining spread across scheduled dates (live from the board)") + (useDollars ? " · $ at " + fmtMoney(r) + "/hr" : "") + (cum ? " · cumulative" : "") + (ceil > 0 ? " · leveled to " + fmtH(capacityPerBucket(capHpm, bucket, levelPace)) + "/" + bucket + " (" + levelPace + "× team)" : "");
       hd.appendChild(el$1("div", "ngp-sub", sub));
       body.appendChild(hd);
       {
@@ -2972,7 +3069,7 @@ var NimbusGanttApp = (function(exports) {
       const row = el$1("div", "ngp-cols ngp-irow" + (options.onOpenItem ? " click" : ""));
       const nameCell = el$1("div");
       const nl = el$1("div", "ngp-grp");
-      nl.appendChild(el$1("div", "ngp-iname", it.name)).setAttribute("style", "flex:1;min-width:0");
+      nl.appendChild(el$1("div", "ngp-iname", cleanItemName(it))).setAttribute("style", "flex:1;min-width:0");
       const track = el$1("div", "ngp-track");
       track.appendChild(el$1("div")).setAttribute("style", "width:" + round(it.hours / maxH * 100) + "%");
       nl.appendChild(track);
@@ -8027,6 +8124,13 @@ var NimbusGanttApp = (function(exports) {
               // or a range change (the Week-only-revert + inert-range-presets bugs).
               onParamsChange: options.onPacingParamsChange ? (p) => options.onPacingParamsChange(p) : void 0,
               rate: pc.rate,
+              // 0.202.0 — feed the active team pool (h/mo) so the forecast can
+              // capacity-level (spike → ramp) and expose the Pace selector. Mirrors
+              // the same CLOUD_NIMBUS_POOL the Stats/Filter bars use; host can drop
+              // it via controls.pace = false.
+              capacity: {
+                hoursPerMonth: CLOUD_NIMBUS_POOL.filter((m) => m.active !== false).reduce((s, m) => s + (m.hoursPerMonth || 0), 0)
+              },
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               defaults: pacingCfg.defaults,
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
