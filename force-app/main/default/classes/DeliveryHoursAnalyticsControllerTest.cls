@@ -1185,10 +1185,12 @@ private class DeliveryHoursAnalyticsControllerTest {
         insertTieredWi('ScopeItem', 40, start, start.addMonths(2).addDays(-1), 'active');
 
         Test.startTest();
-        String json = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
+        // NB: local var is NOT named 'json' — Apex identifiers are case-insensitive, so a
+        // local 'json' shadows the System.JSON class and breaks JSON.deserializeUntyped(...).
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
         Test.stopTest();
 
-        Map<String, Object> data = (Map<String, Object>) JSON.deserializeUntyped(json);
+        Map<String, Object> data = (Map<String, Object>) JSON.deserializeUntyped(pacingJson);
         Map<String, Object> summary = (Map<String, Object>) data.get('summary');
         System.assert(String.isNotBlank((String) summary.get('scopeLabel')),
             'summary carries a scopeLabel for NG\'s pacing scope banner');
