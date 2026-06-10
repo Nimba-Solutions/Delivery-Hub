@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DiscretionaryMonthlyCapHoursNumber__c</fullName>
+    <description>Monthly budget of Auto-approved hours for the discretionary short-circuit in DeliveryWorkApprovalService. Once the calendar month's sum of Auto-approved quoted hours reaches this cap, further under-threshold submissions fall back to the human approval queue. Blank (default) = no monthly cap (only the per-request threshold gates the Auto path).</description>
+    <inlineHelpText>Maximum total hours that may auto-approve per calendar month. Blank = unlimited (per-request threshold still applies).</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Discretionary Monthly Cap Hours</label>
+    <precision>9</precision>
+    <required>false</required>
+    <scale>2</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DiscretionaryThresholdHoursNumber__c</fullName>
+    <description>Per-request hours ceiling for the discretionary Auto-approval short-circuit in DeliveryWorkApprovalService.submitForApproval. A submitted estimate at or under this many quoted hours skips the human approval queue (StatusPk__c='Auto') as long as the monthly Auto cap (DiscretionaryMonthlyCapHoursNumber__c) has not been exhausted. Blank/0 (default) disables the Auto path — every submission queues for a human approver.</description>
+    <inlineHelpText>Estimates at or under this many hours auto-approve (subject to the monthly cap). Blank or 0 = every estimate needs a human approval.</inlineHelpText>
+    <externalId>false</externalId>
+    <label>Discretionary Threshold Hours</label>
+    <precision>9</precision>
+    <required>false</required>
+    <scale>2</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

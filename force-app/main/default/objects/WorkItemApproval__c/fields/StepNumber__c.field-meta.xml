@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>StepNumber__c</fullName>
+    <description>1-based step index in the approval chain. Always 1 for single-step requests (PR1); multi-step chains can increment in later PRs without a schema change.</description>
+    <inlineHelpText>Which step in the approval chain this row represents (1-based).</inlineHelpText>
+    <defaultValue>1</defaultValue>
+    <externalId>false</externalId>
+    <label>Step</label>
+    <precision>4</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>
