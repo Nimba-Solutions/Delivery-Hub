@@ -29,12 +29,12 @@ It is open source under the [BSL 1.1 license](LICENSE.md) and ships as an unlock
 
 ## Install
 
-**Current release**: [`release/0.256.0.2`](https://github.com/Nimba-Solutions/Delivery-Hub/releases) (production-promoted 2026-05-31). See [GitHub Releases](https://github.com/Nimba-Solutions/Delivery-Hub/releases) for the full version history.
+**Current release**: [`release/0.271.0.1`](https://github.com/Nimba-Solutions/Delivery-Hub/releases) (production-promoted 2026-06-09). Carries the cohort stacked-forecast + leaf-only counting + capacity-leveling (NimbusGantt 0.202.0 bundle). See [GitHub Releases](https://github.com/Nimba-Solutions/Delivery-Hub/releases) for the full version history.
 
 | Environment | Link |
 |---|---|
-| **Production** | [![Install in Production](https://img.shields.io/badge/Install-Production-0070d2?logo=salesforce&style=for-the-badge)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000VhdNIAS) |
-| **Sandbox** | [![Install in Sandbox](https://img.shields.io/badge/Install-Sandbox-3e8b3e?logo=salesforce&style=for-the-badge)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000VhdNIAS) |
+| **Production** | [![Install in Production](https://img.shields.io/badge/Install-Production-0070d2?logo=salesforce&style=for-the-badge)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000Vw9NIAS) |
+| **Sandbox** | [![Install in Sandbox](https://img.shields.io/badge/Install-Sandbox-3e8b3e?logo=salesforce&style=for-the-badge)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000Vw9NIAS) |
 
 **Quickstart (≈5 minutes):**
 
