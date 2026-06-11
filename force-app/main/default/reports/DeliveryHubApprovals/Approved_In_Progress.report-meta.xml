@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <columns>
+        <field>CUST_NAME</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%BriefDescriptionTxt__c</field>
+    </columns>
+    <columns>
+        <aggregateTypes>Sum</aggregateTypes>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientPreApprovedHoursNumber__c</field>
+    </columns>
+    <columns>
+        <aggregateTypes>Sum</aggregateTypes>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%TotalLoggedHoursSum__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</field>
+    </columns>
+    <description>Client-approved work items currently in flight (dev through deployment): approved cap vs hours logged so far, by stage.</description>
+    <filter>
+        <booleanFilter>1 AND 2</booleanFilter>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientPreApprovedHoursNumber__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>greaterThan</operator>
+            <value>0</value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>equals</operator>
+            <value>Ready for Development,In Development,Dev Clarification Requested,Providing Dev Clarification,Back For Development,Dev Blocked,Ready for Scratch Test,Scratch Testing,Ready for QA,QA In Progress,Ready for Internal UAT,Internal UAT,Ready for Client UAT,In Client UAT,Ready for UAT Sign-off,Processing Sign-off,Ready for Merge,Merging,Ready for Deployment,Deploying</value>
+        </criteriaItems>
+    </filter>
+    <format>Tabular</format>
+    <name>Approved &amp; In Progress</name>
+    <reportType>CustomEntity$%%%NAMESPACE%%%WorkItem__c</reportType>
+    <scope>organization</scope>
+    <showDetails>true</showDetails>
+    <showGrandTotal>true</showGrandTotal>
+    <sortColumn>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</sortColumn>
+    <sortOrder>Asc</sortOrder>
+</Report>
