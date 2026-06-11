@@ -31,6 +31,12 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryApprovalSummaryCard</componentName>
+                <identifier>c_deliveryApprovalSummaryCard</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryCartCheckout</componentName>
                 <identifier>c_deliveryCartCheckout</identifier>
             </componentInstance>

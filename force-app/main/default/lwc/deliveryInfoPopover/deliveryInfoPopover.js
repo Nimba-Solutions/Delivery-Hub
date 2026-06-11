@@ -263,6 +263,15 @@ const INFO_REGISTRY = {
         keyFields:
             'WorkRequest__c.StatusPk__c, WorkRequest__c.QuotedHoursNumber__c, WorkRequest__c.RequestedBudgetIncreaseNumber__c, WorkRequest__c.ApproverUserLookup__c, WorkRequest__c.DecisionDateTime__c, WorkItem__c.ClientPreApprovedHoursNumber__c, WorkItem__c.StageNamePk__c'
     },
+    deliveryApprovalSummaryCard: {
+        dataSource:
+            'Wires DeliveryApprovalSummaryController.getApprovalSummary — three aggregate SOQL queries: (1) SUM of PreApprovedHoursNumber__c on WorkRequest__c rows Accepted this calendar month, (2) COUNT + quoted-hours SUM of Offer-Sent requests, (3) COUNT + approved-cap SUM of WorkItem__c rows with ClientPreApprovedHoursNumber__c > 0 in the dev-through-deploying stage band. Tile click-throughs navigate to the Delivery Hub Approvals reports, resolved by DeveloperName at runtime.',
+        description:
+            'The approval agenda at a glance: hours approved this month, requests pending approval, and approved work in flight. Each tile opens its backing report (Hours Approved / Pending Approval / Approved & In Progress) for the line-item detail behind the number.',
+        friendlyName: 'Approval Agenda',
+        keyFields:
+            'WorkRequest__c.StatusPk__c, WorkRequest__c.PreApprovedHoursNumber__c, WorkRequest__c.QuotedHoursNumber__c, WorkRequest__c.DecisionDateTime__c, WorkItem__c.ClientPreApprovedHoursNumber__c, WorkItem__c.StageNamePk__c'
+    },
     deliveryWatcherSetup: {
         dataSource:
             'Calls DeliveryWatcherSetupController.getSettings to load the Watcher digest configuration from DeliveryHubSettings__c, and saveSettings to persist it. Flipping the master toggle stamps EnableWatcherDigestDateTime__c; the recipient list is validated against active Users and stored in WatcherDigestRecipientUserIdsTxt__c; an optional Slack webhook override updates the org-wide webhook used by escalations and forecasts.',
