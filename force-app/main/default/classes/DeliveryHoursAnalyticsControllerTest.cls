@@ -615,10 +615,13 @@ private class DeliveryHoursAnalyticsControllerTest {
             DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
         Test.stopTest();
 
-        // Only root (50) + activeChild (20) estimate is in scope = 70.
-        // The 999 + 777 from the non-active / template children are excluded.
-        System.assertEquals(70, dto.totalEstimatedHours,
-            'Estimate must exclude non-activated + template descendants');
+        // Scope = root + activeChild, but the 0.269 LEAF-ONLY rule counts only
+        // items with no in-scope child — the root is a container parent of the
+        // in-scope activeChild, so its 50 is a planning rollup and contributes
+        // nothing. In-scope leaves = activeChild = 20. The 999 + 777 from the
+        // non-active / template children stay fully excluded.
+        System.assertEquals(20, dto.totalEstimatedHours,
+            'Estimate counts in-scope leaves only and excludes non-activated + template descendants');
         // Only root (4) + activeChild (6) logged = 10. The 50 + 50 are excluded.
         System.assertEquals(10, dto.totalLoggedHours,
             'Logged hours must exclude non-activated + template descendants');
