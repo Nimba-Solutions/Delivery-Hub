@@ -710,4 +710,185 @@ private class DeliveryWorkApprovalServiceTest {
         Decimal total = DeliveryWorkApprovalService.sumAutoApprovedHoursThisMonth();
         System.assertEquals(7.5, total, 'seeded auto-approved hours counted against the cap');
     }
+
+    // ────────────────────────────────────────────────────────────────────
+    // NOTIFICATIONS (PR4) — Apex tests cannot assert
+    // Messaging.CustomNotification.send() directly (the managed test runner
+    // short-circuits delivery — see DeliveryShipVerificationTest /
+    // DeliveryNotificationServiceTest). The contract asserted here is the
+    // trackable decision state PLUS the notification path completing without
+    // exception; Test.stopTest() drains the queueable.
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Over-threshold submit runs the approver ping path
+     *              (summarized "Approval needed" bell to the configured
+     *              approver) without exception — the request still lands as
+     *              an assigned Offer-Sent row and the submit DML is never
+     *              blocked by the notification fanout.
+     */
+    @IsTest
+    static void testSubmitOverThresholdPingsApproverWithoutException() {
+        configureSettings(8, 40, UserInfo.getUserId());
+        WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 20
+        });
+
+        Test.startTest();
+        List<DeliveryWorkApprovalService.SubmitResultDTO> results =
+            DeliveryWorkApprovalService.submitForApproval(new Set<Id>{ wi.Id });
+        Test.stopTest();
+
+        // Reaching here = the ping path (and the drained queueable) did not
+        // throw. Sanity-check the trackable side effects are intact.
+        WorkRequest__c req = [
+            SELECT StatusPk__c, ApproverUserLookup__c
+            FROM WorkRequest__c WHERE Id = :results[0].workRequestId
+        ];
+        System.assertEquals('Offer Sent', req.StatusPk__c,
+            'offer still goes out with the ping path wired in');
+        System.assertEquals(UserInfo.getUserId(), req.ApproverUserLookup__c,
+            'configured approver assigned — the ping targets this user');
+    }
+
+    /**
+     * @description Approve fires the decided ping to the work item's
+     *              assigned developer without exception; the decision state
+     *              and canonical cap land exactly as before.
+     */
+    @IsTest
+    static void testApprovePingsAssignedDev() {
+        configureSettings(null, null, UserInfo.getUserId());
+        WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 20,
+            'DeveloperLookup__c' => UserInfo.getUserId()
+        });
+        List<DeliveryWorkApprovalService.SubmitResultDTO> results =
+            DeliveryWorkApprovalService.submitForApproval(new Set<Id>{ wi.Id });
+
+        Test.startTest();
+        DeliveryWorkApprovalService.approve(results[0].workRequestId, 25, 'go');
+        Test.stopTest();
+
+        WorkRequest__c req = [
+            SELECT StatusPk__c, PreApprovedHoursNumber__c
+            FROM WorkRequest__c WHERE Id = :results[0].workRequestId
+        ];
+        System.assertEquals('Accepted', req.StatusPk__c,
+            'approve decision lands with the dev ping wired in');
+        System.assertEquals(25, req.PreApprovedHoursNumber__c,
+            'granted hours stamped — the ping body reads this cap');
+    }
+
+    /**
+     * @description Decline fires the decided ping (with the stand-down
+     *              reason in the body) to the assigned developer without
+     *              exception; the stand-down state lands exactly as before.
+     */
+    @IsTest
+    static void testDeclinePingsAssignedDevWithReason() {
+        configureSettings(null, null, UserInfo.getUserId());
+        WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 20,
+            'DeveloperLookup__c' => UserInfo.getUserId()
+        });
+        List<DeliveryWorkApprovalService.SubmitResultDTO> results =
+            DeliveryWorkApprovalService.submitForApproval(new Set<Id>{ wi.Id });
+
+        Test.startTest();
+        DeliveryWorkApprovalService.decline(results[0].workRequestId, 'Budget freeze');
+        Test.stopTest();
+
+        WorkRequest__c req = [
+            SELECT StatusPk__c, StandDownReasonTxt__c
+            FROM WorkRequest__c WHERE Id = :results[0].workRequestId
+        ];
+        System.assertEquals('Inactive', req.StatusPk__c,
+            'decline decision lands with the dev ping wired in');
+        System.assertEquals('Budget freeze', req.StandDownReasonTxt__c,
+            'reason stored — the ping body carries it');
+    }
+
+    /**
+     * @description No developer assigned on the work item = the decided
+     *              ping skips silently: the approve succeeds and no
+     *              notification queueable is enqueued.
+     */
+    @IsTest
+    static void testDecidedPingSkipsSilentlyWhenNoDevAssigned() {
+        configureSettings(null, null, null);
+        WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 20
+        }); // no DeveloperLookup__c
+        List<DeliveryWorkApprovalService.SubmitResultDTO> results =
+            DeliveryWorkApprovalService.submitForApproval(new Set<Id>{ wi.Id });
+
+        Test.startTest();
+        Integer asyncBefore = [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable'];
+        DeliveryWorkApprovalService.approve(results[0].workRequestId, 20, null);
+        Integer asyncAfter = [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable'];
+        Test.stopTest();
+
+        System.assertEquals(asyncBefore, asyncAfter,
+            'unassigned dev must not enqueue a decided notification');
+        WorkRequest__c req = [
+            SELECT StatusPk__c FROM WorkRequest__c WHERE Id = :results[0].workRequestId
+        ];
+        System.assertEquals('Accepted', req.StatusPk__c,
+            'the decision itself must never be blocked by the silent skip');
+    }
+
+    /**
+     * @description Blank approver setting + unassigned request = the submit
+     *              ping skips silently: nothing to target, no exception, no
+     *              queueable, and the offer still goes out.
+     */
+    @IsTest
+    static void testSubmitPingSkipsSilentlyWhenNoApproverAnywhere() {
+        configureSettings(null, null, null); // no default approver, Auto off
+        WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 20
+        });
+
+        Test.startTest();
+        Integer asyncBefore = [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable'];
+        List<DeliveryWorkApprovalService.SubmitResultDTO> results =
+            DeliveryWorkApprovalService.submitForApproval(new Set<Id>{ wi.Id });
+        Integer asyncAfter = [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable'];
+        Test.stopTest();
+
+        System.assertEquals(asyncBefore, asyncAfter,
+            'no assigned approver and no configured default = no submit ping');
+        WorkRequest__c req = [
+            SELECT StatusPk__c, ApproverUserLookup__c
+            FROM WorkRequest__c WHERE Id = :results[0].workRequestId
+        ];
+        System.assertEquals('Offer Sent', req.StatusPk__c,
+            'the offer itself must never be blocked by the silent skip');
+        System.assertEquals(null, req.ApproverUserLookup__c, 'request is unassigned');
+    }
+
+    /**
+     * @description The two PR4 notification entry points are documented
+     *              null-safe no-ops: null / empty inputs and a non-existent
+     *              request id must never throw or enqueue.
+     */
+    @IsTest
+    static void testNotificationEntryPointsNullSafety() {
+        Test.startTest();
+        Integer asyncBefore = [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable'];
+        DeliveryNotificationService.notifyWorkApprovalSubmitted(null);
+        DeliveryNotificationService.notifyWorkApprovalSubmitted(new List<Id>());
+        DeliveryNotificationService.notifyWorkApprovalDecided(null, true);
+        DeliveryNotificationService.notifyWorkApprovalDecided(null, null);
+        // Real-shaped but non-existent request id — loader returns no rows.
+        DeliveryNotificationService.notifyWorkApprovalDecided(
+            WorkRequest__c.SObjectType.getDescribe(SObjectDescribeOptions.DEFERRED)
+                .getKeyPrefix() + '000000000000', false);
+        Integer asyncAfter = [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable'];
+        Test.stopTest();
+
+        System.assertEquals(asyncBefore, asyncAfter,
+            'null, empty, and missing-record inputs must never enqueue or throw');
+    }
 }
