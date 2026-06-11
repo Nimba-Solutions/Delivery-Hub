@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <columns>
+        <field>%%%NAMESPACE%%%WorkRequest__c$Name</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%WorkItemId__c</field>
+    </columns>
+    <columns>
+        <aggregateTypes>Sum</aggregateTypes>
+        <field>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%QuotedHoursNumber__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%RequestedBudgetIncreaseNumber__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%ApproverUserLookup__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkRequest__c$CreatedDate</field>
+    </columns>
+    <description>Offer-Sent work requests awaiting a decision: the approval queue on paper. Sum of quoted hours = total spend awaiting sign-off.</description>
+    <filter>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%StatusPk__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>equals</operator>
+            <value>Offer Sent</value>
+        </criteriaItems>
+    </filter>
+    <format>Tabular</format>
+    <name>Pending Approval</name>
+    <reportType>%%%NAMESPACE%%%Work_Requests__c</reportType>
+    <scope>organization</scope>
+    <showDetails>true</showDetails>
+    <showGrandTotal>true</showGrandTotal>
+    <sortColumn>%%%NAMESPACE%%%WorkRequest__c$CreatedDate</sortColumn>
+    <sortOrder>Asc</sortOrder>
+</Report>

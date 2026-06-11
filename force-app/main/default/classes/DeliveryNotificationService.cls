@@ -169,6 +169,65 @@ global with sharing class DeliveryNotificationService {
     }
 
     // ────────────────────────────────────────────────────────────────────
+    // SHIP VERIFICATION (Deployed to Prod)
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Work item(s) just entered the 'Deployed to Prod' stage —
+     *              ping the configured approver
+     *              (DeliveryHubSettings__c.ApproverUserIdTxt__c) so the ship
+     *              gets verified instead of rotting at the deploy stage.
+     *              One notification per transaction summarizing the batch
+     *              ("N item(s) deployed..."), deep-linked to the first item.
+     *              Skips silently when the setting is blank or carries an
+     *              invalid id — verification pings are settings-optional.
+     * @param workItemIds The WorkItem__c ids that changed INTO the deploy
+     *        stage in this transaction.
+     */
+    global static void notifyDeployedToProd(List<Id> workItemIds) {
+        if (workItemIds == null || workItemIds.isEmpty()) {
+            return;
+        }
+        try {
+            Id approverId = resolveConfiguredApproverId();
+            if (approverId == null) {
+                return;
+            }
+            Integer count = workItemIds.size();
+            String title = 'Deployed to production';
+            String body = count + ' item(s) deployed to production ' + '\u2014' + ' please verify.';
+            sendQueueable(new Set<Id>{ approverId }, title, body, workItemIds.get(0));
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryNotificationService.notifyDeployedToProd] failed: ' + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Resolves the org-default approver from
+     *              DeliveryHubSettings__c.ApproverUserIdTxt__c (Text-18 user
+     *              id — custom settings cannot hold lookups). Blank or
+     *              malformed values resolve to null so callers can skip
+     *              silently; same parse shape as
+     *              DeliveryWorkApprovalService.resolveDefaultApproverId.
+     * @return The configured approver's user id, or null.
+     */
+    public static Id resolveConfiguredApproverId() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        if (settings == null || String.isBlank(settings.ApproverUserIdTxt__c)) {
+            return null;
+        }
+        try {
+            return Id.valueOf(settings.ApproverUserIdTxt__c.trim());
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryNotificationService.resolveConfiguredApproverId] bad id in settings: '
+                + e.getMessage());
+            return null;
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────────
     // ONBOARDING
     // ────────────────────────────────────────────────────────────────────
 
