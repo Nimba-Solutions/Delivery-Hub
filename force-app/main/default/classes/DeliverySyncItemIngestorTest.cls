@@ -1318,4 +1318,37 @@ private class DeliverySyncItemIngestorTest {
                 'When ledger-matched local record was deleted, must insert fresh');
         }
     }
+
+    /**
+     * @description Asserts findSObjectType resolves known DH objects through
+     *              the typed-token map (token path) — identity-equal to the
+     *              compile-time SObjectType token — for both the bare and
+     *              namespace-prefixed name forms remote payloads send, and
+     *              that unknown names still return null via the
+     *              getGlobalDescribe fallback.
+     */
+    @IsTest
+    static void testFindSObjectTypeResolvesViaTokenPath() {
+        System.assertEquals(WorkItem__c.SObjectType,
+            DeliverySyncItemIngestor.findSObjectType('WorkItem__c'),
+            'Bare WorkItem__c must resolve to the typed token');
+        System.assertEquals(WorkItem__c.SObjectType,
+            DeliverySyncItemIngestor.findSObjectType('delivery__WorkItem__c'),
+            'Namespace-prefixed WorkItem__c must resolve to the same typed token');
+        System.assertEquals(WorkItemComment__c.SObjectType,
+            DeliverySyncItemIngestor.findSObjectType('WorkItemComment__c'),
+            'WorkItemComment__c must resolve to the typed token');
+        System.assertEquals(WorkLog__c.SObjectType,
+            DeliverySyncItemIngestor.findSObjectType('WorkLog__c'),
+            'WorkLog__c must resolve to the typed token');
+        System.assertEquals(ContentVersion.SObjectType,
+            DeliverySyncItemIngestor.findSObjectType('ContentVersion'),
+            'ContentVersion must resolve to the typed token');
+        System.assertEquals(null,
+            DeliverySyncItemIngestor.findSObjectType('NoSuchObject__c'),
+            'Unknown object names must return null from the describe fallback');
+        System.assertEquals(null,
+            DeliverySyncItemIngestor.findSObjectType(''),
+            'Blank input must return null');
+    }
 }

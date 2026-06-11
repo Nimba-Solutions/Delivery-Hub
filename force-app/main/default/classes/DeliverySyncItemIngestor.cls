@@ -1239,12 +1239,45 @@ public without sharing class DeliverySyncItemIngestor {
         return processInboundItem(objectType, payload);
     }
 
+    // Typed tokens for the object types this ingestor actually handles
+    // (WorkItem__c / WorkItemComment__c / WorkLog__c sync payloads plus
+    // ContentVersion file transport). Typed tokens resolve correctly in the
+    // delivery__ packaging/namespaced context, where bare-name
+    // Schema.getGlobalDescribe() lookups silently miss (keys are
+    // namespace-prefixed). Keys are namespace-stripped + lowercased so both
+    // the bare ('WorkItem__c') and prefixed ('delivery__WorkItem__c') forms
+    // remote payloads send resolve through the token path.
+    private static final Map<String, Schema.SObjectType> KNOWN_DH_TYPES =
+        new Map<String, Schema.SObjectType>{
+            'workitem__c' => WorkItem__c.SObjectType,
+            'workitemcomment__c' => WorkItemComment__c.SObjectType,
+            'worklog__c' => WorkLog__c.SObjectType,
+            'contentversion' => ContentVersion.SObjectType
+        };
+
+    /**
+     * @description Resolves an SObject type from a payload-supplied API name.
+     * Token-first: the KNOWN_DH_TYPES map of compile-time typed tokens is
+     * consulted before any dynamic describe, because getGlobalDescribe-based
+     * resolution of DH objects breaks in the delivery__ packaging context
+     * (feature-test scratch orgs are non-namespaced and miss it). The
+     * getGlobalDescribe dual lookup (bare name, then delivery__-prefixed)
+     * survives ONLY as the fallback for genuinely-unknown / non-DH names —
+     * processInboundItem's objectType is a dynamic string from remote-org
+     * sync payloads, so arbitrary names must still resolve.
+     * @param apiName The object API name from the sync payload (bare or namespace-prefixed).
+     * @return The resolved SObjectType token, or null when the name is blank or unknown.
+     */
+    @TestVisible
     private static Schema.SObjectType findSObjectType(String apiName) {
         if (String.isBlank(apiName)) { return null; }
+        Schema.SObjectType known = KNOWN_DH_TYPES.get(stripNamespace(apiName).toLowerCase());
+        if (known != null) { return known; }
+
         Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
         if (gd.containsKey(apiName)) { return gd.get(apiName); }
         if (gd.containsKey('delivery__' + apiName)) { return gd.get('delivery__' + apiName); }
-        
+
         String target = stripNamespace(apiName).toLowerCase();
         for (String key : gd.keySet()) {
             if (stripNamespace(key).toLowerCase() == target) {
