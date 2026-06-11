@@ -8237,6 +8237,47 @@ var NimbusGanttApp = (function(exports) {
           }
         }
       }
+      const EMPTY_STATE_ID = "nga-empty-state";
+      function syncEmptyState(visibleCount) {
+        if (!ganttHost) return;
+        const existing = ganttHost.querySelector("#" + EMPTY_STATE_ID);
+        if (existing) existing.remove();
+        const show = visibleCount === 0 && allTasks.length > 0 && (state.viewMode === "gantt" || state.viewMode === "list");
+        if (!show) return;
+        const wrap = document.createElement("div");
+        wrap.id = EMPTY_STATE_ID;
+        wrap.setAttribute("data-testid", "gantt-empty-state");
+        wrap.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:rgba(248,250,252,0.92);z-index:20;text-align:center;padding:24px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';
+        const filterDef = (tplConfig.filters || []).find((f) => f.id === state.filter);
+        const cut = [
+          filterDef && filterDef.id !== "all" ? 'the "' + filterDef.label + '" view' : "",
+          state.search ? 'search "' + state.search + '"' : ""
+        ].filter(Boolean).join(" + ");
+        const h = document.createElement("div");
+        h.style.cssText = "font-size:15px;font-weight:700;color:#334155";
+        h.textContent = "No items match " + (cut || "this view");
+        wrap.appendChild(h);
+        const p = document.createElement("div");
+        p.style.cssText = "font-size:12px;color:#64748b;max-width:400px";
+        p.textContent = "All " + allTasks.length + " board item" + (allTasks.length === 1 ? "" : "s") + " are excluded by the current cut — nothing is missing or broken.";
+        wrap.appendChild(p);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = "Show everything";
+        btn.setAttribute("data-testid", "gantt-empty-state-reset");
+        btn.style.cssText = "margin-top:4px;font-size:12px;font-weight:600;padding:6px 16px;border-radius:999px;border:1px solid #2563eb;background:#2563eb;color:#fff;cursor:pointer;font-family:inherit";
+        btn.addEventListener("click", () => {
+          dispatch({ type: "SET_SEARCH", q: "" });
+          dispatch({ type: "SET_FILTER", id: "all" });
+        });
+        wrap.appendChild(btn);
+        try {
+          if (getComputedStyle(ganttHost).position === "static") ganttHost.style.position = "relative";
+        } catch (_e2) {
+          ganttHost.style.position = "relative";
+        }
+        ganttHost.appendChild(wrap);
+      }
       function refreshGantt() {
         if (!ganttHost) return;
         if (state.viewMode === "gantt" && ganttInst) {
@@ -8254,6 +8295,7 @@ var NimbusGanttApp = (function(exports) {
             } catch (_e2) {
             }
           }
+          syncEmptyState(maybeHide.length);
         } else {
           rebuildView();
         }
@@ -8280,6 +8322,7 @@ var NimbusGanttApp = (function(exports) {
         ganttHost.innerHTML = "";
         if (state.viewMode === "gantt") {
           initGantt(ganttHost);
+          syncEmptyState(applyFilter(allTasks, state.filter, state.search).length);
         } else if (state.viewMode === "list") {
           const auditTasks = applyFilter(allTasks, state.filter, state.search);
           renderAuditListView(ganttHost, auditTasks, {
@@ -8295,6 +8338,7 @@ var NimbusGanttApp = (function(exports) {
               void options.onItemReorder(taskId, payload);
             } : void 0
           });
+          syncEmptyState(auditTasks.length);
         } else if (state.viewMode === "treemap" || state.viewMode === "bubbles") {
           mountAltCanvasView(
             ganttHost,
