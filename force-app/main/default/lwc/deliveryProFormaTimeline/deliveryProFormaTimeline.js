@@ -896,7 +896,19 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             config: {
                 pacing: {
                     data: this._pacingData || undefined,
-                    controls: { dollars: false },
+                    // 6/11 de-clutter (Glen: the default Pacing view is "overwhelming /
+                    // disorienting"): suppress the pill groups that add decisions without
+                    // adding demo value, so row 2 collapses to just the Pace dial.
+                    //   measure:false  — MF is hours-only; a one-option Hours/$ group is noise
+                    //   mode:false     — Per-period/Cumulative flattening confuses the ramp story
+                    //   breakout:false — Cohort/Epic/Owner/Item restructures the whole chart +
+                    //                    legend + drill-down on each toggle; off by default until
+                    //                    a client asks (NG keeps full capability; this is config)
+                    // Range/Bucket presets + the Series legend stay (the legend doubles as the
+                    // color key). The remaining density (6-7 KPI cards, scope-banner alarm
+                    // styling, actual-vs-greenlit color collision) is NG-substrate work, not
+                    // host config — dispatched separately.
+                    controls: { dollars: false, measure: false, mode: false, breakout: false },
                     // 0.271 — make Pacing drill-down rows clickable. NG fires onOpenItem
                     // with the WorkItem id; navigate to the record (same path the gantt
                     // bar/right-click menu uses). Without this the drill-down rows render
