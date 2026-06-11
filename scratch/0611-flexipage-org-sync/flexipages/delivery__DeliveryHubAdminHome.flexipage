@@ -7,43 +7,43 @@
                     <name>showConnectedState</name>
                     <value>true</value>
                 </componentInstanceProperties>
-                <componentName>deliveryHubSetup</componentName>
+                <componentName>delivery:deliveryHubSetup</componentName>
                 <identifier>c_deliveryHubSetup</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryClientDashboard</componentName>
+                <componentName>delivery:deliveryClientDashboard</componentName>
                 <identifier>c_deliveryClientDashboard</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryPacingForecast</componentName>
+                <componentName>delivery:deliveryPacingForecast</componentName>
                 <identifier>c_deliveryPacingForecast</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryApprovalQueue</componentName>
+                <componentName>delivery:deliveryApprovalQueue</componentName>
                 <identifier>c_deliveryApprovalQueue</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryApprovalSummaryCard</componentName>
+                <componentName>delivery:deliveryApprovalSummaryCard</componentName>
                 <identifier>c_deliveryApprovalSummaryCard</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryCartCheckout</componentName>
+                <componentName>delivery:deliveryCartCheckout</componentName>
                 <identifier>c_deliveryCartCheckout</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryCartBuilder</componentName>
+                <componentName>delivery:deliveryCartBuilder</componentName>
                 <identifier>c_deliveryCartBuilder</identifier>
             </componentInstance>
         </itemInstances>
@@ -53,19 +53,19 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryClientOnboarding</componentName>
+                <componentName>delivery:deliveryClientOnboarding</componentName>
                 <identifier>c_deliveryClientOnboarding</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryDocumentViewer</componentName>
+                <componentName>delivery:deliveryDocumentViewer</componentName>
                 <identifier>c_deliveryDocumentViewer</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryProFormaTimeline</componentName>
+                <componentName>delivery:deliveryProFormaTimeline</componentName>
                 <identifier>c_deliveryProFormaTimeline</identifier>
             </componentInstance>
         </itemInstances>
@@ -75,7 +75,7 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryReleaseNotes</componentName>
+                <componentName>delivery:deliveryReleaseNotes</componentName>
                 <identifier>c_deliveryReleaseNotes</identifier>
             </componentInstance>
         </itemInstances>
@@ -85,31 +85,31 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryBudgetSummary</componentName>
+                <componentName>delivery:deliveryBudgetSummary</componentName>
                 <identifier>c_deliveryBudgetSummary</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryActivityDashboard</componentName>
+                <componentName>delivery:deliveryActivityDashboard</componentName>
                 <identifier>c_deliveryActivityDashboard</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryDataLineage</componentName>
+                <componentName>delivery:deliveryDataLineage</componentName>
                 <identifier>c_deliveryDataLineage</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliverySyncRetryPanel</componentName>
+                <componentName>delivery:deliverySyncRetryPanel</componentName>
                 <identifier>c_deliverySyncRetryPanel</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryHubHealthDashboard</componentName>
+                <componentName>delivery:deliveryHubHealthDashboard</componentName>
                 <identifier>c_deliveryHubHealthDashboard</identifier>
             </componentInstance>
         </itemInstances>
@@ -123,13 +123,13 @@
                     <name>enableShortcut</name>
                     <value>true</value>
                 </componentInstanceProperties>
-                <componentName>deliveryGhostRecorder</componentName>
+                <componentName>delivery:deliveryGhostRecorder</componentName>
                 <identifier>c_deliveryGhostRecorder</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliveryWatcherSetup</componentName>
+                <componentName>delivery:deliveryWatcherSetup</componentName>
                 <identifier>c_deliveryWatcherSetup</identifier>
             </componentInstance>
         </itemInstances>
