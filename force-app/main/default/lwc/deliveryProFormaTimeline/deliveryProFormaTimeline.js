@@ -325,8 +325,6 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
 
     _openContextMenu(task, x, y) {
         const id = (task && task.id) || task;
-        // eslint-disable-next-line no-console
-        console.log('[DH ctx-open]', id, { x, y });
         const full = (this._tasks || []).find(t => t.id === id) || task || {};
         this._menuTaskId = id;
         this._menuTaskPriorityGroup = full.priorityGroup || null;
@@ -993,10 +991,6 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             mountConfig.onItemReorderError = (taskId, error) => this._handleItemReorderError(taskId, error);
             mountConfig.onItemEdit = async (taskId, changes) => {
                 const id = this._normalizeTaskId(taskId);
-                let changesLog = {};
-                try { changesLog = JSON.parse(JSON.stringify(changes || {})); } catch (e) { changesLog = { _unserializable: true }; }
-                // eslint-disable-next-line no-console
-                console.log('[DH onItemEdit inline]', { resolvedId: id, changes: changesLog });
                 if (!id) { throw new Error('[DH] onItemEdit missing taskId'); }
                 const keys = Object.keys(changes || {});
                 if (keys.length === 0) {
@@ -1116,8 +1110,6 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 recordUrlTemplate: mountConfig.recordUrlTemplate,
                 mountedAt: new Date().toISOString(),
             };
-            // eslint-disable-next-line no-console
-            console.log('[DH mount]', JSON.stringify(mountSnapshot));
             // Triple-publish so the probe has multiple reading paths that
             // don't all depend on the same LWS/Locker proxy behaving. Each
             // publish target gets its own try/catch — in LWS strict mode on
@@ -1221,8 +1213,6 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
     }
 
     async _handlePatch(patch) {
-        // eslint-disable-next-line no-console
-        console.log('[DH onPatch]', JSON.stringify(patch || {}));
         const { id, sortOrder, priorityGroup, parentId, startDate, endDate } = patch;
         const ops = [];
 
@@ -1267,8 +1257,6 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
      */
     async _handleItemEdit(arg1, changes) {
         const taskId = this._normalizeTaskId(arg1);
-        // eslint-disable-next-line no-console
-        console.log('[DH onItemEdit]', { arg1Type: typeof arg1, resolvedTaskId: taskId, changes });
         if (!taskId) { throw new Error('[DH] onItemEdit missing taskId'); }
         const { startDate, endDate } = changes || {};
         if (startDate === undefined && endDate === undefined) {
@@ -1298,69 +1286,9 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
      * MF-Prod traced to this handler ignoring newPriorityGroup — sort updated
      * on both but lane only changed visually; on refresh items snapped back.
      */
-    /**
-     * Print a flat table of every task grouped by priority bucket so a
-     * drag + console scroll shows exactly where each task is before and
-     * after the save. Use NG's current view (mount handle) if available,
-     * else fall back to this._tasks (last refetch).
-     */
-    /** Refetch fresh data from Apex, push into NG via setTasks, then dump. */
-    async _refetchAfterPatchAndDump(label) {
-        try {
-            const data = await getProFormaTimelineData({ showCompleted: false });
-            this._tasks = data || [];
-            if (this._mountHandle && typeof this._mountHandle.setTasks === 'function') {
-                this._mountHandle.setTasks(this._mapTasksForNg(this._tasks));
-            }
-            this._dumpPositions(label);
-        } catch (error) {
-            // eslint-disable-next-line no-console
-            console.warn('[DH refetch] failed:', error);
-        }
-    }
-
-    _dumpPositions(label) {
-        let tasks = null;
-        try {
-            if (this._mountHandle && typeof this._mountHandle.getTasks === 'function') {
-                tasks = this._mountHandle.getTasks();
-            }
-        } catch (e) { /* fall through */ }
-        if (!tasks) tasks = this._tasks || [];
-        const rows = tasks.map(t => ({
-            bucket: t.priorityGroup || '(none)',
-            sortOrder: t.sortOrder,
-            name: (t.name || t.title || '').slice(0, 50),
-            id: t.id,
-        }));
-        rows.sort((a, b) => {
-            if (a.bucket !== b.bucket) return String(a.bucket).localeCompare(String(b.bucket));
-            return Number(a.sortOrder) - Number(b.sortOrder);
-        });
-        // Plain text lines so DevTools "Copy all messages" captures them.
-        // console.table prints nicely but is empty in pasted logs.
-        const lines = rows.map(r =>
-            `  ${String(r.bucket).padEnd(14)} ${String(r.sortOrder).padEnd(10)} ${r.id}  ${r.name}`
-        );
-        // eslint-disable-next-line no-console
-        console.log('[DH positions] ' + label + ' (' + rows.length + ' tasks)\n' + lines.join('\n'));
-    }
-
     async _handleItemReorder(arg1, payload) {
         const taskId = this._normalizeTaskId(arg1);
-        this._dumpPositions('BEFORE onItemReorder ' + taskId);
-        // Expanded payload logging — plain stringify so Glen can copy from
-        // console without needing to expand collapsed objects. Fields
-        // enumerated so we can spot if NG sends date info via reorder
-        // (misclassified canvas horizontal drag).
         const p = payload || {};
-        // Stringify full payload so deparent flags + any NG-side metadata is
-        // visible. Earlier log omitted fields like `deparent: true` which NG
-        // emits for bucket-header drops; handler couldn't branch on them.
-        let fullPayloadJson = '';
-        try { fullPayloadJson = JSON.stringify(p); } catch (e) { fullPayloadJson = '[unserializable]'; }
-        // eslint-disable-next-line no-console
-        console.log('[DH onItemReorder]', 'taskId=', taskId, 'payload=', fullPayloadJson);
         if (!taskId) { throw new Error('[DH] onItemReorder missing taskId'); }
         const { newIndex, newParentId, newPriorityGroup, startDate, endDate, position, beforeTaskId, afterTaskId } = p;
         // If NG smuggled date info through the reorder callback (happens when
@@ -1463,8 +1391,6 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
      */
     _handleItemClick(arg1) {
         const taskId = this._normalizeTaskId(arg1);
-        // eslint-disable-next-line no-console
-        console.log('[DH onItemClick]', { arg1Type: typeof arg1, resolvedTaskId: taskId });
         if (!taskId) {
             return;
         }
@@ -1763,15 +1689,8 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
 
     async _refetchAfterPatch() {
         try {
-            // eslint-disable-next-line no-console
-            console.log('[DH refetch] starting — mountHandle type=', typeof this._mountHandle, 'keys=', this._mountHandle ? Object.keys(this._mountHandle) : 'no handle');
             const data = await getProFormaTimelineData({ showCompleted: false });
             this._tasks = data || [];
-            // eslint-disable-next-line no-console
-            console.log('[DH refetch] fetched', this._tasks.length, 'tasks. Sample sortOrder values:', this._tasks.slice(0, 5).map(t => ({ id: t.id, so: t.sortOrder })));
-            const setTasksType = this._mountHandle ? typeof this._mountHandle.setTasks : 'no handle';
-            // eslint-disable-next-line no-console
-            console.log('[DH refetch] handle.setTasks typeof=', setTasksType);
             const mapped = this._mapTasksForNg(this._tasks);
             // Re-filter deps against the refreshed task set so arrows whose
             // endpoints just dropped out of view (completed, date-cleared)
@@ -1780,12 +1699,8 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             const deps = this._mapDependenciesForNg(this._dependencies || []);
             this._dependencies = deps;
             if (this._mountHandle && typeof this._mountHandle.setData === 'function') {
-                // eslint-disable-next-line no-console
-                console.log('[DH refetch] calling setData with', mapped.length, 'tasks,', deps.length, 'deps');
                 this._mountHandle.setData(mapped, deps);
             } else if (this._mountHandle && typeof this._mountHandle.setTasks === 'function') {
-                // eslint-disable-next-line no-console
-                console.log('[DH refetch] setData unavailable — calling setTasks only with', mapped.length, 'tasks');
                 this._mountHandle.setTasks(mapped);
             } else {
                 // eslint-disable-next-line no-console
@@ -1922,8 +1837,8 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
         const bridge = {
             version: VERSION,
             help: function () {
-                // eslint-disable-next-line no-console
-                console.log(HELP_TEXT);
+                // Returned (not console.log'd) — DevTools echoes the return
+                // value of an interactive call, so help() still reads fine.
                 return HELP_TEXT;
             },
             whoami: function () {
@@ -1976,23 +1891,19 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             },
             submit: function (_note) {
                 const msg = 'submit() is a no-op in DH: each patch is already persisted. Reload to refetch.';
-                // eslint-disable-next-line no-console
-                console.log('[cn-edit]', msg);
                 return Promise.resolve({ ok: true, msg: msg });
             },
             reset: function () {
                 const msg = 'reset() is a no-op in DH: there are no local overrides. Reload the page to refetch.';
-                // eslint-disable-next-line no-console
-                console.log('[cn-edit]', msg);
                 return msg;
             }
         };
 
         this._cnEditBridge = bridge;
         // Triple-publish: LWS strict mode (MF-Prod, verified 2026-04-19)
-        // sandboxes `window.*` writes so they're invisible to DevTools. The
-        // console.log prints (shared channel) but `window.__cnEdit = bridge`
-        // lands in a distorted window the user can't reach. Fallbacks:
+        // sandboxes `window.*` writes so they're invisible to DevTools —
+        // `window.__cnEdit = bridge` lands in a distorted window the user
+        // can't reach. Fallbacks:
         //   1. window.__cnEdit       — works on non-LWS orgs (scratch, older prod)
         //   2. document.body.__cnEdit — DOM-property attach; survives LWS because
         //                               document.body is a real Element reference
@@ -2012,18 +1923,6 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 composed: true,
             }));
         } catch (e) { /* dispatchEvent unavailable */ }
-        try {
-            // eslint-disable-next-line no-console
-            console.log(
-                '%c[cn-edit v' + VERSION + ' DH]%c editable timeline ready. Try %cdocument.body.__cnEdit.help()%c (LWS) or %cwindow.__cnEdit.help()%c (scratch).',
-                'color:#a21caf;font-weight:bold',
-                'color:inherit',
-                'color:#a21caf;font-family:monospace',
-                'color:inherit',
-                'color:#a21caf;font-family:monospace',
-                'color:inherit'
-            );
-        } catch (e) { /* console unavailable */ }
     }
 
     _uninstallCnEditBridge() {
