@@ -1,28 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Report xmlns="http://soap.sforce.com/2006/04/metadata">
     <columns>
-        <field>CUST_NAME</field>
+        <field>%%%NAMESPACE%%%WorkRequest__c$Name</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkRequest__c.%%%NAMESPACE%%%WorkItemId__c</field>
+        <field>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%WorkItemId__c</field>
     </columns>
     <columns>
         <aggregateTypes>Sum</aggregateTypes>
-        <field>%%%NAMESPACE%%%WorkRequest__c.%%%NAMESPACE%%%QuotedHoursNumber__c</field>
+        <field>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%QuotedHoursNumber__c</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkRequest__c.%%%NAMESPACE%%%RequestedBudgetIncreaseNumber__c</field>
+        <field>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%RequestedBudgetIncreaseNumber__c</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkRequest__c.%%%NAMESPACE%%%ApproverUserLookup__c</field>
+        <field>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%ApproverUserLookup__c</field>
     </columns>
     <columns>
-        <field>CUST_CREATED_DATE</field>
+        <field>%%%NAMESPACE%%%WorkRequest__c$CreatedDate</field>
     </columns>
     <description>Offer-Sent work requests awaiting a decision: the approval queue on paper. Sum of quoted hours = total spend awaiting sign-off.</description>
     <filter>
         <criteriaItems>
-            <column>%%%NAMESPACE%%%WorkRequest__c.%%%NAMESPACE%%%StatusPk__c</column>
+            <column>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%StatusPk__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>equals</operator>
@@ -31,10 +31,10 @@
     </filter>
     <format>Tabular</format>
     <name>Pending Approval</name>
-    <reportType>CustomEntity$%%%NAMESPACE%%%WorkRequest__c</reportType>
+    <reportType>%%%NAMESPACE%%%Work_Requests__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>
     <showGrandTotal>true</showGrandTotal>
-    <sortColumn>CUST_CREATED_DATE</sortColumn>
+    <sortColumn>%%%NAMESPACE%%%WorkRequest__c$CreatedDate</sortColumn>
     <sortOrder>Asc</sortOrder>
 </Report>

@@ -1,43 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Report xmlns="http://soap.sforce.com/2006/04/metadata">
     <columns>
-        <field>CUST_NAME</field>
+        <field>%%%NAMESPACE%%%WorkRequest__c$Name</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkRequest__c.%%%NAMESPACE%%%WorkItemId__c</field>
+        <field>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%WorkItemId__c</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkRequest__c.%%%NAMESPACE%%%QuotedHoursNumber__c</field>
+        <field>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%QuotedHoursNumber__c</field>
     </columns>
     <columns>
         <aggregateTypes>Sum</aggregateTypes>
-        <field>%%%NAMESPACE%%%WorkRequest__c.%%%NAMESPACE%%%PreApprovedHoursNumber__c</field>
+        <field>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%PreApprovedHoursNumber__c</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkRequest__c.%%%NAMESPACE%%%ApproverUserLookup__c</field>
+        <field>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%ApproverUserLookup__c</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkRequest__c.%%%NAMESPACE%%%DecisionDateTime__c</field>
+        <field>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%DecisionDateTime__c</field>
     </columns>
     <description>Work requests accepted this month: quoted vs granted hours, who decided, and when. Sum of granted hours = the period's approved budget.</description>
     <filter>
         <booleanFilter>1 AND 2 AND 3</booleanFilter>
         <criteriaItems>
-            <column>%%%NAMESPACE%%%WorkRequest__c.%%%NAMESPACE%%%StatusPk__c</column>
+            <column>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%StatusPk__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>equals</operator>
             <value>Accepted</value>
         </criteriaItems>
         <criteriaItems>
-            <column>%%%NAMESPACE%%%WorkRequest__c.%%%NAMESPACE%%%DecisionDateTime__c</column>
+            <column>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%DecisionDateTime__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>greaterOrEqual</operator>
             <value>THIS_MONTH</value>
         </criteriaItems>
         <criteriaItems>
-            <column>%%%NAMESPACE%%%WorkRequest__c.%%%NAMESPACE%%%DecisionDateTime__c</column>
+            <column>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%DecisionDateTime__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>lessOrEqual</operator>
@@ -46,14 +46,14 @@
     </filter>
     <format>Tabular</format>
     <name>Hours Approved (This Period)</name>
-    <reportType>CustomEntity$%%%NAMESPACE%%%WorkRequest__c</reportType>
+    <reportType>%%%NAMESPACE%%%Work_Requests__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>
     <showGrandTotal>true</showGrandTotal>
-    <sortColumn>%%%NAMESPACE%%%WorkRequest__c.%%%NAMESPACE%%%DecisionDateTime__c</sortColumn>
+    <sortColumn>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%DecisionDateTime__c</sortColumn>
     <sortOrder>Desc</sortOrder>
     <timeFrameFilter>
-        <dateColumn>%%%NAMESPACE%%%WorkRequest__c.%%%NAMESPACE%%%DecisionDateTime__c</dateColumn>
+        <dateColumn>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%DecisionDateTime__c</dateColumn>
         <interval>INTERVAL_CUSTOM</interval>
     </timeFrameFilter>
 </Report>

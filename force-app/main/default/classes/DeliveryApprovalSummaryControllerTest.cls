@@ -30,23 +30,13 @@ private class DeliveryApprovalSummaryControllerTest {
 
     /**
      * @description Seeds a WorkRequest__c on the item with the given
-     *              lifecycle/hours state.
+     *              lifecycle/hours overrides.
      * @param workItemId Parent WorkItem__c.
-     * @param status StatusPk__c value.
-     * @param quoted QuotedHoursNumber__c value.
-     * @param granted PreApprovedHoursNumber__c value (null when undecided).
-     * @param decidedAt DecisionDateTime__c value (null when undecided).
+     * @param overrides Field overrides (status / quoted / granted / decided).
      * @return The inserted request.
      */
-    private static WorkRequest__c seedRequest(
-        Id workItemId, String status, Decimal quoted, Decimal granted, Datetime decidedAt
-    ) {
-        return TestDataFactory.createWorkRequest(workItemId, new Map<String, Object>{
-            'StatusPk__c' => status,
-            'QuotedHoursNumber__c' => quoted,
-            'PreApprovedHoursNumber__c' => granted,
-            'DecisionDateTime__c' => decidedAt
-        });
+    private static WorkRequest__c seedRequest(Id workItemId, Map<String, Object> overrides) {
+        return TestDataFactory.createWorkRequest(workItemId, overrides);
     }
 
     /**
@@ -57,9 +47,22 @@ private class DeliveryApprovalSummaryControllerTest {
     @IsTest
     static void testHoursApprovedThisMonthSumsCurrentMonthOnly() {
         WorkItem__c wi = seedItem('In Development', 10);
-        seedRequest(wi.Id, 'Accepted', 10, 10, Datetime.now());
-        seedRequest(wi.Id, 'Accepted', 6, 6, Datetime.now().addMonths(-2));
-        seedRequest(wi.Id, 'Offer Sent', 4, null, null);
+        seedRequest(wi.Id, new Map<String, Object>{
+            'StatusPk__c' => 'Accepted',
+            'QuotedHoursNumber__c' => 10,
+            'PreApprovedHoursNumber__c' => 10,
+            'DecisionDateTime__c' => Datetime.now()
+        });
+        seedRequest(wi.Id, new Map<String, Object>{
+            'StatusPk__c' => 'Accepted',
+            'QuotedHoursNumber__c' => 6,
+            'PreApprovedHoursNumber__c' => 6,
+            'DecisionDateTime__c' => Datetime.now().addMonths(-2)
+        });
+        seedRequest(wi.Id, new Map<String, Object>{
+            'StatusPk__c' => 'Offer Sent',
+            'QuotedHoursNumber__c' => 4
+        });
 
         Test.startTest();
         DeliveryApprovalSummaryController.ApprovalSummaryDTO dto =
@@ -78,9 +81,19 @@ private class DeliveryApprovalSummaryControllerTest {
     static void testPendingAggregatesCountOfferSentOnly() {
         WorkItem__c wi1 = seedItem('Ready for Final Approval', null);
         WorkItem__c wi2 = seedItem('Ready for Final Approval', null);
-        seedRequest(wi1.Id, 'Offer Sent', 12, null, null);
-        seedRequest(wi2.Id, 'Offer Sent', 4, null, null);
-        seedRequest(wi2.Id, 'Inactive', 99, null, Datetime.now());
+        seedRequest(wi1.Id, new Map<String, Object>{
+            'StatusPk__c' => 'Offer Sent',
+            'QuotedHoursNumber__c' => 12
+        });
+        seedRequest(wi2.Id, new Map<String, Object>{
+            'StatusPk__c' => 'Offer Sent',
+            'QuotedHoursNumber__c' => 4
+        });
+        seedRequest(wi2.Id, new Map<String, Object>{
+            'StatusPk__c' => 'Inactive',
+            'QuotedHoursNumber__c' => 99,
+            'DecisionDateTime__c' => Datetime.now()
+        });
 
         Test.startTest();
         DeliveryApprovalSummaryController.ApprovalSummaryDTO dto =
