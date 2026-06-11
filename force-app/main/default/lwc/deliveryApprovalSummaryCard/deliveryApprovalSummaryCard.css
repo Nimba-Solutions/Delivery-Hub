@@ -1,0 +1,129 @@
+:host {
+    display: block;
+}
+
+.agenda-card {
+    background: #ffffff;
+    border-radius: 0.75rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    font-size: 0.8125rem;
+}
+
+.agenda-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.125rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.agenda-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.agenda-header-icon {
+    color: #7c3aed;
+}
+
+.agenda-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 0.15rem 0;
+}
+
+.agenda-subtitle {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+.agenda-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.agenda-loading {
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+}
+
+.agenda-error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 1rem 1.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    color: #991b1b;
+}
+
+.agenda-tiles {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 1.5rem 1.25rem;
+    flex-wrap: wrap;
+}
+
+.agenda-tile {
+    flex: 1 1 12rem;
+    min-width: 11rem;
+    text-align: left;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 0.875rem 1rem;
+    cursor: pointer;
+    font: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.agenda-tile:hover:enabled {
+    border-color: #8b5cf6;
+    box-shadow: 0 1px 4px rgba(124, 58, 237, 0.18);
+}
+
+.agenda-tile:disabled {
+    cursor: default;
+}
+
+.tile-label {
+    font-size: 0.6875rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.25rem;
+}
+
+.tile-value {
+    font-size: 1.375rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.tile-detail {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.15rem;
+}
+
+.tile-link {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #4338ca;
+}

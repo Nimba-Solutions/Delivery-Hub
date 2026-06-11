@@ -95,6 +95,10 @@ mf-active-workitems.csv
 MORNING_*.md
 mfp-dump/
 
+# Local MF data export/build cache (SQLite db + CSV extracts + build script;
+# contains real org record data — must never be committed)
+.mfdata/
+
 # Dated planning / session docs (belong in private notes, not the public repo)
 docs/*_2026-*.md
 docs/*_2027-*.md

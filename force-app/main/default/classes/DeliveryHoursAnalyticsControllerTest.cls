@@ -576,6 +576,95 @@ private class DeliveryHoursAnalyticsControllerTest {
     }
 
     @IsTest
+    static void testPortfolioScopeExcludesNonActiveAndTemplateDescendants() {
+        // The pacing item universe must match the board's canonical "Active"
+        // definition (DeliveryGanttController.getProFormaTimelineData with
+        // showCompleted=false): ActivatedDateTime__c != null AND
+        // TemplateMarkedDateTime__c = null. Before the collectPortfolioTree
+        // gate, the BFS pulled in EVERY descendant regardless of activation /
+        // template state, inflating the forecast's active-item universe above
+        // the board count (the live 99-vs-95 drift on MF prod).
+        WorkItem__c root = insertWi('ScopeRoot', 50, Date.today().addMonths(-1), Date.today().addMonths(1), null);
+        // Activated, non-template child — IN scope (counts toward totals).
+        WorkItem__c activeChild = insertWi('ScopeActiveChild', 20, null, null, root.Id);
+        // Non-activated child — the board never draws it, so it must be OUT.
+        WorkItem__c inactiveChild = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'BriefDescriptionTxt__c' => 'ScopeInactiveChild',
+            'EstimatedHoursNumber__c' => 999,
+            'ParentWorkItemLookup__c' => root.Id,
+            'ActivatedDateTime__c' => null
+        });
+        // Template-marked child — also OUT regardless of activation.
+        WorkItem__c templateChild = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'BriefDescriptionTxt__c' => 'ScopeTemplateChild',
+            'EstimatedHoursNumber__c' => 777,
+            'ParentWorkItemLookup__c' => root.Id,
+            'TemplateMarkedDateTime__c' => Datetime.now()
+        });
+
+        insert new List<WorkLog__c>{
+            buildLog(root.Id, 4, Date.today()),
+            buildLog(activeChild.Id, 6, Date.today()),
+            // Logs on the excluded children must NOT surface in the portfolio.
+            buildLog(inactiveChild.Id, 50, Date.today()),
+            buildLog(templateChild.Id, 50, Date.today())
+        };
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        // Scope = root + activeChild, but the 0.269 LEAF-ONLY rule counts only
+        // items with no in-scope child — the root is a container parent of the
+        // in-scope activeChild, so its 50 is a planning rollup and contributes
+        // nothing. In-scope leaves = activeChild = 20. The 999 + 777 from the
+        // non-active / template children stay fully excluded.
+        System.assertEquals(20, dto.totalEstimatedHours,
+            'Estimate counts in-scope leaves only and excludes non-activated + template descendants');
+        // Only root (4) + activeChild (6) logged = 10. The 50 + 50 are excluded.
+        System.assertEquals(10, dto.totalLoggedHours,
+            'Logged hours must exclude non-activated + template descendants');
+        System.assertEquals(10, totalLogged(dto),
+            'Per-period logged hours must exclude the off-scope children too');
+        // Root is the only active root in scope.
+        System.assertEquals(1, dto.rootCount, 'One active root in scope');
+    }
+
+    @IsTest
+    static void testPortfolioScopeKeepsActivatedGrandchildUnderInactiveParent() {
+        // The walk follows EVERY child link (so traversal is never cut by a
+        // non-active mid-tree parent), but only board-active descendants join
+        // the scope. An activated grandchild under a non-activated parent stays
+        // reachable — mirroring the board's flat, parent-state-independent view.
+        WorkItem__c root = insertWi('GcRoot', 10, null, null, null);
+        WorkItem__c inactiveParent = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'BriefDescriptionTxt__c' => 'GcInactiveParent',
+            'EstimatedHoursNumber__c' => 999,
+            'ParentWorkItemLookup__c' => root.Id,
+            'ActivatedDateTime__c' => null
+        });
+        // Activated grandchild — board would draw it; must be IN scope.
+        WorkItem__c activeGrandchild = insertWi('GcActiveGrandchild', 15, null, null, inactiveParent.Id);
+
+        insert new List<WorkLog__c>{
+            buildLog(root.Id, 2, Date.today()),
+            buildLog(activeGrandchild.Id, 5, Date.today())
+        };
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        // root (10) + activeGrandchild (15) = 25; the inactive parent's 999 is out.
+        System.assertEquals(25, dto.totalEstimatedHours,
+            'Activated grandchild stays in scope; inactive mid-tree parent stays out');
+        System.assertEquals(7, dto.totalLoggedHours,
+            'root 2h + grandchild 5h = 7h; inactive parent contributes nothing');
+    }
+
+    @IsTest
     static void testPortfolioPacingEmptyOrgReturnsSkeleton() {
         // No WorkItems at all — should still return a well-formed skeleton.
         Test.startTest();
