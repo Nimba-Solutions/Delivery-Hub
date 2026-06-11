@@ -229,6 +229,10 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
+        <apexClass>DeliveryWorkCapEnforcementService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>DeliveryWorkItemController</apexClass>
         <enabled>true</enabled>
     </classAccesses>

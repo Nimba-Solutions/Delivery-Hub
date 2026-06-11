@@ -17,6 +17,10 @@ public with sharing class DeliveryWorkLogTriggerHandler {
      * @param newLogs List of WorkLog__c records being inserted.
      */
     public static void onBeforeInsert(List<WorkLog__c> newLogs) {
+        // Client-approved-cap gate (PR5): addError must happen in the BEFORE
+        // context, so this runs ahead of the settings-dependent defaults below.
+        DeliveryWorkCapEnforcementService.checkInserts(newLogs);
+
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         if (settings == null) {
             return;
@@ -100,6 +104,18 @@ public with sharing class DeliveryWorkLogTriggerHandler {
     }
 
     /**
+     * @description Cap-enforcement gate for updates (PR5): re-evaluates rows
+     *              whose hours or parent item changed against the client-
+     *              approved cap. Runs before update so over-cap rows can be
+     *              blocked with addError when enforcement is on.
+     * @param newLogs List of WorkLog__c records being updated.
+     * @param oldMap Map of pre-update WorkLog__c records keyed by Id.
+     */
+    public static void onBeforeUpdate(List<WorkLog__c> newLogs, Map<Id, WorkLog__c> oldMap) {
+        DeliveryWorkCapEnforcementService.checkUpdates(newLogs, oldMap);
+    }
+
+    /**
      * @description Processes newly inserted WorkLog records and creates outbound sync items
      *              for those tied to client-linked work items. When approval is required,
      *              only logs with StatusPk__c = 'Approved' (or null for backward compat)
@@ -107,6 +123,10 @@ public with sharing class DeliveryWorkLogTriggerHandler {
      * @param newLogs List of newly inserted WorkLog__c records.
      */
     public static void onAfterInsert(List<WorkLog__c> newLogs) {
+        // Drain flag-mode cap side effects now that the rows are committed.
+        // The service honors runAfterLogic internally AND clears its buffer
+        // either way, so it must run ahead of the guard below.
+        DeliveryWorkCapEnforcementService.processPendingFlags();
         if (!DeliveryTriggerControl.runAfterLogic) {
             return;
         }
@@ -125,6 +145,8 @@ public with sharing class DeliveryWorkLogTriggerHandler {
      * @param oldMap Map of old WorkLog__c records keyed by Id.
      */
     public static void onAfterUpdate(List<WorkLog__c> newLogs, Map<Id, WorkLog__c> oldMap) {
+        // Drain flag-mode cap side effects (see onAfterInsert).
+        DeliveryWorkCapEnforcementService.processPendingFlags();
         if (!DeliveryTriggerControl.runAfterLogic) {
             return;
         }
