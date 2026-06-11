@@ -228,6 +228,180 @@ global with sharing class DeliveryNotificationService {
     }
 
     // ────────────────────────────────────────────────────────────────────
+    // WORK APPROVAL (WorkRequest__c queue — PR4)
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Work submitted for client approval — ping each approver
+     *              with ONE summarized bell per transaction ("Approval
+     *              needed: N item(s)") instead of a per-row storm. Loads the
+     *              Offer-Sent requests, groups them by
+     *              ApproverUserLookup__c (unassigned rows fall back to the
+     *              configured org-default approver), sums the quoted hours
+     *              per approver, and deep-links each approver's first
+     *              request's work item. Rows with no assigned approver AND
+     *              no configured default skip silently — approver
+     *              assignment is settings-optional in the approval queue.
+     * @param workRequestIds The WorkRequest__c ids that just moved to
+     *        'Offer Sent' in this transaction (auto-approved requests
+     *        should not be passed — they never queue for a human).
+     */
+    global static void notifyWorkApprovalSubmitted(List<Id> workRequestIds) {
+        if (workRequestIds == null || workRequestIds.isEmpty()) {
+            return;
+        }
+        try {
+            List<WorkRequest__c> rows = [
+                SELECT Id, QuotedHoursNumber__c, ApproverUserLookup__c, WorkItemId__c
+                FROM WorkRequest__c
+                WHERE Id IN :workRequestIds
+                  AND StatusPk__c = :DeliveryWorkApprovalService.REQUEST_OFFER_SENT
+                WITH SYSTEM_MODE
+                ORDER BY CreatedDate ASC
+                LIMIT 200
+            ];
+            if (rows.isEmpty()) {
+                return;
+            }
+            Map<Id, List<WorkRequest__c>> byApprover = groupRequestsByApprover(rows);
+            for (Id approverId : byApprover.keySet()) {
+                sendApproverDigest(approverId, byApprover.get(approverId));
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryNotificationService.notifyWorkApprovalSubmitted] failed: '
+                + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Buckets pending requests by their target approver:
+     *              ApproverUserLookup__c when assigned, the configured
+     *              org-default approver otherwise. Rows with neither are
+     *              dropped (skip silently — approver assignment is
+     *              settings-optional).
+     * @param rows Offer-Sent WorkRequest__c rows to bucket.
+     * @return Requests keyed by the approver to ping.
+     */
+    private static Map<Id, List<WorkRequest__c>> groupRequestsByApprover(
+        List<WorkRequest__c> rows
+    ) {
+        Id fallbackApproverId = resolveConfiguredApproverId();
+        Map<Id, List<WorkRequest__c>> byApprover = new Map<Id, List<WorkRequest__c>>();
+        for (WorkRequest__c req : rows) {
+            Id approverId = req.ApproverUserLookup__c != null
+                ? req.ApproverUserLookup__c
+                : fallbackApproverId;
+            if (approverId == null) {
+                continue; // unassigned + no configured default — skip silently
+            }
+            if (!byApprover.containsKey(approverId)) {
+                byApprover.put(approverId, new List<WorkRequest__c>());
+            }
+            byApprover.get(approverId).add(req);
+        }
+        return byApprover;
+    }
+
+    /**
+     * @description Sends ONE summarized "Approval needed" bell to a single
+     *              approver: item count + summed quoted hours, deep-linked
+     *              to the first request's work item.
+     * @param approverId The approver to ping.
+     * @param bucket That approver's pending requests (never null / empty).
+     */
+    private static void sendApproverDigest(Id approverId, List<WorkRequest__c> bucket) {
+        Decimal totalHours = 0;
+        for (WorkRequest__c req : bucket) {
+            if (req.QuotedHoursNumber__c != null) {
+                totalHours += req.QuotedHoursNumber__c;
+            }
+        }
+        String title = 'Approval needed: ' + bucket.size() + ' item(s)';
+        String body = bucket.size() + ' work item(s) totaling ' + totalHours
+            + ' quoted hours are pending your approval.';
+        sendQueueable(new Set<Id>{ approverId }, title, body, bucket.get(0).WorkItemId__c);
+    }
+
+    /**
+     * @description Work-approval decision landed — notify the work item's
+     *              assigned developer (WorkItem__c.DeveloperLookup__c) so dev
+     *              work starts (or stands down) without anyone polling the
+     *              queue. Approved → "capped at N hours, ready for
+     *              development"; declined → includes the stand-down reason
+     *              when one was recorded. Skips silently when the item has
+     *              no assigned developer — assignment is optional and a
+     *              missing dev must never block the decision DML.
+     * @param workRequestId The WorkRequest__c that was just decided.
+     * @param approved True for an approve decision, false for a decline.
+     */
+    global static void notifyWorkApprovalDecided(Id workRequestId, Boolean approved) {
+        if (workRequestId == null || approved == null) {
+            return;
+        }
+        try {
+            List<WorkRequest__c> rows = [
+                SELECT Id, PreApprovedHoursNumber__c, StandDownReasonTxt__c,
+                       WorkItemId__c, WorkItemId__r.DeveloperLookup__c,
+                       WorkItemId__r.Name, WorkItemId__r.BriefDescriptionTxt__c
+                FROM WorkRequest__c
+                WHERE Id = :workRequestId
+                WITH SYSTEM_MODE
+                LIMIT 1
+            ];
+            if (rows.isEmpty()) {
+                return;
+            }
+            WorkRequest__c req = rows.get(0);
+            Id devId = req.WorkItemId__r == null ? null : req.WorkItemId__r.DeveloperLookup__c;
+            if (devId == null) {
+                return; // no developer assigned — skip silently
+            }
+            String label = resolveWorkItemLabel(req);
+            String approverName = resolveUserName(UserInfo.getUserId());
+            String title;
+            String body;
+            if (approved) {
+                title = 'Approved: ' + label;
+                String tail = req.PreApprovedHoursNumber__c == null
+                    ? 'ready for development.'
+                    : 'capped at ' + req.PreApprovedHoursNumber__c
+                        + ' hours, ready for development.';
+                body = approverName + ' approved ' + label + ' ' + '\u2014' + ' ' + tail;
+            } else {
+                title = 'Declined: ' + label;
+                body = approverName + ' declined ' + label + '.';
+                if (String.isNotBlank(req.StandDownReasonTxt__c)) {
+                    body += ' Reason: ' + req.StandDownReasonTxt__c;
+                }
+            }
+            sendQueueable(new Set<Id>{ devId }, title, body, req.WorkItemId__c);
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryNotificationService.notifyWorkApprovalDecided] failed: '
+                + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Builds the human label for a work-approval notification
+     *              from the joined work item: BriefDescriptionTxt__c first,
+     *              the auto-number Name next, generic last — same fallback
+     *              ladder the approval-queue DTO uses.
+     * @param req WorkRequest__c loaded with the WorkItemId__r join.
+     * @return Best-available human label, never null / blank.
+     */
+    private static String resolveWorkItemLabel(WorkRequest__c req) {
+        if (req == null || req.WorkItemId__r == null) {
+            return 'Work item';
+        }
+        if (String.isNotBlank(req.WorkItemId__r.BriefDescriptionTxt__c)) {
+            return req.WorkItemId__r.BriefDescriptionTxt__c;
+        }
+        return String.isBlank(req.WorkItemId__r.Name) ? 'Work item' : req.WorkItemId__r.Name;
+    }
+
+    // ────────────────────────────────────────────────────────────────────
     // ONBOARDING
     // ────────────────────────────────────────────────────────────────────
 
