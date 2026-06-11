@@ -906,6 +906,13 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                     onOpenItem: (taskId) => this._navigateRecord(taskId),
                 },
             },
+            // NG 0.204.0 unified open-item contract (Gate 2 / 4.2): gantt bars
+            // (single-click), pacing drill-down rows, AND list-view row titles
+            // all fire this ONE callback with the task id. DH feeds WorkItem
+            // record ids as task ids, so navigation is direct. Supersedes the
+            // pacing-only config.pacing.onOpenItem path (kept above for
+            // backward-compat with pre-0.204 bundles).
+            onItemClick: (taskId) => this._navigateRecord(taskId),
             // NG 0.196.1 Auto-Schedule review-before-DML. When NG computes an
             // auto-schedule preview and the operator clicks Apply, NG hands the
             // proposed batch here (it writes NOTHING itself). Route each change
