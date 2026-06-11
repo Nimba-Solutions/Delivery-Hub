@@ -41,6 +41,12 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryApprovalQueue</componentName>
+                <identifier>c_deliveryApprovalQueue</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryFeatureCockpit</componentName>
                 <identifier>c_deliveryFeatureCockpit_home</identifier>
             </componentInstance>
