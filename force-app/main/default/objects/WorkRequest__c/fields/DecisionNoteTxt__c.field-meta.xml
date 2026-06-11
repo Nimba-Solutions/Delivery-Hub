@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>DecisionNoteTxt__c</fullName>
-    <description>Optional free-text note the approver supplies along with their decision.</description>
-    <inlineHelpText>Why did you approve or reject? Optional but helpful for audit.</inlineHelpText>
+    <description>Optional free-text note the approver supplies along with their approve decision. Decline reasons live in StandDownReasonTxt__c (the request stand-down field that predates the approval flow).</description>
+    <inlineHelpText>Why did you approve? Optional but helpful for audit.</inlineHelpText>
     <label>Decision Note</label>
     <length>1024</length>
     <required>false</required>

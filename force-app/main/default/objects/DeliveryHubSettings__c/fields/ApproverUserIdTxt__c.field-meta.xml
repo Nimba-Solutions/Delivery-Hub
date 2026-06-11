@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>ApproverUserIdTxt__c</fullName>
-    <description>Salesforce User ID of the default client-side approver for work-approval queue rows. Stamped onto WorkItemApproval__c.ApproverUserLookup__c at submit time so getPendingForApprover surfaces the queue to the right person. Custom Settings only support primitive types, so this is a Text(18) User ID rather than a lookup — same pattern as WatcherDigestRecipientUserIdsTxt__c. Blank (default) = pending rows are created unassigned and an admin assigns out-of-band.</description>
-    <inlineHelpText>18-character Salesforce User ID of the default approver. Blank = approval rows start unassigned.</inlineHelpText>
+    <description>Salesforce User ID of the default client-side approver for work-approval queue rows. Stamped onto WorkRequest__c.ApproverUserLookup__c at submit time so getPendingForApprover surfaces the queue to the right person. Custom Settings only support primitive types, so this is a Text(18) User ID rather than a lookup — same pattern as WatcherDigestRecipientUserIdsTxt__c. Blank (default) = pending requests are created unassigned and any authorised caller may decide (they are stamped as the approver).</description>
+    <inlineHelpText>18-character Salesforce User ID of the default approver. Blank = pending requests start unassigned.</inlineHelpText>
     <label>Approver User ID</label>
     <length>18</length>
     <required>false</required>

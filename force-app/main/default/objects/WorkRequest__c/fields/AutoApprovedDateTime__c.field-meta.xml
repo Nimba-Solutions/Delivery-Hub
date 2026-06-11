@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AutoApprovedDateTime__c</fullName>
+    <description>Set when the discretionary short-circuit auto-approved this request (quoted hours at/under DeliveryHubSettings__c.DiscretionaryThresholdHoursNumber__c with monthly cap headroom). Null = the decision was human. THIS_MONTH sums over this field meter the consumed slice of DiscretionaryMonthlyCapHoursNumber__c. DateTime-not-checkbox per repo convention.</description>
+    <inlineHelpText>When this request was auto-approved under the discretionary threshold. Blank = human decision.</inlineHelpText>
+    <label>Auto-Approved</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DecisionDateTime__c</fullName>
+    <description>Timestamp when the approver accepted or declined this request, or when the discretionary Auto path satisfied it without a human. Null while the request awaits a decision. The immutable per-event history lives in ActivityLog__c (ActionTypePk__c='Work_Approval').</description>
+    <inlineHelpText>When the approve/decline decision was made.</inlineHelpText>
+    <label>Decision</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
