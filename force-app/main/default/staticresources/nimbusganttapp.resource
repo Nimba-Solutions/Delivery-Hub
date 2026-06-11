@@ -2281,7 +2281,7 @@ var NimbusGanttApp = (function(exports) {
 .ngp-leg{display:flex;align-items:center;gap:6px;border:0;background:none;cursor:pointer;font-size:12px;color:#1f2937;padding:2px 4px;font-family:${FONT}}
 .ngp-leg.off{opacity:.4}
 .ngp-sw{width:12px;height:12px;border-radius:3px;flex-shrink:0}
-.ngp-chart{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px}
+.ngp-chart{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;overflow-x:auto;max-width:100%}
 .ngp-empty{font-size:12px;color:#94a3b8;text-align:center;padding:40px 0}
 .ngp-hint{font-size:11px;color:#94a3b8;margin-top:10px;text-align:center}
 .ngp-panel{background:#fff;border:1px solid #e2e8f0;border-radius:10px;margin-top:12px;overflow:hidden}
@@ -2893,12 +2893,28 @@ var NimbusGanttApp = (function(exports) {
         ));
       }
       const win = rangeWindow(range, bucket, customS, customE);
-      const visible = dd.buckets.filter((b) => {
+      let visible = dd.buckets.filter((b) => {
         const ms = b.startMs ?? keyToMs(b.key);
         if (win.from != null && ms < win.from) return false;
         if (win.to != null && ms > win.to) return false;
         return true;
       });
+      if ((win.from == null || win.to == null) && visible.length > 2) {
+        const live = (b) => b.isCurrent || b.actual > 0.5 || b.forecast > 0.5 || b.target > 0.5;
+        let first = visible.findIndex(live);
+        let last = -1;
+        for (let i = visible.length - 1; i >= 0; i--) {
+          if (live(visible[i])) {
+            last = i;
+            break;
+          }
+        }
+        if (first >= 0 && last >= first) {
+          const from = win.from == null ? Math.max(0, first - 1) : 0;
+          const to = win.to == null ? Math.min(visible.length - 1, last + 1) : visible.length - 1;
+          visible = visible.slice(from, to + 1);
+        }
+      }
       body.appendChild(buildChart(visible, { show, segments: dd.segments, useDollars, rate: r || 0, cum, expandedKey }, (k) => {
         expandedKey = expandedKey === k ? null : k;
         render();
@@ -2945,9 +2961,13 @@ var NimbusGanttApp = (function(exports) {
       }
       return { b, actual: (o.cum ? cA : b.actual) * mul, forecast: (o.cum ? cF : b.forecast) * mul, target: (o.cum ? cT : b.target) * mul, segVals };
     });
-    const W = 920, H = 300, padL = 52, padB = 34, padT = 10, padR = 10;
-    const plotW = W - padL - padR, plotH = H - padT - padB;
-    const n = rows.length, slot = plotW / n, barW = Math.min(46, slot * 0.62);
+    const H = 300, padL = 52, padB = 34, padT = 10, padR = 10;
+    const MIN_SLOT = 24;
+    const n = rows.length;
+    const plotW = Math.max(920 - padL - padR, n * MIN_SLOT);
+    const W = plotW + padL + padR;
+    const plotH = H - padT - padB;
+    const slot = plotW / n, barW = Math.min(46, slot * 0.62);
     let maxV = 1;
     for (const r of rows) {
       const segSum = visSegs ? visSegs.reduce((s, sd) => s + (r.segVals[sd.id] || 0), 0) : o.show.forecast ? r.forecast : 0;
@@ -2956,7 +2976,13 @@ var NimbusGanttApp = (function(exports) {
     const niceMax = niceCeil(maxV);
     const y = (v) => padT + plotH - v / niceMax * plotH;
     const fmtAxis = (v) => o.useDollars ? "$" + (v >= 1e3 ? round(v / 1e3) + "k" : round(v)) : round(v) + "";
-    const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, width: "100%", height: "auto", style: "display:block" });
+    const overflowing = W > 920;
+    const svg = svgEl("svg", {
+      viewBox: "0 0 " + W + " " + H,
+      width: overflowing ? W + "px" : "100%",
+      height: "auto",
+      style: "display:block" + (overflowing ? ";min-width:" + W + "px" : "")
+    });
     const defs = svgEl("defs", {});
     svg.appendChild(defs);
     const hatchCache = /* @__PURE__ */ new Map();
@@ -4488,6 +4514,23 @@ var NimbusGanttApp = (function(exports) {
     searchInput.addEventListener("blur", () => {
       searchInputFocused = false;
     });
+    let latestDispatch = initial.dispatch;
+    let searchDebounce = null;
+    let searchPending = false;
+    searchInput.addEventListener("input", () => {
+      searchPending = true;
+      if (searchDebounce) clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(() => {
+        searchPending = false;
+        latestDispatch({ type: "SET_SEARCH", q: searchInput.value });
+      }, 180);
+    });
+    searchInput.addEventListener("blur", () => {
+      if (!searchPending) return;
+      if (searchDebounce) clearTimeout(searchDebounce);
+      searchPending = false;
+      latestDispatch({ type: "SET_SEARCH", q: searchInput.value });
+    });
     function render(p) {
       const hadSearchFocus = searchInputFocused;
       const selStart = hadSearchFocus ? searchInput.selectionStart : null;
@@ -4510,10 +4553,10 @@ var NimbusGanttApp = (function(exports) {
       const icon = el$2("span", CLS_SEARCH_ICON);
       icon.textContent = "🔎";
       sw.appendChild(icon);
-      if (searchInput.value !== state.search) {
+      latestDispatch = dispatch;
+      if (!searchInputFocused && !searchPending && searchInput.value !== state.search) {
         searchInput.value = state.search;
       }
-      searchInput.oninput = (e) => dispatch({ type: "SET_SEARCH", q: e.target.value });
       sw.appendChild(searchInput);
       if (state.search) {
         const clr = el$2("button", CLS_SEARCH_CLEAR);
@@ -4578,15 +4621,22 @@ var NimbusGanttApp = (function(exports) {
         inner.appendChild(rst);
       }
       if (hadSearchFocus) {
-        try {
-          searchInput.focus();
-        } catch (_e) {
-        }
-        if (selStart !== null && selEnd !== null) {
+        const restore = () => {
           try {
-            searchInput.setSelectionRange(selStart, selEnd);
+            searchInput.focus();
           } catch (_e) {
           }
+          if (selStart !== null && selEnd !== null && !searchPending) {
+            try {
+              searchInput.setSelectionRange(selStart, selEnd);
+            } catch (_e) {
+            }
+          }
+        };
+        restore();
+        try {
+          setTimeout(restore, 0);
+        } catch (_e) {
         }
       }
     }
@@ -5437,7 +5487,11 @@ var NimbusGanttApp = (function(exports) {
           var _a, _b;
           (_b = (_a = p.config).onRejectPendingChange) == null ? void 0 : _b.call(_a, taskId);
           return latestProps.config.pendingChanges ?? [];
-        } : void 0
+        } : void 0,
+        // 0.203.0 — subset commit: per-row skip checkboxes. The modal passes
+        // the UNCHECKED taskIds here before Confirm so the IIFE's commitEdits
+        // leaves them staged.
+        p.config.onSkipPendingChanges
       );
     }
     async function runSubmit() {
@@ -5475,10 +5529,11 @@ var NimbusGanttApp = (function(exports) {
       }
     };
   }
-  function openPreviewModal(items, onConfirm, onReject) {
+  function openPreviewModal(items, onConfirm, onReject, onSkip) {
     const existing = document.getElementById("ng-audit-preview-modal");
     if (existing) existing.remove();
     let currentItems = items.slice();
+    const skipped = /* @__PURE__ */ new Set();
     const backdrop = document.createElement("div");
     backdrop.id = "ng-audit-preview-modal";
     backdrop.setAttribute("role", "dialog");
@@ -5512,6 +5567,24 @@ var NimbusGanttApp = (function(exports) {
       for (const it of currentItems) {
         const li = document.createElement("li");
         li.style.cssText = "padding:8px 0;border-bottom:1px solid #f1f5f9;display:flex;gap:8px;align-items:flex-start";
+        if (onSkip) {
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.checked = !skipped.has(it.id);
+          cb.setAttribute("data-testid", "audit-preview-include");
+          cb.setAttribute("data-task-id", it.id);
+          cb.setAttribute("aria-label", "Include " + (it.title || it.id) + " in this commit");
+          cb.title = "Unchecked rows stay staged for a later commit (not sent this round)";
+          cb.style.cssText = "flex:0 0 auto;margin-top:3px;cursor:pointer;accent-color:#a21caf";
+          cb.addEventListener("change", () => {
+            if (cb.checked) skipped.delete(it.id);
+            else skipped.add(it.id);
+            li.style.opacity = cb.checked ? "" : "0.45";
+            updateConfirmLabel();
+          });
+          li.appendChild(cb);
+          if (skipped.has(it.id)) li.style.opacity = "0.45";
+        }
         const main = document.createElement("div");
         main.style.cssText = "flex:1;min-width:0";
         const head = document.createElement("div");
@@ -5545,11 +5618,13 @@ var NimbusGanttApp = (function(exports) {
           rejectBtn.addEventListener("click", () => {
             const next = onReject(it.id);
             currentItems = next;
+            skipped.delete(it.id);
             if (currentItems.length === 0) {
               cleanup();
               return;
             }
             renderRows();
+            if (onSkip) updateConfirmLabel();
           });
           li.appendChild(rejectBtn);
         }
@@ -5566,13 +5641,26 @@ var NimbusGanttApp = (function(exports) {
     cancel.addEventListener("click", cleanup);
     const confirmBtn = document.createElement("button");
     confirmBtn.type = "button";
-    confirmBtn.textContent = "📤 Confirm + commit";
     confirmBtn.setAttribute("data-testid", "audit-preview-confirm");
     confirmBtn.style.cssText = "padding:6px 14px;font-size:13px;border-radius:6px;border:1px solid #a21caf;background:#a21caf;color:#fff;cursor:pointer;font-weight:500";
+    function selectedCount() {
+      return currentItems.filter((it) => !skipped.has(it.id)).length;
+    }
+    function updateConfirmLabel() {
+      const sel = selectedCount();
+      confirmBtn.textContent = onSkip && sel < currentItems.length ? "📤 Confirm + commit " + sel + " of " + currentItems.length : "📤 Confirm + commit";
+      confirmBtn.disabled = sel === 0;
+      confirmBtn.style.opacity = sel === 0 ? "0.5" : "";
+    }
+    updateConfirmLabel();
     confirmBtn.addEventListener("click", async () => {
       confirmBtn.disabled = true;
       cancel.disabled = true;
       confirmBtn.textContent = "Committing...";
+      if (onSkip) {
+        const live = new Set(currentItems.map((it) => it.id));
+        onSkip(Array.from(skipped).filter((id) => live.has(id)));
+      }
       try {
         await onConfirm();
       } finally {
@@ -6847,6 +6935,7 @@ var NimbusGanttApp = (function(exports) {
       const inflightTaskIds = /* @__PURE__ */ new Set();
       const pendingBuffer = /* @__PURE__ */ new Map();
       const dirtyTaskIds = /* @__PURE__ */ new Set();
+      let skippedCommitTaskIds = /* @__PURE__ */ new Set();
       function bufferEdit(taskId, kind, payloadDelta, originalDelta) {
         const key = taskId + "::" + kind;
         const existing = pendingBuffer.get(key);
@@ -6948,6 +7037,7 @@ var NimbusGanttApp = (function(exports) {
       function syncPendingChanges() {
         if (!options.batchMode) return;
         tplConfig.pendingChanges = buildPendingChangesFromBuffer();
+        tplConfig.isDirty = pendingBuffer.size > 0;
         renderSlots();
       }
       if (options.batchMode) {
@@ -6966,6 +7056,9 @@ var NimbusGanttApp = (function(exports) {
           if (!stillBuffered) dirtyTaskIds.delete(taskId);
           syncPendingChanges();
           refreshGantt();
+        };
+        tplConfig.onSkipPendingChanges = (taskIds) => {
+          skippedCommitTaskIds = new Set(taskIds);
         };
       }
       function dimColor(hex) {
@@ -7455,39 +7548,121 @@ var NimbusGanttApp = (function(exports) {
           m.setFooter([{ label: "Close", primary: true, onClick: () => m.close() }]);
           return;
         }
-        m.body.appendChild(mk(
-          "div",
-          void 0,
-          "Reflow start/end dates from dependencies (ASAP / critical-path). Review the proposed changes below — nothing is committed until you Apply."
-        ));
-        const loading = mk("div", "ngm-note", "Computing proposed schedule…");
-        m.body.appendChild(loading);
-        gi.emit("autoSchedule:preview", (raw) => {
-          const result = raw || {};
-          const byId = new Map(allTasks.map((t) => [t.id, t]));
-          const changes = [];
-          if (result.scheduledTasks) {
-            for (const [taskId, sc] of result.scheduledTasks) {
-              const t = byId.get(taskId);
-              if (!t) continue;
-              if (t.startDate !== sc.startDate || t.endDate !== sc.endDate) {
-                changes.push({
-                  id: taskId,
-                  name: t.title || t.name || taskId,
-                  startDate: sc.startDate,
-                  endDate: sc.endDate,
-                  previousStartDate: t.startDate ?? void 0,
-                  previousEndDate: t.endDate ?? void 0
-                });
+        const poolHpm = (options.team && options.team.length ? options.team : CLOUD_NIMBUS_POOL).filter((p) => p.active !== false).reduce((s, p) => s + (p.hoursPerMonth || 0), 0);
+        let pace = (() => {
+          try {
+            const saved = getPacingPrefs();
+            const lp = saved && typeof saved["levelPace"] === "number" ? saved["levelPace"] : 1;
+            return lp >= 0 && lp <= 3 ? lp : 1;
+          } catch (_e2) {
+            return 1;
+          }
+        })();
+        const byId = new Map(allTasks.map((t) => [t.id, t]));
+        const coreSupportsCapacity = (() => {
+          var _a2;
+          try {
+            const caps = (_a2 = ganttInst.capabilities) == null ? void 0 : _a2.call(ganttInst);
+            const v = caps && typeof caps["version"] === "string" ? caps["version"] : "0";
+            const [maj, min] = v.split(".").map((x) => parseInt(x, 10) || 0);
+            return maj > 0 || min >= 204;
+          } catch (_e2) {
+            return false;
+          }
+        })();
+        const LANE_RANK = { "top-priority": 0, "active": 0, "follow-on": 1, "proposed": 2, "deferred": 3 };
+        function capacityOverrides() {
+          if (!coreSupportsCapacity || !(pace > 0) || !(poolHpm > 0)) return null;
+          return {
+            capacity: {
+              hoursPerMonth: poolHpm,
+              pace,
+              // Demand = remaining hours, read from NG's own normalized rows
+              // (engine task objects don't reliably carry estimate fields).
+              demandOf: (t) => {
+                const n = byId.get(t.id);
+                if (!n) return 0;
+                const est = readNum(n, ["estimatedHours", "estimateHours", "hours", "hoursHigh"]);
+                const log = readNum(n, ["loggedHours", "actualHours", "hoursLogged"]);
+                return Math.max(0, est - log);
+              },
+              priorityOf: (t) => {
+                var _a2;
+                const lane = ((_a2 = byId.get(t.id)) == null ? void 0 : _a2.priorityGroup) || "";
+                return lane in LANE_RANK ? LANE_RANK[lane] : 1;
               }
             }
-          }
-          renderReview(changes, result.violations ?? []);
-        });
+          };
+        }
+        function buildIntro() {
+          const w = mk("div");
+          w.appendChild(mk(
+            "div",
+            void 0,
+            "Reflow start/end dates from dependencies (ASAP / critical-path)" + (pace > 0 && poolHpm > 0 ? " + team capacity" : "") + ". Review the proposed changes below — nothing is committed until you Apply."
+          ));
+          const row = mk("div");
+          row.setAttribute("style", "display:flex;align-items:center;gap:6px;margin:10px 0;flex-wrap:wrap");
+          const lbl = mk("span", void 0, "Pace");
+          lbl.setAttribute("style", "font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em");
+          row.appendChild(lbl);
+          [0, 1, 2, 3].forEach((p) => {
+            const on = pace === p;
+            const b = mk("button", void 0, p === 0 ? "Off" : p + "×");
+            b.setAttribute("style", "font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;cursor:pointer;font-family:inherit;border:1px solid " + (on ? "#1e293b" : "#e2e8f0") + ";background:" + (on ? "#1e293b" : "#fff") + ";color:" + (on ? "#fff" : "#475569"));
+            b.addEventListener("click", () => {
+              if (pace === p) return;
+              pace = p;
+              try {
+                setPacingPrefs({ ...getPacingPrefs() || {}, levelPace: p });
+              } catch (_e2) {
+              }
+              runPreview();
+            });
+            row.appendChild(b);
+          });
+          const note = mk("span", void 0, pace > 0 && poolHpm > 0 ? coreSupportsCapacity ? "leveled to ~" + Math.round(poolHpm * 12 / 365 * pace) + "h/day (" + pace + "× of " + poolHpm + "h/mo team pool)" : "Pace needs core 0.204+ — re-copy the core bundle. Showing dependency-only reflow." : "dependency-only reflow — no capacity ceiling");
+          note.setAttribute("style", "font-size:11px;color:#94a3b8;margin-left:4px");
+          row.appendChild(note);
+          w.appendChild(row);
+          return w;
+        }
+        function runPreview() {
+          m.body.textContent = "";
+          m.body.appendChild(buildIntro());
+          m.body.appendChild(mk("div", "ngm-note", "Computing proposed schedule…"));
+          m.setFooter([{ label: "Cancel", onClick: () => m.close() }]);
+          const ov = capacityOverrides();
+          const cb = (raw) => {
+            const result = raw || {};
+            const changes = [];
+            if (result.scheduledTasks) {
+              for (const [taskId, sc] of result.scheduledTasks) {
+                const t = byId.get(taskId);
+                if (!t) continue;
+                if (t.startDate !== sc.startDate || t.endDate !== sc.endDate) {
+                  changes.push({
+                    id: taskId,
+                    name: t.title || t.name || taskId,
+                    startDate: sc.startDate,
+                    endDate: sc.endDate,
+                    previousStartDate: t.startDate ?? void 0,
+                    previousEndDate: t.endDate ?? void 0
+                  });
+                }
+              }
+            }
+            renderReview(changes, result.violations ?? []);
+          };
+          if (ov) gi.emit("autoSchedule:preview", ov, cb);
+          else gi.emit("autoSchedule:preview", cb);
+        }
+        runPreview();
         function renderReview(changes, violations) {
           m.body.textContent = "";
+          m.body.appendChild(buildIntro());
           if (!changes.length) {
-            m.body.appendChild(mk("div", void 0, "No date changes proposed — the schedule already satisfies the dependencies."));
+            m.body.appendChild(mk("div", void 0, "No date changes proposed — the schedule already satisfies the dependencies" + (pace > 0 && poolHpm > 0 && coreSupportsCapacity ? " and the capacity ceiling" : "") + "."));
             m.setFooter([{ label: "Close", primary: true, onClick: () => m.close() }]);
             return;
           }
@@ -7524,16 +7699,36 @@ var NimbusGanttApp = (function(exports) {
           tbl.appendChild(tb);
           m.body.appendChild(tbl);
           const usingHost = !!options.onAutoSchedule || !!options.onPatch;
-          m.body.appendChild(mk("div", "ngm-note", usingHost ? "Apply sends these to the host to stage for review before any DML — nothing is written to the org until you commit them there." : "Standalone: Apply updates this session only (use Undo to revert)."));
+          m.body.appendChild(mk("div", "ngm-note", options.batchMode ? "Gather mode: Apply stages these changes into the audit list (no DML). Review, skip, or reject them there — nothing is written until you commit." : usingHost ? "Apply sends these to the host to stage for review before any DML — nothing is written to the org until you commit them there." : "Standalone: Apply updates this session only (use Undo to revert)."));
           m.setFooter([
             { label: "Cancel", onClick: () => m.close() },
             { label: `Apply ${changes.length} change${changes.length === 1 ? "" : "s"}`, primary: true, onClick: () => {
+              if (options.batchMode) {
+                for (const c of changes) {
+                  const idx = allTasks.findIndex((t) => t.id === c.id);
+                  if (idx === -1) continue;
+                  bufferEdit(
+                    c.id,
+                    "edit",
+                    { startDate: c.startDate, endDate: c.endDate },
+                    { startDate: allTasks[idx].startDate ?? void 0, endDate: allTasks[idx].endDate ?? void 0 }
+                  );
+                  allTasks[idx] = { ...allTasks[idx], startDate: c.startDate, endDate: c.endDate };
+                  dirtyTaskIds.add(c.id);
+                }
+                syncPendingChanges();
+                refreshGantt();
+                m.close();
+                return;
+              }
               if (options.onAutoSchedule) {
                 options.onAutoSchedule({ changes });
               } else if (options.onPatch) {
                 changes.forEach((c) => options.onPatch({ id: c.id, startDate: c.startDate, endDate: c.endDate }));
               } else {
-                gi.emit("autoSchedule:run");
+                const ov = capacityOverrides();
+                if (ov) gi.emit("autoSchedule:run", ov);
+                else gi.emit("autoSchedule:run");
               }
               m.close();
             } }
@@ -8090,6 +8285,9 @@ var NimbusGanttApp = (function(exports) {
           renderAuditListView(ganttHost, auditTasks, {
             progressLabel: tplConfig.progressLabel,
             hideRecordIds: tplConfig.hideRecordIds,
+            // 0.204.0 — list-row title click fires the same canonical id-only
+            // open contract bars + pacing drill-down rows use. Host navigates.
+            onTaskClick: options.onItemClick ? (taskId) => options.onItemClick(taskId) : void 0,
             // 0.185.5 — forward the host's onItemReorder contract so the
             // list-view 3-dot handle persists drops through the same path
             // the gantt sidebar uses.
@@ -8427,10 +8625,24 @@ var NimbusGanttApp = (function(exports) {
          *  `{ committed }` on full success. On first failure, throws
          *  `{ failedAt, successful, error }`; failed + remaining stay in
          *  the buffer so the host can retry or discardEdits(). */
-        async commitEdits() {
+        async commitEdits(opts) {
           const all = Array.from(pendingBuffer.values());
-          const edits = all.filter((p) => p.kind === "edit");
-          const reorders = all.filter((p) => p.kind === "reorder");
+          let scoped = all;
+          if ((opts == null ? void 0 : opts.only) && opts.only.length) {
+            const wantBoth = /* @__PURE__ */ new Set();
+            const wantExact = /* @__PURE__ */ new Set();
+            for (const s of opts.only) {
+              if (s.kind) wantExact.add(s.taskId + "::" + s.kind);
+              else wantBoth.add(s.taskId);
+            }
+            scoped = all.filter((p) => wantBoth.has(p.taskId) || wantExact.has(p.taskId + "::" + p.kind));
+          } else if (skippedCommitTaskIds.size) {
+            const skip = skippedCommitTaskIds;
+            scoped = all.filter((p) => !skip.has(p.taskId));
+          }
+          skippedCommitTaskIds = /* @__PURE__ */ new Set();
+          const edits = scoped.filter((p) => p.kind === "edit");
+          const reorders = scoped.filter((p) => p.kind === "reorder");
           const ordered = [...edits, ...reorders];
           const committed = [];
           for (const p of ordered) {
