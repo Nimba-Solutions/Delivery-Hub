@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnforceApprovalCapDateTime__c</fullName>
+    <description>When populated, work logs that would push a work item's total logged hours past its client-approved cap (ClientPreApprovedHoursNumber__c) are hard-blocked at save. When null (default), over-cap logging is allowed but flagged: the item's newest Accepted work request moves to Budget Hold and the approver/developer are notified. Provides an audit trail of when hard enforcement was enabled.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set this to hard-block logging beyond the client-approved hours cap. Leave blank for flag mode (default): over-cap logs save, but the item's Accepted request moves to Budget Hold and the approver is notified.</inlineHelpText>
+    <label>Enforce Approval Cap Since</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
