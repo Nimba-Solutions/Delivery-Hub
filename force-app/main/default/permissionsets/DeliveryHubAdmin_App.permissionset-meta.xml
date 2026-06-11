@@ -25,6 +25,10 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
+        <apexClass>DeliveryApprovalSummaryController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>DeliveryBurndownController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
@@ -218,6 +222,10 @@
     </classAccesses>
     <classAccesses>
         <apexClass>DeliveryVoiceNotesController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>DeliveryWorkApprovalService</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
@@ -596,6 +604,26 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>FeatureToggleApproval__c.DecisionNoteTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>WorkRequest__c.ApproverUserLookup__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>WorkRequest__c.AutoApprovedDateTime__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>WorkRequest__c.DecisionDateTime__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>WorkRequest__c.DecisionNoteTxt__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>

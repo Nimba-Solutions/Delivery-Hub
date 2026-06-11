@@ -58,6 +58,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             logStageChanges(newRows, oldMap);
             DeliveryFieldTrackingService.trackChanges(newRows, oldMap);
             handleSLAPauseResume(newRows, oldMap);
+            notifyDeployedToProd(newRows, oldMap);
         }
 
         // 3. UNIFIED SYNC ENGINE (High-Water Mark)
@@ -360,6 +361,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     public static void handleBeforeUpdate(List<WorkItem__c> newWorkItems, Map<Id, WorkItem__c> oldMap) {
         protectGanttCriticalFieldsFromNull(newWorkItems, oldMap);
         stampStageEnteredOnUpdate(newWorkItems, oldMap);
+        assignDeployVerifier(newWorkItems, oldMap);
 
         // Auto-generate bounty token when BountyEnabledDateTime__c flips to true on update
         for (WorkItem__c workItem : newWorkItems) {
@@ -590,6 +592,86 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         if (!slaUpdates.isEmpty()) {
             Database.update(slaUpdates, AccessLevel.SYSTEM_MODE);
         }
+    }
+
+    /** WorkItem__c stage that means the work shipped and awaits verification. */
+    @TestVisible
+    private static final String STAGE_DEPLOYED_TO_PROD = 'Deployed to Prod';
+
+    /**
+     * @description BEFORE-UPDATE: when an item moves INTO 'Deployed to Prod',
+     *              hand it to the configured approver
+     *              (DeliveryHubSettings__c.ApproverUserIdTxt__c) for
+     *              verification by setting DeveloperLookup__c — the org's
+     *              assignee field — in the same DML (no extra update).
+     *              Skips silently when the setting is blank/invalid, and
+     *              skips inbound-sync writes (the source org owns assignment).
+     * @param newWorkItems WorkItem__c rows being updated (mutable).
+     * @param oldMap Pre-update rows keyed by Id.
+     */
+    private static void assignDeployVerifier(
+        List<WorkItem__c> newWorkItems, Map<Id, WorkItem__c> oldMap
+    ) {
+        if (DeliveryTriggerControl.inboundSyncContext) {
+            return;
+        }
+        List<WorkItem__c> deployed = collectNewlyDeployed(newWorkItems, oldMap);
+        if (deployed.isEmpty()) {
+            return;
+        }
+        Id verifierId = DeliveryNotificationService.resolveConfiguredApproverId();
+        if (verifierId == null) {
+            return;
+        }
+        for (WorkItem__c wi : deployed) {
+            wi.DeveloperLookup__c = verifierId;
+        }
+    }
+
+    /**
+     * @description AFTER-UPDATE: one bell notification to the configured
+     *              approver summarizing every item that entered
+     *              'Deployed to Prod' in this transaction ("N item(s)
+     *              deployed to production — please verify"). Delegates to
+     *              DeliveryNotificationService, which enqueues the
+     *              notification queueable and never breaks the caller.
+     * @param newRows Updated WorkItem__c rows.
+     * @param oldMap Pre-update rows keyed by Id.
+     */
+    private static void notifyDeployedToProd(
+        List<WorkItem__c> newRows, Map<Id, WorkItem__c> oldMap
+    ) {
+        List<WorkItem__c> deployed = collectNewlyDeployed(newRows, oldMap);
+        if (deployed.isEmpty()) {
+            return;
+        }
+        List<Id> deployedIds = new List<Id>();
+        for (WorkItem__c wi : deployed) {
+            deployedIds.add(wi.Id);
+        }
+        DeliveryNotificationService.notifyDeployedToProd(deployedIds);
+    }
+
+    /**
+     * @description Rows whose StageNamePk__c CHANGED TO 'Deployed to Prod' in
+     *              this transaction (already-deployed rows don't re-fire).
+     * @param newRows Current rows.
+     * @param oldMap Pre-update rows keyed by Id.
+     * @return The newly-deployed subset (possibly empty, never null).
+     */
+    private static List<WorkItem__c> collectNewlyDeployed(
+        List<WorkItem__c> newRows, Map<Id, WorkItem__c> oldMap
+    ) {
+        List<WorkItem__c> out = new List<WorkItem__c>();
+        for (WorkItem__c wi : newRows) {
+            WorkItem__c old = oldMap == null ? null : oldMap.get(wi.Id);
+            if (old != null
+                && wi.StageNamePk__c == STAGE_DEPLOYED_TO_PROD
+                && old.StageNamePk__c != STAGE_DEPLOYED_TO_PROD) {
+                out.add(wi);
+            }
+        }
+        return out;
     }
 
     /**
