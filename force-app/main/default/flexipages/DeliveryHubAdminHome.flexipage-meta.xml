@@ -25,6 +25,12 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryApprovalQueue</componentName>
+                <identifier>c_deliveryApprovalQueue</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryCartCheckout</componentName>
                 <identifier>c_deliveryCartCheckout</identifier>
             </componentInstance>

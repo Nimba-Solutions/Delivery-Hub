@@ -1,0 +1,164 @@
+<template>
+    <div class="queue-card">
+
+        <div class="queue-header">
+            <div class="queue-header-left">
+                <lightning-icon icon-name="standard:approval" alternative-text="Approval queue" size="small" class="queue-header-icon"></lightning-icon>
+                <div>
+                    <h2 class="queue-title">Pending Work Approvals</h2>
+                    <p class="queue-subtitle">Offer-Sent work requests awaiting your decision</p>
+                </div>
+            </div>
+            <div class="queue-controls">
+                <c-delivery-info-popover component-name="deliveryApprovalQueue"></c-delivery-info-popover>
+                <lightning-button-icon
+                    icon-name="utility:refresh"
+                    variant="border-filled"
+                    alternative-text="Refresh"
+                    title="Refresh"
+                    onclick={handleRefresh}>
+                </lightning-button-icon>
+            </div>
+        </div>
+
+        <template lwc:if={isLoading}>
+            <div class="queue-loading">
+                <lightning-spinner alternative-text="Loading approval queue..." size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <template lwc:if={hasError}>
+            <div class="queue-error">
+                <lightning-icon icon-name="utility:error" size="x-small"></lightning-icon>
+                <span>{errorMessage}</span>
+            </div>
+        </template>
+
+        <template lwc:if={hasRows}>
+            <div class="queue-summary-row">
+                <div class="summary-tile">
+                    <div class="summary-label">Pending</div>
+                    <div class="summary-value">{pendingCountDisplay}</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="summary-label">Hours quoted</div>
+                    <div class="summary-value">{totalQuotedDisplay}h</div>
+                </div>
+            </div>
+
+            <ul class="queue-list">
+                <template for:each={rows} for:item="row">
+                    <li key={row.key} class="queue-row">
+                        <div class="queue-row-main">
+                            <div class="queue-row-info">
+                                <button class="queue-item-link"
+                                        data-work-item-id={row.workItemId}
+                                        onclick={handleItemClick}>{row.label}</button>
+                                <div class="queue-row-meta">
+                                    <span class="queue-hours">{row.quotedDisplay}</span>
+                                    <template lwc:if={row.hasIncrease}>
+                                        <span class="queue-increase-badge">{row.increaseBadge}</span>
+                                    </template>
+                                    <span class="queue-age">{row.ageDisplay}</span>
+                                </div>
+                            </div>
+                            <div class="queue-row-actions">
+                                <lightning-button
+                                    variant="brand"
+                                    label="Approve"
+                                    data-request-id={row.key}
+                                    disabled={isSaving}
+                                    onclick={handleApprove}>
+                                </lightning-button>
+                                <lightning-button
+                                    variant="neutral"
+                                    label="Approve w/ change"
+                                    data-request-id={row.key}
+                                    disabled={isSaving}
+                                    onclick={handleOpenChange}>
+                                </lightning-button>
+                                <lightning-button
+                                    variant="destructive-text"
+                                    label="Decline"
+                                    data-request-id={row.key}
+                                    disabled={isSaving}
+                                    onclick={handleOpenDecline}>
+                                </lightning-button>
+                            </div>
+                        </div>
+
+                        <template lwc:if={row.isChangeOpen}>
+                            <div class="queue-inline">
+                                <lightning-input
+                                    type="number"
+                                    label="Approved hours"
+                                    step="0.25"
+                                    min="0"
+                                    value={draftHours}
+                                    onchange={handleHoursChange}
+                                    class="queue-inline-input">
+                                </lightning-input>
+                                <lightning-input
+                                    type="text"
+                                    label="Note (optional)"
+                                    value={draftNote}
+                                    onchange={handleNoteChange}
+                                    class="queue-inline-input queue-inline-input--wide">
+                                </lightning-input>
+                                <div class="queue-inline-actions">
+                                    <lightning-button
+                                        variant="brand"
+                                        label="Confirm"
+                                        data-request-id={row.key}
+                                        disabled={isSaving}
+                                        onclick={handleConfirmChange}>
+                                    </lightning-button>
+                                    <lightning-button
+                                        variant="neutral"
+                                        label="Cancel"
+                                        onclick={handleCancelInline}>
+                                    </lightning-button>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template lwc:if={row.isDeclineOpen}>
+                            <div class="queue-inline">
+                                <lightning-input
+                                    type="text"
+                                    label="Decline reason"
+                                    value={draftReason}
+                                    onchange={handleReasonChange}
+                                    class="queue-inline-input queue-inline-input--wide">
+                                </lightning-input>
+                                <div class="queue-inline-actions">
+                                    <lightning-button
+                                        variant="destructive"
+                                        label="Confirm decline"
+                                        data-request-id={row.key}
+                                        disabled={isSaving}
+                                        onclick={handleConfirmDecline}>
+                                    </lightning-button>
+                                    <lightning-button
+                                        variant="neutral"
+                                        label="Cancel"
+                                        onclick={handleCancelInline}>
+                                    </lightning-button>
+                                </div>
+                            </div>
+                        </template>
+                    </li>
+                </template>
+            </ul>
+        </template>
+
+        <template lwc:if={isEmpty}>
+            <div class="queue-empty">
+                <lightning-icon icon-name="utility:success" size="medium" class="queue-empty-icon"></lightning-icon>
+                <p>Nothing pending &mdash; you&rsquo;re caught up</p>
+                <p class="queue-empty-sub">New work requests submitted for approval will appear here.</p>
+            </div>
+        </template>
+
+    </div>
+</template>
