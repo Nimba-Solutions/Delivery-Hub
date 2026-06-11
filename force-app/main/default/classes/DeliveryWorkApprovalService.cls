@@ -298,7 +298,9 @@ public with sharing class DeliveryWorkApprovalService {
 
     /**
      * @description Batched DML for submit: upsert the requests, update the
-     *              items, and write one audit row per Auto short-circuit.
+     *              items, write one audit row per Auto short-circuit, and
+     *              fire the summarized approver ping for the requests that
+     *              queued for a human decision (PR4).
      * @param requests Requests to save (mixed insert/update).
      * @param itemUpdates WorkItem stage/cap updates.
      * @param results DTOs to backfill with request ids.
@@ -317,12 +319,19 @@ public with sharing class DeliveryWorkApprovalService {
                 + e.getMessage());
             throw new AuraHandledException('Unable to submit for approval.');
         }
+        List<Id> pendingRequestIds = new List<Id>();
         for (Integer i = 0; i < results.size(); i++) {
             results[i].workRequestId = requests[i].Id;
             if (results[i].autoApproved) {
                 writeAuditRow(results[i].workItemId, 'Auto_Approve', requests[i].Id, null);
+            } else {
+                pendingRequestIds.add(requests[i].Id);
             }
         }
+        // Fire-and-forget approver ping for the requests that actually queued
+        // for a human — the notification service is null-safe and never
+        // throws back into this transaction.
+        DeliveryNotificationService.notifyWorkApprovalSubmitted(pendingRequestIds);
     }
 
     // ────────────────────────────────────────────────────────────────────
@@ -373,6 +382,8 @@ public with sharing class DeliveryWorkApprovalService {
             throw new AuraHandledException('Unable to approve the request.');
         }
         writeAuditRow(req.WorkItemId__c, isIncrease ? 'Approve_Increase' : 'Approve', req.Id, note);
+        // Fire-and-forget dev ping — null-safe, never throws back here.
+        DeliveryNotificationService.notifyWorkApprovalDecided(req.Id, true);
     }
 
     // ────────────────────────────────────────────────────────────────────
@@ -411,6 +422,8 @@ public with sharing class DeliveryWorkApprovalService {
             throw new AuraHandledException('Unable to decline the request.');
         }
         writeAuditRow(req.WorkItemId__c, 'Decline', req.Id, reason);
+        // Fire-and-forget dev ping — null-safe, never throws back here.
+        DeliveryNotificationService.notifyWorkApprovalDecided(req.Id, false);
     }
 
     // ────────────────────────────────────────────────────────────────────
