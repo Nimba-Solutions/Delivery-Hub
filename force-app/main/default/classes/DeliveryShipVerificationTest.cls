@@ -22,12 +22,22 @@ private class DeliveryShipVerificationTest {
     private static final String STAGE_DEPLOYING = 'Deploying';
     private static final String STAGE_DEPLOYED = 'Deployed to Prod';
 
+    /**
+     * @description Writes ApproverUserIdTxt__c on the org-default settings.
+     * @param value User id string, or null to blank the setting.
+     */
     private static void setApproverSetting(String value) {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         settings.ApproverUserIdTxt__c = value;
         upsert settings;
     }
 
+    /**
+     * @description Seeds a WorkItem__c parked at the given stage (insert
+     *              trigger side effects bypassed; later updates run live).
+     * @param stage StageNamePk__c value.
+     * @return The inserted item.
+     */
     private static WorkItem__c seedItemAt(String stage) {
         return TestDataFactory.createWorkItem(new Map<String, Object>{
             'StageNamePk__c' => stage

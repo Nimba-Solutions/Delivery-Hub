@@ -14,6 +14,13 @@
 @IsTest
 private class DeliveryApprovalSummaryControllerTest {
 
+    /**
+     * @description Seeds a WorkItem__c at the given stage with an optional
+     *              client-approved cap (trigger side effects bypassed).
+     * @param stage StageNamePk__c value.
+     * @param cap ClientPreApprovedHoursNumber__c value (null = uncapped).
+     * @return The inserted item.
+     */
     private static WorkItem__c seedItem(String stage, Decimal cap) {
         return TestDataFactory.createWorkItem(new Map<String, Object>{
             'StageNamePk__c' => stage,
@@ -21,6 +28,16 @@ private class DeliveryApprovalSummaryControllerTest {
         });
     }
 
+    /**
+     * @description Seeds a WorkRequest__c on the item with the given
+     *              lifecycle/hours state.
+     * @param workItemId Parent WorkItem__c.
+     * @param status StatusPk__c value.
+     * @param quoted QuotedHoursNumber__c value.
+     * @param granted PreApprovedHoursNumber__c value (null when undecided).
+     * @param decidedAt DecisionDateTime__c value (null when undecided).
+     * @return The inserted request.
+     */
     private static WorkRequest__c seedRequest(
         Id workItemId, String status, Decimal quoted, Decimal granted, Datetime decidedAt
     ) {
