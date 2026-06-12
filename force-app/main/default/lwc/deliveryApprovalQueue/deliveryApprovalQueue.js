@@ -13,7 +13,10 @@
  *               labels (AuraHandledException messages come back generic inside
  *               the managed package). Clicking the item name navigates to the
  *               WorkItem__c record via NavigationMixin + @salesforce/schema so
- *               the object API name stays namespace-safe.
+ *               the object API name stays namespace-safe. Rows carrying a
+ *               latestProposalNote (proposeEstimate's reasoning comment)
+ *               expose an expandable "Why this estimate" line under the row
+ *               (item 9 — the estimate haggle on the record).
  * @author       Cloud Nimbus LLC
  */
 import { LightningElement, wire } from "lwc";
@@ -46,6 +49,9 @@ export default class DeliveryApprovalQueue extends NavigationMixin(LightningElem
     draftNote = "";
     draftReason = "";
 
+    // Rows whose "why this estimate" proposal note is expanded.
+    expandedNoteIds = [];
+
     wiredResult;
 
     @wire(getPendingForApprover, { userId: null })
@@ -67,6 +73,8 @@ export default class DeliveryApprovalQueue extends NavigationMixin(LightningElem
     get rows() {
         return this.pendingRaw.map((dto) => {
             const isActive = dto.requestId === this.activeRequestId;
+            const hasProposalNote = Boolean(dto.latestProposalNote);
+            const isProposalOpen = hasProposalNote && this.expandedNoteIds.includes(dto.requestId);
             return {
                 key: dto.requestId,
                 workItemId: dto.workItemId,
@@ -77,7 +85,13 @@ export default class DeliveryApprovalQueue extends NavigationMixin(LightningElem
                 ageDisplay: this._ageDisplay(dto.submittedAt),
                 isSelected: this.selectedIds.includes(dto.requestId),
                 isChangeOpen: isActive && this.activeMode === MODE_CHANGE,
-                isDeclineOpen: isActive && this.activeMode === MODE_DECLINE
+                isDeclineOpen: isActive && this.activeMode === MODE_DECLINE,
+                hasProposalNote,
+                isProposalOpen,
+                proposalNote: dto.latestProposalNote || "",
+                proposalToggleLabel: isProposalOpen
+                    ? "Hide why this estimate"
+                    : "Why this estimate"
             };
         });
     }
@@ -260,6 +274,20 @@ export default class DeliveryApprovalQueue extends NavigationMixin(LightningElem
         if (this.wiredResult) {
             refreshApex(this.wiredResult);
         }
+    }
+
+    // ── Proposal note ("why this estimate") ──────────────────────
+
+    handleToggleProposalNote(event) {
+        const requestId = event.currentTarget.dataset.requestId;
+        if (!requestId) {
+            return;
+        }
+        const next = this.expandedNoteIds.filter((id) => id !== requestId);
+        if (next.length === this.expandedNoteIds.length) {
+            next.push(requestId);
+        }
+        this.expandedNoteIds = next;
     }
 
     // ── Internals ────────────────────────────────────────────────

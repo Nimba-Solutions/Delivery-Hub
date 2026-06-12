@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>TeamPoolTxt__c</fullName>
+    <description>The org's delivery-team capacity pool fed to the gantt (NG options.team): entries separated by ';', each formatted 'Name|Role|HoursPerMonth' (e.g. 'Glen|Principal Engineer|80;Mahi|SFDC Dev|50'). Drives the Pace dial's capacity ceiling and the Team Capacity modal. Blank = NG's built-in vendor fallback (named Cloud Nimbus staff, 170h/mo) — every subscriber org should set its own. Custom settings only support primitives, hence the delimited text format; per-assignee calendars are the NG GAP-2 v2 follow-on.</description>
+    <inlineHelpText>Semicolon-separated team members: Name|Role|HoursPerMonth. Example: Glen|Principal Engineer|80;Mahi|SFDC Dev|50</inlineHelpText>
+    <label>Team Capacity Pool</label>
+    <length>255</length>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

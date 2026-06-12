@@ -16,6 +16,17 @@
  *               tiered chain ever becomes real, a child object can be ADDED
  *               then — objects shipped in the package cannot be removed.
  *
+ *               proposeEstimate(workItemId, proposedHours, reasoning)
+ *                 -> the vendor-side estimate PROPOSAL (item 9 — the haggle
+ *                    on the record): stamps the proposed hours into the
+ *                    WorkItem's EstimatedHoursNumber__c AND the newest Draft
+ *                    request's QuotedHoursNumber__c (minting a Draft when
+ *                    absent — same reuse semantics as submitForApproval's
+ *                    ensureRequest), writes the reasoning as a
+ *                    WorkItemComment__c prefixed PROPOSAL_NOTE_PREFIX so the
+ *                    queue can surface it, and audit-logs the event. The
+ *                    request stays Draft — proposal != submission; the
+ *                    Offer-Sent step remains submitForApproval's job.
  *               submitForApproval(workItemIds)
  *                 -> ensures ONE WorkRequest__c per WorkItem (reusing the
  *                    newest Draft request when present), stamps
@@ -106,6 +117,20 @@ global with sharing class DeliveryWorkApprovalService {
     private static final Integer MAX_QUEUE_ROWS = 200;
     private static final Integer MAX_CAP_ROWS = 5000;
 
+    /**
+     * Marker prefix on proposeEstimate's reasoning comment. The queue feed
+     * matches on it to surface the latest proposal note per item — keep it
+     * stable; changing it orphans existing proposal comments.
+     */
+    public static final String PROPOSAL_NOTE_PREFIX = '📐 Estimate proposal: ';
+
+    /**
+     * Newest-first comment-scan window for the queue's proposal-note join.
+     * BodyTxt__c is a rich-text (Html) field — NOT filterable in SOQL — so
+     * the prefix match happens in Apex over this bounded window.
+     */
+    private static final Integer MAX_PROPOSAL_SCAN_ROWS = 2000;
+
     // ────────────────────────────────────────────────────────────────────
     // DTOs
     // ────────────────────────────────────────────────────────────────────
@@ -126,6 +151,12 @@ global with sharing class DeliveryWorkApprovalService {
         @AuraEnabled public String requestStatus;
         @AuraEnabled public DateTime submittedAt;
         @AuraEnabled public Id approverUserId;
+        /**
+         * Body of the newest PROPOSAL_NOTE_PREFIX-marked WorkItemComment__c
+         * on the work item ("why this estimate"); null when no proposal
+         * comment exists.
+         */
+        @AuraEnabled public String latestProposalNote;
     }
 
     /**
@@ -151,6 +182,72 @@ global with sharing class DeliveryWorkApprovalService {
     global class BulkApproveResultDTO {
         @AuraEnabled public List<Id> approvedIds = new List<Id>();
         @AuraEnabled public List<String> failures = new List<String>();
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // PROPOSE ESTIMATE (item 9 — the haggle on the record)
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Lands a proposed estimate ON the record so the negotiation
+     *              happens in-system, not in Slack: stamps the proposed hours
+     *              into the WorkItem's EstimatedHoursNumber__c AND the newest
+     *              Draft WorkRequest__c's QuotedHoursNumber__c (minting a
+     *              Draft when none exists — the same reuse semantics as
+     *              submitForApproval's ensureRequest), and writes the
+     *              reasoning as a WorkItemComment__c prefixed
+     *              PROPOSAL_NOTE_PREFIX so the approval queue can surface
+     *              "why this estimate" next to the row. The request stays
+     *              Draft on purpose — proposal != submission; moving it to
+     *              Offer Sent remains submitForApproval's job. The approver
+     *              counters via approve(id, hours, note) or questions in the
+     *              item's comments.
+     * @param workItemId The WorkItem__c the estimate is proposed for.
+     * @param proposedHours The proposed estimate in hours (must be > 0).
+     * @param reasoning Why this estimate — written to the proposal comment
+     *        and audit-logged (required).
+     * @return The Draft WorkRequest__c id carrying the proposed quote.
+     */
+    @AuraEnabled
+    global static Id proposeEstimate(Id workItemId, Decimal proposedHours, String reasoning) {
+        if (workItemId == null) {
+            throw new AuraHandledException('workItemId is required.');
+        }
+        if (proposedHours == null || proposedHours <= 0) {
+            throw new AuraHandledException('proposedHours must be greater than zero.');
+        }
+        if (String.isBlank(reasoning)) {
+            throw new AuraHandledException('reasoning is required.');
+        }
+        List<WorkItem__c> items = loadWorkItemsForSubmit(new Set<Id>{ workItemId });
+        if (items.isEmpty()) {
+            throw new AuraHandledException('No matching work item found.');
+        }
+        WorkItem__c wi = items[0];
+        WorkRequest__c req = ensureRequest(wi);
+        if (req.Id == null) {
+            req.StatusPk__c = REQUEST_DRAFT;
+        }
+        req.QuotedHoursNumber__c = proposedHours;
+        WorkItemComment__c note = new WorkItemComment__c(
+            WorkItemId__c = wi.Id,
+            BodyTxt__c = PROPOSAL_NOTE_PREFIX + String.valueOf(proposedHours)
+                + 'h — ' + reasoning,
+            SourcePk__c = 'Salesforce',
+            AuthorTxt__c = UserInfo.getName()
+        );
+        try {
+            upsert req;
+            update new WorkItem__c(Id = wi.Id, EstimatedHoursNumber__c = proposedHours);
+            insert note;
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryWorkApprovalService.proposeEstimate] DML failed: '
+                + e.getMessage());
+            throw new AuraHandledException('Unable to record the estimate proposal.');
+        }
+        writeAuditRow(wi.Id, 'Propose_Estimate', req.Id, reasoning);
+        return req.Id;
     }
 
     // ────────────────────────────────────────────────────────────────────
@@ -587,6 +684,7 @@ global with sharing class DeliveryWorkApprovalService {
             ]) {
                 out.add(toPendingDto(req));
             }
+            applyLatestProposalNotes(out);
         } catch (Exception e) {
             System.debug(LoggingLevel.WARN,
                 '[DeliveryWorkApprovalService.getPendingForApprover] failed: '
@@ -594,6 +692,48 @@ global with sharing class DeliveryWorkApprovalService {
             throw new AuraHandledException('Unable to load the approval queue.');
         }
         return out;
+    }
+
+    /**
+     * @description Backfills latestProposalNote on the page of queue rows:
+     *              ONE bulkified WorkItemComment__c query across the page's
+     *              work items, newest-first, keeping the first
+     *              PROPOSAL_NOTE_PREFIX-marked body per item. BodyTxt__c is a
+     *              rich-text (Html) field — not filterable in SOQL — so the
+     *              prefix match runs in Apex over a bounded scan window
+     *              (MAX_PROPOSAL_SCAN_ROWS); on an extremely chatty page a
+     *              proposal older than the window is simply not surfaced.
+     * @param rows The page of pending rows to decorate (mutated in place).
+     */
+    private static void applyLatestProposalNotes(List<PendingApprovalDTO> rows) {
+        Set<Id> workItemIds = new Set<Id>();
+        for (PendingApprovalDTO dto : rows) {
+            if (dto.workItemId != null) {
+                workItemIds.add(dto.workItemId);
+            }
+        }
+        if (workItemIds.isEmpty()) {
+            return;
+        }
+        Map<Id, String> noteByItem = new Map<Id, String>();
+        for (WorkItemComment__c c : [
+            SELECT WorkItemId__c, BodyTxt__c
+            FROM WorkItemComment__c
+            WHERE WorkItemId__c IN :workItemIds
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate DESC, Id DESC
+            LIMIT :MAX_PROPOSAL_SCAN_ROWS
+        ]) {
+            if (noteByItem.containsKey(c.WorkItemId__c)) {
+                continue;
+            }
+            if (c.BodyTxt__c != null && c.BodyTxt__c.startsWith(PROPOSAL_NOTE_PREFIX)) {
+                noteByItem.put(c.WorkItemId__c, c.BodyTxt__c);
+            }
+        }
+        for (PendingApprovalDTO dto : rows) {
+            dto.latestProposalNote = noteByItem.get(dto.workItemId);
+        }
     }
 
     private static PendingApprovalDTO toPendingDto(WorkRequest__c req) {
@@ -757,8 +897,8 @@ global with sharing class DeliveryWorkApprovalService {
      *              immutable per-event decision history (the request itself
      *              carries only its final decision state).
      * @param workItemId WorkItem__c the decision concerns.
-     * @param action Lifecycle verb (Auto_Approve / Approve / Approve_Increase
-     *        / Decline / Request_Increase).
+     * @param action Lifecycle verb (Propose_Estimate / Auto_Approve / Approve
+     *        / Approve_Increase / Decline / Request_Increase).
      * @param requestId The WorkRequest__c id (carried in ContextData).
      * @param note Optional decision note carried in ContextData.
      */
