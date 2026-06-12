@@ -1205,4 +1205,40 @@ private class DeliveryGanttControllerTest {
         System.assert(threw, 'Blank workItemId must throw');
     }
 
+    /**
+     * @description getTeamPool parses the delimited settings value, skips
+     *              malformed entries, and returns empty (never throws) when
+     *              the setting is blank.
+     */
+    @IsTest
+    static void testGetTeamPoolParsesSettingAndSkipsMalformed() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        settings.TeamPoolTxt__c = 'Ana|Lead Dev|80; Bo|SFDC Dev|45.5 ;bad-entry;|NoName|10;Cy|Zero|0';
+        upsert settings;
+
+        Test.startTest();
+        List<DeliveryGanttController.TeamPoolMemberDTO> pool = DeliveryGanttController.getTeamPool();
+        Test.stopTest();
+
+        System.assertEquals(2, pool.size(),
+            'two well-formed entries parse; malformed, nameless, and zero-hour entries are skipped');
+        System.assertEquals('Ana', pool[0].name, 'name parsed');
+        System.assertEquals('Lead Dev', pool[0].role, 'role parsed');
+        System.assertEquals(80, pool[0].hoursPerMonth, 'hours parsed');
+        System.assertEquals(true, pool[0].active, 'members default active');
+        System.assertEquals(45.5, pool[1].hoursPerMonth, 'decimal hours parse and whitespace trims');
+    }
+
+    /**
+     * @description Blank/unset TeamPoolTxt__c resolves to an empty pool so the
+     *              LWC omits options.team and NG applies its own fallback.
+     */
+    @IsTest
+    static void testGetTeamPoolBlankSettingReturnsEmpty() {
+        Test.startTest();
+        List<DeliveryGanttController.TeamPoolMemberDTO> pool = DeliveryGanttController.getTeamPool();
+        Test.stopTest();
+        System.assertEquals(0, pool.size(), 'unconfigured setting yields an empty pool, never an exception');
+    }
+
 }
