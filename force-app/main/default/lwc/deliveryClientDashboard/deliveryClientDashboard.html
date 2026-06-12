@@ -135,13 +135,13 @@
                     <template lwc:if={isLoaded}>
                         <div class="slds-grid slds-wrap slds-gutters_x-small slds-p-horizontal_medium slds-p-bottom_medium">
                             <div class="slds-col slds-size_1-of-4 slds-text-align_center">
-                                <button class="tw-metric tw-metric--clickable" onclick={handleCompletedClick} title="View recently completed work items">
+                                <button class="tw-metric tw-metric--clickable" onclick={handleCompletedClick} title="Items reaching a terminal stage in the selected period — click to open the Recently Completed report">
                                     <div class="tw-metric-value tw-metric--success dh-metric">{thisWeek.completed}</div>
                                     <div class="tw-metric-label dh-metric-label">Completed</div>
                                 </button>
                             </div>
                             <div class="slds-col slds-size_1-of-4 slds-text-align_center">
-                                <button class="tw-metric tw-metric--clickable" onclick={handleInProgressClick} title="View in-flight work items">
+                                <button class="tw-metric tw-metric--clickable" onclick={handleInProgressClick} title="Active items (activated, not archived, not completed) updated in the selected period — click to open the In-Flight Work Items report">
                                     <div class="tw-metric-value tw-metric--info dh-metric">{thisWeek.moved}</div>
                                     <div class="tw-metric-label dh-metric-label">In Progress</div>
                                 </button>
@@ -153,7 +153,7 @@
                                 </button>
                             </div>
                             <div class="slds-col slds-size_1-of-4 slds-text-align_center">
-                                <button class="tw-metric tw-metric--clickable" onclick={handleBlockedClick} title="View blocked work items">
+                                <button class="tw-metric tw-metric--clickable" onclick={handleBlockedClick} title="Items currently blocked by a dependency — current state, not limited to the selected period">
                                     <div class="tw-metric-value tw-metric--warning dh-metric">{thisWeek.blocked}</div>
                                     <div class="tw-metric-label dh-metric-label">Blocked</div>
                                 </button>

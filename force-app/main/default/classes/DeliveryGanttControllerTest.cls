@@ -219,6 +219,38 @@ private class DeliveryGanttControllerTest {
         }
     }
 
+    /**
+     * @description Regression guard for the archived-filter fix: the default
+     *              (showCompleted=false) timeline scope is the canonical active
+     *              definition — activated AND not archived. Pre-fix archived items
+     *              still rendered, so the timeline count disagreed with every other
+     *              "active items" surface on Home.
+     */
+    @IsTest
+    static void testGetGanttDataExcludesArchivedByDefault() {
+        System.runAs(testUser) {
+            insert new WorkItem__c(
+                BriefDescriptionTxt__c   = 'Archived item',
+                StageNamePk__c           = 'In Development',
+                ActivatedDateTime__c     = Datetime.now(),
+                ArchivedDateTime__c      = Datetime.now(),
+                EstimatedStartDevDate__c = Date.today(),
+                EstimatedEndDevDate__c   = Date.today().addDays(5)
+            );
+
+            Test.startTest();
+            List<DeliveryGanttController.GanttTask> tasks = DeliveryGanttController.getGanttData(false);
+            Test.stopTest();
+
+            System.assertEquals(3, tasks.size(),
+                'Archived items must be excluded from the default timeline view even when activated.');
+            for (DeliveryGanttController.GanttTask t : tasks) {
+                System.assertNotEquals('Archived item', t.description,
+                    'The archived item must not render on the default timeline.');
+            }
+        }
+    }
+
     @IsTest
     static void testGetGanttDataIncludesCompleted() {
         System.runAs(testUser) {
@@ -635,6 +667,35 @@ private class DeliveryGanttControllerTest {
                     'Every row should have a priorityGroup (explicit or derived)');
                 System.assertNotEquals(null, row.startDate, 'startDate should resolve');
                 System.assertNotEquals(null, row.endDate, 'endDate should resolve');
+            }
+        }
+    }
+
+    /**
+     * @description Mirror of testGetGanttDataExcludesArchivedByDefault for the
+     *              Pro Forma Timeline feed — default scope must exclude archived
+     *              items so the timeline reconciles with the other Home surfaces.
+     */
+    @IsTest
+    static void testGetProFormaTimelineDataExcludesArchivedByDefault() {
+        System.runAs(testUser) {
+            insert new WorkItem__c(
+                BriefDescriptionTxt__c   = 'Archived timeline item',
+                StageNamePk__c           = 'In Development',
+                ActivatedDateTime__c     = Datetime.now(),
+                ArchivedDateTime__c      = Datetime.now(),
+                EstimatedStartDevDate__c = Date.today(),
+                EstimatedEndDevDate__c   = Date.today().addDays(5)
+            );
+
+            Test.startTest();
+            List<DeliveryGanttController.ProFormaTimelineRow> rows =
+                DeliveryGanttController.getProFormaTimelineData(false);
+            Test.stopTest();
+
+            for (DeliveryGanttController.ProFormaTimelineRow row : rows) {
+                System.assertNotEquals('Archived timeline item', row.title,
+                    'Archived items must be excluded from the default Pro Forma Timeline view.');
             }
         }
     }
