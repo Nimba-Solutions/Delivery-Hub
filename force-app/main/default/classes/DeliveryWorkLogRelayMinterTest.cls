@@ -90,15 +90,20 @@ private class DeliveryWorkLogRelayMinterTest {
     }
 
     /**
-     * @description KILLER REGRESSION (guest REST relay mint). A WorkLog inserted
-     *              under a user with no sharing access to WorkItem__c /
-     *              WorkRequest__c must STILL mint its outbound relay. Pre-fix
-     *              (`with sharing` handler owning the eligibility queries) this
-     *              minted zero SyncItems under the Site Guest User; post-fix the
-     *              `without sharing` DeliveryWorkLogRelayMinter mints exactly one
-     *              Hub-mode relay — matching DeliverySyncEngine, which already ran
-     *              `without sharing` and minted WorkItem relays in the same guest
-     *              transactions.
+     * @description KILLER REGRESSION (guest REST relay mint). The mint queries
+     *              executed under a user with no sharing access to WorkItem__c /
+     *              WorkRequest__c must STILL find the parents and mint the relay.
+     *              Pre-fix (`with sharing` handler owning the eligibility queries)
+     *              this minted zero SyncItems under the Site Guest User; post-fix
+     *              the `without sharing` DeliveryWorkLogRelayMinter mints exactly
+     *              one Hub-mode relay — matching DeliverySyncEngine, which already
+     *              ran `without sharing` and minted WorkItem relays in the same
+     *              guest transactions. The WorkLog DML itself runs as admin: the
+     *              restricted user cannot perform the insert in test context (the
+     *              platform rejects the master-detail WorkRequest__c reference
+     *              with INSUFFICIENT_ACCESS_ON_CROSS_REFERENCE_ENTITY before any
+     *              trigger fires) — in production the guest never owns that DML
+     *              either; the without-sharing ingestor does.
      */
     @IsTest
     static void testRelayMintsUnderGuestSharingContext() {
@@ -106,15 +111,20 @@ private class DeliveryWorkLogRelayMinterTest {
         WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
         User restricted = getRestrictedUser();
 
+        DeliveryTriggerControl.disableAfterLogic();
+        WorkLog__c log = new WorkLog__c(
+            RequestId__c          = request.Id,
+            WorkItemLookup__c     = workItem.Id,
+            HoursLoggedNumber__c  = 2.5,
+            WorkDateDate__c       = Date.today(),
+            WorkDescriptionTxt__c = 'Inbound REST worklog (guest context)'
+        );
+        insert log;
+        DeliveryTriggerControl.enableAfterLogic();
+
         System.runAs(restricted) {
             Test.startTest();
-            insert new WorkLog__c(
-                RequestId__c          = request.Id,
-                WorkItemLookup__c     = workItem.Id,
-                HoursLoggedNumber__c  = 2.5,
-                WorkDateDate__c       = Date.today(),
-                WorkDescriptionTxt__c = 'Inbound REST worklog (guest context)'
-            );
+            DeliveryWorkLogRelayMinter.mintForLogs(new List<WorkLog__c>{ log });
             Test.stopTest();
         }
 
@@ -180,6 +190,9 @@ private class DeliveryWorkLogRelayMinterTest {
         Test.startTest();
         DeliveryWorkLogRelayMinter.mintForLogs(new List<WorkLog__c>{ new WorkLog__c(HoursLoggedNumber__c = 1.0) });
         Test.stopTest();
-        System.assertEquals(0, [SELECT COUNT() FROM SyncItem__c], 'No parent WorkItem → no relay');
+        // Scope to WorkLog relays — @TestSetup's WorkItem/NetworkEntity inserts mint
+        // their own (non-WorkLog) SyncItems via DeliverySyncEngine.
+        System.assertEquals(0, [SELECT COUNT() FROM SyncItem__c WHERE ObjectTypePk__c = 'WorkLog__c'],
+            'No parent WorkItem → no relay');
     }
 }
