@@ -4,9 +4,16 @@
  * @description Daily forecast-alert sweep. Walks active root WorkItems
  *              (ParentWorkItemLookup__c = NULL), runs the velocity-based
  *              forecast for each, and dispatches bell + email + Slack alerts
- *              to the WI owner when projectedFinalHours exceeds the configured
- *              threshold (default 110% of EstimatedHoursNumber). Cooldown +
- *              delta-detection guard prevents re-alert spam.
+ *              to the WI owner when any divergence condition holds:
+ *              (1) projectedFinalHours exceeds the configured threshold
+ *                  (default 110% of EstimatedHoursNumber);
+ *              (2) item 8 — the velocity-projected completion date falls past
+ *                  the committed CalculatedETADate__c (the ETA stamped when a
+ *                  schedule apply is committed via commitGanttPatches);
+ *              (3) item 8 — projectedFinalHours exceeds the client-approved
+ *                  cap (ClientPreApprovedHoursNumber__c > 0).
+ *              Cooldown + delta-detection guard (LastForecastAlert* fields)
+ *              prevents re-alert spam across all three conditions.
  *
  *              Mirrors DeliveryOverdueReminderService shape — gated by an org
  *              setting DateTime opt-in (EnableForecastAlertsDateTime__c) +
@@ -78,6 +85,7 @@ global with sharing class DeliveryForecastAlertService {
             SELECT Id, Name, BriefDescriptionTxt__c, OwnerId, DeveloperLookup__c,
                    EstimatedHoursNumber__c, TotalLoggedHoursSum__c,
                    StageNamePk__c, ActivatedDateTime__c,
+                   CalculatedETADate__c, ClientPreApprovedHoursNumber__c,
                    LastForecastAlertDateTime__c, LastForecastAlertProjectedHoursNumber__c
             FROM WorkItem__c
             WHERE ParentWorkItemLookup__c = NULL
@@ -116,9 +124,11 @@ global with sharing class DeliveryForecastAlertService {
     }
 
     /**
-     * @description Evaluates a single WI. Returns AlertCandidate when it should
-     *              alert, null when it shouldn't (under threshold, in cooldown,
-     *              or no projection available).
+     * @description Evaluates a single WI. Returns AlertCandidate when any
+     *              divergence condition fires (scope-overrun threshold,
+     *              committed-ETA blow, or approved-cap blow), null when it
+     *              shouldn't alert (no divergence, in cooldown, or no
+     *              projection available).
      */
     private static AlertCandidate evaluate(WorkItem__c wi, Decimal thresholdRatio) {
         DeliveryForecastService.ProjectForecast f;
@@ -135,7 +145,34 @@ global with sharing class DeliveryForecastAlertService {
             return null;
         }
         Decimal ratio = f.projectedFinalHours / f.totalEstimatedHours;
-        if (ratio < thresholdRatio) {
+        Decimal overrunPercent = (ratio * 100 - 100).setScale(1, System.RoundingMode.HALF_UP);
+        Decimal overrunHours = (f.projectedFinalHours - f.totalEstimatedHours).setScale(2, System.RoundingMode.HALF_UP);
+
+        List<String> reasons = new List<String>();
+        // (1) Scope-overrun threshold — the original condition, unchanged.
+        if (ratio >= thresholdRatio) {
+            reasons.add('Projected ' + overrunPercent + '% over scope ('
+                + overrunHours + 'h overrun) at current velocity');
+        }
+        // (2) Item 8 — committed-ETA blow: logged pace implies finishing past the
+        // ETA stamped on schedule apply (commitGanttPatches end-date write-back).
+        if (wi.CalculatedETADate__c != null && f.projectedCompletionDate != null
+                && f.projectedCompletionDate > wi.CalculatedETADate__c) {
+            Integer daysLate = wi.CalculatedETADate__c.daysBetween(f.projectedCompletionDate);
+            reasons.add('Current pace projects completion ' + daysLate
+                + ' day(s) past the committed ETA (' + String.valueOf(wi.CalculatedETADate__c) + ')');
+        }
+        // (3) Item 8 — approved-cap blow: projected final hours exceed the
+        // client-approved cap (the canonical approval-queue number).
+        if (wi.ClientPreApprovedHoursNumber__c != null && wi.ClientPreApprovedHoursNumber__c > 0
+                && f.projectedFinalHours > wi.ClientPreApprovedHoursNumber__c) {
+            Decimal capOver = (f.projectedFinalHours - wi.ClientPreApprovedHoursNumber__c)
+                .setScale(2, System.RoundingMode.HALF_UP);
+            reasons.add('Projected final ' + f.projectedFinalHours
+                + 'h exceeds the client-approved cap of ' + wi.ClientPreApprovedHoursNumber__c
+                + 'h (+' + capOver + 'h)');
+        }
+        if (reasons.isEmpty()) {
             return null;
         }
         if (inCooldown(wi, f)) {
@@ -144,8 +181,9 @@ global with sharing class DeliveryForecastAlertService {
         AlertCandidate ac = new AlertCandidate();
         ac.workItem = wi;
         ac.forecast = f;
-        ac.overrunPercent = (ratio * 100 - 100).setScale(1, System.RoundingMode.HALF_UP);
-        ac.overrunHours = (f.projectedFinalHours - f.totalEstimatedHours).setScale(2, System.RoundingMode.HALF_UP);
+        ac.overrunPercent = overrunPercent;
+        ac.overrunHours = overrunHours;
+        ac.reasons = reasons;
         return ac;
     }
 
@@ -197,9 +235,9 @@ global with sharing class DeliveryForecastAlertService {
                 ? wi.BriefDescriptionTxt__c : wi.Name;
             String recordUrl = orgUrl + '/lightning/r/WorkItem__c/' + wi.Id + '/view';
 
+            String reasonSummary = String.join(ac.reasons, ' · ');
             String bellTitle = 'Forecast risk: ' + wi.Name;
-            String bellBody = 'Projected ' + ac.overrunPercent + '% over scope ('
-                + ac.overrunHours + 'h overrun) at current velocity. Tap to review.';
+            String bellBody = reasonSummary + '. Tap to review.';
 
             for (Id recipientId : routeRecipients(wi)) {
                 if (!userMap.containsKey(recipientId)) {
@@ -216,8 +254,7 @@ global with sharing class DeliveryForecastAlertService {
                     }
                 }
             }
-            slackMessages.put(wi.Name, title + ' · projected ' + ac.overrunPercent
-                + '% over scope (+' + ac.overrunHours + 'h) · ' + recordUrl);
+            slackMessages.put(wi.Name, title + ' · ' + reasonSummary + ' · ' + recordUrl);
         }
 
         if (!emails.isEmpty() && emailGloballyEnabled()) {
@@ -272,8 +309,9 @@ global with sharing class DeliveryForecastAlertService {
             String recordUrl, String title) {
         Messaging.SingleEmailMessage email = new Messaging.SingleEmailMessage();
         email.setToAddresses(new List<String>{ toAddress });
-        email.setSubject('Delivery Hub Forecast Risk: ' + wi.Name
-            + ' projected ' + ac.overrunPercent + '% over scope');
+        // Lead with the first (highest-priority) divergence reason so ETA-only or
+        // cap-only alerts don't claim a scope overrun that didn't fire.
+        email.setSubject('Delivery Hub Forecast Risk: ' + wi.Name + ' — ' + ac.reasons[0]);
         email.setHtmlBody(buildForecastHtml(wi.Name, title, ac, recordUrl));
         email.setSaveAsActivity(false);
         return email;
@@ -284,8 +322,9 @@ global with sharing class DeliveryForecastAlertService {
         return '<div style="font-family: Arial, sans-serif; max-width: 600px;">'
             + '<h2 style="color: #b91c1c; margin: 0 0 16px;">Forecast Risk: ' + escape(wiName) + '</h2>'
             + '<p style="font-size: 14px; color: #374151;">'
-            + '<strong>' + escape(title) + '</strong> is trending past scope at current velocity.</p>'
+            + '<strong>' + escape(title) + '</strong> is diverging from plan at current velocity.</p>'
             + '<table style="border-collapse: collapse; width: 100%; font-size: 13px; margin: 12px 0;">'
+            + row('Why', String.join(ac.reasons, ' · '))
             + row('Estimated hours', String.valueOf(ac.forecast.totalEstimatedHours))
             + row('Logged hours', String.valueOf(ac.forecast.totalLoggedHours))
             + row('Projected final', String.valueOf(ac.forecast.projectedFinalHours)
@@ -374,5 +413,7 @@ global with sharing class DeliveryForecastAlertService {
         DeliveryForecastService.ProjectForecast forecast;
         Decimal overrunPercent;
         Decimal overrunHours;
+        /** Human-readable divergence reasons (scope / ETA / approved-cap) — never empty. */
+        List<String> reasons = new List<String>();
     }
 }
