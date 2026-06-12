@@ -56,6 +56,10 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
+        <apexClass>DeliveryWorkLogRelayMinter</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>WebhookSignatureVerifier</apexClass>
         <enabled>true</enabled>
     </classAccesses>
