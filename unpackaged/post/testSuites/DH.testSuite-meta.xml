@@ -131,5 +131,6 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryOnboardingHistoryControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryNotificationServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryApprovalSummaryControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryBillingPreviewControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryShipVerificationTest</testClassName>
 </ApexTestSuite>

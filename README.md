@@ -29,12 +29,12 @@ It is open source under the [BSL 1.1 license](LICENSE.md) and ships as an unlock
 
 ## Install
 
-**Current release**: [`release/0.273.0.2`](https://github.com/Nimba-Solutions/Delivery-Hub/releases) (production-promoted 2026-06-11). Carries the work-approval queue (estimate → approve → cap rails, pending-approval queue on Home, approval reports + agenda card, Deployed-to-Prod ship loop), forecast/board scope parity, and NimbusGantt 0.204.0 (pace-aware auto-schedule, unified click-through, search + axis fixes) with a de-cluttered default Pacing view. See [GitHub Releases](https://github.com/Nimba-Solutions/Delivery-Hub/releases) for the full version history.
+**Current release**: [`release/0.276.0.2`](https://github.com/Nimba-Solutions/Delivery-Hub/releases) (production-promoted 2026-06-12). Completes the work-approval queue arc on top of 0.273's foundation (estimate → approve rails, pending-approval queue on Home, approval reports + agenda card, Deployed-to-Prod ship loop, NimbusGantt 0.204.0, de-cluttered Pacing view). 0.274 → 0.276 add: **approval pings** (submit notifies the approver, decisions notify the dev), **WorkLog cap enforcement** (over-cap logs flag by default, hard-block via `EnforceApprovalCapDateTime__c`), NimbusGantt **0.204.1** (empty-state fix), **approved-green forecast cohort** (greenlit tier = client-approved hours, not lane), **ETA write-back** on gantt apply (`CalculatedETADate__c`) + pace-divergence alerts, and the **approved-vs-total pitch stat** + backup approver + `global` `DeliveryWorkApprovalService`. See [GitHub Releases](https://github.com/Nimba-Solutions/Delivery-Hub/releases) for the full version history.
 
 | Environment | Link |
 |---|---|
-| **Production** | [![Install in Production](https://img.shields.io/badge/Install-Production-0070d2?logo=salesforce&style=for-the-badge)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000Vxi9IAC) |
-| **Sandbox** | [![Install in Sandbox](https://img.shields.io/badge/Install-Sandbox-3e8b3e?logo=salesforce&style=for-the-badge)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000Vxi9IAC) |
+| **Production** | [![Install in Production](https://img.shields.io/badge/Install-Production-0070d2?logo=salesforce&style=for-the-badge)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000VyeDIAS) |
+| **Sandbox** | [![Install in Sandbox](https://img.shields.io/badge/Install-Sandbox-3e8b3e?logo=salesforce&style=for-the-badge)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000VyeDIAS) |
 
 **Quickstart (≈5 minutes):**
 
@@ -89,7 +89,7 @@ Delivery Hub is organized into 8 layers. Layers 1–3 are the original delivery 
 
 | Layer | Name | Purpose |
 |---|---|---|
-| **1** | Core domain | `WorkItem__c`, `WorkRequest__c`, `WorkLog__c`, `WorkItemComment__c`, `WorkItemDependency__c` |
+| **1** | Core domain | `WorkItem__c`, `WorkRequest__c`, `WorkLog__c`, `WorkItemComment__c`, `WorkItemDependency__c` — plus the **work-approval queue** (0.272–0.276): the client estimate decision lives ON `WorkRequest__c` (no child approval object), with a discretionary auto-approve gate, an approved-hours cap enforced at WorkLog time, and a pending-approval queue on Home |
 | **2** | Sync & integration | `SyncItem__c`, `NetworkEntity__c`, Slack inbound/outbound, inbound email, IntegrationProvider webhooks |
 | **3** | Observability | `ActivityLog__c` (hash-chained), `WatcherDigest__c`, daily Watcher digest (Signals 1-3) |
 | **4** | Feature Catalog | `Feature__c` + `FeatureDefinition__mdt` + `FeatureDependency__c` + `deliveryFeatureCockpit` LWC |
@@ -97,6 +97,8 @@ Delivery Hub is organized into 8 layers. Layers 1–3 are the original delivery 
 | **6** | Dev-loop mirror | `ScratchOrgInstance__c` + `DevLoopGuide__mdt` + REST `POST/PATCH /scratch-orgs` |
 | **7** | Dataset templates | `DatasetTemplate__c` + `DatasetTemplateAssignment__c` + `load_feature_data` CCI task |
 | **8** | Approval framework | `FeatureToggleRequest__c` + `FeatureToggleApproval__c` + multi-step cascading approvals + in-app notifications |
+
+> **Two approval systems, on purpose.** Layer 8 approves *feature toggles* (request/approval pair, multi-step `StepNumber` chain). The Layer-1 **work-approval queue** approves *client work estimates* (decision stamped directly on `WorkRequest__c` — a request is decided at most once, budget increases are NEW requests, so per-step child rows would be speculative machinery). They are deliberately separate shapes today; unifying them under one approval framework is a someday-refactor, not a bug. See [docs/ARCHITECTURE.md § Work-Approval Queue](docs/ARCHITECTURE.md#work-approval-queue).
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the deep object/class/trigger reference, [docs/COCKPIT.md](docs/COCKPIT.md) for the per-layer cockpit detail, and [docs/SETUP.md](docs/SETUP.md) for the install/smoke-test runbook.
 

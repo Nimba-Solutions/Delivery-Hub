@@ -37,6 +37,12 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryBillingPreview</componentName>
+                <identifier>c_deliveryBillingPreview</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryCartCheckout</componentName>
                 <identifier>c_deliveryCartCheckout</identifier>
             </componentInstance>
