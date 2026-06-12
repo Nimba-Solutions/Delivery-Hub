@@ -625,6 +625,77 @@ See [DOCUMENT_ACTIONING_FEATURE.md](DOCUMENT_ACTIONING_FEATURE.md) for the full 
 
 ---
 
+## Work-Approval Queue
+
+Shipped across 0.272 → 0.276 (PRs #891–#893, #899–#900, #904). Client-facing estimate approval for `WorkItem__c` work: the vendor submits an estimate, the client (approver) accepts or declines, and the accepted hours become a hard budget cap enforced when hours are logged.
+
+**Design decision — the decision lives ON `WorkRequest__c`, no child approval object.** A request is decided at most once in its lifecycle (Offer Sent → Accepted/Inactive; budget increases are NEW requests), so per-step child rows would be speculative machinery. This mirrors the shipped `DeliveryDocApprovalService` pattern (decision state on the record + immutable per-event history in `ActivityLog__c` via the SHA-256 hash-chain trigger), and is deliberately distinct from Layer 8's FeatureToggle request/approval pair, whose multi-step `StepNumber` machinery this flow does not need. If a tiered chain ever becomes real, a child object can be ADDED then — objects shipped in the package cannot be removed.
+
+### Objects touched
+
+| Object | Fields | Role |
+|--------|--------|------|
+| **WorkRequest__c** | `StatusPk__c` (lifecycle: Draft / Offer Sent / Accepted / In Progress / Completed / Budget Hold / Inactive), `QuotedHoursNumber__c`, `PreApprovedHoursNumber__c`, `RequestedBudgetIncreaseNumber__c`, `ApproverUserLookup__c`, `DecisionDateTime__c`, `DecisionNoteTxt__c`, `StandDownReasonTxt__c`, `AutoApprovedDateTime__c` | Carries the quote and the final decision state |
+| **WorkItem__c** | `ClientPreApprovedHoursNumber__c` (THE canonical client-approved cap), `StageNamePk__c` (moved by the lifecycle), `ClientIntentionPk__c` (`On Hold` on decline of a never-approved item) | Receives the cap; stage reflects approval state |
+| **DeliveryHubSettings__c** | `ApproverUserIdTxt__c` (default approver, Text 18), `ApproverBackupUserIdTxt__c` (optional backup approver — may decide, never auto-assigned, gets no submit pings), `DiscretionaryThresholdHoursNumber__c` (per-request auto-approve ceiling), `DiscretionaryMonthlyCapHoursNumber__c` (monthly auto-approve budget), `EnforceApprovalCapDateTime__c` (flag-vs-block cap mode toggle) | Approver routing + discretionary gate + cap posture |
+| **ActivityLog__c** | `ActionTypePk__c = 'Work_Approval'` rows (Auto_Approve / Approve / Approve_Increase / Decline / Request_Increase) | Immutable per-event decision history on the SHA-256 hash chain |
+
+### Classes
+
+| Class | Responsibility |
+|-------|---------------|
+| **DeliveryWorkApprovalService** (`global`) | The decision engine: `submitForApproval(workItemIds[, quotedHoursByItem])`, `approve(workRequestId, approvedHours, note)`, `decline(workRequestId, reason)`, `requestIncrease(workItemId, extraHours, reason)`, `getPendingForApprover(userId)`. Global (with global DTOs `PendingApprovalDTO` / `SubmitResultDTO`) so subscriber-org anonymous Apex and future MCP automation can drive the lifecycle under the `delivery__` namespace. Caller guard: `assertCallerMayDecide` allows the assigned approver OR the configured backup; unassigned requests may be decided by any authorised caller, who is then stamped as approver. |
+| **DeliveryApprovalSummaryController** | Read-only aggregate feed for the `deliveryApprovalSummaryCard` LWC: hours approved this month, pending count/hours, approved-in-flight, the approved-vs-total pitch pair (`totalActiveEstimatedHours` / `totalApprovedHours` over the board-canonical active scope), and report ids for tile click-through (`Hours_Approved_This_Period`, `Pending_Approval`, `Approved_In_Progress`, `Deployed_To_Prod_Awaiting_Verification`). |
+| **DeliveryWorkCapEnforcementService** | Enforces `ClientPreApprovedHoursNumber__c` at `WorkLog__c` time from the WorkLog trigger (before-context `checkInserts`/`checkUpdates` + after-context `processPendingFlags`). Sums logged totals LIVE from `WorkLog__c` (rollups are stale mid-transaction); running per-item total so several rows in one batch can't collectively sneak past the cap; inbound-sync DML is exempt. |
+| **DeliveryNotificationService** (additions) | `notifyWorkApprovalSubmitted(workRequestIds)` — summarized bell ping to the assigned approver on submit; `notifyWorkApprovalDecided(workRequestId, approved)` — pings the item's developer on approve/decline. Both fire-and-forget, null-safe, never throw back into the calling transaction. |
+| **deliveryApprovalQueue** (LWC) | The pending-approval queue on DH Home — renders `getPendingForApprover` with inline approve/decline. |
+| **deliveryApprovalSummaryCard** (LWC) | Agenda card: three tiles + the `Nh of Mh approved (P%)` pitch strip (zero-guarded denominator). |
+
+### Lifecycle
+
+```
+                       submitForApproval(workItemIds)
+                                  │
+              quoted ≤ DiscretionaryThresholdHoursNumber__c
+              AND month's auto-sum < DiscretionaryMonthlyCapHoursNumber__c?
+                     │                            │
+                    yes                           no
+                     │                            │
+        WorkRequest: Accepted          WorkRequest: 'Offer Sent'
+        (AutoApprovedDateTime__c)      (ApproverUserLookup__c assigned,
+        WI cap stamped,                 approver pinged)
+        WI → Ready for Development     WI → Ready for Final Approval
+                                                  │
+                                   ┌──────────────┴──────────────┐
+                              approve(...)                  decline(...)
+                                   │                              │
+                        WorkRequest: Accepted          WorkRequest: Inactive
+                        WI ClientPreApprovedHours      (StandDownReasonTxt__c)
+                        SET — or RAISED by delta       WI → On Hold ONLY if
+                        on a budget increase,          nothing was previously
+                        never overwritten              approved (declining an
+                        WI → Ready for Development     increase leaves the item
+                                   │                   and original cap intact)
+                                   ▼
+                   hours logged against the cap (WorkLog__c)
+                                   │
+                  over cap? ── requestIncrease(workItemId, extraHours)
+                                   → NEW WorkRequest__c ('Offer Sent',
+                                     RequestedBudgetIncreaseNumber__c;
+                                     increases NEVER auto-approve)
+```
+
+### Cap enforcement: flag vs block
+
+Gated by `DeliveryHubSettings__c.EnforceApprovalCapDateTime__c` (DateTime-not-Boolean toggle pattern):
+
+- **FLAG MODE (default — setting null):** an over-cap WorkLog still **saves**, but the item's newest Accepted `WorkRequest__c` moves to `StatusPk__c = 'Budget Hold'` and one bell notification goes to the org-default approver plus the item's assigned developer. Flag mode never throws — every side effect is WARN-logged on failure.
+- **ENFORCE MODE (setting populated):** the offending row gets `addError()` in the BEFORE context, so the over-cap log never commits. The unblock path is `requestIncrease(...)` → `approve(...)`, which raises the cap by the approved delta only.
+
+Items with a null/zero cap are uncapped and never evaluated.
+
+---
+
 ## Enterprise Services
 
 17 service classes ship with the package for organizations that need formal governance, compliance controls, and audit-grade integrity. Every one is opt-in via a `*DateTime__c` toggle on `DeliveryHubSettings__c` or a per-entity configuration field — installing the package doesn't change behavior until you turn something on.
