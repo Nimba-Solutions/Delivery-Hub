@@ -112,6 +112,17 @@
                             </div>
                         </div>
 
+                        <template lwc:if={row.hasProposalNote}>
+                            <div class="queue-proposal">
+                                <button class="queue-proposal-toggle"
+                                        data-request-id={row.key}
+                                        onclick={handleToggleProposalNote}>{row.proposalToggleLabel}</button>
+                                <template lwc:if={row.isProposalOpen}>
+                                    <div class="queue-proposal-note">{row.proposalNote}</div>
+                                </template>
+                            </div>
+                        </template>
+
                         <template lwc:if={row.isChangeOpen}>
                             <div class="queue-inline">
                                 <lightning-input

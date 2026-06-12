@@ -80,25 +80,12 @@ global with sharing class CartExperienceProfile {
     /**
      * @description Reads a single blended hourly rate when EXACTLY ONE active
      *              NetworkEntity carries a DefaultHourlyRateCurrency__c. Returns null
-     *              when zero or many distinct rates exist (ambiguous — hours-only).
-     *              Mirrors DeliveryHoursAnalyticsController.resolveBlendedRate. Field is
-     *              referenced statically in the SOQL so it is compile-time guaranteed
-     *              to exist (no namespace-unsafe describe guard).
+     *              when zero or many rated entities exist (ambiguous — hours-only).
+     *              Kept as a global pass-through (cross-boundary callers); the query
+     *              itself now lives in the canonical DeliveryRateService.
      * @return The blended rate, or null.
      */
     global static Decimal resolveBlendedRate() {
-        List<NetworkEntity__c> rated = [
-            SELECT DefaultHourlyRateCurrency__c
-            FROM NetworkEntity__c
-            WHERE DefaultHourlyRateCurrency__c != NULL
-              AND DefaultHourlyRateCurrency__c > 0
-              AND StatusPk__c = 'Active'
-            WITH SYSTEM_MODE
-            LIMIT 2
-        ];
-        if (rated.size() == 1) {
-            return rated[0].DefaultHourlyRateCurrency__c;
-        }
-        return null;
+        return DeliveryRateService.resolveBlendedRate();
     }
 }

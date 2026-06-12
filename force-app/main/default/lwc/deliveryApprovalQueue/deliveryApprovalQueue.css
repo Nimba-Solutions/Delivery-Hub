@@ -194,6 +194,39 @@
     flex-wrap: wrap;
 }
 
+.queue-proposal {
+    margin-top: 0.4rem;
+}
+
+.queue-proposal-toggle {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #7c3aed;
+    text-align: left;
+}
+
+.queue-proposal-toggle:hover {
+    text-decoration: underline;
+    color: #5b21b6;
+}
+
+.queue-proposal-note {
+    margin-top: 0.4rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: 0.5rem;
+    background: #f5f3ff;
+    border: 1px solid #ddd6fe;
+    color: #4c1d95;
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
 .queue-inline {
     display: flex;
     align-items: flex-end;

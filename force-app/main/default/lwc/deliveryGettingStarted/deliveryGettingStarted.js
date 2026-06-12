@@ -198,7 +198,9 @@ export default class DeliveryGettingStarted extends LightningElement {
                 return performHandshake({ localEntityId: entity.Id })
                     .then(() => {
                         this.isAlreadyConnected = true;
-                        this.connectedEntityName = entity.Name || 'Cloud Nimbus LLC';
+                        // entity.Name is the Apex-resolved (CMT-driven) partner name;
+                        // generic fallback only if it somehow comes back blank.
+                        this.connectedEntityName = entity.Name || 'your delivery partner';
                         this.currentStep = 5;
                         this.dispatchEvent(new ShowToastEvent({
                             title: 'Connected!',
