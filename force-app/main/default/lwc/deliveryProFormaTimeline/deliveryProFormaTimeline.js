@@ -45,6 +45,7 @@ import CLOUDNIMBUS_CSS from '@salesforce/resourceUrl/cloudnimbustemplatecss';
 import USER_ID from '@salesforce/user/Id';
 import getProFormaTimelineData from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getProFormaTimelineData';
 import getGanttDependencies from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getGanttDependencies';
+import getTeamPool from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.getTeamPool';
 import updateWorkItemDates from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemDates';
 import updateWorkItemSortOrder from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.updateWorkItemSortOrder';
 import reorderWorkItemDense from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGanttController.reorderWorkItemDense';
@@ -604,6 +605,34 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
      * mounts. Uses NG 0.198's default granularity window (week) so the
      * authoritative buckets line up with NG's built-in default cut.
      */
+    /**
+     * Best-effort fetch of the org's team capacity pool
+     * (DeliveryHubSettings__c.TeamPoolTxt__c via getTeamPool). Stored on
+     * this._teamPool for the mount's options.team. Resolves null on failure
+     * or when unconfigured — NG then applies its own vendor fallback, so a
+     * missing/bad setting can never break the timeline. Without options.team
+     * the Pace dial / Team Capacity modal quote NG's built-in Cloud Nimbus
+     * pool (named CN staff, 170h/mo) — wrong team on every subscriber org.
+     */
+    async _fetchTeamPool() {
+        try {
+            const pool = await getTeamPool();
+            this._teamPool = Array.isArray(pool) && pool.length
+                ? pool.map((m) => ({
+                      name: m.name,
+                      role: m.role,
+                      hoursPerMonth: m.hoursPerMonth,
+                      active: m.active !== false,
+                  }))
+                : null;
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn('[DeliveryTimeline] team pool fetch failed — NG fallback applies', e);
+            this._teamPool = null;
+        }
+        return this._teamPool;
+    }
+
     async _fetchPacingData() {
         try {
             const json = await getPacing({
@@ -701,6 +730,11 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
                 // same batch so config.pacing.data is ready at mount, but its
                 // failure never rejects this Promise.all (handled inside).
                 this._fetchPacingData(),
+                // Team pool is best-effort too — resolves to null on failure
+                // or when DeliveryHubSettings__c.TeamPoolTxt__c is unset (NG
+                // then applies its own fallback). Awaited here so
+                // options.team is ready at mount.
+                this._fetchTeamPool(),
             ]);
             this._tasks = data || [];
             this._dependencies = this._mapDependenciesForNg(deps);
@@ -923,6 +957,12 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             // pacing-only config.pacing.onOpenItem path (kept above for
             // backward-compat with pre-0.204 bundles).
             onItemClick: (taskId) => this._navigateRecord(taskId),
+            // NG 0.205/0.206 (B4): the org's REAL team capacity pool from
+            // DeliveryHubSettings__c.TeamPoolTxt__c. Omitted (undefined) when
+            // unconfigured — NG then uses its vendor fallback, but every
+            // subscriber org should set its own so the Pace dial and Team
+            // Capacity modal never quote Cloud Nimbus staff to a client.
+            team: this._teamPool || undefined,
             // NG 0.196.1 Auto-Schedule review-before-DML. When NG computes an
             // auto-schedule preview and the operator clicks Apply, NG hands the
             // proposed batch here (it writes NOTHING itself). Route each change

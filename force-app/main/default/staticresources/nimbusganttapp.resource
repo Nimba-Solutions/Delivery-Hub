@@ -2126,7 +2126,7 @@ var NimbusGanttApp = (function(exports) {
     ctx.textBaseline = "alphabetic";
   }
   const PACING_SEGMENT_DEFAULTS = [
-    { id: "greenlit", label: "Greenlit", color: "#059669", style: "solid", order: 0 },
+    { id: "greenlit", label: "Greenlit", color: "#0e7490", style: "solid", order: 0 },
     { id: "predicted", label: "Predicted", color: "#2563eb", style: "solid", order: 1 },
     { id: "ready", label: "Ready to approve", color: "#d97706", style: "dotted", order: 2 }
   ];
@@ -2272,11 +2272,12 @@ var NimbusGanttApp = (function(exports) {
 .ngp-card-v{font-size:20px;font-weight:800;line-height:1.1}
 .ngp-card-l{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#64748b;margin-top:2px}
 .ngp-warn{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#92400e}
-.ngp-scope{display:flex;gap:8px;align-items:flex-start;border-radius:8px;padding:7px 12px;margin-bottom:12px;font-size:12px;line-height:1.45}
-.ngp-scope.auth{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
-.ngp-scope.preview{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412}
-.ngp-scope .ngp-scope-ico{font-size:13px;line-height:1.2}
-.ngp-scope b{font-weight:700}
+.ngp-scope{display:flex;gap:6px;align-items:baseline;padding:0 2px;margin:-6px 0 10px;font-size:11px;line-height:1.5;color:#94a3b8}
+.ngp-scope.auth{color:#94a3b8}
+.ngp-scope.preview{color:#a16207}
+.ngp-scope .ngp-scope-ico{font-size:11px;line-height:1.2}
+.ngp-scope b{font-weight:600;color:#64748b}
+.ngp-scope.preview b{color:#a16207}
 .ngp-legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px}
 .ngp-leg{display:flex;align-items:center;gap:6px;border:0;background:none;cursor:pointer;font-size:12px;color:#1f2937;padding:2px 4px;font-family:${FONT}}
 .ngp-leg.off{opacity:.4}
@@ -2868,23 +2869,27 @@ var NimbusGanttApp = (function(exports) {
       }
       const s = d.summary;
       const val = (h) => useDollars ? fmtMoney(h * r) : fmtH(h);
-      const cards = el$1("div", "ngp-cards");
-      const stat = (label, value, tone) => {
-        const c = el$1("div", "ngp-card");
-        const v = el$1("div", "ngp-card-v", value);
-        if (tone) v.setAttribute("style", "color:" + tone);
-        c.appendChild(v);
-        c.appendChild(el$1("div", "ngp-card-l", label));
-        return c;
-      };
-      cards.appendChild(stat("Logged", val(s.loggedHours)));
-      cards.appendChild(stat("Estimated", val(s.estimatedHours)));
-      cards.appendChild(stat("Remaining", val(s.remainingHours), "#2563eb"));
-      cards.appendChild(stat("Projected final", val(s.projectedFinalHours)));
-      cards.appendChild(stat("Pacing", s.pacingPct + "%", s.pacingPct > 100 ? COL.actualOver : "#10b981"));
-      cards.appendChild(stat("Active items", String(s.activeItems)));
-      if (s.unscheduledHours > 0) cards.appendChild(stat("Unscheduled", val(s.unscheduledHours), "#d97706"));
-      body.appendChild(cards);
+      const cardSet = Array.isArray(ctrl.cards) ? new Set(ctrl.cards) : null;
+      const wantCard = (k) => ctrl.cards !== false && (!cardSet || cardSet.has(k));
+      if (ctrl.cards !== false) {
+        const cards = el$1("div", "ngp-cards");
+        const stat = (label, value, tone) => {
+          const c = el$1("div", "ngp-card");
+          const v = el$1("div", "ngp-card-v", value);
+          if (tone) v.setAttribute("style", "color:" + tone);
+          c.appendChild(v);
+          c.appendChild(el$1("div", "ngp-card-l", label));
+          return c;
+        };
+        if (wantCard("logged")) cards.appendChild(stat("Logged", val(s.loggedHours)));
+        if (wantCard("estimated")) cards.appendChild(stat("Estimated", val(s.estimatedHours)));
+        if (wantCard("remaining")) cards.appendChild(stat("Remaining", val(s.remainingHours), "#2563eb"));
+        if (wantCard("projected")) cards.appendChild(stat("Projected final", val(s.projectedFinalHours)));
+        if (wantCard("pacing")) cards.appendChild(stat("Pacing", s.pacingPct + "%", s.pacingPct > 100 ? COL.actualOver : "#10b981"));
+        if (wantCard("active")) cards.appendChild(stat("Active items", String(s.activeItems)));
+        if (wantCard("unscheduled") && s.unscheduledHours > 0) cards.appendChild(stat("Unscheduled", val(s.unscheduledHours), "#d97706"));
+        if (cards.childNodes.length > 0) body.appendChild(cards);
+      }
       if (s.unscheduledHours > 0) {
         body.appendChild(el$1(
           "div",
@@ -2893,28 +2898,13 @@ var NimbusGanttApp = (function(exports) {
         ));
       }
       const win = rangeWindow(range, bucket, customS, customE);
-      let visible = dd.buckets.filter((b) => {
+      const inWindow = dd.buckets.filter((b) => {
         const ms = b.startMs ?? keyToMs(b.key);
         if (win.from != null && ms < win.from) return false;
         if (win.to != null && ms > win.to) return false;
         return true;
       });
-      if ((win.from == null || win.to == null) && visible.length > 2) {
-        const live = (b) => b.isCurrent || b.actual > 0.5 || b.forecast > 0.5 || b.target > 0.5;
-        let first = visible.findIndex(live);
-        let last = -1;
-        for (let i = visible.length - 1; i >= 0; i--) {
-          if (live(visible[i])) {
-            last = i;
-            break;
-          }
-        }
-        if (first >= 0 && last >= first) {
-          const from = win.from == null ? Math.max(0, first - 1) : 0;
-          const to = win.to == null ? Math.min(visible.length - 1, last + 1) : visible.length - 1;
-          visible = visible.slice(from, to + 1);
-        }
-      }
+      const visible = fitBucketsToData(inWindow, win);
       body.appendChild(buildChart(visible, { show, segments: dd.segments, useDollars, rate: r || 0, cum, expandedKey }, (k) => {
         expandedKey = expandedKey === k ? null : k;
         render();
@@ -2937,6 +2927,22 @@ var NimbusGanttApp = (function(exports) {
       }
       host.innerHTML = "";
     };
+  }
+  function fitBucketsToData(visible, win) {
+    if (!(win.from == null || win.to == null) || visible.length <= 2) return visible;
+    const live = (b) => b.isCurrent || b.actual > 0.5 || b.forecast > 0.5 || b.target > 0.5;
+    let first = visible.findIndex(live);
+    let last = -1;
+    for (let i = visible.length - 1; i >= 0; i--) {
+      if (live(visible[i])) {
+        last = i;
+        break;
+      }
+    }
+    if (first < 0 || last < first) return visible;
+    const from = win.from == null ? Math.max(0, first - 1) : 0;
+    const to = win.to == null ? Math.min(visible.length - 1, last + 1) : visible.length - 1;
+    return visible.slice(from, to + 1);
   }
   function buildChart(buckets, o, onBucketClick) {
     const wrap = el$1("div", "ngp-chart");
@@ -3271,7 +3277,10 @@ var NimbusGanttApp = (function(exports) {
       var _a;
       if (closed) return;
       closed = true;
-      document.removeEventListener("keydown", onKey, true);
+      try {
+        document.removeEventListener("keydown", onKey, true);
+      } catch (_e) {
+      }
       overlay.remove();
       (_a = opts.onClose) == null ? void 0 : _a.call(opts);
     }
@@ -3285,7 +3294,22 @@ var NimbusGanttApp = (function(exports) {
     overlay.addEventListener("mousedown", (e) => {
       if (e.target === overlay) close();
     });
-    document.addEventListener("keydown", onKey, true);
+    overlay.tabIndex = -1;
+    overlay.style.outline = "none";
+    overlay.addEventListener("keydown", onKey);
+    try {
+      document.addEventListener("keydown", onKey, true);
+    } catch (_e) {
+    }
+    try {
+      setTimeout(() => {
+        try {
+          if (!closed) overlay.focus();
+        } catch (_e) {
+        }
+      }, 0);
+    } catch (_e) {
+    }
     function setFooter(buttons) {
       foot.textContent = "";
       for (const b of buttons) {
@@ -3614,9 +3638,9 @@ var NimbusGanttApp = (function(exports) {
     detailOpen: false,
     detailMode: "view",
     auditPanelOpen: false,
-    // default collapsed — Audit toggle in TitleBar opens it
+    // default collapsed â€” Audit toggle in TitleBar opens it
     hrsWkStripOpen: false,
-    // default collapsed — Hrs/Wk toggle in TitleBar opens it
+    // default collapsed â€” Hrs/Wk toggle in TitleBar opens it
     fullscreen: false,
     selectedTaskId: null,
     pendingPatchCount: 0,
@@ -3630,14 +3654,19 @@ var NimbusGanttApp = (function(exports) {
   };
   function reduceAppState(state, event) {
     switch (event.type) {
-      // 0.199.0 — a manual view-mode switch diverges from any applied saved view,
+      // 0.199.0 â€” a manual view-mode switch diverges from any applied saved view,
       // so clear activeViewId (the Views menu falls back to its "Views" label).
       case "SET_VIEW":
         return { ...state, viewMode: event.mode, activeViewId: null };
+      // 0.205.0 - same-value short-circuit: SET_FILTER/SET_SEARCH with an
+      // unchanged value return the SAME state object, so the IIFE's
+      // stateChanged check skips the full renderSlots + gantt rebuild. The
+      // FilterBar blur-flush made redundant SET_SEARCH dispatches common
+      // (type a char, delete it, blur) - each cost a complete gantt teardown.
       case "SET_FILTER":
-        return { ...state, filter: event.id };
+        return event.id === state.filter ? state : { ...state, filter: event.id };
       case "SET_SEARCH":
-        return { ...state, search: event.q };
+        return event.q === state.search ? state : { ...state, search: event.q };
       case "SET_ZOOM":
         return { ...state, zoom: event.zoom };
       case "SET_GROUP_BY":
@@ -4528,8 +4557,11 @@ var NimbusGanttApp = (function(exports) {
     searchInput.addEventListener("blur", () => {
       if (!searchPending) return;
       if (searchDebounce) clearTimeout(searchDebounce);
-      searchPending = false;
-      latestDispatch({ type: "SET_SEARCH", q: searchInput.value });
+      searchDebounce = setTimeout(() => {
+        if (!searchPending) return;
+        searchPending = false;
+        latestDispatch({ type: "SET_SEARCH", q: searchInput.value });
+      }, 0);
     });
     function render(p) {
       const hadSearchFocus = searchInputFocused;
@@ -4563,7 +4595,12 @@ var NimbusGanttApp = (function(exports) {
         clr.textContent = "×";
         clr.title = "Clear search";
         clr.setAttribute("aria-label", "Clear search");
-        clr.addEventListener("click", () => dispatch({ type: "SET_SEARCH", q: "" }));
+        clr.addEventListener("click", () => {
+          if (searchDebounce) clearTimeout(searchDebounce);
+          searchPending = false;
+          searchInput.value = "";
+          dispatch({ type: "SET_SEARCH", q: "" });
+        });
         sw.appendChild(clr);
       }
       inner.appendChild(sw);
@@ -4645,6 +4682,8 @@ var NimbusGanttApp = (function(exports) {
       el: root,
       update: render,
       destroy() {
+        if (searchDebounce) clearTimeout(searchDebounce);
+        searchPending = false;
         clear(root);
         if (root.parentNode) root.parentNode.removeChild(root);
       }
@@ -5605,6 +5644,13 @@ var NimbusGanttApp = (function(exports) {
         descList.style.cssText = "margin-top:3px;color:#475569;font-size:12px;line-height:1.45";
         descList.textContent = descs.join(" · ");
         main.appendChild(descList);
+        if (it.error) {
+          const errLine = document.createElement("div");
+          errLine.setAttribute("data-testid", "audit-preview-error");
+          errLine.style.cssText = "margin-top:3px;color:#dc2626;font-size:11.5px;line-height:1.4;font-weight:500";
+          errLine.textContent = "✗ last commit failed: " + it.error;
+          main.appendChild(errLine);
+        }
         li.appendChild(main);
         if (onReject) {
           const rejectBtn = document.createElement("button");
@@ -5675,25 +5721,36 @@ var NimbusGanttApp = (function(exports) {
     backdrop.addEventListener("click", (e) => {
       if (e.target === backdrop) cleanup();
     });
+    backdrop.tabIndex = -1;
+    backdrop.style.outline = "none";
     const onKey = (e) => {
       if (e.key === "Escape") cleanup();
     };
-    document.addEventListener("keydown", onKey);
+    backdrop.addEventListener("keydown", onKey);
+    try {
+      setTimeout(() => {
+        try {
+          backdrop.focus();
+        } catch (_e) {
+        }
+      }, 0);
+    } catch (_e) {
+    }
     function cleanup() {
-      document.removeEventListener("keydown", onKey);
       if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
     }
   }
+  const KIND_ALIAS = { startDate: "start", endDate: "end", priorityGroup: "group" };
   function summarizeKinds(items) {
     const counts = { dates: 0, group: 0, reorder: 0, parent: 0, other: 0 };
     const covered = /* @__PURE__ */ new Set(["start", "end", "group", "sortOrder", "parentId"]);
     for (const it of items) {
-      const f = new Set(it.fields);
+      const f = new Set(it.fields.map((k) => KIND_ALIAS[k] || k));
       if (f.has("start") || f.has("end")) counts.dates++;
       if (f.has("group")) counts.group++;
       if (f.has("sortOrder") && !f.has("start") && !f.has("end") && !f.has("group")) counts.reorder++;
       if (f.has("parentId")) counts.parent++;
-      if (it.fields.some((k) => !covered.has(k))) counts.other++;
+      if ([...f].some((k) => !covered.has(k))) counts.other++;
     }
     const parts = [];
     if (counts.dates) parts.push(counts.dates + " date");
@@ -7010,6 +7067,7 @@ var NimbusGanttApp = (function(exports) {
             entry = { id: p.taskId, title, fields: [], descs: [] };
             byTask.set(p.taskId, entry);
           }
+          if (p.lastError && !entry.error) entry.error = p.lastError;
           if (p.kind === "edit" && p.changes) {
             for (const k of Object.keys(p.changes)) {
               if (p.changes[k] === void 0) continue;
@@ -7539,12 +7597,18 @@ var NimbusGanttApp = (function(exports) {
         const gi = ganttInst;
         const hasEmit = !!gi && typeof gi.emit === "function";
         const m = openModal({ title: "Auto-Schedule — review changes", width: 560 });
-        if (!hasEmit) {
-          m.body.appendChild(mk(
-            "div",
-            "ngm-note ngm-warn",
-            "Auto-schedule needs the core engine 0.196.1+ (the preview trigger). Re-copy the core bundle, then reload."
-          ));
+        const pluginInstalled = (() => {
+          var _a2;
+          try {
+            const caps = (_a2 = ganttInst.capabilities) == null ? void 0 : _a2.call(ganttInst);
+            const list = caps && typeof caps["pluginsInstalled"] === "string" ? caps["pluginsInstalled"] : "";
+            return !caps || list.indexOf("AutoSchedulePlugin") >= 0;
+          } catch (_e2) {
+            return true;
+          }
+        })();
+        if (!hasEmit || !pluginInstalled) {
+          m.body.appendChild(mk("div", "ngm-note ngm-warn", !hasEmit ? "Auto-schedule needs the core engine 0.196.1+ (the preview trigger). Re-copy the core bundle, then reload." : "AutoSchedulePlugin is not installed in this build (host opt-out). Enable it in mountConfig.autoSchedule, then reload."));
           m.setFooter([{ label: "Close", primary: true, onClick: () => m.close() }]);
           return;
         }
@@ -7559,17 +7623,27 @@ var NimbusGanttApp = (function(exports) {
           }
         })();
         const byId = new Map(allTasks.map((t) => [t.id, t]));
-        const coreSupportsCapacity = (() => {
+        const coreMinor = (() => {
           var _a2;
           try {
             const caps = (_a2 = ganttInst.capabilities) == null ? void 0 : _a2.call(ganttInst);
             const v = caps && typeof caps["version"] === "string" ? caps["version"] : "0";
             const [maj, min] = v.split(".").map((x) => parseInt(x, 10) || 0);
-            return maj > 0 || min >= 204;
+            return maj > 0 ? 999 : min;
           } catch (_e2) {
-            return false;
+            return 0;
           }
         })();
+        const coreSupportsCapacity = coreMinor >= 204;
+        const coreSupportsDataOverride = coreMinor >= 206;
+        function scheduleData() {
+          if (!coreSupportsDataOverride) return null;
+          const schedulable = allTasks.filter((t) => !t.isInactive && !DONE_STAGES[t.stage || ""]);
+          return {
+            tasks: buildTasks(schedulable).filter((t) => !isBucketId(t.id)),
+            dependencies: allDependencies
+          };
+        }
         const LANE_RANK = { "top-priority": 0, "active": 0, "follow-on": 1, "proposed": 2, "deferred": 3 };
         function capacityOverrides() {
           if (!coreSupportsCapacity || !(pace > 0) || !(poolHpm > 0)) return null;
@@ -7601,6 +7675,21 @@ var NimbusGanttApp = (function(exports) {
             void 0,
             "Reflow start/end dates from dependencies (ASAP / critical-path)" + (pace > 0 && poolHpm > 0 ? " + team capacity" : "") + ". Review the proposed changes below — nothing is committed until you Apply."
           ));
+          const cutActive = state.filter && state.filter !== "all" || !!state.search || !!state.hideCompleted;
+          if (cutActive && !coreSupportsDataOverride) {
+            const visN = applyFilter(allTasks, state.filter, state.search).filter((t) => !state.hideCompleted || !DONE_STAGES[t.stage || ""]).length;
+            w.appendChild(mk(
+              "div",
+              "ngm-note ngm-warn",
+              "⚠ A view filter is active: this preview schedules ONLY the " + visN + " visible item" + (visN === 1 ? "" : "s") + " of " + allTasks.length + " on the board (full-board scheduling needs core 0.206+ — re-copy the core bundle). Hidden items’ dependencies and capacity demand are not considered."
+            ));
+          } else if (cutActive) {
+            w.appendChild(mk(
+              "div",
+              "ngm-note",
+              "Schedules the FULL board (" + allTasks.length + " items, completed work excluded) — including items hidden by the current view. Changes to hidden items still stage for review."
+            ));
+          }
           const row = mk("div");
           row.setAttribute("style", "display:flex;align-items:center;gap:6px;margin:10px 0;flex-wrap:wrap");
           const lbl = mk("span", void 0, "Pace");
@@ -7654,7 +7743,9 @@ var NimbusGanttApp = (function(exports) {
             }
             renderReview(changes, result.violations ?? []);
           };
-          if (ov) gi.emit("autoSchedule:preview", ov, cb);
+          const data = scheduleData();
+          const merged = ov || data ? { ...ov || {}, ...data || {} } : null;
+          if (merged) gi.emit("autoSchedule:preview", merged, cb);
           else gi.emit("autoSchedule:preview", cb);
         }
         runPreview();
@@ -7696,6 +7787,14 @@ var NimbusGanttApp = (function(exports) {
             tr.appendChild(eCell);
             tb.appendChild(tr);
           });
+          if (changes.length > 200) {
+            const tr = mk("tr");
+            const td = mk("td", void 0, "…and " + (changes.length - 200) + " more (all included in Apply)");
+            td.setAttribute("colspan", "3");
+            td.setAttribute("style", "color:#94a3b8;font-style:italic");
+            tr.appendChild(td);
+            tb.appendChild(tr);
+          }
           tbl.appendChild(tb);
           m.body.appendChild(tbl);
           const usingHost = !!options.onAutoSchedule || !!options.onPatch;
@@ -7727,8 +7826,15 @@ var NimbusGanttApp = (function(exports) {
                 changes.forEach((c) => options.onPatch({ id: c.id, startDate: c.startDate, endDate: c.endDate }));
               } else {
                 const ov = capacityOverrides();
-                if (ov) gi.emit("autoSchedule:run", ov);
+                const data = scheduleData();
+                const merged = ov || data ? { ...ov || {}, ...data || {} } : null;
+                if (merged) gi.emit("autoSchedule:run", merged);
                 else gi.emit("autoSchedule:run");
+                for (const c of changes) {
+                  const idx = allTasks.findIndex((t) => t.id === c.id);
+                  if (idx === -1) continue;
+                  allTasks[idx] = { ...allTasks[idx], startDate: c.startDate, endDate: c.endDate };
+                }
               }
               m.close();
             } }
@@ -8251,7 +8357,8 @@ var NimbusGanttApp = (function(exports) {
         const filterDef = (tplConfig.filters || []).find((f) => f.id === state.filter);
         const cut = [
           filterDef && filterDef.id !== "all" ? 'the "' + filterDef.label + '" view' : "",
-          state.search ? 'search "' + state.search + '"' : ""
+          state.search ? 'search "' + state.search + '"' : "",
+          state.hideCompleted ? "hide-completed" : ""
         ].filter(Boolean).join(" + ");
         const h = document.createElement("div");
         h.style.cssText = "font-size:15px;font-weight:700;color:#334155";
@@ -8269,6 +8376,7 @@ var NimbusGanttApp = (function(exports) {
         btn.addEventListener("click", () => {
           dispatch({ type: "SET_SEARCH", q: "" });
           dispatch({ type: "SET_FILTER", id: "all" });
+          if (state.hideCompleted) dispatch({ type: "TOGGLE_HIDE_COMPLETED" });
         });
         wrap.appendChild(btn);
         try {
@@ -8322,7 +8430,7 @@ var NimbusGanttApp = (function(exports) {
         ganttHost.innerHTML = "";
         if (state.viewMode === "gantt") {
           initGantt(ganttHost);
-          syncEmptyState(applyFilter(allTasks, state.filter, state.search).length);
+          syncEmptyState(applyFilter(allTasks, state.filter, state.search).filter((t) => !state.hideCompleted || !DONE_STAGES[t.stage || ""]).length);
         } else if (state.viewMode === "list") {
           const auditTasks = applyFilter(allTasks, state.filter, state.search);
           renderAuditListView(ganttHost, auditTasks, {
@@ -8684,48 +8792,77 @@ var NimbusGanttApp = (function(exports) {
             const skip = skippedCommitTaskIds;
             scoped = all.filter((p) => !skip.has(p.taskId));
           }
+          const armedSkips = skippedCommitTaskIds;
           skippedCommitTaskIds = /* @__PURE__ */ new Set();
           const edits = scoped.filter((p) => p.kind === "edit");
           const reorders = scoped.filter((p) => p.kind === "reorder");
           const ordered = [...edits, ...reorders];
           const committed = [];
+          const commitOne = async (p) => {
+            if (p.kind === "edit" && p.changes) {
+              if (options.onItemEdit) {
+                await options.onItemEdit(p.taskId, p.changes);
+              } else if (options.onPatch) {
+                await Promise.resolve(options.onPatch({
+                  id: p.taskId,
+                  startDate: p.changes.startDate,
+                  endDate: p.changes.endDate
+                }));
+              }
+            } else if (p.kind === "reorder" && p.reorderPayload) {
+              if (options.onItemReorder) {
+                const newIndex = typeof p.reorderPayload.sortOrder === "number" ? p.reorderPayload.sortOrder : 0;
+                const payload = { newIndex };
+                if (p.reorderPayload.parentId !== void 0) payload.newParentId = p.reorderPayload.parentId;
+                if (p.reorderPayload.priorityGroup !== void 0) payload.newPriorityGroup = p.reorderPayload.priorityGroup;
+                const rp = p.reorderPayload;
+                if (rp.position !== void 0) payload.position = rp.position;
+                if (rp.beforeTaskId !== void 0) payload.beforeTaskId = rp.beforeTaskId;
+                if (rp.afterTaskId !== void 0) payload.afterTaskId = rp.afterTaskId;
+                await options.onItemReorder(p.taskId, payload);
+              } else if (options.onPatch) {
+                await Promise.resolve(options.onPatch({
+                  id: p.taskId,
+                  parentId: p.reorderPayload.parentId,
+                  priorityGroup: p.reorderPayload.priorityGroup,
+                  sortOrder: p.reorderPayload.sortOrder
+                }));
+              }
+            }
+          };
+          const settleSuccess = (p) => {
+            pendingBuffer.delete(p.taskId + "::" + p.kind);
+            const stillBuffered = pendingBuffer.has(p.taskId + "::edit") || pendingBuffer.has(p.taskId + "::reorder");
+            if (!stillBuffered) dirtyTaskIds.delete(p.taskId);
+            committed.push(p);
+          };
+          if (opts == null ? void 0 : opts.continueOnError) {
+            const results = [];
+            const failed = [];
+            for (const p of ordered) {
+              try {
+                await commitOne(p);
+                settleSuccess(p);
+                delete p.lastError;
+                results.push({ taskId: p.taskId, kind: p.kind, ok: true });
+              } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                p.lastError = msg;
+                failed.push(p);
+                results.push({ taskId: p.taskId, kind: p.kind, ok: false, error: msg });
+              }
+            }
+            if (failed.length) skippedCommitTaskIds = armedSkips;
+            syncPendingChanges();
+            refreshGantt();
+            return { committed, failed, results };
+          }
           for (const p of ordered) {
             try {
-              if (p.kind === "edit" && p.changes) {
-                if (options.onItemEdit) {
-                  await options.onItemEdit(p.taskId, p.changes);
-                } else if (options.onPatch) {
-                  await Promise.resolve(options.onPatch({
-                    id: p.taskId,
-                    startDate: p.changes.startDate,
-                    endDate: p.changes.endDate
-                  }));
-                }
-              } else if (p.kind === "reorder" && p.reorderPayload) {
-                if (options.onItemReorder) {
-                  const newIndex = typeof p.reorderPayload.sortOrder === "number" ? p.reorderPayload.sortOrder : 0;
-                  const payload = { newIndex };
-                  if (p.reorderPayload.parentId !== void 0) payload.newParentId = p.reorderPayload.parentId;
-                  if (p.reorderPayload.priorityGroup !== void 0) payload.newPriorityGroup = p.reorderPayload.priorityGroup;
-                  const rp = p.reorderPayload;
-                  if (rp.position !== void 0) payload.position = rp.position;
-                  if (rp.beforeTaskId !== void 0) payload.beforeTaskId = rp.beforeTaskId;
-                  if (rp.afterTaskId !== void 0) payload.afterTaskId = rp.afterTaskId;
-                  await options.onItemReorder(p.taskId, payload);
-                } else if (options.onPatch) {
-                  await Promise.resolve(options.onPatch({
-                    id: p.taskId,
-                    parentId: p.reorderPayload.parentId,
-                    priorityGroup: p.reorderPayload.priorityGroup,
-                    sortOrder: p.reorderPayload.sortOrder
-                  }));
-                }
-              }
-              pendingBuffer.delete(p.taskId + "::" + p.kind);
-              const stillBuffered = pendingBuffer.has(p.taskId + "::edit") || pendingBuffer.has(p.taskId + "::reorder");
-              if (!stillBuffered) dirtyTaskIds.delete(p.taskId);
-              committed.push(p);
+              await commitOne(p);
+              settleSuccess(p);
             } catch (err) {
+              skippedCommitTaskIds = armedSkips;
               syncPendingChanges();
               refreshGantt();
               throw { failedAt: p, successful: committed, error: err };
@@ -8770,6 +8907,7 @@ var NimbusGanttApp = (function(exports) {
           }
           pendingBuffer.clear();
           dirtyTaskIds.clear();
+          skippedCommitTaskIds = /* @__PURE__ */ new Set();
           syncPendingChanges();
           refreshGantt();
         },
