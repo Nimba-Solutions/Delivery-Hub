@@ -15,7 +15,36 @@ private class DeliveryHubSetupControllerTest {
         System.runAs(testUser) {
             DeliveryHubSetupController.SetupStatus status = DeliveryHubSetupController.getSetupStatus();
             System.assertNotEquals(null, status, 'SetupStatus should not be null');
+            System.assert(String.isNotBlank(status.mothershipName),
+                'SetupStatus carries the resolved mothership name for LWC display');
         }
+    }
+
+    @IsTest
+    static void testMothershipNameFallbackWhenCmtMissing() {
+        System.assertEquals('Cloud Nimbus LLC',
+            DeliveryHubSetupController.mothershipNamePrefix(null),
+            'Null CMT row falls back to the legacy literal');
+    }
+
+    @IsTest
+    static void testMothershipNameFallbackWhenFieldBlank() {
+        CloudNimbusGlobalSettings__mdt cfg = new CloudNimbusGlobalSettings__mdt(
+            MothershipEntityNameTxt__c = '  '
+        );
+        System.assertEquals('Cloud Nimbus LLC',
+            DeliveryHubSetupController.mothershipNamePrefix(cfg),
+            'Blank CMT field falls back to the legacy literal');
+    }
+
+    @IsTest
+    static void testMothershipNameUsesConfiguredValue() {
+        CloudNimbusGlobalSettings__mdt cfg = new CloudNimbusGlobalSettings__mdt(
+            MothershipEntityNameTxt__c = 'EXAMPLE_PARTNER_NAME'
+        );
+        System.assertEquals('EXAMPLE_PARTNER_NAME',
+            DeliveryHubSetupController.mothershipNamePrefix(cfg),
+            'Configured CMT value wins over the literal');
     }
 
     @IsTest

@@ -208,23 +208,13 @@ global with sharing class DeliveryNotificationService {
      *              DeliveryHubSettings__c.ApproverUserIdTxt__c (Text-18 user
      *              id — custom settings cannot hold lookups). Blank or
      *              malformed values resolve to null so callers can skip
-     *              silently; same parse shape as
-     *              DeliveryWorkApprovalService.resolveDefaultApproverId.
+     *              silently. Kept as a public pass-through (external callers
+     *              exist, e.g. DeliveryWorkItemTriggerHandler); the parse
+     *              itself now lives in the canonical DeliveryApproverService.
      * @return The configured approver's user id, or null.
      */
     public static Id resolveConfiguredApproverId() {
-        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        if (settings == null || String.isBlank(settings.ApproverUserIdTxt__c)) {
-            return null;
-        }
-        try {
-            return Id.valueOf(settings.ApproverUserIdTxt__c.trim());
-        } catch (Exception e) {
-            System.debug(LoggingLevel.WARN,
-                '[DeliveryNotificationService.resolveConfiguredApproverId] bad id in settings: '
-                + e.getMessage());
-            return null;
-        }
+        return DeliveryApproverService.resolveDefaultApproverId();
     }
 
     // ────────────────────────────────────────────────────────────────────

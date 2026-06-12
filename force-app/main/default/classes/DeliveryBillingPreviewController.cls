@@ -22,11 +22,11 @@
  *               against the cap; there is no per-invoice billed-to-date
  *               ledger yet).
  *
- *               Dollars: mirrors DeliveryHoursAnalyticsController's
- *               resolveBlendedRate — a single blended hourly rate is surfaced
- *               only when EXACTLY ONE active NetworkEntity__c carries a
- *               DefaultHourlyRateCurrency__c; zero or many distinct rates is
- *               ambiguous → hours-only display.
+ *               Dollars: via the canonical DeliveryRateService.
+ *               resolveBlendedRate (shared with the pacing card and cart) — a
+ *               single blended hourly rate is surfaced only when EXACTLY ONE
+ *               active NetworkEntity__c carries a DefaultHourlyRateCurrency__c;
+ *               zero or many rated entities is ambiguous → hours-only display.
  *
  *               SOQL is WITH SYSTEM_MODE per CLAUDE.md (WITH USER_MODE breaks
  *               in namespaced package test context). Kept separate from
@@ -172,7 +172,7 @@ public with sharing class DeliveryBillingPreviewController {
 
         sortRowsByMonthLoggedDesc(dto.rows);
 
-        dto.blendedRate = resolveBlendedRate();
+        dto.blendedRate = DeliveryRateService.resolveBlendedRate();
         if (dto.blendedRate != null) {
             dto.totalBillableAmount = (dto.totalBillable * dto.blendedRate)
                 .setScale(2, System.RoundingMode.HALF_UP);
@@ -317,29 +317,4 @@ public with sharing class DeliveryBillingPreviewController {
         }
     }
 
-    /**
-     * @description Reads a single blended hourly rate when EXACTLY ONE active
-     *              NetworkEntity carries a DefaultHourlyRateCurrency__c, so the
-     *              LWC can render the ≈ $ figure. Returns null when zero or
-     *              many distinct rates exist (ambiguous — hours-only display).
-     *              Mirrors DeliveryHoursAnalyticsController.resolveBlendedRate
-     *              (private there) so the billing preview and the pacing card
-     *              can never disagree on the rate.
-     * @return The single blended rate, or null when ambiguous.
-     */
-    private static Decimal resolveBlendedRate() {
-        List<NetworkEntity__c> rated = [
-            SELECT DefaultHourlyRateCurrency__c
-            FROM NetworkEntity__c
-            WHERE DefaultHourlyRateCurrency__c != NULL
-              AND DefaultHourlyRateCurrency__c > 0
-              AND StatusPk__c = 'Active'
-            WITH SYSTEM_MODE
-            LIMIT 2
-        ];
-        if (rated.size() == 1) {
-            return rated[0].DefaultHourlyRateCurrency__c;
-        }
-        return null;
-    }
 }

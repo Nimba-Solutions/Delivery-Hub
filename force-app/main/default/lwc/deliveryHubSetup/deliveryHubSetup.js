@@ -111,6 +111,12 @@ export default class DeliveryHubSetup extends LightningElement {
         return true;
     }
 
+    /** Apex-resolved partner/mothership display name (CMT-driven); generic
+     *  fallback when the wire has not resolved or the name is blank. */
+    get partnerName() {
+        return (this.status && this.status.mothershipName) || 'your delivery partner';
+    }
+
     get entityStatus() {
         return this.status.entity && this.status.entity.StatusPk__c
             ? this.status.entity.StatusPk__c
@@ -129,7 +135,7 @@ export default class DeliveryHubSetup extends LightningElement {
             })
             .then(() => {
                 this.connectingStep = '';
-                this.showToast('Connected!', 'Your org is now linked to Cloud Nimbus LLC.', 'success');
+                this.showToast('Connected!', 'Your org is now linked to ' + this.partnerName + '.', 'success');
                 return refreshApex(this._wiredStatusResult);
             })
             .catch(error => {

@@ -16,6 +16,8 @@ global without sharing class DeliveryHubSetupController {
         @AuraEnabled public Boolean isMothership;
         @AuraEnabled public String requiredRemoteSite;
         @AuraEnabled public NetworkEntity__c entity;
+        /** Resolved mothership/vendor display name (CMT-driven, never blank). */
+        @AuraEnabled public String mothershipName;
     }
 
     /** @description DTO holding prerequisite check results for the setup wizard. */
@@ -69,6 +71,7 @@ global without sharing class DeliveryHubSetupController {
         } else {
             status.isConnected = false;
         }
+        status.mothershipName = mothershipNamePrefix();
         return status;
     }
 
@@ -77,12 +80,24 @@ global without sharing class DeliveryHubSetupController {
      *              CloudNimbusGlobalSettings__mdt.Default.MothershipEntityNameTxt__c,
      *              falling back to the legacy literal "Cloud Nimbus LLC" when the
      *              metadata field is unset (preserves behaviour for orgs upgrading
-     *              from before the field existed).
+     *              from before the field existed). Public so other surfaces
+     *              (e.g. the weekly-digest email footer) share the one brand
+     *              resolution instead of hard-coding the literal.
      * @return The configured mothership entity name.
      */
+    public static String mothershipNamePrefix() {
+        return mothershipNamePrefix(CloudNimbusGlobalSettings__mdt.getInstance('Default'));
+    }
+
+    /**
+     * @description Parse-level overload so tests can exercise the fallback
+     *              paths (the shipped CMT row is visible in test context and
+     *              cannot be blanked with DML).
+     * @param cfg The global-settings CMT row (may be null).
+     * @return MothershipEntityNameTxt__c when set, else "Cloud Nimbus LLC".
+     */
     @TestVisible
-    private static String mothershipNamePrefix() {
-        CloudNimbusGlobalSettings__mdt cfg = CloudNimbusGlobalSettings__mdt.getInstance('Default');
+    private static String mothershipNamePrefix(CloudNimbusGlobalSettings__mdt cfg) {
         if (cfg != null && String.isNotBlank(cfg.MothershipEntityNameTxt__c)) {
             return cfg.MothershipEntityNameTxt__c;
         }
