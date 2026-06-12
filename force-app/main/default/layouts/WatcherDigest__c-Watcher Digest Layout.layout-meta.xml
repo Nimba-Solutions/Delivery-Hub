@@ -72,6 +72,10 @@
                 <behavior>Edit</behavior>
                 <field>ErrorMessageTxt__c</field>
             </layoutItems>
+            <layoutItems>
+                <behavior>Edit</behavior>
+                <field>SlackResponseTxt__c</field>
+            </layoutItems>
         </layoutColumns>
         <style>OneColumn</style>
     </layoutSections>

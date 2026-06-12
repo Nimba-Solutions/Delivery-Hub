@@ -1183,6 +1183,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>WatcherDigest__c.SlackResponseTxt__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>WatcherDigest__c.StatusPk__c</field>
         <readable>true</readable>
     </fieldPermissions>

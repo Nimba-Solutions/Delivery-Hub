@@ -73,8 +73,16 @@ global with sharing class DeliveryWatcherService {
         result.status = computeStatus(result);
         result.digestBodyMarkdown = buildBodyMarkdown(result);
 
-        persistDigest(result, settings);
-        postSlackIfRecipients(result, settings);
+        // Slack BEFORE persist so the digest row reflects actual delivery
+        // outcome on first insert (no second DML round trip). Synchronous
+        // callout — see DeliverySlackService.postWatcherDigest header for the
+        // architecture note.
+        DeliverySlackService.SlackPostResultDTO slackOutcome = postSlackIfRecipients(result, settings);
+        if (slackOutcome != null && slackOutcome.attempted && !slackOutcome.delivered) {
+            result.status = 'Slack_Failed';
+        }
+
+        persistDigest(result, settings, slackOutcome);
         stampHeartbeat(settings, result.status);
         return result;
     }
@@ -269,10 +277,13 @@ global with sharing class DeliveryWatcherService {
     }
 
     /**
-     * @description Computes the run-level status: Failed if every signal
-     *              threw, Partial if at least one threw, Success otherwise.
-     *              A signal "succeeded" when its DTO slot is non-null
-     *              (PR-C onward: SLA / Stuck / AR each contribute).
+     * @description Computes the signal-collection status: Failed if every
+     *              signal threw, Partial if at least one threw, Success
+     *              otherwise. A signal "succeeded" when its DTO slot is
+     *              non-null (PR-C onward: SLA / Stuck / AR each contribute).
+     *              Slack-delivery outcome is a separate downgrade applied by
+     *              the caller after the post (`Slack_Failed` overrides
+     *              `Success` when the webhook 4xx/5xx'd or threw).
      * @param result Aggregated result.
      * @return One of `Success`, `Partial`, `Failed` (GVS-backed).
      */
@@ -311,11 +322,19 @@ global with sharing class DeliveryWatcherService {
     /**
      * @description Inserts a WatcherDigest__c audit row capturing this run.
      *              Wrapped in try/catch — persistence must not nullify a
-     *              successful sweep.
-     * @param result   Aggregated result.
-     * @param settings Org-default settings row.
+     *              successful sweep. Receives the Slack delivery outcome so
+     *              the row's StatusPk__c and SlackResponseTxt__c reflect what
+     *              actually happened (closes Flow 8 #3 audit gap — subscribers
+     *              previously saw `Success` even when the webhook 4xx/5xx'd).
+     * @param result       Aggregated result.
+     * @param settings     Org-default settings row.
+     * @param slackOutcome Slack post outcome; null when no post was attempted.
      */
-    private static void persistDigest(WatcherRunResultDTO result, DeliveryHubSettings__c settings) {
+    private static void persistDigest(
+        WatcherRunResultDTO result,
+        DeliveryHubSettings__c settings,
+        DeliverySlackService.SlackPostResultDTO slackOutcome
+    ) {
         try {
             WatcherDigest__c row = new WatcherDigest__c(
                 RunDateTime__c = Datetime.now(),
@@ -327,6 +346,7 @@ global with sharing class DeliveryWatcherService {
                 FlaggedDocumentIdsTxt__c = buildFlaggedDocumentIds(result),
                 ErrorMessageTxt__c = buildErrorMessageTxt(result),
                 RecipientUserIdsTxt__c = truncate(settings.WatcherDigestRecipientUserIdsTxt__c, 255),
+                SlackResponseTxt__c = buildSlackResponseTxt(slackOutcome),
                 RunModePk__c = Test.isRunningTest() ? 'Test' : 'Scheduled'
             );
             insert row;
@@ -335,6 +355,27 @@ global with sharing class DeliveryWatcherService {
             System.debug(LoggingLevel.WARN,
                 '[DeliveryWatcherService] WatcherDigest__c insert failed: ' + e.getMessage());
         }
+    }
+
+    /**
+     * @description Returns the SlackResponseTxt__c value to persist. Empty
+     *              when no Slack post was attempted (quiet day, no recipient
+     *              list, master-flag-off path) or when delivery succeeded
+     *              (we only persist the response text on failure for the
+     *              audit trail — keeps successful-day rows compact). The
+     *              response text is already clipped to 255 chars by
+     *              DeliverySlackService.
+     * @param slackOutcome Outcome from the Slack post; null when not attempted.
+     * @return Slack response preview when delivery failed, otherwise empty.
+     */
+    private static String buildSlackResponseTxt(DeliverySlackService.SlackPostResultDTO slackOutcome) {
+        if (slackOutcome == null || !slackOutcome.attempted) {
+            return '';
+        }
+        if (slackOutcome.delivered) {
+            return '';
+        }
+        return slackOutcome.responseText == null ? '' : slackOutcome.responseText;
     }
 
     /**
@@ -423,27 +464,45 @@ global with sharing class DeliveryWatcherService {
      * @description Posts the Block Kit payload to Slack when (a) a recipient
      *              list is configured AND (b) the formatter returned a
      *              non-null payload (quiet days return null → silent).
+     *              Returns the Slack delivery outcome so the caller can
+     *              reflect it on the WatcherDigest__c row's StatusPk__c +
+     *              SlackResponseTxt__c. Any exception thrown while building
+     *              the payload is captured in the returned DTO so persistence
+     *              still happens.
      * @param result   Aggregated result.
      * @param settings Org-default settings row.
+     * @return SlackPostResultDTO with `attempted=false` when no post was
+     *         attempted (no recipients / quiet day / payload-build failure);
+     *         otherwise the actual outcome from DeliverySlackService.
      */
-    private static void postSlackIfRecipients(WatcherRunResultDTO result, DeliveryHubSettings__c settings) {
+    private static DeliverySlackService.SlackPostResultDTO postSlackIfRecipients(
+        WatcherRunResultDTO result,
+        DeliveryHubSettings__c settings
+    ) {
+        DeliverySlackService.SlackPostResultDTO skipped = new DeliverySlackService.SlackPostResultDTO();
         if (String.isBlank(settings.WatcherDigestRecipientUserIdsTxt__c)) {
-            return;
+            return skipped;
         }
         try {
             String label = Datetime.now().format('yyyy-MM-dd HH:mm');
             Map<String, Object> blockKit = DeliveryWatcherDigestFormatter.buildBlockKit(result, label);
             if (blockKit == null) {
-                return; // Quiet day — Slack silent, audit row already written.
+                return skipped; // Quiet day — Slack silent, audit row still written.
             }
             String channelOverride = settings.WatcherDigestSlackChannelTxt__c;
             if (String.isNotBlank(channelOverride)) {
                 blockKit.put('channel', channelOverride);
             }
-            DeliverySlackService.postWatcherDigest(JSON.serialize(blockKit));
+            return DeliverySlackService.postWatcherDigest(JSON.serialize(blockKit));
         } catch (Exception e) {
-            System.debug(LoggingLevel.WARN,
-                '[DeliveryWatcherService] Slack post failed: ' + e.getMessage());
+            // Payload-build failure: don't poison the run, but DO surface the
+            // failure as a Slack-side problem so the audit reflects it.
+            DeliverySlackService.SlackPostResultDTO buildFail = new DeliverySlackService.SlackPostResultDTO();
+            buildFail.attempted = true;
+            buildFail.delivered = false;
+            String msg = 'Payload build failed: ' + e.getTypeName() + ': ' + e.getMessage();
+            buildFail.responseText = msg.length() > 255 ? msg.substring(0, 255) : msg;
+            return buildFail;
         }
     }
 
@@ -451,15 +510,20 @@ global with sharing class DeliveryWatcherService {
 
     /**
      * @description Stamps LastWatcherHeartbeatDateTime__c on the org-default
-     *              settings when the run succeeded (or partially succeeded).
+     *              settings when the signal-collection sweep succeeded (or
+     *              partially succeeded, OR succeeded-but-Slack-failed).
+     *              Heartbeat tracks "the watcher woke up and queried", which
+     *              is independent of Slack delivery — a Slack outage must not
+     *              keep the 14-day stabilization gate from clearing. Only
+     *              `Failed` (orchestrator-side blow-up) skips the stamp.
      *              Used by the scheduler's idempotency gate AND the 14-day
      *              stabilization gate that precedes Phase 3 auto-digest.
      * @param settings Org-default settings row (already loaded).
-     * @param status   Run status (Success / Partial / Failed).
+     * @param status   Run status (Success / Partial / Failed / Slack_Failed).
      */
     private static void stampHeartbeat(DeliveryHubSettings__c settings, String status) {
         if (status == 'Failed') {
-            return; // Heartbeat tracks successful runs only.
+            return; // Heartbeat tracks successful sweeps only; Slack_Failed still counts.
         }
         try {
             settings.LastWatcherHeartbeatDateTime__c = Datetime.now();

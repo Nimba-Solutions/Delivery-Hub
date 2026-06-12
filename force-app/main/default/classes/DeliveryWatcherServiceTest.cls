@@ -11,6 +11,11 @@
  *                - signal-throw → captured into errorMessages (validated
  *                  via tampered settings shape would be too invasive;
  *                  rely on stub flag-gate to keep coverage tractable)
+ *                - Slack 2xx → StatusPk__c='Success', SlackResponseTxt__c empty
+ *                - Slack 4xx → StatusPk__c='Slack_Failed', SlackResponseTxt__c populated
+ *                - Slack 5xx → StatusPk__c='Slack_Failed', SlackResponseTxt__c populated
+ *                - CalloutException → StatusPk__c='Slack_Failed', SlackResponseTxt__c contains exception
+ *                  (closes Flow 8 #3 audit gap from e2e-walkthrough-2026-05-21.md)
  * @author Cloud Nimbus LLC
  */
 @IsTest
@@ -19,22 +24,68 @@ private class DeliveryWatcherServiceTest {
     private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
 
     /**
-     * @description Mock that always returns 200 OK for the Slack callout.
+     * @description Configurable Slack mock — defaults to 200 OK for the
+     *              existing happy-path tests; the Slack-delivery-status
+     *              tests construct it with explicit status + body.
      */
     private class SlackMock implements HttpCalloutMock {
         public Integer callCount = 0;
+        public Integer statusCode = 200;
+        public String body = 'ok';
+        public String statusText = 'OK';
+
         /**
-         * @description Records each invocation + returns a canned 200 OK so the
-         *              @future callout path executes end-to-end in test context.
+         * @description Default constructor — 200 OK.
+         */
+        public SlackMock() {}
+
+        /**
+         * @description Configurable constructor for the new Slack-delivery-
+         *              status tests.
+         * @param statusCode  HTTP status to return.
+         * @param statusText  HTTP status line text (e.g. "Bad Request").
+         * @param body        Response body to return.
+         */
+        public SlackMock(Integer statusCode, String statusText, String body) {
+            this.statusCode = statusCode;
+            this.statusText = statusText;
+            this.body = body;
+        }
+
+        /**
+         * @description Records each invocation + returns a canned response so
+         *              the synchronous callout path executes end-to-end in test
+         *              context.
          * @param req Inbound HttpRequest from DeliverySlackService.postWatcherDigest.
-         * @return Canned HttpResponse (status 200, body "ok").
+         * @return Canned HttpResponse with configured status + body.
          */
         public HttpResponse respond(HttpRequest req) {
             this.callCount++;
             HttpResponse res = new HttpResponse();
-            res.setStatusCode(200);
-            res.setBody('ok');
+            res.setStatusCode(this.statusCode);
+            res.setStatus(this.statusText);
+            res.setBody(this.body);
             return res;
+        }
+    }
+
+    /**
+     * @description Mock that simulates a CalloutException (e.g. DNS failure /
+     *              SSL error / timeout). Used by the Slack-delivery-status
+     *              test that proves CalloutException → Slack_Failed.
+     */
+    private class ThrowingSlackMock implements HttpCalloutMock {
+        public Integer callCount = 0;
+
+        /**
+         * @description Throws a CalloutException so DeliverySlackService can
+         *              catch it and reflect it in the SlackPostResultDTO.
+         * @param req Inbound HttpRequest (unused — we throw before reading).
+         * @return Never returns; always throws.
+         */
+        public HttpResponse respond(HttpRequest req) {
+            this.callCount++;
+            throw new System.CalloutException('Simulated network error: connection refused');
         }
     }
 
@@ -223,6 +274,152 @@ private class DeliveryWatcherServiceTest {
                 'SignalCountsTxt__c should reflect AR:1 — got: ' + rows.get(0).SignalCountsTxt__c);
             System.assert(String.isNotBlank(rows.get(0).FlaggedDocumentIdsTxt__c),
                 'AR invoices should populate FlaggedDocumentIdsTxt__c');
+        }
+    }
+
+    // ── Slack-delivery-status tests (Flow 8 #3 audit gap) ──────────────────
+
+    /**
+     * @description 2xx Slack response → StatusPk__c stays `Success` and
+     *              SlackResponseTxt__c stays empty (we only persist the
+     *              response text on failure to keep success rows compact).
+     */
+    @IsTest
+    static void testSlack2xxKeepsSuccessStatus() {
+        System.runAs(testUser) {
+            insertWatcherEnabledSettings(String.valueOf(UserInfo.getUserId()));
+            seedAlertableWorkItem();
+            SlackMock mock = new SlackMock(200, 'OK', 'ok');
+            Test.setMock(HttpCalloutMock.class, mock);
+
+            Test.startTest();
+            DeliveryWatcherService.WatcherRunResultDTO result =
+                DeliveryWatcherService.runAndReturnSummary();
+            Test.stopTest();
+
+            System.assertEquals('Success', result.status, '2xx Slack response should leave status Success');
+            System.assertEquals(1, mock.callCount, 'Exactly one Slack callout should fire');
+            List<WatcherDigest__c> rows = [
+                SELECT StatusPk__c, SlackResponseTxt__c FROM WatcherDigest__c
+            ];
+            System.assertEquals(1, rows.size(), 'One audit row should have been written');
+            System.assertEquals('Success', rows.get(0).StatusPk__c,
+                'Persisted status should match — 2xx Slack response keeps Success');
+            System.assert(String.isBlank(rows.get(0).SlackResponseTxt__c),
+                'Successful Slack post should not persist response text (keep success rows compact) — got: '
+                + rows.get(0).SlackResponseTxt__c);
+        }
+    }
+
+    /**
+     * @description 4xx Slack response → StatusPk__c downgrades to
+     *              `Slack_Failed` and SlackResponseTxt__c captures the
+     *              response code + body. Closes the false-Success audit gap.
+     */
+    @IsTest
+    static void testSlack4xxDowngradesToSlackFailed() {
+        System.runAs(testUser) {
+            insertWatcherEnabledSettings(String.valueOf(UserInfo.getUserId()));
+            seedAlertableWorkItem();
+            SlackMock mock = new SlackMock(404, 'Not Found', 'no_service');
+            Test.setMock(HttpCalloutMock.class, mock);
+
+            Test.startTest();
+            DeliveryWatcherService.WatcherRunResultDTO result =
+                DeliveryWatcherService.runAndReturnSummary();
+            Test.stopTest();
+
+            System.assertEquals('Slack_Failed', result.status,
+                '4xx Slack response should downgrade status to Slack_Failed');
+            System.assertEquals(1, mock.callCount, 'Exactly one Slack callout should fire');
+            List<WatcherDigest__c> rows = [
+                SELECT StatusPk__c, SlackResponseTxt__c FROM WatcherDigest__c
+            ];
+            System.assertEquals(1, rows.size(), 'One audit row should have been written');
+            System.assertEquals('Slack_Failed', rows.get(0).StatusPk__c,
+                'Persisted status should match — 4xx Slack response → Slack_Failed');
+            System.assert(String.isNotBlank(rows.get(0).SlackResponseTxt__c),
+                'SlackResponseTxt__c should be populated on 4xx');
+            System.assert(rows.get(0).SlackResponseTxt__c.contains('404'),
+                'SlackResponseTxt__c should include the status code 404 — got: '
+                + rows.get(0).SlackResponseTxt__c);
+            System.assert(rows.get(0).SlackResponseTxt__c.contains('no_service'),
+                'SlackResponseTxt__c should include the response body — got: '
+                + rows.get(0).SlackResponseTxt__c);
+
+            // Heartbeat must still stamp on Slack_Failed — signals collected
+            // cleanly, only Slack delivery failed. (See stampHeartbeat docs.)
+            DeliveryHubSettings__c after = DeliveryHubSettings__c.getOrgDefaults();
+            System.assertNotEquals(null, after.LastWatcherHeartbeatDateTime__c,
+                'Heartbeat should still stamp on Slack_Failed (signal sweep succeeded)');
+        }
+    }
+
+    /**
+     * @description 5xx Slack response → StatusPk__c downgrades to
+     *              `Slack_Failed`. Same path as 4xx but proves the >=300
+     *              boundary catches server errors too.
+     */
+    @IsTest
+    static void testSlack5xxDowngradesToSlackFailed() {
+        System.runAs(testUser) {
+            insertWatcherEnabledSettings(String.valueOf(UserInfo.getUserId()));
+            seedAlertableWorkItem();
+            SlackMock mock = new SlackMock(503, 'Service Unavailable', 'try later');
+            Test.setMock(HttpCalloutMock.class, mock);
+
+            Test.startTest();
+            DeliveryWatcherService.WatcherRunResultDTO result =
+                DeliveryWatcherService.runAndReturnSummary();
+            Test.stopTest();
+
+            System.assertEquals('Slack_Failed', result.status,
+                '5xx Slack response should downgrade status to Slack_Failed');
+            List<WatcherDigest__c> rows = [
+                SELECT StatusPk__c, SlackResponseTxt__c FROM WatcherDigest__c
+            ];
+            System.assertEquals('Slack_Failed', rows.get(0).StatusPk__c,
+                'Persisted status should match — 5xx Slack response → Slack_Failed');
+            System.assert(rows.get(0).SlackResponseTxt__c.contains('503'),
+                'SlackResponseTxt__c should include the status code 503 — got: '
+                + rows.get(0).SlackResponseTxt__c);
+        }
+    }
+
+    /**
+     * @description CalloutException during the Slack POST → StatusPk__c
+     *              downgrades to `Slack_Failed` and SlackResponseTxt__c
+     *              captures the exception message (prefixed
+     *              `CalloutException:`).
+     */
+    @IsTest
+    static void testSlackCalloutExceptionDowngradesToSlackFailed() {
+        System.runAs(testUser) {
+            insertWatcherEnabledSettings(String.valueOf(UserInfo.getUserId()));
+            seedAlertableWorkItem();
+            ThrowingSlackMock mock = new ThrowingSlackMock();
+            Test.setMock(HttpCalloutMock.class, mock);
+
+            Test.startTest();
+            DeliveryWatcherService.WatcherRunResultDTO result =
+                DeliveryWatcherService.runAndReturnSummary();
+            Test.stopTest();
+
+            System.assertEquals('Slack_Failed', result.status,
+                'CalloutException should downgrade status to Slack_Failed');
+            System.assertEquals(1, mock.callCount,
+                'Exactly one Slack callout attempt should be made (the one that threw)');
+            List<WatcherDigest__c> rows = [
+                SELECT StatusPk__c, SlackResponseTxt__c FROM WatcherDigest__c
+            ];
+            System.assertEquals('Slack_Failed', rows.get(0).StatusPk__c,
+                'Persisted status should match — CalloutException → Slack_Failed');
+            System.assert(rows.get(0).SlackResponseTxt__c.startsWith('CalloutException:'),
+                'SlackResponseTxt__c should be prefixed with CalloutException: — got: '
+                + rows.get(0).SlackResponseTxt__c);
+            System.assert(rows.get(0).SlackResponseTxt__c.contains('Simulated network error'),
+                'SlackResponseTxt__c should include the exception message — got: '
+                + rows.get(0).SlackResponseTxt__c);
         }
     }
 

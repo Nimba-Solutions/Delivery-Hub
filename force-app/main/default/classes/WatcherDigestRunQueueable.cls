@@ -5,9 +5,11 @@
  *              Enqueued by DeliveryHubScheduler.enqueueWatcherDigestIfDue at
  *              the configured GMT hour once per day. Implements
  *              Database.AllowsCallouts so the orchestrator's downstream
- *              DeliverySlackService.postWatcherDigest @future callout chain
- *              is permitted in the same job. Mirrors
- *              DeliveryForecastAlertQueueable shape.
+ *              DeliverySlackService.postWatcherDigest synchronous callout is
+ *              permitted in the same job. (postWatcherDigest used to be
+ *              @future; it was promoted to synchronous so the WatcherDigest__c
+ *              StatusPk__c can reflect actual Slack delivery outcome —
+ *              closes Flow 8 #3 audit gap.) Mirrors DeliveryForecastAlertQueueable shape.
  * @author Cloud Nimbus LLC
  */
 @SuppressWarnings('PMD.ApexDoc')
