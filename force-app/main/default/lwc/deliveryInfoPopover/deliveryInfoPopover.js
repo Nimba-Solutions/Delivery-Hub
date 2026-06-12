@@ -258,7 +258,7 @@ const INFO_REGISTRY = {
         dataSource:
             'Wires DeliveryWorkApprovalService.getPendingForApprover — every WorkRequest__c at StatusPk__c=Offer Sent assigned to the running user (plus unassigned requests), oldest first. Approve / Approve-with-change / Decline call the service imperatively; approve stamps the decision on the request and lands ClientPreApprovedHoursNumber__c on the WorkItem (a budget INCREASE raises the existing cap by the approved delta), decline stands the request down and parks the item only when nothing was previously approved.',
         description:
-            'The approver\'s pending-work queue. Each Offer-Sent work request shows the item, quoted hours, any requested budget increase, and time in queue — with one-click Approve, an Approve-with-change inline hours/note form, and an inline-reason Decline. Item names click through to the Work Item record.',
+            'The approver\'s pending-work queue. Each Offer-Sent work request shows the item, quoted hours, any requested budget increase, and time in queue — with one-click Approve, an Approve-with-change inline hours/note form, and an inline-reason Decline. Rows with a proposed estimate expose an expandable "Why this estimate" line carrying the proposer\'s reasoning comment, so the estimate negotiation stays on the record. Item names click through to the Work Item record.',
         friendlyName: 'Pending Work Approvals',
         keyFields:
             'WorkRequest__c.StatusPk__c, WorkRequest__c.QuotedHoursNumber__c, WorkRequest__c.RequestedBudgetIncreaseNumber__c, WorkRequest__c.ApproverUserLookup__c, WorkRequest__c.DecisionDateTime__c, WorkItem__c.ClientPreApprovedHoursNumber__c, WorkItem__c.StageNamePk__c'
