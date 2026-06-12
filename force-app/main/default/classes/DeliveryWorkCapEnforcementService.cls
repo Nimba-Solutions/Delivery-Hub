@@ -398,15 +398,15 @@ public with sharing class DeliveryWorkCapEnforcementService {
 
     /**
      * @description Enqueues ONE DeliveryNotificationQueueable per flagged item
-     *              targeting the org-default approver (parsed from
-     *              ApproverUserIdTxt__c, same resolver shape as the shipped
-     *              approval service) plus the item's assigned developer.
+     *              targeting the org-default approver (resolved via the
+     *              canonical DeliveryApproverService) plus the item's
+     *              assigned developer.
      *              No-ops per item when neither target resolves. Never throws.
      * @param flags The drained flag-mode buffer entries.
      */
     @SuppressWarnings('PMD.OperationWithLimitsInLoop') // one queueable per flagged ITEM (already deduped); a flag batch is a handful of items, nowhere near the 50-job trigger limit, and each enqueue is individually guarded so one failure cannot starve the rest
     private static void notifyOverCap(List<PendingFlag> flags) {
-        Id approverId = resolveDefaultApproverId();
+        Id approverId = DeliveryApproverService.resolveDefaultApproverId();
         for (PendingFlag flag : flags) {
             try {
                 Set<Id> targets = new Set<Id>();
@@ -433,26 +433,4 @@ public with sharing class DeliveryWorkCapEnforcementService {
         }
     }
 
-    /**
-     * @description Resolves the org-default approver from
-     *              DeliveryHubSettings__c.ApproverUserIdTxt__c — a private
-     *              copy of the shipped services' resolver (the approval
-     *              service is owned by a parallel change and must not be
-     *              touched). Bad/blank ids resolve to null with a WARN.
-     * @return The configured approver's user id, or null when unset/invalid.
-     */
-    private static Id resolveDefaultApproverId() {
-        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
-        if (settings == null || String.isBlank(settings.ApproverUserIdTxt__c)) {
-            return null;
-        }
-        try {
-            return Id.valueOf(settings.ApproverUserIdTxt__c.trim());
-        } catch (Exception e) {
-            System.debug(LoggingLevel.WARN,
-                '[DeliveryWorkCapEnforcementService.resolveDefaultApproverId] bad id in settings: '
-                + e.getMessage());
-            return null;
-        }
-    }
 }
