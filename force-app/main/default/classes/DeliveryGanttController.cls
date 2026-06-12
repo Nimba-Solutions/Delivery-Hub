@@ -1500,6 +1500,16 @@ public with sharing class DeliveryGanttController {
      *              outer savepoint can roll back cleanly — the public method
      *              wraps in its own try/catch + AuraHandledException, which
      *              would short-circuit our atomicity guarantee.
+     *
+     *              ETA write-back (item 8, NG dispatch-dh-0611-gate2): a patch
+     *              that lands here is COMMITTED (the operator reviewed the
+     *              pendingBuffer and clicked Submit — previews never reach
+     *              this method). Auto-schedule batches (`onAutoSchedule
+     *              {changes}` → _handleAutoSchedule) and manual drag-edits
+     *              both drain through this path, so any committed end-date
+     *              move also stamps WorkItem__c.CalculatedETADate__c in the
+     *              SAME update statement (same transaction, no extra
+     *              round-trip). Start-only moves do not touch the ETA.
      * @param patch The pending-buffer entry of kind="edit".
      */
     private static void applyEditPatch(Map<String, Object> patch) {
@@ -1522,7 +1532,10 @@ public with sharing class DeliveryGanttController {
         }
         Object ed = changes.get('endDate');
         if (ed != null && String.isNotBlank(String.valueOf(ed))) {
-            item.EstimatedEndDevDate__c = Date.valueOf(String.valueOf(ed));
+            Date committedEnd = Date.valueOf(String.valueOf(ed));
+            item.EstimatedEndDevDate__c = committedEnd;
+            // Committed end-date move → the leveled/applied end IS the new ETA.
+            item.CalculatedETADate__c = committedEnd;
         }
         update item; //NOPMD - with sharing class handles CRUD
     }

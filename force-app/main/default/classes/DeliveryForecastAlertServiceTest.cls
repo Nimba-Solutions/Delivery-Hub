@@ -196,6 +196,101 @@ private class DeliveryForecastAlertServiceTest {
         System.assertEquals(0, fired, 'Terminal-stage WIs excluded from sweep');
     }
 
+    // ── Item 8 — divergence alerts (committed-ETA blow / approved-cap blow) ──
+
+    @IsTest
+    static void testEtaDivergenceFiresUnderHoursThreshold() {
+        // 100h estimate, 40h logged at 10h/wk → projected final = 100h = exactly
+        // 100% of scope (UNDER the 110% threshold — the legacy condition is
+        // silent). But remaining 60h at 10h/wk ≈ 6 more weeks, far past the
+        // committed ETA of next week → the ETA-divergence condition must fire.
+        WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'BriefDescriptionTxt__c' => 'ETA diverge',
+            'EstimatedHoursNumber__c' => 100,
+            'EstimatedStartDevDate__c' => Date.today().addDays(-21),
+            'EstimatedEndDevDate__c' => Date.today().addDays(60),
+            'CalculatedETADate__c' => Date.today().addDays(7),
+            'StageNamePk__c' => 'In Development'
+        });
+        insert new List<WorkLog__c>{
+            buildLog(wi.Id, 10, Date.today().addDays(-21)),
+            buildLog(wi.Id, 10, Date.today().addDays(-14)),
+            buildLog(wi.Id, 10, Date.today().addDays(-7)),
+            buildLog(wi.Id, 10, Date.today())
+        };
+        enableFeature(110);
+
+        Test.startTest();
+        Integer fired = DeliveryForecastAlertService.runSweep();
+        Test.stopTest();
+
+        System.assertEquals(1, fired,
+            'Pace blowing the committed CalculatedETADate must fire even under the hours threshold');
+        WorkItem__c after = [SELECT LastForecastAlertDateTime__c FROM WorkItem__c WHERE Id = :wi.Id];
+        System.assertNotEquals(null, after.LastForecastAlertDateTime__c,
+            'Cooldown stamp lands for ETA-divergence alerts too');
+    }
+
+    @IsTest
+    static void testApprovedCapDivergenceFiresUnderHoursThreshold() {
+        // 50h estimate, 40h logged → projected final = 50h = 100% of scope (under
+        // the 110% threshold). But the client approved only 45h → projected 50h
+        // blows the approved cap → the cap-divergence condition must fire.
+        // (Logged 40h stays UNDER the cap so DeliveryWorkCapEnforcementService's
+        // flag path stays out of the picture.)
+        WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'BriefDescriptionTxt__c' => 'Cap diverge',
+            'EstimatedHoursNumber__c' => 50,
+            'ClientPreApprovedHoursNumber__c' => 45,
+            'EstimatedStartDevDate__c' => Date.today().addDays(-21),
+            'EstimatedEndDevDate__c' => Date.today().addDays(28),
+            'StageNamePk__c' => 'In Development'
+        });
+        insert new List<WorkLog__c>{
+            buildLog(wi.Id, 10, Date.today().addDays(-21)),
+            buildLog(wi.Id, 10, Date.today().addDays(-14)),
+            buildLog(wi.Id, 10, Date.today().addDays(-7)),
+            buildLog(wi.Id, 10, Date.today())
+        };
+        enableFeature(110);
+
+        Test.startTest();
+        Integer fired = DeliveryForecastAlertService.runSweep();
+        Test.stopTest();
+
+        System.assertEquals(1, fired,
+            'Projected final blowing the client-approved cap must fire even under the hours threshold');
+    }
+
+    @IsTest
+    static void testNoDivergenceStaysSilentWithEtaAndCapHeadroom() {
+        // Same at-budget shape as testUnderThresholdSilent, but WITH an ETA and a
+        // cap that both have headroom — none of the three conditions fire.
+        WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'BriefDescriptionTxt__c' => 'Healthy item',
+            'EstimatedHoursNumber__c' => 50,
+            'ClientPreApprovedHoursNumber__c' => 60,
+            'EstimatedStartDevDate__c' => Date.today().addDays(-21),
+            'EstimatedEndDevDate__c' => Date.today().addDays(28),
+            'CalculatedETADate__c' => Date.today().addDays(60),
+            'StageNamePk__c' => 'In Development'
+        });
+        insert new List<WorkLog__c>{
+            buildLog(wi.Id, 10, Date.today().addDays(-21)),
+            buildLog(wi.Id, 10, Date.today().addDays(-14)),
+            buildLog(wi.Id, 10, Date.today().addDays(-7)),
+            buildLog(wi.Id, 10, Date.today())
+        };
+        enableFeature(110);
+
+        Test.startTest();
+        Integer fired = DeliveryForecastAlertService.runSweep();
+        Test.stopTest();
+
+        System.assertEquals(0, fired,
+            'On-pace item with ETA + cap headroom must not fire any divergence condition');
+    }
+
     @IsTest
     static void testQueueableDelegates() {
         seedOverBudgetWi();
