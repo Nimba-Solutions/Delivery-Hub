@@ -25,11 +25,49 @@ private class DeliveryWorkApprovalServiceTest {
      * @param approverId Default approver User ID (null = unassigned requests).
      */
     private static void configureSettings(Decimal threshold, Decimal monthlyCap, Id approverId) {
+        configureSettings(threshold, monthlyCap, approverId, null);
+    }
+
+    /**
+     * @description Writes the discretionary-gate org-default settings
+     *              including the optional BACKUP approver.
+     * @param threshold Per-request Auto ceiling (null/0 disables Auto).
+     * @param monthlyCap Monthly Auto budget (null = uncapped).
+     * @param approverId Default approver User ID (null = unassigned requests).
+     * @param backupId Backup approver User ID (null = no backup).
+     */
+    private static void configureSettings(
+        Decimal threshold, Decimal monthlyCap, Id approverId, Id backupId
+    ) {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         settings.DiscretionaryThresholdHoursNumber__c = threshold;
         settings.DiscretionaryMonthlyCapHoursNumber__c = monthlyCap;
         settings.ApproverUserIdTxt__c = approverId == null ? null : String.valueOf(approverId);
+        settings.ApproverBackupUserIdTxt__c = backupId == null ? null : String.valueOf(backupId);
         upsert settings;
+    }
+
+    /**
+     * @description Inserts a second Standard User for caller-guard tests.
+     *              runAs isolates the setup-object DML from sObject DML in the
+     *              calling test (MIXED_DML_OPERATION guard).
+     * @return The inserted user.
+     */
+    private static User createOtherUser() {
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        String stamp = String.valueOf(Datetime.now().getTime())
+            + String.valueOf(Math.abs(Crypto.getRandomInteger())).left(6);
+        User other = new User(
+            Alias = 'wapprv', Email = 'wapprv' + stamp + '@example.com',
+            EmailEncodingKey = 'UTF-8', LastName = 'Approver',
+            LanguageLocaleKey = 'en_US', LocaleSidKey = 'en_US',
+            ProfileId = p.Id, TimeZoneSidKey = 'America/New_York',
+            Username = 'wapprv' + stamp + '@example.com.dhtest'
+        );
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            insert other;
+        }
+        return other;
     }
 
     /**
@@ -404,6 +442,110 @@ private class DeliveryWorkApprovalServiceTest {
         }
         Test.stopTest();
         System.assert(threw, 'a caller other than the assigned approver must be rejected');
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // BACKUP APPROVER (ApproverBackupUserIdTxt__c)
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description The configured BACKUP approver may decide a request
+     *              assigned to the primary: the approve lands and the
+     *              assignment stays with the primary (stampDecision only
+     *              stamps previously-unassigned requests).
+     */
+    @IsTest
+    static void testBackupApproverMayDecide() {
+        User primary = createOtherUser();
+        // Primary = the other user; backup = the running user.
+        configureSettings(null, null, primary.Id, UserInfo.getUserId());
+        WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 10
+        });
+        List<DeliveryWorkApprovalService.SubmitResultDTO> results =
+            DeliveryWorkApprovalService.submitForApproval(new Set<Id>{ wi.Id });
+
+        Test.startTest();
+        DeliveryWorkApprovalService.approve(results[0].workRequestId, 10, 'backup signing off');
+        Test.stopTest();
+
+        WorkRequest__c req = [
+            SELECT StatusPk__c, ApproverUserLookup__c, PreApprovedHoursNumber__c
+            FROM WorkRequest__c WHERE Id = :results[0].workRequestId
+        ];
+        System.assertEquals('Accepted', req.StatusPk__c,
+            'the backup approver\'s decision lands');
+        System.assertEquals(primary.Id, req.ApproverUserLookup__c,
+            'the assignment stays with the primary — the backup decides, not reassigns');
+        System.assertEquals(10, req.PreApprovedHoursNumber__c, 'granted hours stamped');
+
+        WorkItem__c after = [
+            SELECT ClientPreApprovedHoursNumber__c, StageNamePk__c
+            FROM WorkItem__c WHERE Id = :wi.Id
+        ];
+        System.assertEquals(10, after.ClientPreApprovedHoursNumber__c,
+            'canonical cap lands exactly as a primary approve would');
+        System.assertEquals('Ready for Development', after.StageNamePk__c,
+            'approved item is dev-ready');
+    }
+
+    /**
+     * @description A caller who is NEITHER the assigned approver NOR the
+     *              configured backup is still rejected — the backup clause
+     *              must not open the decision surface to everyone.
+     */
+    @IsTest
+    static void testStrangerRejectedEvenWithBackupConfigured() {
+        User other = createOtherUser();
+        // Primary AND backup both point at the other user; the running user
+        // is a stranger to the approval chain.
+        configureSettings(null, null, other.Id, other.Id);
+        WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 10
+        });
+        List<DeliveryWorkApprovalService.SubmitResultDTO> results =
+            DeliveryWorkApprovalService.submitForApproval(new Set<Id>{ wi.Id });
+
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryWorkApprovalService.decline(results[0].workRequestId, 'nope');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+        System.assert(threw,
+            'a stranger must be rejected even when a backup approver is configured');
+        WorkRequest__c req = [
+            SELECT StatusPk__c FROM WorkRequest__c WHERE Id = :results[0].workRequestId
+        ];
+        System.assertEquals('Offer Sent', req.StatusPk__c,
+            'the request stays pending after the rejected attempt');
+    }
+
+    /**
+     * @description The backup approver's queue feed includes requests
+     *              assigned to the PRIMARY approver — primary and backup
+     *              share one queue.
+     */
+    @IsTest
+    static void testGetPendingForBackupIncludesPrimaryQueue() {
+        User primary = createOtherUser();
+        configureSettings(null, null, primary.Id, UserInfo.getUserId());
+        WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 20
+        });
+        DeliveryWorkApprovalService.submitForApproval(new Set<Id>{ wi.Id });
+
+        Test.startTest();
+        List<DeliveryWorkApprovalService.PendingApprovalDTO> queue =
+            DeliveryWorkApprovalService.getPendingForApprover(null); // running user = backup
+        Test.stopTest();
+
+        System.assertEquals(1, queue.size(),
+            'the backup sees the request assigned to the primary');
+        System.assertEquals(primary.Id, queue[0].approverUserId,
+            'the row is still assigned to the primary');
     }
 
     // ────────────────────────────────────────────────────────────────────

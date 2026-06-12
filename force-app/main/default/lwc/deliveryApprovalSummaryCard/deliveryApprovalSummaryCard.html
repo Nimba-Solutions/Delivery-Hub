@@ -28,6 +28,10 @@
         </template>
 
         <template lwc:if={hasData}>
+            <div class="agenda-pitch">
+                <span class="pitch-label">Client approved</span>
+                <span class="pitch-stat">{approvedShareStat}</span>
+            </div>
             <div class="agenda-tiles">
                 <template for:each={tiles} for:item="tile">
                     <button key={tile.key}

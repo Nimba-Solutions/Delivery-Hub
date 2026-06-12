@@ -5,7 +5,9 @@
  *               approved-this-month sum (Accepted + DecisionDateTime this
  *               month only), the pending count/quoted-hours pair (Offer Sent
  *               only), the in-flight aggregate (cap &gt; 0 AND stage inside the
- *               dev → deploying band), and the empty-org zero defaults.
+ *               dev → deploying band), the approved-vs-total pitch pair
+ *               (active portfolio scope only — activated, non-archived,
+ *               non-template, non-terminal), and the empty-org zero defaults.
  *               Report-id resolution is asserted shape-only — the agenda
  *               reports may not be deployed in a bare scratch context, which
  *               is the documented missing-report tolerance.
@@ -130,6 +132,55 @@ private class DeliveryApprovalSummaryControllerTest {
     }
 
     /**
+     * @description The pitch pair sums estimates and caps over the ACTIVE
+     *              portfolio scope only: terminal-stage, non-activated,
+     *              template, and archived items are all excluded from both
+     *              the denominator and the approved numerator.
+     */
+    @IsTest
+    static void testApprovedShareSumsActiveScopeOnly() {
+        TestDataFactory.createWorkItem(new Map<String, Object>{
+            'StageNamePk__c' => 'In Development',
+            'EstimatedHoursNumber__c' => 100,
+            'ClientPreApprovedHoursNumber__c' => 10
+        });
+        TestDataFactory.createWorkItem(new Map<String, Object>{
+            'StageNamePk__c' => 'Backlog',
+            'EstimatedHoursNumber__c' => 50
+        }); // active, estimated, not yet approved — denominator only
+        TestDataFactory.createWorkItem(new Map<String, Object>{
+            'StageNamePk__c' => 'Done',
+            'EstimatedHoursNumber__c' => 40,
+            'ClientPreApprovedHoursNumber__c' => 40
+        }); // terminal stage — excluded from both sums
+        TestDataFactory.createWorkItem(new Map<String, Object>{
+            'StageNamePk__c' => 'Backlog',
+            'EstimatedHoursNumber__c' => 30,
+            'ActivatedDateTime__c' => null
+        }); // not activated — excluded
+        TestDataFactory.createWorkItem(new Map<String, Object>{
+            'StageNamePk__c' => 'Backlog',
+            'EstimatedHoursNumber__c' => 20,
+            'TemplateMarkedDateTime__c' => Datetime.now()
+        }); // template — excluded
+        TestDataFactory.createWorkItem(new Map<String, Object>{
+            'StageNamePk__c' => 'Backlog',
+            'EstimatedHoursNumber__c' => 25,
+            'ArchivedDateTime__c' => Datetime.now()
+        }); // archived — excluded
+
+        Test.startTest();
+        DeliveryApprovalSummaryController.ApprovalSummaryDTO dto =
+            DeliveryApprovalSummaryController.getApprovalSummary();
+        Test.stopTest();
+
+        System.assertEquals(150, dto.totalActiveEstimatedHours,
+            '100 + 50 estimated hours in the active scope — excluded items do not count');
+        System.assertEquals(10, dto.totalApprovedHours,
+            'only the active item\'s cap counts toward the approved numerator');
+    }
+
+    /**
      * @description Empty org returns zero defaults (never null numbers) and a
      *              non-null report-id map. Report rows may or may not exist in
      *              the test org — shape-only assertion, mirroring
@@ -147,6 +198,8 @@ private class DeliveryApprovalSummaryControllerTest {
         System.assertEquals(0, dto.pendingQuotedHours, 'zero default, not null');
         System.assertEquals(0, dto.inProgressCount, 'zero default, not null');
         System.assertEquals(0, dto.inProgressApprovedHours, 'zero default, not null');
+        System.assertEquals(0, dto.totalActiveEstimatedHours, 'zero default, not null');
+        System.assertEquals(0, dto.totalApprovedHours, 'zero default, not null');
         System.assertNotEquals(null, dto.reportIdsByDeveloperName,
             'report-id map is always present (possibly empty)');
     }
