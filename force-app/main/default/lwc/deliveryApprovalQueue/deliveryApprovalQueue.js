@@ -5,7 +5,10 @@
  *               work-approval queue). Wires
  *               DeliveryWorkApprovalService.getPendingForApprover and renders
  *               each Offer-Sent WorkRequest__c with inline Approve /
- *               Approve-with-change / Decline actions. After any decision the
+ *               Approve-with-change / Decline actions, plus row checkboxes +
+ *               select-all feeding a bulk "Approve selected (N)" action
+ *               (approveMany — spec §6a) that toasts the approved/failed
+ *               counts from BulkApproveResultDTO. After any decision the
  *               wire is refreshed and a toast confirms the outcome using OUR
  *               labels (AuraHandledException messages come back generic inside
  *               the managed package). Clicking the item name navigates to the
@@ -20,6 +23,7 @@ import { ShowToastEvent } from "lightning/platformShowToastEvent";
 import WORK_ITEM_OBJECT from "@salesforce/schema/WorkItem__c";
 import getPendingForApprover from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.getPendingForApprover";
 import approveApex from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.approve";
+import approveManyApex from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.approveMany";
 import declineApex from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.decline";
 
 const MS_PER_DAY = 86400000;
@@ -31,6 +35,9 @@ export default class DeliveryApprovalQueue extends NavigationMixin(LightningElem
     errorMessage = "";
     isLoading = true;
     isSaving = false;
+
+    // Bulk selection: request ids ticked for "Approve selected".
+    selectedIds = [];
 
     // One inline panel open at a time: the row + which panel.
     activeRequestId = null;
@@ -68,6 +75,7 @@ export default class DeliveryApprovalQueue extends NavigationMixin(LightningElem
                 hasIncrease: dto.requestedIncrease > 0,
                 increaseBadge: `increase +${this._formatHours(dto.requestedIncrease)}h`,
                 ageDisplay: this._ageDisplay(dto.submittedAt),
+                isSelected: this.selectedIds.includes(dto.requestId),
                 isChangeOpen: isActive && this.activeMode === MODE_CHANGE,
                 isDeclineOpen: isActive && this.activeMode === MODE_DECLINE
             };
@@ -86,6 +94,24 @@ export default class DeliveryApprovalQueue extends NavigationMixin(LightningElem
 
     get hasError() {
         return !this.isLoading && this.errorMessage.length > 0;
+    }
+
+    // ── Bulk selection (templates can't do ternaries — getters) ──
+
+    get selectedCount() {
+        return this._selectedPendingIds().length;
+    }
+
+    get bulkApproveLabel() {
+        return `Approve selected (${this.selectedCount})`;
+    }
+
+    get isBulkApproveDisabled() {
+        return this.isSaving || this.selectedCount === 0;
+    }
+
+    get isAllSelected() {
+        return this.pendingRaw.length > 0 && this.selectedCount === this.pendingRaw.length;
     }
 
     // ── Headline numbers ─────────────────────────────────────────
@@ -117,6 +143,50 @@ export default class DeliveryApprovalQueue extends NavigationMixin(LightningElem
                 actionName: "view"
             }
         });
+    }
+
+    // ── Bulk selection actions ───────────────────────────────────
+
+    handleRowSelect(event) {
+        const requestId = event.target.dataset.requestId;
+        if (!requestId) {
+            return;
+        }
+        const next = this.selectedIds.filter((id) => id !== requestId);
+        if (event.target.checked) {
+            next.push(requestId);
+        }
+        this.selectedIds = next;
+    }
+
+    handleSelectAll(event) {
+        this.selectedIds = event.target.checked
+            ? this.pendingRaw.map((dto) => dto.requestId)
+            : [];
+    }
+
+    handleBulkApprove() {
+        const ids = this._selectedPendingIds();
+        if (ids.length === 0 || this.isSaving) {
+            return;
+        }
+        this.isSaving = true;
+        approveManyApex({ workRequestIds: ids, note: null })
+            .then((result) => {
+                this.isSaving = false;
+                this.selectedIds = [];
+                this._closeInline();
+                this._toastBulkOutcome(result);
+                return refreshApex(this.wiredResult);
+            })
+            .catch((err) => {
+                this.isSaving = false;
+                this._toast(
+                    "Bulk approve failed",
+                    this._errorText(err, "The selected requests could not be approved."),
+                    "error"
+                );
+            });
     }
 
     // ── Decision actions ─────────────────────────────────────────
@@ -193,6 +263,38 @@ export default class DeliveryApprovalQueue extends NavigationMixin(LightningElem
     }
 
     // ── Internals ────────────────────────────────────────────────
+
+    // Selected ids still present in the pending feed — stale selections
+    // (rows decided elsewhere then refreshed away) never reach apex.
+    _selectedPendingIds() {
+        const pending = new Set(this.pendingRaw.map((dto) => dto.requestId));
+        return this.selectedIds.filter((id) => pending.has(id));
+    }
+
+    _toastBulkOutcome(result) {
+        const approved = result && result.approvedIds ? result.approvedIds.length : 0;
+        const failed = result && result.failures ? result.failures.length : 0;
+        if (failed === 0) {
+            const noun = approved === 1 ? "request" : "requests";
+            this._toast(
+                "Approved",
+                `${approved} ${noun} approved at the quoted hours.`,
+                "success"
+            );
+        } else if (approved === 0) {
+            this._toast(
+                "Bulk approve failed",
+                `0 approved, ${failed} failed.`,
+                "error"
+            );
+        } else {
+            this._toast(
+                "Partially approved",
+                `${approved} approved, ${failed} failed.`,
+                "warning"
+            );
+        }
+    }
 
     _openInline(requestId, mode) {
         if (!requestId) {
