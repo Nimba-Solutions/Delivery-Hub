@@ -109,6 +109,8 @@ The sync engine handles bidirectional data replication between connected Salesfo
 | **DeliveryHubPoller** | Schedulable. Polls connected vendor orgs for staged changes on a 15-minute schedule. |
 | **DeliveryHubScheduler** | Scheduled tick. Drains Pending SyncItems via `requeuePendingItems()` every 15 minutes in addition to its existing reconciliation and poller work, so Pending backlog self-heals without admin intervention. |
 
+**Sharing rule:** relay-minting paths MUST be `without sharing` (`DeliverySyncEngine`, `DeliveryWorkLogRelayMinter`) — inbound REST runs as the Site Guest User (forced-Private record access), and `WITH SYSTEM_MODE` bypasses FLS but NOT sharing, so eligibility queries inside a `with sharing` class return empty and silently mint nothing (2026-06 nimba incident: 65 WorkLog rows / 138.5h never relayed to the billing org).
+
 ### Push Flow
 
 ```
