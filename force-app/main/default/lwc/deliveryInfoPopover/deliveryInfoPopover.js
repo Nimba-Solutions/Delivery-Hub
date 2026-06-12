@@ -272,6 +272,15 @@ const INFO_REGISTRY = {
         keyFields:
             'WorkRequest__c.StatusPk__c, WorkRequest__c.PreApprovedHoursNumber__c, WorkRequest__c.QuotedHoursNumber__c, WorkRequest__c.DecisionDateTime__c, WorkItem__c.ClientPreApprovedHoursNumber__c, WorkItem__c.EstimatedHoursNumber__c, WorkItem__c.ActivatedDateTime__c, WorkItem__c.StageNamePk__c'
     },
+    deliveryBillingPreview: {
+        dataSource:
+            'Wires DeliveryBillingPreviewController.getBillingPreview for the selected calendar month: one query for every WorkItem__c carrying a client-approved cap (ClientPreApprovedHoursNumber__c > 0), plus two grouped WorkLog__c aggregates — SUM(HoursLoggedNumber__c) inside the month and SUM before the month. Per item: billable = MIN(month logged, MAX(0, cap − logged before)); the excess is over-cap and non-billable until an increase is approved. Dollars appear only when exactly one active NetworkEntity__c carries a DefaultHourlyRateCurrency__c (the same blended-rate resolution the pacing card uses).',
+        description:
+            'The monthly billing close-out — Approved vs Logged vs Billable per work item. The billable total is the invoice preview that should match the actual invoice: hours under each item\'s approved cap bill, hours over the remaining cap headroom are flagged and held non-billable until a budget increase is approved. No invoice surprises.',
+        friendlyName: 'Billing Preview',
+        keyFields:
+            'WorkItem__c.ClientPreApprovedHoursNumber__c, WorkItem__c.BriefDescriptionTxt__c, WorkLog__c.HoursLoggedNumber__c, WorkLog__c.WorkDateDate__c, NetworkEntity__c.DefaultHourlyRateCurrency__c'
+    },
     deliveryWatcherSetup: {
         dataSource:
             'Calls DeliveryWatcherSetupController.getSettings to load the Watcher digest configuration from DeliveryHubSettings__c, and saveSettings to persist it. Flipping the master toggle stamps EnableWatcherDigestDateTime__c; the recipient list is validated against active Users and stored in WatcherDigestRecipientUserIdsTxt__c; an optional Slack webhook override updates the org-wide webhook used by escalations and forecasts.',

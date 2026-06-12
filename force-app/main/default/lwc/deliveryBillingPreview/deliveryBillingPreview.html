@@ -1,0 +1,109 @@
+<template>
+    <div class="billing-card">
+
+        <div class="billing-header">
+            <div class="billing-header-left">
+                <lightning-icon icon-name="standard:invoice" alternative-text="Billing preview" size="small" class="billing-header-icon"></lightning-icon>
+                <div>
+                    <h2 class="billing-title">Billing Preview</h2>
+                    <p class="billing-subtitle">Approved vs logged vs billable &mdash; the invoice preview for the selected month</p>
+                </div>
+            </div>
+            <div class="billing-controls">
+                <c-delivery-info-popover component-name="deliveryBillingPreview"></c-delivery-info-popover>
+                <lightning-combobox
+                    name="billingMonth"
+                    label="Month"
+                    variant="label-hidden"
+                    value={monthValue}
+                    options={monthOptions}
+                    onchange={handleMonthChange}
+                    class="billing-select">
+                </lightning-combobox>
+            </div>
+        </div>
+
+        <template lwc:if={isLoading}>
+            <div class="billing-loading">
+                <lightning-spinner alternative-text="Loading billing preview..." size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <template lwc:if={hasError}>
+            <div class="billing-error">
+                <lightning-icon icon-name="utility:error" size="x-small"></lightning-icon>
+                <span>{errorMessage}</span>
+            </div>
+        </template>
+
+        <template lwc:if={hasData}>
+            <div class="billing-summary-row">
+                <div class="summary-tile summary-tile--billable">
+                    <div class="summary-label">Billable this month</div>
+                    <div class="summary-value">{billableHeadline}</div>
+                    <template lwc:if={hasRate}>
+                        <div class="summary-money">{billableDollarDisplay}</div>
+                    </template>
+                </div>
+                <div class="summary-tile">
+                    <div class="summary-label">Logged this month</div>
+                    <div class="summary-value">{loggedDisplay}</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="summary-label">Approved caps</div>
+                    <div class="summary-value">{approvedCapDisplay}</div>
+                </div>
+                <div class="summary-tile">
+                    <div class="summary-label">Over cap (not billable)</div>
+                    <div class="summary-value summary-value--over">{overCapDisplay}</div>
+                    <template lwc:if={hasOverCapTotal}>
+                        <div class="summary-note">Needs an approved increase</div>
+                    </template>
+                </div>
+            </div>
+
+            <div class="billing-table-wrap">
+                <table class="billing-table">
+                    <thead>
+                        <tr>
+                            <th class="col-label">Work item</th>
+                            <th class="col-num">Approved cap</th>
+                            <th class="col-num">Logged before</th>
+                            <th class="col-num">Logged ({monthLabel})</th>
+                            <th class="col-num">Billable</th>
+                            <th class="col-num">Over cap</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template for:each={rows} for:item="row">
+                            <tr key={row.key} class={row.rowClass}>
+                                <td class="col-label">
+                                    <button class="row-link"
+                                            data-work-item-id={row.workItemId}
+                                            onclick={handleItemClick}>{row.label}</button>
+                                    <template lwc:if={row.isOverCap}>
+                                        <span class="over-badge">Over cap</span>
+                                    </template>
+                                </td>
+                                <td class="col-num">{row.approvedCap}</td>
+                                <td class="col-num">{row.loggedBefore}</td>
+                                <td class="col-num">{row.monthLogged}</td>
+                                <td class="col-num cell-billable">{row.billable}</td>
+                                <td class="col-num cell-over">{row.overCap}</td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </template>
+
+        <template lwc:if={isEmpty}>
+            <div class="billing-empty">
+                <lightning-icon icon-name="standard:invoice" size="medium" class="billing-empty-icon"></lightning-icon>
+                <p>Nothing to invoice yet</p>
+                <p class="billing-empty-sub">{emptyStateDetail}</p>
+            </div>
+        </template>
+
+    </div>
+</template>

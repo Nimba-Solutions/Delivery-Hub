@@ -4,6 +4,20 @@ All notable changes to the Delivery Hub package are documented here. Versions ma
 
 ---
 
+## [0.272 — 0.276] — 2026-06-11 → 2026-06-12 (work-approval queue arc)
+
+The work-approval queue shipped end-to-end across five production promotions in ~36 hours (release tags map to merges via the beta timestamps; PR descriptions on GitHub stay authoritative):
+
+- **0.272.0.1 (6/11 morning)** — Work-approval queue PR1–PR3: schema + `DeliveryWorkApprovalService` decision engine (#891 — decision lives ON `WorkRequest__c`, discretionary auto-approve gate, budget-increase requests), `deliveryApprovalQueue` pending-approval LWC on DH Home (#892), approval reports + `deliveryApprovalSummaryCard` agenda card + Deploy-to-Prod ship report & ping (#893). Plus #894 (scope-test alignment with 0.269 leaf-only counting — unblocked the beta).
+- **0.273.0.2 (6/11 afternoon, PROMOTED + pinned)** — NimbusGantt 0.204.0 two-bundle adoption (#895 — pace-aware auto-schedule, unified click-through, search + axis fixes), six untracked working docs committed (#896), de-cluttered default Pacing view (#897 — measure/mode/breakout pill groups suppressed).
+- **0.274.0.3 (6/11 evening)** — Approval pings (#899 — submit notifies the approver, decisions notify the dev; `DeliveryNotificationService.notifyWorkApprovalSubmitted`/`notifyWorkApprovalDecided`), **WorkLog cap enforcement** (#900 — `DeliveryWorkCapEnforcementService`: over-cap logs flag by default → newest Accepted request to `Budget Hold` + bell pings; hard-block via `EnforceApprovalCapDateTime__c`), NG 0.204.1 app bundle (#901 — empty-state for zero-result view filters).
+- **0.275.0.2 (6/11 night)** — `deliveryCartBuilder` placed on AdminHome + subscriber org-sync deploy bundle (#902), audit quick fixes (#903 — debug `console.log` stripped from timeline, token-first sObjectType resolution).
+- **0.276.0.2 (6/12, PROMOTED — `04tQr000000VyeDIAS`)** — Approval polish (#904 — approved-vs-total **pitch stat** on the agenda card (`totalActiveEstimatedHours`/`totalApprovedHours`, zero-guarded), backup approver via `ApproverBackupUserIdTxt__c`, `DeliveryWorkApprovalService` + DTOs made **global** for subscriber-org scripting / future MCP automation). Item 8 (#905 — **ETA write-back**: `commitGanttPatches` stamps `CalculatedETADate__c` on committed endDate moves; **approved-green cohort**: greenlit forecast tier membership = `ClientPreApprovedHoursNumber__c > 0`, not priority lane; divergence alerts when logged pace implies blowing the committed ETA or the approved cap).
+
+Per-PR detail intentionally not back-filled — PR descriptions on GitHub stay authoritative. (0.251 — 0.271, the forecast-credibility arc, is documented in the GitHub release tags.)
+
+---
+
 ## [0.240 — 0.250] — 2026-05-15 → 2026-05-26 (per-PR detail not back-filled)
 
 The strategic plan (`wild-roaming-rocket.md`) Phase 0 closed at 0.240 and the 50h DH Cockpit plan ran end-to-end across 0.243 → 0.245. Phase 2 Watcher v1 landed at 0.246. The "subscriber-ready first impression" cheap-wins bundle landed at 0.247. The audit-driven UX-gap fan-out closed across 0.248 → 0.250. Major themes that shipped in this stretch:
