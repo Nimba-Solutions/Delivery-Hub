@@ -49,16 +49,16 @@ const INFO_REGISTRY = {
     },
     deliveryBudgetSummary: {
         dataSource:
-            'Calls getBudgetMetrics which counts active WorkItems (IsActive = true), sums WorkLog hours for current and previous months, and tallies Sync_Item__c records by status to compute connection health percentage.',
+            'Calls getBudgetMetrics. "Active Work Items" uses the canonical active definition — ActivatedDateTime set, not archived, not a recurring template, and in a non-terminal workflow stage (excludes Done/Cancelled) — the same scope as the Executive Dashboard\'s Active Work Items card and the What\'s In Flight tiles. Hours sum WorkLog entries for the current and previous months (by work date, with an entry-date fallback for undated rows). Connection health tallies Sync_Item__c records by status.',
         description:
-            'Quick health check showing active work item count, hours logged this month vs. last month, and (optionally) sync connection health with success/failure counts.',
+            'Quick health check showing active work item count (excludes completed and archived), hours logged this month vs. last month, and (optionally) sync connection health with success/failure counts.',
         friendlyName: 'System Pulse',
         keyFields:
             'WorkItem__c.ActivatedDateTime__c, WorkLog__c.HoursNumber__c, WorkLog__c.WorkDateDate__c, Sync_Item__c.StatusPk__c'
     },
     deliveryClientDashboard: {
         dataSource:
-            'Queries active Work Items where the current user\'s persona requires action (e.g., client approval stages). Attention items are scored by days-in-stage, priority, and blocked status. Phase counts come from non-terminal workflow stages defined in Custom Metadata. The "This Week" metrics count completions, stage moves, hours logged, and blocked items within the selected time range.',
+            'Queries active Work Items where the current user\'s persona requires action (e.g., client approval stages). Attention items are scored by days-in-stage, priority, and blocked status. Phase counts come from non-terminal workflow stages defined in Custom Metadata, scoped to activated, non-archived, non-template items. The "This Week" metrics: Completed = items reaching a terminal stage in the window; In Progress = ACTIVE items (activated, not archived, not completed) updated in the window; Hours Logged = WorkLog hours by work date in the window; Blocked = current-state dependency-blocked items, not time-bounded.',
         description:
             'Your personal delivery overview. Shows a greeting, items needing your attention ranked by urgency, a phase-by-phase count of active work, a "This Week" snapshot, and recently updated items.',
         friendlyName: 'Client Dashboard',
@@ -220,7 +220,7 @@ const INFO_REGISTRY = {
     },
     deliveryProFormaTimeline: {
         dataSource:
-            'Calls DeliveryGanttController.getProFormaTimelineData to load WorkItem__c records with priority group + estimated hours. Drag-to-reparent, drag-to-reorder, and drag-to-reschedule dispatch write-backs via updateWorkItemDates / updateWorkItemSortOrder / updateWorkItemPriorityGroup / updateWorkItemParent.',
+            'Calls DeliveryGanttController.getProFormaTimelineData to load WorkItem__c records with priority group + estimated hours. Default scope: activated, non-archived, non-template items — completed (Done) items stay visible on the timeline until archived, so this count can exceed the Active Work Items metric. The show-completed toggle additionally pulls in unactivated items modified in the last 90 days. Drag-to-reparent, drag-to-reorder, and drag-to-reschedule dispatch write-backs via updateWorkItemDates / updateWorkItemSortOrder / updateWorkItemPriorityGroup / updateWorkItemParent.',
         description:
             'Pro Forma Timeline — template-driven gantt built on the @nimbus-gantt/app framework (v10). Renders six views (Gantt, List, Treemap, Bubbles, Calendar, Flow) with priority-group buckets (NOW / NEXT / PLANNED / PROPOSED / HOLD), drag-to-reparent, depth shading, and a fullscreen toggle that escapes the Salesforce chrome. Same template ships to cloudnimbusllc.com for cross-platform parity.',
         friendlyName: 'Pro Forma Timeline',
