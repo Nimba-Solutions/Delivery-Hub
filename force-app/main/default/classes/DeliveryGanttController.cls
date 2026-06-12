@@ -1607,5 +1607,70 @@ public with sharing class DeliveryGanttController {
             update item; //NOPMD - with sharing class handles CRUD
         }
     }
+
+    /**
+     * @description One member of the org's delivery-team capacity pool, fed to
+     *              the gantt as NG's `options.team` so the Pace dial / Team
+     *              Capacity modal quote THIS org's real team. Without it, NG
+     *              falls back to its vendor default (named Cloud Nimbus staff
+     *              at 170h/mo) — wrong team quoted to every subscriber.
+     */
+    public class TeamPoolMemberDTO {
+        /** @description Display name shown in NG's Team Capacity modal. */
+        @AuraEnabled public String name { get; set; }
+        /** @description Role label (free text). */
+        @AuraEnabled public String role { get; set; }
+        /** @description Monthly capacity hours this member contributes to the pool. */
+        @AuraEnabled public Decimal hoursPerMonth { get; set; }
+        /** @description Whether the member currently counts toward the pool. */
+        @AuraEnabled public Boolean active { get; set; }
+    }
+
+    /**
+     * @description Parses DeliveryHubSettings__c.TeamPoolTxt__c — entries
+     *              separated by ';', each 'Name|Role|HoursPerMonth' — into the
+     *              gantt's team pool. Blank/missing setting or malformed
+     *              entries resolve to an EMPTY list (never throws): the LWC
+     *              then omits options.team and NG applies its own fallback,
+     *              so a bad value can never break the timeline.
+     * @return Parsed active team pool; empty when unconfigured.
+     */
+    @AuraEnabled(cacheable=true)
+    public static List<TeamPoolMemberDTO> getTeamPool() {
+        List<TeamPoolMemberDTO> out = new List<TeamPoolMemberDTO>();
+        try {
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            String raw = settings == null ? null : settings.TeamPoolTxt__c;
+            if (String.isBlank(raw)) {
+                return out;
+            }
+            for (String entry : raw.split(';')) {
+                List<String> parts = entry.trim().split('\\|');
+                if (parts.size() < 3) {
+                    continue;
+                }
+                Decimal hours;
+                try {
+                    hours = Decimal.valueOf(parts[2].trim());
+                } catch (Exception e) {
+                    continue;
+                }
+                if (String.isBlank(parts[0].trim()) || hours <= 0) {
+                    continue;
+                }
+                TeamPoolMemberDTO m = new TeamPoolMemberDTO();
+                m.name = parts[0].trim();
+                m.role = parts[1].trim();
+                m.hoursPerMonth = hours;
+                m.active = true;
+                out.add(m);
+            }
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryGanttController.getTeamPool] parse failed: ' + e.getMessage());
+            out.clear();
+        }
+        return out;
+    }
 }
 
