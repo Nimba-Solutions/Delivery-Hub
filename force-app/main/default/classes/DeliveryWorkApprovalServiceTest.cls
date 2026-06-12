@@ -3,7 +3,9 @@
  * @license      BSL 1.1 — See LICENSE.md
  * @description  Tests for the PR1 work-approval queue service:
  *               submit / approve / approveMany (bulk, partial-failure
- *               collection) / decline / requestIncrease / queue feed,
+ *               collection) / decline / requestIncrease / proposeEstimate
+ *               (item 9 — proposal stamps both sides, stays Draft, prefixed
+ *               reasoning comment + audit row, queue note join) / queue feed,
  *               plus the discretionary Auto short-circuit (under-threshold
  *               auto-approves; an exhausted monthly cap does not), the
  *               canonical cap landing on ClientPreApprovedHoursNumber__c, and
@@ -897,6 +899,175 @@ private class DeliveryWorkApprovalServiceTest {
     }
 
     // ────────────────────────────────────────────────────────────────────
+    // PROPOSE ESTIMATE (item 9 — the haggle on the record)
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description proposeEstimate stamps the proposed hours on BOTH sides
+     *              (WorkItem estimate + the existing Draft request's quote),
+     *              keeps the request Draft (proposal != submission), writes
+     *              the prefixed reasoning comment, and audit-logs a
+     *              Propose_Estimate row.
+     */
+    @IsTest
+    static void testProposeEstimateStampsItemDraftCommentAndAudit() {
+        configureSettings(null, null, null);
+        WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 20
+        });
+        WorkRequest__c draft = TestDataFactory.createWorkRequest(wi.Id, new Map<String, Object>{
+            'StatusPk__c' => DeliveryWorkApprovalService.REQUEST_DRAFT
+        });
+
+        Test.startTest();
+        Id requestId = DeliveryWorkApprovalService.proposeEstimate(
+            wi.Id, 12.5, 'Similar to the last two reporting tickets');
+        Test.stopTest();
+
+        System.assertEquals(draft.Id, requestId,
+            'the existing Draft request carries the proposal — not a duplicate');
+        Integer requestCount = [
+            SELECT COUNT() FROM WorkRequest__c WHERE WorkItemId__c = :wi.Id
+        ];
+        System.assertEquals(1, requestCount, 'no duplicate request minted');
+
+        WorkItem__c afterItem = [
+            SELECT EstimatedHoursNumber__c FROM WorkItem__c WHERE Id = :wi.Id
+        ];
+        System.assertEquals(12.5, afterItem.EstimatedHoursNumber__c,
+            'proposed hours land on the WorkItem estimate');
+
+        WorkRequest__c afterReq = [
+            SELECT StatusPk__c, QuotedHoursNumber__c FROM WorkRequest__c WHERE Id = :draft.Id
+        ];
+        System.assertEquals(12.5, afterReq.QuotedHoursNumber__c,
+            'proposed hours land on the Draft quote');
+        System.assertEquals('Draft', afterReq.StatusPk__c,
+            'proposal must NOT move the request to Offer Sent — submit stays separate');
+
+        // BodyTxt__c is Html (not SOQL-filterable) — match the prefix in Apex.
+        String proposalBody;
+        for (WorkItemComment__c c : [
+            SELECT BodyTxt__c FROM WorkItemComment__c WHERE WorkItemId__c = :wi.Id
+        ]) {
+            if (c.BodyTxt__c != null
+                && c.BodyTxt__c.startsWith(DeliveryWorkApprovalService.PROPOSAL_NOTE_PREFIX)) {
+                proposalBody = c.BodyTxt__c;
+            }
+        }
+        System.assertNotEquals(null, proposalBody,
+            'the reasoning lands as a prefixed WorkItemComment__c');
+        System.assert(proposalBody.contains('12.5h'),
+            'the comment names the proposed hours');
+        System.assert(proposalBody.contains('Similar to the last two reporting tickets'),
+            'the comment carries the reasoning');
+
+        Boolean auditFound = false;
+        for (ActivityLog__c row : [
+            SELECT ContextDataTxt__c FROM ActivityLog__c
+            WHERE ActionTypePk__c = 'Work_Approval'
+              AND RecordIdTxt__c = :String.valueOf(wi.Id)
+        ]) {
+            if (row.ContextDataTxt__c != null
+                && row.ContextDataTxt__c.contains('Propose_Estimate')) {
+                auditFound = true;
+            }
+        }
+        System.assert(auditFound, 'one Propose_Estimate audit row is written');
+    }
+
+    /**
+     * @description With no Draft request on the item, proposeEstimate mints
+     *              one (Draft, quoted at the proposal) — mirroring
+     *              submitForApproval's ensureRequest reuse semantics.
+     */
+    @IsTest
+    static void testProposeEstimateCreatesDraftWhenAbsent() {
+        configureSettings(null, null, null);
+        WorkItem__c wi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 20
+        });
+
+        Test.startTest();
+        Id requestId = DeliveryWorkApprovalService.proposeEstimate(
+            wi.Id, 6, 'Fresh sizing for a brand-new item');
+        Test.stopTest();
+
+        System.assertNotEquals(null, requestId, 'a request is minted for the proposal');
+        WorkRequest__c req = [
+            SELECT StatusPk__c, QuotedHoursNumber__c, WorkItemId__c
+            FROM WorkRequest__c WHERE Id = :requestId
+        ];
+        System.assertEquals(wi.Id, req.WorkItemId__c, 'parented to the work item');
+        System.assertEquals('Draft', req.StatusPk__c,
+            'the minted request parks at Draft — proposal != submission');
+        System.assertEquals(6, req.QuotedHoursNumber__c, 'proposed quote stamped');
+
+        WorkItem__c afterItem = [
+            SELECT EstimatedHoursNumber__c FROM WorkItem__c WHERE Id = :wi.Id
+        ];
+        System.assertEquals(6, afterItem.EstimatedHoursNumber__c,
+            'proposed hours land on the WorkItem estimate');
+        Integer requestCount = [
+            SELECT COUNT() FROM WorkRequest__c WHERE WorkItemId__c = :wi.Id
+        ];
+        System.assertEquals(1, requestCount, 'exactly one request minted');
+    }
+
+    /**
+     * @description proposeEstimate validation: null item, null/zero hours,
+     *              blank reasoning, and a well-formed but non-existent item id
+     *              all throw.
+     */
+    @IsTest
+    static void testProposeEstimateValidationErrors() {
+        WorkItem__c wi = TestDataFactory.createWorkItem(null);
+
+        Boolean threw = false;
+        try {
+            DeliveryWorkApprovalService.proposeEstimate(null, 5, 'why');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        System.assert(threw, 'null workItemId should throw');
+
+        threw = false;
+        try {
+            DeliveryWorkApprovalService.proposeEstimate(wi.Id, null, 'why');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        System.assert(threw, 'null proposedHours should throw');
+
+        threw = false;
+        try {
+            DeliveryWorkApprovalService.proposeEstimate(wi.Id, 0, 'why');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        System.assert(threw, 'zero proposedHours should throw');
+
+        threw = false;
+        try {
+            DeliveryWorkApprovalService.proposeEstimate(wi.Id, 5, '   ');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        System.assert(threw, 'blank reasoning should throw');
+
+        Id missingId = Id.valueOf(
+            WorkItem__c.SObjectType.getDescribe(SObjectDescribeOptions.DEFERRED)
+                .getKeyPrefix() + '000000000000');
+        threw = false;
+        try {
+            DeliveryWorkApprovalService.proposeEstimate(missingId, 5, 'why');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        System.assert(threw, 'a non-existent work item should throw');
+    }
+
+    // ────────────────────────────────────────────────────────────────────
     // QUEUE FEED
     // ────────────────────────────────────────────────────────────────────
 
@@ -953,6 +1124,64 @@ private class DeliveryWorkApprovalServiceTest {
 
         System.assertEquals(1, queue.size(), 'unassigned pending request is visible');
         System.assertEquals(null, queue[0].approverUserId, 'request is unassigned');
+    }
+
+    /**
+     * @description The queue feed carries the NEWEST prefixed proposal note
+     *              per work item (older proposals and plain non-proposal
+     *              comments never mask it) and leaves latestProposalNote null
+     *              on rows whose item has no proposal comment.
+     */
+    @IsTest
+    static void testGetPendingCarriesLatestProposalNote() {
+        configureSettings(null, null, null);
+        WorkItem__c proposedWi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 20
+        });
+        WorkItem__c plainWi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 15
+        });
+        DeliveryWorkApprovalService.proposeEstimate(
+            proposedWi.Id, 10, 'first pass sizing');
+        DeliveryWorkApprovalService.proposeEstimate(
+            proposedWi.Id, 12, 'second pass after reviewing the schema');
+        // A newer NON-proposal comment must not mask the proposal note.
+        TestDataFactory.createWorkItemComment(
+            proposedWi.Id, 'Quick question about scope', null);
+        DeliveryWorkApprovalService.submitForApproval(
+            new Set<Id>{ proposedWi.Id, plainWi.Id });
+
+        Test.startTest();
+        List<DeliveryWorkApprovalService.PendingApprovalDTO> queue =
+            DeliveryWorkApprovalService.getPendingForApprover(null);
+        Test.stopTest();
+
+        System.assertEquals(2, queue.size(), 'both submitted items pend');
+        DeliveryWorkApprovalService.PendingApprovalDTO proposedDto;
+        DeliveryWorkApprovalService.PendingApprovalDTO plainDto;
+        for (DeliveryWorkApprovalService.PendingApprovalDTO dto : queue) {
+            if (dto.workItemId == proposedWi.Id) {
+                proposedDto = dto;
+            } else if (dto.workItemId == plainWi.Id) {
+                plainDto = dto;
+            }
+        }
+        System.assertNotEquals(null, proposedDto, 'proposed item row present');
+        System.assertNotEquals(null, plainDto, 'plain item row present');
+        System.assertNotEquals(null, proposedDto.latestProposalNote,
+            'the proposal note rides the queue row');
+        System.assert(
+            proposedDto.latestProposalNote.startsWith(
+                DeliveryWorkApprovalService.PROPOSAL_NOTE_PREFIX),
+            'the carried note is the prefixed proposal comment');
+        System.assert(
+            proposedDto.latestProposalNote.contains('second pass after reviewing the schema'),
+            'the NEWEST proposal wins');
+        System.assert(
+            !proposedDto.latestProposalNote.contains('first pass sizing'),
+            'the older proposal is not the one carried');
+        System.assertEquals(null, plainDto.latestProposalNote,
+            'no proposal comment = null note on the row');
     }
 
     // ────────────────────────────────────────────────────────────────────
