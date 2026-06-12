@@ -4,12 +4,15 @@
  * @description  Approval agenda summary card (PR3 of the work-approval
  *               queue): three click-through tiles — Hours Approved (this
  *               month), Pending Approval, and Approved & In Progress — fed by
- *               DeliveryApprovalSummaryController.getApprovalSummary. Each
- *               tile navigates to its backing report via NavigationMixin
- *               using the report record id the controller resolved by
- *               DeveloperName (namespace-safe: no hardcoded org ids). Tiles
- *               whose report is missing in the org render without the
- *               click-through affordance.
+ *               DeliveryApprovalSummaryController.getApprovalSummary, plus
+ *               the approved-vs-total pitch strip ("Nh of Mh approved (P%)")
+ *               over the active portfolio — THE approval-queue pitch stat.
+ *               The percentage is zero-guarded (a 0h denominator renders 0%,
+ *               never Infinity/NaN). Each tile navigates to its backing
+ *               report via NavigationMixin using the report record id the
+ *               controller resolved by DeveloperName (namespace-safe: no
+ *               hardcoded org ids). Tiles whose report is missing in the org
+ *               render without the click-through affordance.
  * @author       Cloud Nimbus LLC
  */
 import { LightningElement, wire } from "lwc";
@@ -49,6 +52,19 @@ export default class DeliveryApprovalSummaryCard extends NavigationMixin(Lightni
 
     get hasData() {
         return !this.isLoading && !this.errorMessage && Boolean(this.summary);
+    }
+
+    // ── Pitch strip (computed — templates can't do ternaries) ────
+
+    get approvedShareStat() {
+        if (!this.summary) {
+            return "";
+        }
+        const total = this._toFiniteNumber(this.summary.totalActiveEstimatedHours);
+        const approved = this._toFiniteNumber(this.summary.totalApprovedHours);
+        // Zero-guard the ratio: a 0h denominator reads 0%, never Infinity.
+        const pct = total > 0 ? (approved / total) * 100 : 0;
+        return `${this._formatHours(approved)}h of ${this._formatHours(total)}h approved (${this._formatPercent(pct)}%)`;
     }
 
     // ── Tiles (computed — templates can't do ternaries) ──────────
@@ -123,5 +139,21 @@ export default class DeliveryApprovalSummaryCard extends NavigationMixin(Lightni
             return num.toFixed(1);
         }
         return num.toFixed(2);
+    }
+
+    _formatPercent(value) {
+        const num = Number(value);
+        if (!Number.isFinite(num)) {
+            return "0";
+        }
+        if (Math.abs(num) >= 10) {
+            return num.toFixed(0);
+        }
+        return num.toFixed(1);
+    }
+
+    _toFiniteNumber(value) {
+        const num = Number(value);
+        return Number.isFinite(num) ? num : 0;
     }
 }
