@@ -2,7 +2,8 @@
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
  * @description  Tests for the PR1 work-approval queue service:
- *               submit / approve / decline / requestIncrease / queue feed,
+ *               submit / approve / approveMany (bulk, partial-failure
+ *               collection) / decline / requestIncrease / queue feed,
  *               plus the discretionary Auto short-circuit (under-threshold
  *               auto-approves; an exhausted monthly cap does not), the
  *               canonical cap landing on ClientPreApprovedHoursNumber__c, and
@@ -549,6 +550,166 @@ private class DeliveryWorkApprovalServiceTest {
     }
 
     // ────────────────────────────────────────────────────────────────────
+    // BULK APPROVE (approveMany — spec §6a "Approve selected")
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description approveMany approves 2 of 2 pending requests at their
+     *              quoted hours (null approvedHours -> quoted fallback per
+     *              item): both Accepted, both items dev-ready with the
+     *              canonical cap = each item's own quote, no failures.
+     */
+    @IsTest
+    static void testApproveManyApprovesAll() {
+        configureSettings(null, null, UserInfo.getUserId());
+        WorkItem__c first = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 12
+        });
+        WorkItem__c second = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 8
+        });
+        List<DeliveryWorkApprovalService.SubmitResultDTO> submitted =
+            DeliveryWorkApprovalService.submitForApproval(
+                new Set<Id>{ first.Id, second.Id });
+        List<Id> requestIds = new List<Id>();
+        for (DeliveryWorkApprovalService.SubmitResultDTO dto : submitted) {
+            requestIds.add(dto.workRequestId);
+        }
+
+        Test.startTest();
+        DeliveryWorkApprovalService.BulkApproveResultDTO result =
+            DeliveryWorkApprovalService.approveMany(requestIds, 'bulk sign-off');
+        Test.stopTest();
+
+        System.assertEquals(2, result.approvedIds.size(), 'both requests approved');
+        System.assertEquals(0, result.failures.size(), 'no failures in a clean batch');
+
+        Integer acceptedCount = [
+            SELECT COUNT() FROM WorkRequest__c
+            WHERE Id IN :requestIds AND StatusPk__c = 'Accepted'
+        ];
+        System.assertEquals(2, acceptedCount, 'both requests landed Accepted');
+
+        Map<Id, WorkItem__c> afterById = new Map<Id, WorkItem__c>([
+            SELECT ClientPreApprovedHoursNumber__c, StageNamePk__c
+            FROM WorkItem__c WHERE Id IN (:first.Id, :second.Id)
+        ]);
+        System.assertEquals(12, afterById.get(first.Id).ClientPreApprovedHoursNumber__c,
+            'first item capped at its own quote — null hours fall back per item');
+        System.assertEquals(8, afterById.get(second.Id).ClientPreApprovedHoursNumber__c,
+            'second item capped at its own quote');
+        System.assertEquals('Ready for Development', afterById.get(first.Id).StageNamePk__c,
+            'first item dev-ready');
+        System.assertEquals('Ready for Development', afterById.get(second.Id).StageNamePk__c,
+            'second item dev-ready');
+    }
+
+    /**
+     * @description Mixed batch: one id is already decided (declined before
+     *              the bulk call) — that id lands in failures while the
+     *              still-pending id approves. One bad row never blocks the
+     *              rest. The failure entry carries the failing id (the id
+     *              prefix is OUR formatting — the AuraHandledException text
+     *              itself is never asserted).
+     */
+    @IsTest
+    static void testApproveManyMixedBatchCollectsFailure() {
+        configureSettings(null, null, null);
+        WorkItem__c decidedWi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 10
+        });
+        WorkItem__c pendingWi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 6
+        });
+        List<DeliveryWorkApprovalService.SubmitResultDTO> submitted =
+            DeliveryWorkApprovalService.submitForApproval(
+                new Set<Id>{ decidedWi.Id, pendingWi.Id });
+        Id decidedRequestId;
+        Id pendingRequestId;
+        for (DeliveryWorkApprovalService.SubmitResultDTO dto : submitted) {
+            if (dto.workItemId == decidedWi.Id) {
+                decidedRequestId = dto.workRequestId;
+            } else {
+                pendingRequestId = dto.workRequestId;
+            }
+        }
+        // Pre-decide one request so the bulk call hits a non-pending row.
+        DeliveryWorkApprovalService.decline(decidedRequestId, 'already handled');
+
+        Test.startTest();
+        DeliveryWorkApprovalService.BulkApproveResultDTO result =
+            DeliveryWorkApprovalService.approveMany(
+                new List<Id>{ decidedRequestId, pendingRequestId }, null);
+        Test.stopTest();
+
+        System.assertEquals(1, result.approvedIds.size(),
+            'only the still-pending request approves');
+        System.assertEquals(pendingRequestId, result.approvedIds[0],
+            'the pending id is the approved one');
+        System.assertEquals(1, result.failures.size(),
+            'the already-decided id lands in failures');
+        System.assert(result.failures[0].contains(String.valueOf(decidedRequestId)),
+            'the failure entry names the failing request id');
+
+        WorkRequest__c decided = [
+            SELECT StatusPk__c FROM WorkRequest__c WHERE Id = :decidedRequestId
+        ];
+        System.assertEquals('Inactive', decided.StatusPk__c,
+            'the declined request stays declined — bulk approve never resurrects it');
+        WorkRequest__c approved = [
+            SELECT StatusPk__c FROM WorkRequest__c WHERE Id = :pendingRequestId
+        ];
+        System.assertEquals('Accepted', approved.StatusPk__c,
+            'the pending request approved despite the sibling failure');
+    }
+
+    /**
+     * @description The caller guard runs PER ITEM inside the bulk loop: a
+     *              request assigned to another approver fails (and stays
+     *              pending) while an unassigned request in the same batch
+     *              approves for the running user.
+     */
+    @IsTest
+    static void testApproveManyRespectsCallerGuardPerItem() {
+        User other = createOtherUser();
+        // First item submits while the OTHER user is the configured approver.
+        configureSettings(null, null, other.Id);
+        WorkItem__c guardedWi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 10
+        });
+        Id guardedRequestId = DeliveryWorkApprovalService.submitForApproval(
+            new Set<Id>{ guardedWi.Id })[0].workRequestId;
+        // Second item submits unassigned — any authorised caller may decide.
+        configureSettings(null, null, null);
+        WorkItem__c openWi = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 5
+        });
+        Id openRequestId = DeliveryWorkApprovalService.submitForApproval(
+            new Set<Id>{ openWi.Id })[0].workRequestId;
+
+        Test.startTest();
+        DeliveryWorkApprovalService.BulkApproveResultDTO result =
+            DeliveryWorkApprovalService.approveMany(
+                new List<Id>{ guardedRequestId, openRequestId }, null);
+        Test.stopTest();
+
+        System.assertEquals(1, result.approvedIds.size(),
+            'only the unassigned request approves for the non-approver caller');
+        System.assertEquals(openRequestId, result.approvedIds[0],
+            'the unassigned id is the approved one');
+        System.assertEquals(1, result.failures.size(),
+            'the guarded id is rejected per item');
+        System.assert(result.failures[0].contains(String.valueOf(guardedRequestId)),
+            'the failure entry names the guarded request id');
+
+        WorkRequest__c guarded = [
+            SELECT StatusPk__c FROM WorkRequest__c WHERE Id = :guardedRequestId
+        ];
+        System.assertEquals('Offer Sent', guarded.StatusPk__c,
+            'the guarded request stays pending for its assigned approver');
+    }
+
+    // ────────────────────────────────────────────────────────────────────
     // DECLINE
     // ────────────────────────────────────────────────────────────────────
 
@@ -840,6 +1001,22 @@ private class DeliveryWorkApprovalServiceTest {
             threw = true;
         }
         System.assert(threw, 'approve on a Draft (not awaiting decision) should throw');
+
+        threw = false;
+        try {
+            DeliveryWorkApprovalService.approveMany(new List<Id>(), null);
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        System.assert(threw, 'empty workRequestIds should throw');
+
+        threw = false;
+        try {
+            DeliveryWorkApprovalService.approveMany(null, null);
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        System.assert(threw, 'null workRequestIds should throw');
     }
 
     /**
