@@ -21,12 +21,18 @@
 @IsTest
 private class DeliveryBillingPreviewControllerTest {
 
-    /** @description Start of the current calendar month — the test anchor. */
+    /**
+     * @description Start of the current calendar month — the test anchor.
+     * @return First day of the current month.
+     */
     private static Date monthStart() {
         return Date.today().toStartOfMonth();
     }
 
-    /** @description A date safely inside the PRIOR calendar month. */
+    /**
+     * @description A date safely inside the PRIOR calendar month.
+     * @return The last day of the previous month.
+     */
     private static Date priorMonthDate() {
         return monthStart().addDays(-1);
     }
@@ -42,7 +48,10 @@ private class DeliveryBillingPreviewControllerTest {
         });
     }
 
-    /** @description Runs getBillingPreview for the current calendar month. */
+    /**
+     * @description Runs getBillingPreview for the current calendar month.
+     * @return The controller's BillingPreviewDTO for the current month.
+     */
     private static DeliveryBillingPreviewController.BillingPreviewDTO runCurrentMonth() {
         Date anchor = monthStart();
         return DeliveryBillingPreviewController.getBillingPreview(anchor.year(), anchor.month());

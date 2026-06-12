@@ -105,49 +105,7 @@ public with sharing class DeliveryBillingPreviewController {
     @AuraEnabled(cacheable=true)
     public static BillingPreviewDTO getBillingPreview(Integer year, Integer month) {
         try {
-            Date today = Date.today();
-            Integer effectiveYear = (year == null) ? today.year() : year;
-            Integer effectiveMonth = (month == null) ? today.month() : month;
-            if (effectiveMonth < 1 || effectiveMonth > 12) {
-                throw new AuraHandledException('month must be between 1 and 12.');
-            }
-            if (effectiveYear < 1900 || effectiveYear > 2200) {
-                throw new AuraHandledException('year is out of range.');
-            }
-
-            Date monthStart = Date.newInstance(effectiveYear, effectiveMonth, 1);
-            Date monthEnd = monthStart.addMonths(1).addDays(-1);
-
-            BillingPreviewDTO dto = new BillingPreviewDTO();
-            dto.year = effectiveYear;
-            dto.month = effectiveMonth;
-            dto.monthLabel = MONTH_NAMES[effectiveMonth - 1] + ' ' + effectiveYear;
-            dto.rows = new List<BillingRowDTO>();
-            dto.totalApprovedCap = 0;
-            dto.totalMonthLogged = 0;
-            dto.totalBillable = 0;
-            dto.totalOverCap = 0;
-
-            List<WorkItem__c> cappedItems = queryCappedItems();
-            dto.cappedItemCount = cappedItems.size();
-
-            if (!cappedItems.isEmpty()) {
-                Set<Id> itemIds = new Map<Id, WorkItem__c>(cappedItems).keySet();
-                Map<Id, Decimal> monthLoggedByItem =
-                    sumLoggedByItem(itemIds, monthStart, monthEnd);
-                Map<Id, Decimal> beforeLoggedByItem =
-                    sumLoggedByItem(itemIds, null, monthStart.addDays(-1));
-                buildRows(dto, cappedItems, monthLoggedByItem, beforeLoggedByItem);
-            }
-
-            sortRowsByMonthLoggedDesc(dto.rows);
-
-            dto.blendedRate = resolveBlendedRate();
-            if (dto.blendedRate != null) {
-                dto.totalBillableAmount = (dto.totalBillable * dto.blendedRate)
-                    .setScale(2, System.RoundingMode.HALF_UP);
-            }
-            return dto;
+            return buildPreview(resolveMonthStart(year, month));
         } catch (AuraHandledException ahe) {
             throw ahe;
         } catch (Exception e) {
@@ -155,6 +113,71 @@ public with sharing class DeliveryBillingPreviewController {
             ahe.setMessage(e.getMessage());
             throw ahe;
         }
+    }
+
+    /**
+     * @description Resolves and validates the requested month: null params
+     *              default to the current calendar month; an out-of-range
+     *              month or year is rejected.
+     * @param year Calendar year, or null for the current year.
+     * @param month Calendar month 1–12, or null for the current month.
+     * @return The first day of the resolved calendar month.
+     */
+    private static Date resolveMonthStart(Integer year, Integer month) {
+        Date today = Date.today();
+        Integer effectiveYear = (year == null) ? today.year() : year;
+        Integer effectiveMonth = (month == null) ? today.month() : month;
+        if (effectiveMonth < 1 || effectiveMonth > 12) {
+            throw new AuraHandledException('month must be between 1 and 12.');
+        }
+        if (effectiveYear < 1900 || effectiveYear > 2200) {
+            throw new AuraHandledException('year is out of range.');
+        }
+        return Date.newInstance(effectiveYear, effectiveMonth, 1);
+    }
+
+    /**
+     * @description Assembles the close-out for the resolved month: queries the
+     *              capped-item universe, runs the two windowed WorkLog
+     *              aggregates, applies the v1 billable split per item, sorts
+     *              the rows, and prices the billable total when a single
+     *              blended rate resolves.
+     * @param monthStart First day of the (already validated) calendar month.
+     * @return The fully populated BillingPreviewDTO.
+     */
+    private static BillingPreviewDTO buildPreview(Date monthStart) {
+        Date monthEnd = monthStart.addMonths(1).addDays(-1);
+
+        BillingPreviewDTO dto = new BillingPreviewDTO();
+        dto.year = monthStart.year();
+        dto.month = monthStart.month();
+        dto.monthLabel = MONTH_NAMES[dto.month - 1] + ' ' + dto.year;
+        dto.rows = new List<BillingRowDTO>();
+        dto.totalApprovedCap = 0;
+        dto.totalMonthLogged = 0;
+        dto.totalBillable = 0;
+        dto.totalOverCap = 0;
+
+        List<WorkItem__c> cappedItems = queryCappedItems();
+        dto.cappedItemCount = cappedItems.size();
+
+        if (!cappedItems.isEmpty()) {
+            Set<Id> itemIds = new Map<Id, WorkItem__c>(cappedItems).keySet();
+            Map<Id, Decimal> monthLoggedByItem =
+                sumLoggedByItem(itemIds, monthStart, monthEnd);
+            Map<Id, Decimal> beforeLoggedByItem =
+                sumLoggedByItem(itemIds, null, monthStart.addDays(-1));
+            buildRows(dto, cappedItems, monthLoggedByItem, beforeLoggedByItem);
+        }
+
+        sortRowsByMonthLoggedDesc(dto.rows);
+
+        dto.blendedRate = resolveBlendedRate();
+        if (dto.blendedRate != null) {
+            dto.totalBillableAmount = (dto.totalBillable * dto.blendedRate)
+                .setScale(2, System.RoundingMode.HALF_UP);
+        }
+        return dto;
     }
 
     /**
