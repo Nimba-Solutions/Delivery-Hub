@@ -993,8 +993,10 @@ private class DeliveryHoursAnalyticsControllerTest {
 
     // ────────────────────────────────────────────────────────────────────
     // getPacing — cohort/commitment-tier split (the stacked hockey-stick).
-    // PriorityGroupPk__c → segment id: active/top-priority→greenlit,
-    // follow-on→predicted, proposed/deferred→ready. Per-bucket `segments`
+    // Item 8: greenlit (Committed) = APPROVAL TRUTH — an item is greenlit
+    // iff ClientPreApprovedHoursNumber__c > 0, regardless of lane.
+    // Unapproved items map by lane: top-priority/active/follow-on→predicted,
+    // proposed/deferred→ready; blank/unknown→predicted. Per-bucket `segments`
     // sum to forecast; items carry `tier`; top-level segments[] advertises
     // only tiers that carry hours.
     // ────────────────────────────────────────────────────────────────────
@@ -1011,6 +1013,20 @@ private class DeliveryHoursAnalyticsControllerTest {
         });
     }
 
+    /** @description Same as insertTieredWi but client-approved (the greenlit membership signal). */
+    @SuppressWarnings('PMD.ExcessiveParameterList')
+    private static WorkItem__c insertApprovedWi(String briefDesc, Decimal estimate, Date startDate, Date endDate, String priorityGroup, Decimal approvedHours) {
+        return TestDataFactory.createWorkItem(new Map<String, Object>{
+            'BriefDescriptionTxt__c' => briefDesc,
+            'EstimatedHoursNumber__c' => estimate,
+            'EstimatedStartDevDate__c' => startDate,
+            'EstimatedEndDevDate__c' => endDate,
+            'PriorityGroupPk__c' => priorityGroup,
+            'ClientPreApprovedHoursNumber__c' => approvedHours,
+            'ActivatedDateTime__c' => System.now()
+        });
+    }
+
     /** @description Pulls the top-level segments[] defs out of a getPacing payload. */
     private static List<Object> segmentDefsOf(String pacingJson) {
         Map<String, Object> data = (Map<String, Object>) JSON.deserializeUntyped(pacingJson);
@@ -1020,12 +1036,13 @@ private class DeliveryHoursAnalyticsControllerTest {
     @IsTest
     static void testCohortSplitTiersBucketsAndItems() {
         // Three active roots over the SAME future window → their forecast buckets carry
-        // all three commitment tiers, mapped from PriorityGroupPk__c.
+        // all three commitment tiers. Greenlit = client-approved (item 8); the other
+        // two map from PriorityGroupPk__c.
         Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
         Date spanEnd = nextMonthStart.addMonths(3).addDays(-1);
-        insertTieredWi('CommittedWI', 90, nextMonthStart, spanEnd, 'active');     // → greenlit
-        insertTieredWi('PredictedWI', 60, nextMonthStart, spanEnd, 'follow-on');  // → predicted
-        insertTieredWi('ProposedWI',  30, nextMonthStart, spanEnd, 'proposed');   // → ready
+        insertApprovedWi('CommittedWI', 90, nextMonthStart, spanEnd, 'active', 90); // approved → greenlit
+        insertTieredWi('PredictedWI', 60, nextMonthStart, spanEnd, 'follow-on');    // → predicted
+        insertTieredWi('ProposedWI',  30, nextMonthStart, spanEnd, 'proposed');     // → ready
 
         Test.startTest();
         String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
@@ -1069,7 +1086,7 @@ private class DeliveryHoursAnalyticsControllerTest {
                 String name = (String) item.get('name');
                 String tier = (String) item.get('tier');
                 if (name == 'CommittedWI') {
-                    System.assertEquals('greenlit', tier, 'active lane → greenlit');
+                    System.assertEquals('greenlit', tier, 'client-approved item → greenlit');
                 } else if (name == 'PredictedWI') {
                     System.assertEquals('predicted', tier, 'follow-on lane → predicted');
                 } else if (name == 'ProposedWI') {
@@ -1082,9 +1099,11 @@ private class DeliveryHoursAnalyticsControllerTest {
     }
 
     @IsTest
-    static void testBlankLaneFallsBackToGreenlitNoVanish() {
-        // A future-dated item with NO priority lane must still land in a tier (greenlit),
+    static void testBlankLaneFallsBackToPredictedNoVanish() {
+        // A future-dated UNAPPROVED item with NO priority lane must still land in a tier,
         // so its forecast hours never vanish from the stack (Σ segments == forecast).
+        // Item 8: the no-vanish fallback is 'predicted' — never 'greenlit', because
+        // greenlit membership is approval truth only.
         Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
         Date spanEnd = nextMonthStart.addMonths(2).addDays(-1);
         insertTieredWi('NoLaneWI', 50, nextMonthStart, spanEnd, null);
@@ -1097,17 +1116,58 @@ private class DeliveryHoursAnalyticsControllerTest {
         for (Object o : segmentDefsOf(pacingJson)) {
             ids.add((String) ((Map<String, Object>) o).get('id'));
         }
-        System.assertEquals(new List<String>{ 'greenlit' }, ids,
-            'blank lane folds into the single greenlit tier (no-vanish fallback)');
+        System.assertEquals(new List<String>{ 'predicted' }, ids,
+            'blank lane on an unapproved item folds into the single predicted tier (no-vanish fallback)');
         for (Object o : bucketsOf(pacingJson)) {
             Map<String, Object> b = (Map<String, Object>) o;
             Decimal forecast = (Decimal) b.get('forecast');
             if (forecast != null && forecast > 0) {
                 Map<String, Object> segs = (Map<String, Object>) b.get('segments');
-                System.assertEquals(forecast, (Decimal) segs.get('greenlit'),
-                    'all forecast hours land in greenlit when no lane is set');
+                System.assertEquals(forecast, (Decimal) segs.get('predicted'),
+                    'all forecast hours land in predicted when no lane is set and nothing is approved');
             }
         }
+    }
+
+    @IsTest
+    static void testGreenlitMembershipIsApprovalTruthNotLane() {
+        // Item 8 acceptance pair: an APPROVED item lands greenlit even from the
+        // lowliest lane ('proposed'), and an UNAPPROVED top-priority item does NOT
+        // land greenlit (it keeps its lane-derived tier, 'predicted').
+        Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = nextMonthStart.addMonths(2).addDays(-1);
+        insertApprovedWi('ApprovedProposedWI', 40, nextMonthStart, spanEnd, 'proposed', 40);
+        insertTieredWi('UnapprovedTopWI', 80, nextMonthStart, spanEnd, 'top-priority');
+
+        Test.startTest();
+        String pacingJson = DeliveryHoursAnalyticsController.getPacing('Month', 6, 4);
+        Test.stopTest();
+
+        Boolean sawApproved = false;
+        Boolean sawUnapproved = false;
+        for (Object o : bucketsOf(pacingJson)) {
+            Map<String, Object> b = (Map<String, Object>) o;
+            List<Object> items = (List<Object>) b.get('items');
+            if (items == null) {
+                continue;
+            }
+            for (Object io : items) {
+                Map<String, Object> item = (Map<String, Object>) io;
+                String name = (String) item.get('name');
+                String tier = (String) item.get('tier');
+                if (name == 'ApprovedProposedWI') {
+                    System.assertEquals('greenlit', tier,
+                        'Approved item is greenlit regardless of its (proposed) lane');
+                    sawApproved = true;
+                } else if (name == 'UnapprovedTopWI') {
+                    System.assertEquals('predicted', tier,
+                        'Unapproved top-priority item must NOT be greenlit');
+                    sawUnapproved = true;
+                }
+            }
+        }
+        System.assert(sawApproved && sawUnapproved,
+            'Both items appear in the forecast drill-down');
     }
 
     @IsTest
