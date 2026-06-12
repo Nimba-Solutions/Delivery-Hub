@@ -259,6 +259,46 @@ private class DeliveryHubDashboardControllerTest {
         }
     }
 
+    /**
+     * @description Regression guard for the "In Progress" (moved) metric fix:
+     *              the count must use the full canonical active-item filter —
+     *              including ActivatedDateTime__c != null — so unactivated
+     *              backlog items modified in the window do not inflate the
+     *              This-Week tile relative to System Pulse's active count.
+     */
+    @IsTest
+    static void testThisWeekMovedExcludesUnactivatedItems() {
+        System.runAs(testUser) {
+            // Active item modified now — should count
+            insert new WorkItem__c(
+                BriefDescriptionTxt__c = 'Active moved item',
+                StageNamePk__c = 'In Development',
+                ActivatedDateTime__c = Datetime.now()
+            );
+
+            // Unactivated backlog item modified now — should NOT count.
+            // Bypass the auto-stamp trigger so it lands genuinely unactivated.
+            DeliveryWorkItemTriggerHandler.triggerDisabled = true;
+            try {
+                insert new WorkItem__c(
+                    BriefDescriptionTxt__c = 'Backlog unactivated moved',
+                    StageNamePk__c = 'Backlog'
+                );
+            } finally {
+                DeliveryWorkItemTriggerHandler.triggerDisabled = false;
+            }
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard('thisWeek', 'Software_Delivery');
+            Test.stopTest();
+
+            Map<String, Object> thisWeek = (Map<String, Object>) result.get('thisWeek');
+            System.assertEquals(1, (Integer) thisWeek.get('moved'),
+                'moved should count only ACTIVATED, non-archived, non-template, non-terminal items '
+                + 'modified in the window — the unactivated backlog item must be excluded');
+        }
+    }
+
     @IsTest
     static void testGetClientDashboard() {
         System.runAs(testUser) {
