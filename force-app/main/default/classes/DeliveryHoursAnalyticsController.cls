@@ -61,7 +61,8 @@ global with sharing class DeliveryHoursAnalyticsController {
         Date startDate;
         Date endDate;
         /** 0.268 — the stacked-forecast commitment tier (PacingSegment.id) this item
-         *  belongs to, derived once from PriorityGroupPk__c via tierForGroup(). Drives
+         *  belongs to, derived once via tierForItem() (approval truth first —
+         *  ClientPreApprovedHoursNumber__c > 0 → greenlit — else lane-derived). Drives
          *  both the per-bucket `segments` sums and each drill-down item's `tier`. */
         String tier;
     }
@@ -342,29 +343,41 @@ global with sharing class DeliveryHoursAnalyticsController {
 
     /**
      * @description Maps a WorkItem `PriorityGroupPk__c` lane onto the NG stacked-forecast
-     *              commitment tier (PacingSegment.id). Mirrors NG's PACING_LANE_TO_SEGMENT
-     *              (packages/app/src/renderers/pacing.ts) 1:1 so DH's AUTHORITATIVE per-tier
-     *              split reconciles with NG's task-derived PREVIEW split — same lane, same
-     *              tier, no drift. DH's lane values (top-priority/active/follow-on/proposed/
-     *              deferred — see DeliveryGanttController) ARE NG's keys, so no translation.
+     *              commitment tier (PacingSegment.id) for items that are NOT client-approved.
+     *              Item 8 (approved-green cohort): membership in the 'greenlit' (Committed)
+     *              tier is APPROVAL TRUTH, not lane truth — an item is greenlit iff
+     *              `ClientPreApprovedHoursNumber__c > 0` (the canonical client-approved cap
+     *              stamped by DeliveryWorkApprovalService), regardless of lane (see
+     *              tierForItem). Unapproved items land in their lane-derived tier here, so
+     *              the formerly-greenlit lanes (top-priority/active — work that is moving
+     *              but not literally approved) now read 'predicted'. Segment IDS/COLORS are
+     *              an NG contract (SEGMENT_DEFS) and are unchanged — only membership moved.
+     *              This makes DH's AUTHORITATIVE split intentionally STRICTER than NG's
+     *              task-derived PREVIEW (PACING_LANE_TO_SEGMENT in
+     *              packages/app/src/renderers/pacing.ts, which has no approval signal);
+     *              authoritative wins whenever DH feeds segments.
      *              Fallbacks preserve the "no work silently vanishes" invariant: every
      *              forecasted item lands in a tier, so the per-bucket segments always sum to
      *              the bucket forecast (NG renders bar = actual + Σ segments and ignores
-     *              `forecast` once segments are present). Blank/unknown → 'greenlit' (matches
-     *              NG); 'deferred' (on-hold) → 'ready' (the speculative/dotted upside tier)
+     *              `forecast` once segments are present). Blank/unknown unapproved →
+     *              'predicted' (never 'greenlit' — greenlit is approval-only);
+     *              'deferred' (on-hold) → 'ready' (the speculative/dotted upside tier)
      *              rather than NG's exclude, because DH's schedule spread already counts
      *              on-hold remaining and dropping its tier would shrink the bar.
      */
     private static final Map<String, String> PRIORITY_GROUP_TO_TIER = new Map<String, String>{
-        'top-priority' => 'greenlit',
-        'active'       => 'greenlit',
+        'top-priority' => 'predicted',
+        'active'       => 'predicted',
         'follow-on'    => 'predicted',
         'proposed'     => 'ready',
         'deferred'     => 'ready'
     };
 
-    /** @description Fallback tier for blank/unknown lanes (no-vanish — see above). */
-    private static final String DEFAULT_TIER = 'greenlit';
+    /** @description The approval-only Committed tier id (NG PacingSegment.id contract). */
+    private static final String GREENLIT_TIER = 'greenlit';
+
+    /** @description Fallback tier for blank/unknown lanes on UNAPPROVED items (no-vanish — see above). */
+    private static final String DEFAULT_TIER = 'predicted';
 
     /**
      * @description The DH-declared stacked-forecast tier definitions, in stack order, in
@@ -385,7 +398,25 @@ global with sharing class DeliveryHoursAnalyticsController {
     private static final List<String> TIER_ORDER = new List<String>{ 'greenlit', 'predicted', 'ready', 'recurring' };
 
     /**
-     * @description Resolves a WorkItem lane to its forecast tier (see PRIORITY_GROUP_TO_TIER).
+     * @description Resolves a WorkItem's forecast tier. Approval truth first: any item the
+     *              client has pre-approved hours for (`ClientPreApprovedHoursNumber__c > 0`)
+     *              is 'greenlit' regardless of lane; everything else falls back to its
+     *              lane-derived tier (see PRIORITY_GROUP_TO_TIER — never 'greenlit').
+     * @param approvedHours The WorkItem `ClientPreApprovedHoursNumber__c` value (nullable).
+     * @param lane The WorkItem `PriorityGroupPk__c` value (may be blank).
+     * @return A PacingSegment.id — never null.
+     */
+    private static String tierForItem(Decimal approvedHours, String lane) {
+        if (approvedHours != null && approvedHours > 0) {
+            return GREENLIT_TIER;
+        }
+        return tierForGroup(lane);
+    }
+
+    /**
+     * @description Resolves a WorkItem lane to its UNAPPROVED forecast tier (see
+     *              PRIORITY_GROUP_TO_TIER). Callers wanting the full approval-aware
+     *              resolution use tierForItem.
      * @param lane The WorkItem `PriorityGroupPk__c` value (may be blank).
      * @return A PacingSegment.id — never null (blank/unknown fall back to DEFAULT_TIER).
      */
@@ -910,6 +941,7 @@ global with sharing class DeliveryHoursAnalyticsController {
         List<WorkItem__c> items = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, DeveloperLookup__r.Name,
                    EstimatedHoursNumber__c, PriorityGroupPk__c, ParentWorkItemLookup__c,
+                   ClientPreApprovedHoursNumber__c,
                    EstimatedStartDevDate__c, EstimatedEndDevDate__c
             FROM WorkItem__c
             WHERE Id IN :portfolioIds
@@ -968,7 +1000,9 @@ global with sharing class DeliveryHoursAnalyticsController {
             sched.logged = logged;
             sched.startDate = wi.EstimatedStartDevDate__c;
             sched.endDate = wi.EstimatedEndDevDate__c;
-            sched.tier = tierForGroup(wi.PriorityGroupPk__c);
+            // Item 8 — greenlit = literally approved (ClientPreApprovedHoursNumber__c > 0),
+            // regardless of lane; unapproved items keep their lane-derived tier.
+            sched.tier = tierForItem(wi.ClientPreApprovedHoursNumber__c, wi.PriorityGroupPk__c);
             portfolioItemSchedules.add(sched);
             Date s = wi.EstimatedStartDevDate__c;
             if (s != null && (dto.earliestStart == null || s < dto.earliestStart)) {

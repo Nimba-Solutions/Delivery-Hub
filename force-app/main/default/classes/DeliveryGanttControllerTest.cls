@@ -427,6 +427,104 @@ private class DeliveryGanttControllerTest {
         }
     }
 
+    // ── commitGanttPatches — ETA write-back on committed apply (item 8) ──
+
+    @IsTest
+    static void testCommitGanttPatchesEndDateMoveStampsCalculatedEta() {
+        System.runAs(testUser) {
+            WorkItem__c item = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Build login page' LIMIT 1];
+            Date newStart = Date.today().addDays(3);
+            Date newEnd = Date.today().addDays(42);
+            String patchesJson = JSON.serialize(new List<Object>{
+                new Map<String, Object>{
+                    'taskId' => item.Id,
+                    'kind' => 'edit',
+                    'changes' => new Map<String, Object>{
+                        'startDate' => String.valueOf(newStart),
+                        'endDate' => String.valueOf(newEnd)
+                    }
+                }
+            });
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryGanttController.commitGanttPatches(patchesJson, 'auto-schedule apply');
+            Test.stopTest();
+
+            System.assertEquals(true, result.get('ok'), 'Commit should succeed');
+            System.assertEquals(1, result.get('committed'), 'One patch committed');
+            WorkItem__c updated = [SELECT EstimatedStartDevDate__c, EstimatedEndDevDate__c, CalculatedETADate__c
+                                   FROM WorkItem__c WHERE Id = :item.Id];
+            System.assertEquals(newStart, updated.EstimatedStartDevDate__c, 'Start date committed');
+            System.assertEquals(newEnd, updated.EstimatedEndDevDate__c, 'End date committed');
+            System.assertEquals(newEnd, updated.CalculatedETADate__c,
+                'Committed end-date move stamps CalculatedETADate__c in the same transaction');
+        }
+    }
+
+    @IsTest
+    static void testCommitGanttPatchesStartOnlyMoveLeavesEtaUntouched() {
+        System.runAs(testUser) {
+            // 'Fix export bug' carries no engineered end and no prior ETA — a
+            // start-only move must NOT invent one.
+            WorkItem__c item = [SELECT Id, CalculatedETADate__c FROM WorkItem__c
+                                WHERE BriefDescriptionTxt__c = 'Fix export bug' LIMIT 1];
+            System.assertEquals(null, item.CalculatedETADate__c, 'Precondition: no ETA yet');
+            String patchesJson = JSON.serialize(new List<Object>{
+                new Map<String, Object>{
+                    'taskId' => item.Id,
+                    'kind' => 'edit',
+                    'changes' => new Map<String, Object>{
+                        'startDate' => String.valueOf(Date.today().addDays(5))
+                    }
+                }
+            });
+
+            Test.startTest();
+            DeliveryGanttController.commitGanttPatches(patchesJson, null);
+            Test.stopTest();
+
+            WorkItem__c updated = [SELECT CalculatedETADate__c FROM WorkItem__c WHERE Id = :item.Id];
+            System.assertEquals(null, updated.CalculatedETADate__c,
+                'A start-only committed move must not stamp CalculatedETADate__c');
+        }
+    }
+
+    @IsTest
+    static void testCommitGanttPatchesAutoScheduleBatchStampsEachMovedItem() {
+        System.runAs(testUser) {
+            // The onAutoSchedule({changes}) batch shape after the operator
+            // Submits: multiple edit patches in one commit — each item with an
+            // end-date move gets its OWN committed end as its ETA.
+            WorkItem__c a = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Build login page' LIMIT 1];
+            WorkItem__c b = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Fix export bug' LIMIT 1];
+            Date endA = Date.today().addDays(21);
+            Date endB = Date.today().addDays(35);
+            String patchesJson = JSON.serialize(new List<Object>{
+                new Map<String, Object>{
+                    'taskId' => a.Id,
+                    'kind' => 'edit',
+                    'changes' => new Map<String, Object>{ 'endDate' => String.valueOf(endA) }
+                },
+                new Map<String, Object>{
+                    'taskId' => b.Id,
+                    'kind' => 'edit',
+                    'changes' => new Map<String, Object>{ 'endDate' => String.valueOf(endB) }
+                }
+            });
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryGanttController.commitGanttPatches(patchesJson, 'leveled batch');
+            Test.stopTest();
+
+            System.assertEquals(2, result.get('committed'), 'Both auto-schedule patches committed');
+            Map<Id, WorkItem__c> updated = new Map<Id, WorkItem__c>([
+                SELECT Id, CalculatedETADate__c FROM WorkItem__c WHERE Id IN (:a.Id, :b.Id)
+            ]);
+            System.assertEquals(endA, updated.get(a.Id).CalculatedETADate__c, 'Item A ETA = its leveled end');
+            System.assertEquals(endB, updated.get(b.Id).CalculatedETADate__c, 'Item B ETA = its leveled end');
+        }
+    }
+
     // ── getGanttDependencies ─────────────────────────────────────────
 
     @IsTest
