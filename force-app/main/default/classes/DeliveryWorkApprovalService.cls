@@ -39,6 +39,14 @@
  *                    approved delta when the request is a budget increase,
  *                    never overwritten — and the stage moves to
  *                    'Ready for Development'.
+ *               approveMany(workRequestIds, note)
+ *                 -> bulk "Approve selected" for the queue LWC (spec §6a).
+ *                    Loops the single approve() per id so every id gets the
+ *                    EXACT same semantics (caller guard, raise-for-increase
+ *                    delta math, null hours -> quoted fallback). Partial-
+ *                    failure policy: process every id, collect failures, and
+ *                    return both lists in BulkApproveResultDTO — one bad row
+ *                    never blocks the rest of the batch.
  *               decline(workRequestId, reason)
  *                 -> request StatusPk__c='Inactive' with StandDownReasonTxt__c;
  *                    the WorkItem parks (ClientIntentionPk__c='On Hold') ONLY
@@ -131,6 +139,18 @@ global with sharing class DeliveryWorkApprovalService {
         @AuraEnabled public Id workRequestId;
         @AuraEnabled public Boolean autoApproved;
         @AuraEnabled public Decimal quotedHours;
+    }
+
+    /**
+     * @description Result of a bulk approve (approveMany): which requests
+     *              landed and one human-readable entry per failure. Global
+     *              because it is the return type of the global approveMany
+     *              (subscriber-side automation) — CLAUDE.md: inner classes
+     *              used as global return types must be global.
+     */
+    global class BulkApproveResultDTO {
+        @AuraEnabled public List<Id> approvedIds = new List<Id>();
+        @AuraEnabled public List<String> failures = new List<String>();
     }
 
     // ────────────────────────────────────────────────────────────────────
@@ -403,6 +423,47 @@ global with sharing class DeliveryWorkApprovalService {
         writeAuditRow(req.WorkItemId__c, isIncrease ? 'Approve_Increase' : 'Approve', req.Id, note);
         // Fire-and-forget dev ping — null-safe, never throws back here.
         DeliveryNotificationService.notifyWorkApprovalDecided(req.Id, true);
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // BULK APPROVE (queue LWC "Approve selected" — spec §6a)
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * @description Bulk approve at quoted hours for the queue LWC's
+     *              "Approve selected" action. Each id delegates to the single
+     *              approve() so it gets the EXACT same semantics: per-item
+     *              caller guard, raise-for-increase delta math, and the null
+     *              approvedHours -> QuotedHoursNumber__c fallback. Partial-
+     *              failure policy: every id is processed; failures are
+     *              collected per id and returned alongside the approved ids
+     *              instead of aborting the batch (@AuraEnabled cannot both
+     *              return and throw). DML stays per-item by design — the
+     *              queue feed is capped at 200 rows (MAX_QUEUE_ROWS), so the
+     *              loop is well inside limits at queue scale.
+     * @param workRequestIds The WorkRequest__c ids to approve at their
+     *        quoted hours (each approve passes null approvedHours).
+     * @param note Optional decision note applied to every approved request.
+     * @return BulkApproveResultDTO carrying the successfully approved ids
+     *         plus one "<requestId>: <reason>" entry per failed id.
+     */
+    @AuraEnabled
+    global static BulkApproveResultDTO approveMany(List<Id> workRequestIds, String note) {
+        if (workRequestIds == null || workRequestIds.isEmpty()) {
+            throw new AuraHandledException('workRequestIds is required.');
+        }
+        BulkApproveResultDTO result = new BulkApproveResultDTO();
+        for (Id requestId : workRequestIds) {
+            try {
+                approve(requestId, null, note);
+                result.approvedIds.add(requestId);
+            } catch (Exception e) {
+                // AuraHandledException.getMessage() comes back generic inside
+                // the managed package — the id prefix is the actionable part.
+                result.failures.add(requestId + ': ' + e.getMessage());
+            }
+        }
+        return result;
     }
 
     // ────────────────────────────────────────────────────────────────────
