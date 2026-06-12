@@ -29,6 +29,10 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
+        <apexClass>DeliveryBillingPreviewController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>DeliveryBurndownController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
