@@ -122,7 +122,7 @@ global with sharing class DeliveryWorkApprovalService {
      * matches on it to surface the latest proposal note per item — keep it
      * stable; changing it orphans existing proposal comments.
      */
-    public static final String PROPOSAL_NOTE_PREFIX = '📐 Estimate proposal: ';
+    public static final String PROPOSAL_NOTE_PREFIX = 'Estimate proposal: ';
 
     /**
      * Newest-first comment-scan window for the queue's proposal-note join.
@@ -232,7 +232,7 @@ global with sharing class DeliveryWorkApprovalService {
         WorkItemComment__c note = new WorkItemComment__c(
             WorkItemId__c = wi.Id,
             BodyTxt__c = PROPOSAL_NOTE_PREFIX + String.valueOf(proposedHours)
-                + 'h — ' + reasoning,
+                + 'h - ' + reasoning,
             SourcePk__c = 'Salesforce',
             AuthorTxt__c = UserInfo.getName()
         );
@@ -727,8 +727,14 @@ global with sharing class DeliveryWorkApprovalService {
             if (noteByItem.containsKey(c.WorkItemId__c)) {
                 continue;
             }
-            if (c.BodyTxt__c != null && c.BodyTxt__c.startsWith(PROPOSAL_NOTE_PREFIX)) {
-                noteByItem.put(c.WorkItemId__c, c.BodyTxt__c);
+            // BodyTxt__c is rich text (Html): packaging orgs can wrap content in
+            // markup and entity-encode on save, so normalize to plain text
+            // before the marker match — and carry plain text to the LWC.
+            String plain = c.BodyTxt__c == null
+                ? ''
+                : c.BodyTxt__c.stripHtmlTags().unescapeHtml4().trim();
+            if (plain.startsWith(PROPOSAL_NOTE_PREFIX)) {
+                noteByItem.put(c.WorkItemId__c, plain);
             }
         }
         for (PendingApprovalDTO dto : rows) {
