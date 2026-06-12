@@ -3,6 +3,8 @@
  * @license      BSL 1.1 — See LICENSE.md
  * @description  Jest coverage for deliveryApprovalSummaryCard: the three
  *               agenda tiles from the wire (numbers + hour details), the
+ *               approved-vs-total pitch strip ("Nh of Mh approved (P%)")
+ *               including the zero-denominator guard (no Infinity/NaN), the
  *               report click-through wiring (tile carries the resolved report
  *               id; missing report disables the affordance), and the error
  *               state.
@@ -22,6 +24,8 @@ function sampleSummary(overrides = {}) {
         pendingQuotedHours: 16,
         inProgressCount: 5,
         inProgressApprovedHours: 120,
+        totalActiveEstimatedHours: 3155,
+        totalApprovedHours: 10,
         reportIdsByDeveloperName: {
             Hours_Approved_This_Period: REPORT_ID_APPROVED,
             Pending_Approval: REPORT_ID_PENDING
@@ -65,6 +69,45 @@ describe("c-delivery-approval-summary-card", () => {
         expect(text).toContain("16.0h quoted awaiting decision");
         expect(text).toContain("5"); // in-progress count
         expect(text).toContain("120h approved in flight");
+    });
+
+    it("surfaces the approved-vs-total pitch strip with the zero-guarded percentage", async () => {
+        const element = createComponent();
+        getApprovalSummary.emit(sampleSummary());
+        await flushPromises();
+
+        const pitch = element.shadowRoot.querySelector(".agenda-pitch");
+        expect(pitch).not.toBeNull();
+        expect(pitch.textContent).toContain("10.0h of 3155h approved (0.3%)");
+    });
+
+    it("renders 0% (never Infinity/NaN) when the active estimated denominator is zero", async () => {
+        const element = createComponent();
+        getApprovalSummary.emit(
+            sampleSummary({ totalActiveEstimatedHours: 0, totalApprovedHours: 0 })
+        );
+        await flushPromises();
+
+        const pitch = element.shadowRoot.querySelector(".agenda-pitch");
+        expect(pitch.textContent).toContain("0.00h of 0.00h approved (0.0%)");
+        expect(pitch.textContent).not.toContain("Infinity");
+        expect(pitch.textContent).not.toContain("NaN");
+    });
+
+    it("zero-guards the pitch when the summary omits the pitch fields entirely", async () => {
+        const element = createComponent();
+        getApprovalSummary.emit(
+            sampleSummary({
+                totalActiveEstimatedHours: undefined,
+                totalApprovedHours: undefined
+            })
+        );
+        await flushPromises();
+
+        const pitch = element.shadowRoot.querySelector(".agenda-pitch");
+        expect(pitch.textContent).toContain("0.00h of 0.00h approved (0.0%)");
+        expect(pitch.textContent).not.toContain("Infinity");
+        expect(pitch.textContent).not.toContain("NaN");
     });
 
     it("carries the resolved report id on click-through tiles and disables tiles without a report", async () => {

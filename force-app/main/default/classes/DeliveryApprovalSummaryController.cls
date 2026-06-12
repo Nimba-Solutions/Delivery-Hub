@@ -5,9 +5,12 @@
  *               LWC (PR3 of the work-approval queue): three agenda numbers —
  *               hours approved this month, requests pending approval, and
  *               approved work in flight — plus the report ids for tile
- *               click-through. Kept separate from DeliveryWorkApprovalService
- *               (the decision engine) so the card can evolve without touching
- *               the service under review.
+ *               click-through, plus the approved-vs-total pitch pair
+ *               (totalActiveEstimatedHours / totalApprovedHours) so the card
+ *               can surface how little of the active estimated portfolio is
+ *               client-approved — the approval-queue pitch stat. Kept separate
+ *               from DeliveryWorkApprovalService (the decision engine) so the
+ *               card can evolve without touching the service under review.
  *
  *               SOQL is WITH SYSTEM_MODE per CLAUDE.md (WITH USER_MODE breaks
  *               in namespaced package test context). Report ids are resolved
@@ -46,7 +49,19 @@ public with sharing class DeliveryApprovalSummaryController {
     };
 
     /**
-     * @description The three agenda tiles plus report click-through ids.
+     * WorkItem__c stages excluded from the active portfolio scope. Mirrors
+     * DeliveryHoursAnalyticsController's portfolio filter (the board's
+     * canonical "Active" definition) so the pitch denominator matches the
+     * numbers the forecast and gantt board already show.
+     */
+    @TestVisible
+    private static final Set<String> TERMINAL_STAGES = new Set<String>{
+        'Done', 'Cancelled', 'Closed', 'Rejected'
+    };
+
+    /**
+     * @description The three agenda tiles, the approved-vs-total pitch pair,
+     *              plus report click-through ids.
      */
     public class ApprovalSummaryDTO {
         @AuraEnabled public Decimal hoursApprovedThisMonth;
@@ -54,6 +69,10 @@ public with sharing class DeliveryApprovalSummaryController {
         @AuraEnabled public Decimal pendingQuotedHours;
         @AuraEnabled public Integer inProgressCount;
         @AuraEnabled public Decimal inProgressApprovedHours;
+        /** Sum of EstimatedHoursNumber__c across the active portfolio scope. */
+        @AuraEnabled public Decimal totalActiveEstimatedHours;
+        /** Sum of ClientPreApprovedHoursNumber__c across the same scope. */
+        @AuraEnabled public Decimal totalApprovedHours;
         @AuraEnabled public Map<String, String> reportIdsByDeveloperName;
     }
 
@@ -62,8 +81,9 @@ public with sharing class DeliveryApprovalSummaryController {
      *              hours on requests Accepted this calendar month, (2) count +
      *              quoted-hours sum of Offer-Sent requests awaiting a
      *              decision, (3) count + approved-cap sum of in-flight
-     *              WorkItems carrying a client-approved budget — plus the
-     *              report ids backing each tile's click-through.
+     *              WorkItems carrying a client-approved budget, (4) the
+     *              approved-vs-total pitch pair over the active portfolio —
+     *              plus the report ids backing each tile's click-through.
      * @return One ApprovalSummaryDTO; numbers default to 0 when empty.
      */
     @AuraEnabled(cacheable=true)
@@ -73,6 +93,7 @@ public with sharing class DeliveryApprovalSummaryController {
             dto.hoursApprovedThisMonth = sumApprovedThisMonth();
             fillPendingAggregates(dto);
             fillInProgressAggregates(dto);
+            fillApprovedShareAggregates(dto);
             dto.reportIdsByDeveloperName = resolveReportIds();
         } catch (Exception e) {
             System.debug(LoggingLevel.WARN,
@@ -134,6 +155,34 @@ public with sharing class DeliveryApprovalSummaryController {
         Decimal approved = (Decimal) row.get('approved');
         dto.inProgressCount = cnt == null ? 0 : cnt;
         dto.inProgressApprovedHours = approved == null ? 0 : approved;
+    }
+
+    /**
+     * @description The approval-queue pitch pair in ONE aggregate: total
+     *              estimated hours across the active portfolio vs how much of
+     *              it carries a client-approved cap. "Active" borrows the
+     *              board's canonical scope (DeliveryHoursAnalyticsController's
+     *              portfolio filter): activated, not archived, not a template,
+     *              and not in a terminal stage. SUM ignores null caps, so the
+     *              approved figure is exactly the sum of positive
+     *              ClientPreApprovedHoursNumber__c values in that scope.
+     * @param dto DTO to fill (totalActiveEstimatedHours / totalApprovedHours).
+     */
+    private static void fillApprovedShareAggregates(ApprovalSummaryDTO dto) {
+        AggregateResult row = [
+            SELECT SUM(EstimatedHoursNumber__c) est,
+                   SUM(ClientPreApprovedHoursNumber__c) approved
+            FROM WorkItem__c
+            WHERE ActivatedDateTime__c != NULL
+              AND ArchivedDateTime__c = NULL
+              AND TemplateMarkedDateTime__c = NULL
+              AND StageNamePk__c NOT IN :TERMINAL_STAGES
+            WITH SYSTEM_MODE
+        ];
+        Decimal est = (Decimal) row.get('est');
+        Decimal approved = (Decimal) row.get('approved');
+        dto.totalActiveEstimatedHours = est == null ? 0 : est;
+        dto.totalApprovedHours = approved == null ? 0 : approved;
     }
 
     /**

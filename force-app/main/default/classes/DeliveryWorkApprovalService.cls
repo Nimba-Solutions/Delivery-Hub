@@ -52,7 +52,23 @@
  *                    The WorkItem keeps its current stage — only the delta
  *                    awaits a decision, not the already-approved work.
  *               getPendingForApprover(userId)
- *                 -> the queue feed for the approval LWC (PR2).
+ *                 -> the queue feed for the approval LWC (PR2). When the
+ *                    given user is the configured primary OR backup approver,
+ *                    requests assigned to EITHER of them are included.
+ *
+ *               Backup approver: DeliveryHubSettings__c.ApproverBackupUserIdTxt__c
+ *               names an optional second user who may decide pending requests
+ *               (assertCallerMayDecide allows primary or backup). The backup
+ *               is never auto-assigned and gets no submit pings — the primary
+ *               (resolveDefaultApproverId) stays the assignment/notification
+ *               target.
+ *
+ *               GLOBAL on purpose: subscriber orgs install Delivery Hub under
+ *               the delivery__ namespace, where public Apex is invisible to
+ *               subscriber-side anonymous Apex. The class and its service
+ *               methods (and the DTOs they return) are global so admin
+ *               scripting / future MCP automation in subscriber orgs can
+ *               drive the approval lifecycle directly.
  *
  *               WorkRequest__c lifecycle values used here are the verified
  *               picklist values: Draft / Offer Sent / Accepted / In Progress /
@@ -62,8 +78,8 @@
  *               suppression style.
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity,PMD.CognitiveComplexity')
-public with sharing class DeliveryWorkApprovalService {
+@SuppressWarnings('PMD.ApexCRUDViolation,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity,PMD.CognitiveComplexity,PMD.AvoidGlobalModifier')
+global with sharing class DeliveryWorkApprovalService {
 
     /** WorkRequest__c lifecycle values (verified picklist values). */
     public static final String REQUEST_DRAFT = 'Draft';
@@ -89,8 +105,10 @@ public with sharing class DeliveryWorkApprovalService {
     /**
      * @description One render-ready pending-approval row for the queue LWC
      *              (PR2): the Offer-Sent request joined with its work item.
+     *              Global because it is the return type of the global
+     *              getPendingForApprover (subscriber-side automation).
      */
-    public class PendingApprovalDTO {
+    global class PendingApprovalDTO {
         @AuraEnabled public Id requestId;
         @AuraEnabled public Id workItemId;
         @AuraEnabled public String workItemName;
@@ -105,9 +123,10 @@ public with sharing class DeliveryWorkApprovalService {
     /**
      * @description Per-item result of submitForApproval — which request the
      *              item landed on and whether the discretionary short-circuit
-     *              auto-approved it.
+     *              auto-approved it. Global because it is the return type of
+     *              the global submitForApproval (subscriber-side automation).
      */
-    public class SubmitResultDTO {
+    global class SubmitResultDTO {
         @AuraEnabled public Id workItemId;
         @AuraEnabled public Id workRequestId;
         @AuraEnabled public Boolean autoApproved;
@@ -124,7 +143,7 @@ public with sharing class DeliveryWorkApprovalService {
      * @param workItemIds The WorkItem__c ids to submit.
      * @return One SubmitResultDTO per submitted item.
      */
-    public static List<SubmitResultDTO> submitForApproval(Set<Id> workItemIds) {
+    global static List<SubmitResultDTO> submitForApproval(Set<Id> workItemIds) {
         return submitForApproval(workItemIds, null);
     }
 
@@ -138,7 +157,7 @@ public with sharing class DeliveryWorkApprovalService {
      *        items absent from the map fall back to EstimatedHoursNumber__c.
      * @return One SubmitResultDTO per submitted item.
      */
-    public static List<SubmitResultDTO> submitForApproval(
+    global static List<SubmitResultDTO> submitForApproval(
         Set<Id> workItemIds, Map<Id, Decimal> quotedHoursByItem
     ) {
         if (workItemIds == null || workItemIds.isEmpty()) {
@@ -353,7 +372,7 @@ public with sharing class DeliveryWorkApprovalService {
      * @param note Optional decision note from the approver.
      */
     @AuraEnabled
-    public static void approve(Id workRequestId, Decimal approvedHours, String note) {
+    global static void approve(Id workRequestId, Decimal approvedHours, String note) {
         WorkRequest__c req = loadPendingRequestOrThrow(workRequestId);
         assertCallerMayDecide(req);
         Decimal granted = approvedHours == null ? req.QuotedHoursNumber__c : approvedHours;
@@ -400,7 +419,7 @@ public with sharing class DeliveryWorkApprovalService {
      * @param reason Why the client declined (stored on the request).
      */
     @AuraEnabled
-    public static void decline(Id workRequestId, String reason) {
+    global static void decline(Id workRequestId, String reason) {
         WorkRequest__c req = loadPendingRequestOrThrow(workRequestId);
         assertCallerMayDecide(req);
         Decimal currentCap = req.WorkItemId__r.ClientPreApprovedHoursNumber__c;
@@ -443,7 +462,7 @@ public with sharing class DeliveryWorkApprovalService {
      * @return The new WorkRequest__c id.
      */
     @AuraEnabled
-    public static Id requestIncrease(Id workItemId, Decimal extraHours, String reason) {
+    global static Id requestIncrease(Id workItemId, Decimal extraHours, String reason) {
         if (workItemId == null) {
             throw new AuraHandledException('workItemId is required.');
         }
@@ -478,13 +497,18 @@ public with sharing class DeliveryWorkApprovalService {
      *              their work item for one-screen render. Includes requests
      *              assigned to the given user AND unassigned requests (no
      *              default approver configured) so the queue never silently
-     *              hides work — approver assignment is settings-optional in PR1.
+     *              hides work — approver assignment is settings-optional in
+     *              PR1. When the given user is the configured primary OR
+     *              backup approver, requests assigned to EITHER of them are
+     *              included — the backup sees (and may work) the primary's
+     *              queue and vice versa.
      * @param userId Approver to fetch for; null = the running user.
      * @return Oldest-first list of PendingApprovalDTO (LIMIT 200).
      */
     @AuraEnabled(cacheable=true)
-    public static List<PendingApprovalDTO> getPendingForApprover(Id userId) {
+    global static List<PendingApprovalDTO> getPendingForApprover(Id userId) {
         Id approverId = userId == null ? UserInfo.getUserId() : userId;
+        Set<Id> approverIds = resolveQueueApproverIds(approverId);
         List<PendingApprovalDTO> out = new List<PendingApprovalDTO>();
         try {
             for (WorkRequest__c req : [
@@ -494,7 +518,7 @@ public with sharing class DeliveryWorkApprovalService {
                        WorkItemId__r.BriefDescriptionTxt__c
                 FROM WorkRequest__c
                 WHERE StatusPk__c = :REQUEST_OFFER_SENT
-                  AND (ApproverUserLookup__c = :approverId
+                  AND (ApproverUserLookup__c IN :approverIds
                        OR ApproverUserLookup__c = NULL)
                 WITH SYSTEM_MODE
                 ORDER BY CreatedDate ASC
@@ -568,19 +592,76 @@ public with sharing class DeliveryWorkApprovalService {
     /**
      * @description Caller guard, mirroring the FeatureToggle rails' caller-
      *              is-approver gate but relaxed for unassigned requests: when
-     *              an approver IS assigned, only that user may decide (the
-     *              @AuraEnabled surface is reachable outside the LWC);
+     *              an approver IS assigned, only that user — or the configured
+     *              BACKUP approver (ApproverBackupUserIdTxt__c) — may decide
+     *              (the @AuraEnabled surface is reachable outside the LWC);
      *              unassigned requests may be decided by any authorised
      *              caller, who is then stamped as the approver — PR1 leaves
      *              approver assignment settings-optional.
      * @param req The loaded pending request.
      */
     private static void assertCallerMayDecide(WorkRequest__c req) {
-        if (req.ApproverUserLookup__c != null
-            && req.ApproverUserLookup__c != UserInfo.getUserId()) {
-            throw new AuraHandledException(
-                'You are not the assigned approver for this request.');
+        if (req.ApproverUserLookup__c == null) {
+            return;
         }
+        Id caller = UserInfo.getUserId();
+        if (req.ApproverUserLookup__c == caller) {
+            return;
+        }
+        Id backupId = resolveBackupApproverId(DeliveryHubSettings__c.getOrgDefaults());
+        if (backupId != null && backupId == caller) {
+            return;
+        }
+        throw new AuraHandledException(
+            'You are not the assigned approver for this request.');
+    }
+
+    /**
+     * @description Resolves the optional BACKUP approver from
+     *              DeliveryHubSettings__c.ApproverBackupUserIdTxt__c — same
+     *              Text(18) parse-and-tolerate idiom as
+     *              resolveDefaultApproverId. The backup may decide pending
+     *              requests but is never auto-assigned and gets no submit
+     *              pings (the primary stays the assignment/ping target).
+     * @param settings Org-default settings (null-safe).
+     * @return The backup approver's user id, or null when unset/invalid.
+     */
+    private static Id resolveBackupApproverId(DeliveryHubSettings__c settings) {
+        if (settings == null || String.isBlank(settings.ApproverBackupUserIdTxt__c)) {
+            return null;
+        }
+        try {
+            return Id.valueOf(settings.ApproverBackupUserIdTxt__c.trim());
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryWorkApprovalService.resolveBackupApproverId] bad id in settings: '
+                + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * @description Builds the assignee set the queue feed matches against:
+     *              just the requested approver — widened to {primary, backup}
+     *              when the requested approver IS the configured primary or
+     *              backup, so either of them sees the whole shared queue.
+     * @param approverId The user the queue is being fetched for.
+     * @return Non-empty set of assignee ids to match ApproverUserLookup__c.
+     */
+    private static Set<Id> resolveQueueApproverIds(Id approverId) {
+        Set<Id> approverIds = new Set<Id>{ approverId };
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        Id primaryId = resolveDefaultApproverId(settings);
+        Id backupId = resolveBackupApproverId(settings);
+        if (approverId == primaryId || approverId == backupId) {
+            if (primaryId != null) {
+                approverIds.add(primaryId);
+            }
+            if (backupId != null) {
+                approverIds.add(backupId);
+            }
+        }
+        return approverIds;
     }
 
     /**
