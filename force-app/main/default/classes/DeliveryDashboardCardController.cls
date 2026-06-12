@@ -37,11 +37,20 @@ global with sharing class DeliveryDashboardCardController {
     global static Object getCardData(String dataSource, String filterJson) {
         switch on dataSource {
             when 'activeWorkItems' {
+                // Canonical "active" definition, shared with System Pulse
+                // (DeliveryHubDashboardController.getBudgetMetrics.activeRequests):
+                // activated + non-archived + non-template + NON-TERMINAL stage.
+                // Pre-fix this count was missing the terminal-stage exclusion, so
+                // Done/Cancelled items still counted as "Active" and the Exec
+                // Dashboard disagreed with System Pulse (155 vs 110 on live data).
+                Set<String> terminalStages =
+                    DeliveryWorkflowConfigService.getTerminalStageValues('Software_Delivery');
                 return [
                     SELECT COUNT() FROM WorkItem__c
                     WHERE ActivatedDateTime__c != NULL
                     AND ArchivedDateTime__c = NULL
                     AND TemplateMarkedDateTime__c = NULL
+                    AND StageNamePk__c NOT IN :terminalStages
                     WITH SYSTEM_MODE
                 ];
             }
@@ -56,11 +65,19 @@ global with sharing class DeliveryDashboardCardController {
                 ];
             }
             when 'hoursThisMonth' {
+                // Hours WORKED this month, keyed on WorkDateDate__c (when the work
+                // actually happened) with a CreatedDate fallback for legacy rows
+                // where the work date was never captured — the exact semantics of
+                // System Pulse's "Hours Performed This Month" and the Monthly_Hours
+                // report. Pre-fix this card summed by CreatedDate (entry time),
+                // which silently diverged from both whenever entries were backdated.
                 Date monthStart = Date.today().toStartOfMonth();
+                DateTime monthStartDt = DateTime.newInstance(monthStart, Time.newInstance(0, 0, 0, 0));
                 AggregateResult[] results = [
                     SELECT SUM(HoursLoggedNumber__c) total
                     FROM WorkLog__c
-                    WHERE CreatedDate >= :monthStart
+                    WHERE (WorkDateDate__c >= :monthStart)
+                       OR (WorkDateDate__c = NULL AND CreatedDate >= :monthStartDt)
                     WITH SYSTEM_MODE
                 ];
                 return results.isEmpty() || results[0].get('total') == null ? 0 : results[0].get('total');

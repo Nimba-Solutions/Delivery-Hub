@@ -3,7 +3,7 @@
     <label>Items By Stage</label>
     <protected>false</protected>
     <values><field>TitleTxt__c</field><value xsi:type="xsd:string">Items by Stage</value></values>
-    <values><field>DescriptionTxt__c</field><value xsi:type="xsd:string">Active work items grouped by workflow stage</value></values>
+    <values><field>DescriptionTxt__c</field><value xsi:type="xsd:string">All activated, non-archived items by stage — includes completed (top 10 stages)</value></values>
     <values><field>CardTypePk__c</field><value xsi:type="xsd:string">BarChart</value></values>
     <values><field>IconNameTxt__c</field><value xsi:type="xsd:string">utility:kanban</value></values>
     <values><field>DataSourceTxt__c</field><value xsi:type="xsd:string">workItemsByPhase</value></values>
@@ -15,4 +15,6 @@
     <values><field>CardSizeTxt__c</field><value xsi:type="xsd:string">medium</value></values>
     <values><field>ThresholdWarningNumber__c</field><value xsi:nil="true"/></values>
     <values><field>ThresholdCriticalNumber__c</field><value xsi:nil="true"/></values>
+    <values><field>ClickThroughUrlTxt__c</field><value xsi:type="xsd:string">report:Work_Item_Pipeline</value></values>
+    <values><field>InfoPopoverTxt__c</field><value xsi:type="xsd:string">Stage breakdown of every activated, non-archived, non-template WorkItem — DELIBERATELY including terminal stages (Done, etc.) so you can see the full pipeline shape, capped at the 10 largest stages. This is why its total exceeds the Active Work Items metric, which excludes completed items. Click the card to open the Work Item Pipeline by Stage report for the uncapped, line-item view.</value></values>
 </CustomMetadata>
