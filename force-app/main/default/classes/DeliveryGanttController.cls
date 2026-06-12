@@ -152,7 +152,13 @@ public with sharing class DeliveryGanttController {
                 query += 'AND (ActivatedDateTime__c != null '
                     + 'OR LastModifiedDate >= LAST_N_DAYS:' + DEFAULT_STALE_CUTOFF_DAYS + ') ';
             } else {
-                query += 'AND ActivatedDateTime__c != null ';
+                // Default view: canonical active scope — activated AND not archived.
+                // Pre-fix the archived filter was missing, so archived items still
+                // rendered on the timeline and its count disagreed with every other
+                // "active items" surface on Home. (showCompleted=true deliberately
+                // keeps archived/inactive items, bounded by the freshness window.)
+                query += 'AND ActivatedDateTime__c != null '
+                    + 'AND ArchivedDateTime__c = null ';
             }
 
             query += 'WITH SYSTEM_MODE '
@@ -1093,7 +1099,10 @@ public with sharing class DeliveryGanttController {
                 query += 'AND (ActivatedDateTime__c != null '
                     + 'OR LastModifiedDate >= LAST_N_DAYS:' + DEFAULT_STALE_CUTOFF_DAYS + ') ';
             } else {
-                query += 'AND ActivatedDateTime__c != null ';
+                // Default view: canonical active scope — activated AND not archived
+                // (mirrors getGanttData; pre-fix archived items still rendered).
+                query += 'AND ActivatedDateTime__c != null '
+                    + 'AND ArchivedDateTime__c = null ';
             }
 
             // SortOrderNumber__c is the primary sort — drag-to-reorder writes it,

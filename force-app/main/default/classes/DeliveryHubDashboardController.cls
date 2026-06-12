@@ -496,7 +496,12 @@ global with sharing class DeliveryHubDashboardController {
         }
         metrics.put('completed', completed);
 
-        // Items modified (stage changed) in range — exclude templates and archived.
+        // Items modified (stage changed) in range — surfaced as the "In Progress"
+        // tile. Requires the full canonical active-item filter set (activated +
+        // non-template + non-archived + non-terminal) so this count reconciles
+        // with System Pulse's activeRequests and the What's-In-Flight phase
+        // tiles. Pre-fix the ActivatedDateTime__c check was missing, so
+        // unactivated backlog items modified in the window inflated the number.
         Integer moved;
         if (endDt != null) {
             moved = [
@@ -505,6 +510,7 @@ global with sharing class DeliveryHubDashboardController {
                 WHERE LastModifiedDate >= :startDt
                 AND LastModifiedDate < :endDt
                 AND StageNamePk__c NOT IN :terminalStages
+                AND ActivatedDateTime__c != null
                 AND TemplateMarkedDateTime__c = null
                 AND ArchivedDateTime__c = null
             ];
@@ -514,6 +520,7 @@ global with sharing class DeliveryHubDashboardController {
                 FROM WorkItem__c
                 WHERE LastModifiedDate >= :startDt
                 AND StageNamePk__c NOT IN :terminalStages
+                AND ActivatedDateTime__c != null
                 AND TemplateMarkedDateTime__c = null
                 AND ArchivedDateTime__c = null
             ];
