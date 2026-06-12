@@ -424,8 +424,12 @@ public with sharing class DeliveryWeeklyDigestService {
         // Footer
         html += '<div style="background: #f3f3f3; padding: 18px 32px; '
              +  'border-radius: 0 0 8px 8px; border: 1px solid #e5e5e5; border-top: none;">';
+        // Brand: CMT-driven entity name (DeliveryHubSetupController resolves
+        // MothershipEntityNameTxt__c with the legacy literal as last-resort
+        // fallback) so white-label distributions don't email our name.
         html += '<p style="margin: 0; font-size: 12px; color: #706e6b; text-align: center;">'
-             +  'Powered by Delivery Hub | Cloud Nimbus LLC</p>';
+             +  'Powered by Delivery Hub | '
+             +  DeliveryHubSetupController.mothershipNamePrefix().escapeHtml4() + '</p>';
         html += '<p style="margin: 6px 0 0; font-size: 11px; color: #939393; text-align: center;">'
              +  'To stop receiving this digest, ask your admin to disable Weekly Digest in '
              +  'Delivery Hub Settings.</p>';

@@ -498,7 +498,7 @@ global with sharing class DeliveryHoursAnalyticsController {
             applyPortfolioForecast(periods, dto, back);
 
             dto.periods = periods;
-            dto.blendedRate = resolveBlendedRate();
+            dto.blendedRate = DeliveryRateService.resolveBlendedRate();
             return dto;
         } catch (AuraHandledException ahe) {
             throw ahe;
@@ -1391,31 +1391,4 @@ global with sharing class DeliveryHoursAnalyticsController {
         return sum / window;
     }
 
-    /**
-     * @description Reads a single blended hourly rate when EXACTLY ONE active
-     *              NetworkEntity carries a DefaultHourlyRateCurrency__c, so the
-     *              LWC can render a secondary $ axis. Returns null when zero or
-     *              many distinct rates exist (ambiguous — hours-only display).
-     */
-    private static Decimal resolveBlendedRate() {
-        // No describe guard: DefaultHourlyRateCurrency__c is referenced statically
-        // in the SOQL below, so it is compile-time guaranteed to exist. A
-        // fields.getMap().containsKey('DefaultHourlyRateCurrency__c') guard is also
-        // namespace-UNSAFE — in the packaging org the map key is prefixed
-        // ('delivery__defaulthourly...'), so the unprefixed containsKey returns
-        // false and the method returned null in managed contexts (upload-beta only).
-        List<NetworkEntity__c> rated = [
-            SELECT DefaultHourlyRateCurrency__c
-            FROM NetworkEntity__c
-            WHERE DefaultHourlyRateCurrency__c != NULL
-              AND DefaultHourlyRateCurrency__c > 0
-              AND StatusPk__c = 'Active'
-            WITH SYSTEM_MODE
-            LIMIT 2
-        ];
-        if (rated.size() == 1) {
-            return rated[0].DefaultHourlyRateCurrency__c;
-        }
-        return null;
-    }
 }

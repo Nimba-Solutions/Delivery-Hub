@@ -30,7 +30,9 @@ function samplePending() {
             requestedIncrease: null,
             requestStatus: "Offer Sent",
             submittedAt: new Date().toISOString(),
-            approverUserId: "005000000000001AAA"
+            approverUserId: "005000000000001AAA",
+            latestProposalNote:
+                "📐 Estimate proposal: 12h — Mirrors the last two reporting tickets"
         },
         {
             requestId: REQUEST_TWO,
@@ -41,7 +43,8 @@ function samplePending() {
             requestedIncrease: 4,
             requestStatus: "Offer Sent",
             submittedAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-            approverUserId: null
+            approverUserId: null,
+            latestProposalNote: null
         }
     ];
 }
@@ -245,6 +248,46 @@ describe("c-delivery-approval-queue", () => {
             workRequestId: REQUEST_ONE,
             reason: "Budget exhausted for this quarter"
         });
+    });
+
+    it("shows the why-this-estimate toggle only on rows carrying a proposal note", async () => {
+        const element = createComponent();
+        getPendingForApprover.emit(samplePending());
+        await flushPromises();
+
+        const toggles = element.shadowRoot.querySelectorAll(".queue-proposal-toggle");
+        expect(toggles.length).toBe(1); // only REQUEST_ONE carries a note
+        expect(toggles[0].textContent).toBe("Why this estimate");
+        // Collapsed by default — no note body rendered yet.
+        expect(element.shadowRoot.querySelector(".queue-proposal-note")).toBeNull();
+    });
+
+    it("expands and collapses the proposal note on toggle clicks", async () => {
+        const element = createComponent();
+        getPendingForApprover.emit(samplePending());
+        await flushPromises();
+
+        const toggle = element.shadowRoot.querySelector(".queue-proposal-toggle");
+        toggle.dispatchEvent(new CustomEvent("click"));
+        await flushPromises();
+
+        const note = element.shadowRoot.querySelector(".queue-proposal-note");
+        expect(note).not.toBeNull();
+        expect(note.textContent).toContain(
+            "📐 Estimate proposal: 12h — Mirrors the last two reporting tickets"
+        );
+        expect(
+            element.shadowRoot.querySelector(".queue-proposal-toggle").textContent
+        ).toBe("Hide why this estimate");
+
+        element.shadowRoot
+            .querySelector(".queue-proposal-toggle")
+            .dispatchEvent(new CustomEvent("click"));
+        await flushPromises();
+        expect(element.shadowRoot.querySelector(".queue-proposal-note")).toBeNull();
+        expect(
+            element.shadowRoot.querySelector(".queue-proposal-toggle").textContent
+        ).toBe("Why this estimate");
     });
 
     it("shows the caught-up empty state when nothing is pending", async () => {

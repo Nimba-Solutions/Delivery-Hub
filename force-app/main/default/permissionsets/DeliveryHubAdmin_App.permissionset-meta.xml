@@ -29,6 +29,10 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
+        <apexClass>DeliveryApproverService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>DeliveryBillingPreviewController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
@@ -170,6 +174,10 @@
     </classAccesses>
     <classAccesses>
         <apexClass>DeliveryQuickRequestController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>DeliveryRateService</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
