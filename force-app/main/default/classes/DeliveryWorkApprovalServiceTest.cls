@@ -950,9 +950,13 @@ private class DeliveryWorkApprovalServiceTest {
         for (WorkItemComment__c c : [
             SELECT BodyTxt__c FROM WorkItemComment__c WHERE WorkItemId__c = :wi.Id
         ]) {
-            if (c.BodyTxt__c != null
-                && c.BodyTxt__c.startsWith(DeliveryWorkApprovalService.PROPOSAL_NOTE_PREFIX)) {
-                proposalBody = c.BodyTxt__c;
+            // Normalize the Html round-trip the same way the service's queue
+            // join does — packaging orgs can wrap/entity-encode rich text.
+            String plain = c.BodyTxt__c == null
+                ? ''
+                : c.BodyTxt__c.stripHtmlTags().unescapeHtml4().trim();
+            if (plain.startsWith(DeliveryWorkApprovalService.PROPOSAL_NOTE_PREFIX)) {
+                proposalBody = plain;
             }
         }
         System.assertNotEquals(null, proposalBody,
