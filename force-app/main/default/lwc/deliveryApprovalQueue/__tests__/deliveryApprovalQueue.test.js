@@ -4,14 +4,16 @@
  * @description  Jest coverage for deliveryApprovalQueue: wire-driven rows
  *               (label fallback, increase badge, headline totals), the
  *               imperative approve flow (apex call + success toast + wire
- *               refresh), the inline decline flow, and the caught-up empty
- *               state.
+ *               refresh), the bulk "Approve selected" flow (selection
+ *               toggles, approveMany call shape, outcome toasts), the inline
+ *               decline flow, and the caught-up empty state.
  * @author       Cloud Nimbus LLC
  */
 import { createElement } from "lwc";
 import DeliveryApprovalQueue from "c/deliveryApprovalQueue";
 import getPendingForApprover from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.getPendingForApprover";
 import approve from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.approve";
+import approveMany from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.approveMany";
 import decline from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.decline";
 
 const REQUEST_ONE = "a0G000000000001AAA";
@@ -60,6 +62,17 @@ function findButtonByLabel(element, label) {
     return Array.from(element.shadowRoot.querySelectorAll("lightning-button")).find(
         (b) => b.label === label
     );
+}
+
+function findInputByLabel(element, label) {
+    return Array.from(element.shadowRoot.querySelectorAll("lightning-input")).find(
+        (i) => i.label === label
+    );
+}
+
+function setCheckbox(input, checked) {
+    input.checked = checked;
+    input.dispatchEvent(new CustomEvent("change"));
 }
 
 describe("c-delivery-approval-queue", () => {
@@ -113,6 +126,98 @@ describe("c-delivery-approval-queue", () => {
         expect(toastHandler).toHaveBeenCalled();
         const toastDetail = toastHandler.mock.calls[0][0].detail;
         expect(toastDetail.variant).toBe("success");
+    });
+
+    it("selection toggles drive the bulk button label and disabled state", async () => {
+        const element = createComponent();
+        getPendingForApprover.emit(samplePending());
+        await flushPromises();
+
+        let bulkButton = findButtonByLabel(element, "Approve selected (0)");
+        expect(bulkButton).toBeTruthy();
+        expect(bulkButton.disabled).toBe(true);
+
+        // Tick the first row checkbox -> (1), enabled.
+        const rowCheckbox = findInputByLabel(element, "Select request");
+        setCheckbox(rowCheckbox, true);
+        await flushPromises();
+
+        bulkButton = findButtonByLabel(element, "Approve selected (1)");
+        expect(bulkButton).toBeTruthy();
+        expect(bulkButton.disabled).toBe(false);
+
+        // Select all -> (2).
+        setCheckbox(findInputByLabel(element, "Select all"), true);
+        await flushPromises();
+        expect(findButtonByLabel(element, "Approve selected (2)")).toBeTruthy();
+
+        // Clear via select-all -> back to (0), disabled.
+        setCheckbox(findInputByLabel(element, "Select all"), false);
+        await flushPromises();
+        bulkButton = findButtonByLabel(element, "Approve selected (0)");
+        expect(bulkButton).toBeTruthy();
+        expect(bulkButton.disabled).toBe(true);
+    });
+
+    it("bulk approve calls apex with the selected ids and toasts the success count", async () => {
+        approveMany.mockResolvedValue({
+            approvedIds: [REQUEST_ONE, REQUEST_TWO],
+            failures: []
+        });
+        const element = createComponent();
+        const toastHandler = jest.fn();
+        element.addEventListener("lightning__showtoast", toastHandler);
+
+        getPendingForApprover.emit(samplePending());
+        await flushPromises();
+
+        setCheckbox(findInputByLabel(element, "Select all"), true);
+        await flushPromises();
+
+        findButtonByLabel(element, "Approve selected (2)").dispatchEvent(
+            new CustomEvent("click")
+        );
+        await flushPromises();
+        await flushPromises();
+
+        expect(approveMany).toHaveBeenCalledWith({
+            workRequestIds: [REQUEST_ONE, REQUEST_TWO],
+            note: null
+        });
+        expect(toastHandler).toHaveBeenCalled();
+        const toastDetail = toastHandler.mock.calls[0][0].detail;
+        expect(toastDetail.variant).toBe("success");
+        expect(toastDetail.message).toContain("2 requests approved");
+    });
+
+    it("bulk approve toasts a warning summarizing partial failures", async () => {
+        approveMany.mockResolvedValue({
+            approvedIds: [REQUEST_ONE],
+            failures: [`${REQUEST_TWO}: not awaiting a decision`]
+        });
+        const element = createComponent();
+        const toastHandler = jest.fn();
+        element.addEventListener("lightning__showtoast", toastHandler);
+
+        getPendingForApprover.emit(samplePending());
+        await flushPromises();
+
+        setCheckbox(findInputByLabel(element, "Select all"), true);
+        await flushPromises();
+
+        findButtonByLabel(element, "Approve selected (2)").dispatchEvent(
+            new CustomEvent("click")
+        );
+        await flushPromises();
+        await flushPromises();
+
+        expect(approveMany).toHaveBeenCalledWith({
+            workRequestIds: [REQUEST_ONE, REQUEST_TWO],
+            note: null
+        });
+        const toastDetail = toastHandler.mock.calls[0][0].detail;
+        expect(toastDetail.variant).toBe("warning");
+        expect(toastDetail.message).toContain("1 approved, 1 failed");
     });
 
     it("decline requires a reason then calls apex", async () => {
