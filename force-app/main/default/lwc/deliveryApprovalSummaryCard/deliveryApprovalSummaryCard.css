@@ -69,6 +69,27 @@
     color: #991b1b;
 }
 
+.agenda-pitch {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.875rem 1.5rem 0;
+    flex-wrap: wrap;
+}
+
+.pitch-label {
+    font-size: 0.6875rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.pitch-stat {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #111827;
+}
+
 .agenda-tiles {
     display: flex;
     gap: 1rem;
