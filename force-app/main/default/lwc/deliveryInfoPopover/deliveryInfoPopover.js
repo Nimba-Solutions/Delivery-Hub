@@ -265,12 +265,12 @@ const INFO_REGISTRY = {
     },
     deliveryApprovalSummaryCard: {
         dataSource:
-            'Wires DeliveryApprovalSummaryController.getApprovalSummary — three aggregate SOQL queries: (1) SUM of PreApprovedHoursNumber__c on WorkRequest__c rows Accepted this calendar month, (2) COUNT + quoted-hours SUM of Offer-Sent requests, (3) COUNT + approved-cap SUM of WorkItem__c rows with ClientPreApprovedHoursNumber__c > 0 in the dev-through-deploying stage band. Tile click-throughs navigate to the Delivery Hub Approvals reports, resolved by DeveloperName at runtime.',
+            'Wires DeliveryApprovalSummaryController.getApprovalSummary — four aggregate SOQL queries: (1) SUM of PreApprovedHoursNumber__c on WorkRequest__c rows Accepted this calendar month, (2) COUNT + quoted-hours SUM of Offer-Sent requests, (3) COUNT + approved-cap SUM of WorkItem__c rows with ClientPreApprovedHoursNumber__c > 0 in the dev-through-deploying stage band, (4) the approved-vs-total pitch pair — SUM of EstimatedHoursNumber__c vs SUM of ClientPreApprovedHoursNumber__c over the active portfolio scope (activated, non-archived, non-template, non-terminal). Tile click-throughs navigate to the Delivery Hub Approvals reports, resolved by DeveloperName at runtime.',
         description:
-            'The approval agenda at a glance: hours approved this month, requests pending approval, and approved work in flight. Each tile opens its backing report (Hours Approved / Pending Approval / Approved & In Progress) for the line-item detail behind the number.',
+            'The approval agenda at a glance: how much of the active estimated portfolio is client-approved (the pitch strip), hours approved this month, requests pending approval, and approved work in flight. Each tile opens its backing report (Hours Approved / Pending Approval / Approved & In Progress) for the line-item detail behind the number.',
         friendlyName: 'Approval Agenda',
         keyFields:
-            'WorkRequest__c.StatusPk__c, WorkRequest__c.PreApprovedHoursNumber__c, WorkRequest__c.QuotedHoursNumber__c, WorkRequest__c.DecisionDateTime__c, WorkItem__c.ClientPreApprovedHoursNumber__c, WorkItem__c.StageNamePk__c'
+            'WorkRequest__c.StatusPk__c, WorkRequest__c.PreApprovedHoursNumber__c, WorkRequest__c.QuotedHoursNumber__c, WorkRequest__c.DecisionDateTime__c, WorkItem__c.ClientPreApprovedHoursNumber__c, WorkItem__c.EstimatedHoursNumber__c, WorkItem__c.ActivatedDateTime__c, WorkItem__c.StageNamePk__c'
     },
     deliveryWatcherSetup: {
         dataSource:
