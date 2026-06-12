@@ -20,11 +20,12 @@
                         <div class="slds-media__figure">
                             <lightning-icon icon-name="standard:case" size="medium"></lightning-icon>
                         </div>
-                        <div class="slds-media__body" style="cursor: pointer;" onclick={handleActiveItemsClick}>
+                        <div class="slds-media__body" style="cursor: pointer;" onclick={handleActiveItemsClick} title="Activated, non-archived items in non-terminal stages — excludes completed and templates">
                             <div class="slds-text-heading_large slds-var-m-bottom_xx-small">
                                 <strong>{metrics.activeRequests}</strong>
                             </div>
                             <div class="slds-text-title_caps slds-text-color_weak">Active Work Items</div>
+                            <div class="slds-text-body_small slds-text-color_weak">excludes completed &amp; archived</div>
                         </div>
                     </div>
                 </div>

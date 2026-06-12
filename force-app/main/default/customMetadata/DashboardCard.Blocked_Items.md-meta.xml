@@ -15,4 +15,6 @@
     <values><field>CardSizeTxt__c</field><value xsi:type="xsd:string">small</value></values>
     <values><field>ThresholdWarningNumber__c</field><value xsi:type="xsd:double">3</value></values>
     <values><field>ThresholdCriticalNumber__c</field><value xsi:type="xsd:double">5</value></values>
+    <values><field>ClickThroughUrlTxt__c</field><value xsi:type="xsd:string">report:Blocked_Work_Items</value></values>
+    <values><field>InfoPopoverTxt__c</field><value xsi:type="xsd:string">Counts activated, non-archived, non-template WorkItems whose stage name contains "Blocked" — current state, not time-bounded. Click the card to open the Blocked Work Items report for the line-item detail.</value></values>
 </CustomMetadata>

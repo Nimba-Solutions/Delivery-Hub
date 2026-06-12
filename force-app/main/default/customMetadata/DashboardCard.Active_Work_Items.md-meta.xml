@@ -3,7 +3,7 @@
     <label>Active Work Items</label>
     <protected>false</protected>
     <values><field>TitleTxt__c</field><value xsi:type="xsd:string">Active Work Items</value></values>
-    <values><field>DescriptionTxt__c</field><value xsi:type="xsd:string">Total active, non-archived work items</value></values>
+    <values><field>DescriptionTxt__c</field><value xsi:type="xsd:string">Activated, non-archived, non-terminal items — matches System Pulse</value></values>
     <values><field>CardTypePk__c</field><value xsi:type="xsd:string">Metric</value></values>
     <values><field>IconNameTxt__c</field><value xsi:type="xsd:string">utility:task</value></values>
     <values><field>DataSourceTxt__c</field><value xsi:type="xsd:string">activeWorkItems</value></values>
@@ -15,4 +15,6 @@
     <values><field>CardSizeTxt__c</field><value xsi:type="xsd:string">small</value></values>
     <values><field>ThresholdWarningNumber__c</field><value xsi:type="xsd:double">50</value></values>
     <values><field>ThresholdCriticalNumber__c</field><value xsi:type="xsd:double">100</value></values>
+    <values><field>ClickThroughUrlTxt__c</field><value xsi:type="xsd:string">report:In_Flight_Work_Items</value></values>
+    <values><field>InfoPopoverTxt__c</field><value xsi:type="xsd:string">Counts WorkItems that are activated (ActivatedDateTime set), not archived, not recurring templates, and in a non-terminal workflow stage — the same canonical "active" definition System Pulse uses, so the two headline numbers always agree. Click the card to open the In-Flight Work Items report (note: the report additionally narrows to items modified this month).</value></values>
 </CustomMetadata>

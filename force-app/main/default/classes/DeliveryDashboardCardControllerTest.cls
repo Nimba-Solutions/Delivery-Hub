@@ -179,11 +179,90 @@ private class DeliveryDashboardCardControllerTest {
             DeliveryWorkItemTriggerHandler.triggerDisabled = false;
         }
 
+        // Terminal-stage item — activated but Done, must NOT count as "Active".
+        // Regression guard for the canonical-filter fix: pre-fix this row counted
+        // and the Exec Dashboard disagreed with System Pulse.
+        insert new WorkItem__c(
+            BriefDescriptionTxt__c = 'Done item',
+            StageNamePk__c         = 'Done',
+            ActivatedDateTime__c   = Datetime.now()
+        );
+
+        // Archived item — activated and non-terminal but archived, must NOT count.
+        insert new WorkItem__c(
+            BriefDescriptionTxt__c = 'Archived item',
+            StageNamePk__c         = 'In Development',
+            ActivatedDateTime__c   = Datetime.now(),
+            ArchivedDateTime__c    = Datetime.now()
+        );
+
         Test.startTest();
         Object result = DeliveryDashboardCardController.getCardData('activeWorkItems', null);
         Test.stopTest();
 
-        System.assertEquals(2, (Integer) result, 'Should count only items with ActivatedDateTime__c set');
+        System.assertEquals(2, (Integer) result,
+            'Should count only activated, non-archived, non-template items in non-terminal stages '
+            + '(the canonical active definition shared with System Pulse)');
+    }
+
+    /**
+     * @description Regression guard for the hoursThisMonth work-date fix: the card
+     *              must sum by WorkDateDate__c (when the work happened) with a
+     *              CreatedDate fallback only for rows where the work date is null —
+     *              matching System Pulse and the Monthly_Hours report. A log entered
+     *              today but WORKED last month must not count toward this month.
+     */
+    @IsTest
+    static void testHoursThisMonthKeysOnWorkDateNotEntryDate() {
+        WorkItem__c wi = new WorkItem__c(
+            BriefDescriptionTxt__c = 'WorkDate semantics test',
+            StageNamePk__c         = 'In Development',
+            ActivatedDateTime__c   = Datetime.now()
+        );
+        insert wi;
+        WorkRequest__c wr = new WorkRequest__c(
+            WorkItemId__c         = wi.Id,
+            QuotedHoursNumber__c  = 10,
+            HourlyRateCurrency__c = 100,
+            StatusPk__c           = 'Accepted'
+        );
+        insert wr;
+
+        // Worked THIS month → counts (2h)
+        insert new WorkLog__c(
+            RequestId__c          = wr.Id,
+            WorkItemLookup__c     = wi.Id,
+            HoursLoggedNumber__c  = 2,
+            WorkDateDate__c       = Date.today().toStartOfMonth(),
+            WorkDescriptionTxt__c = 'worked this month'
+        );
+        // Entered now but worked LAST month → must NOT count
+        insert new WorkLog__c(
+            RequestId__c          = wr.Id,
+            WorkItemLookup__c     = wi.Id,
+            HoursLoggedNumber__c  = 40,
+            WorkDateDate__c       = Date.today().toStartOfMonth().addDays(-1),
+            WorkDescriptionTxt__c = 'backdated to last month'
+        );
+        // No work date at all → CreatedDate fallback counts it (0.5h)
+        WorkLog__c undated = new WorkLog__c(
+            RequestId__c          = wr.Id,
+            WorkItemLookup__c     = wi.Id,
+            HoursLoggedNumber__c  = 0.5,
+            WorkDateDate__c       = Date.today(),
+            WorkDescriptionTxt__c = 'undated legacy row'
+        );
+        insert undated;
+        undated.WorkDateDate__c = null;
+        update undated;
+
+        Test.startTest();
+        Object result = DeliveryDashboardCardController.getCardData('hoursThisMonth', null);
+        Test.stopTest();
+
+        System.assertEquals(2.5, (Decimal) result,
+            'Should sum the this-month work date (2h) + the undated fallback row (0.5h) '
+            + 'and exclude the entry logged now but worked last month');
     }
 
     @IsTest
