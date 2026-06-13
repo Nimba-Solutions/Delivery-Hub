@@ -238,7 +238,7 @@ public with sharing class DeliveryGanttController {
         Boolean hasEngineeredEnd = item.EstimatedEndDevDate__c != null
             || item.ProjectedUATReadyDate__c != null
             || item.CalculatedETADate__c != null;
-        Boolean isTerminal = TERMINAL_STAGES.contains(item.StageNamePk__c);
+        Boolean isTerminal = terminalStages.contains(item.StageNamePk__c);
 
         // Terminal items without engineered dates use LastModifiedDate as a real
         // completion timestamp; otherwise the existing fallback chain handles it.
@@ -377,12 +377,20 @@ public with sharing class DeliveryGanttController {
      * @description Stage values considered terminal for Gantt rendering. Terminal
      *              items receive their LastModifiedDate as the bar end instead of
      *              the synthesized +14-day forward bar that the fallback chain
-     *              would otherwise produce. Hardcoded here (not CMT-driven) so the
-     *              Gantt's terminal definition stays stable across workflow types.
+     *              would otherwise produce. CMT-driven cross-type union plus
+     *              'Deployed to Prod' (ship-loop: workflow-active but no remaining
+     *              schedulable effort) — spans all workflow types because the Gantt
+     *              renders items regardless of type.
      */
-    private static final Set<String> TERMINAL_STAGES = new Set<String>{
-        'Done', 'Deployed to Prod', 'Cancelled', 'Closed', 'Rejected'
-    };
+    private static Set<String> terminalStages {
+        get {
+            if (terminalStages == null) {
+                terminalStages = DeliveryWorkflowConfigService.getAllEffortTerminalStageValues();
+            }
+            return terminalStages;
+        }
+        set;
+    }
 
     /** @description Days back from today that count as "recently done" for the style decorator. */
     private static final Integer RECENTLY_DONE_WINDOW_DAYS = 7;
@@ -409,7 +417,7 @@ public with sharing class DeliveryGanttController {
      * @param item The work item being mapped
      * @param startDt The already-resolved start date for fallback anchoring
      * @param hasEngineeredEnd True when at least one engineered end-date field is set
-     * @param isTerminal True when the item's stage is in TERMINAL_STAGES
+     * @param isTerminal True when the item's stage is in terminalStages
      * @return The end date the Gantt should render
      */
     private static Date chooseEndDate(WorkItem__c item, Date startDt, Boolean hasEngineeredEnd, Boolean isTerminal) {
@@ -1050,7 +1058,7 @@ public with sharing class DeliveryGanttController {
         if (looksPaused) {
             return 'deferred';
         }
-        if (TERMINAL_STAGES.contains(stage)) {
+        if (terminalStages.contains(stage)) {
             return 'follow-on';
         }
         Boolean isActive = ACTIVE_STAGES.contains(stage);
@@ -1287,7 +1295,7 @@ public with sharing class DeliveryGanttController {
         Boolean hasEngineeredEnd = item.EstimatedEndDevDate__c != null
             || item.ProjectedUATReadyDate__c != null
             || item.CalculatedETADate__c != null;
-        Boolean isTerminal = TERMINAL_STAGES.contains(item.StageNamePk__c);
+        Boolean isTerminal = terminalStages.contains(item.StageNamePk__c);
         Date endDt = chooseEndDate(item, startDt, hasEngineeredEnd, isTerminal);
         if (endDt < startDt) {
             endDt = startDt.addDays(1);

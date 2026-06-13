@@ -384,11 +384,14 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         }
         if (!workItemsToCheck.isEmpty()) {
             // FIX: Swapped USER_MODE for SYSTEM_MODE
+            // Blockers in any effort-terminal stage (CMT cross-type union + 'Deployed
+            // to Prod') count as resolved and no longer hold their dependents.
+            Set<String> resolvedStages = DeliveryWorkflowConfigService.getAllEffortTerminalStageValues();
             List<WorkItemDependency__c> unresolvedBlockers = [
                 SELECT BlockedWorkItemLookup__c, BlockingWorkItemLookup__r.BriefDescriptionTxt__c, BlockingWorkItemLookup__r.StageNamePk__c
                 FROM WorkItemDependency__c
                 WHERE BlockedWorkItemLookup__c IN :workItemsToCheck
-                AND BlockingWorkItemLookup__r.StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')
+                AND BlockingWorkItemLookup__r.StageNamePk__c NOT IN :resolvedStages
                 WITH SYSTEM_MODE
             ];
             for (WorkItemDependency__c dependency : unresolvedBlockers) {
