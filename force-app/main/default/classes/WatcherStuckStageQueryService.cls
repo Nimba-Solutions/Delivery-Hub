@@ -52,10 +52,16 @@ public with sharing class WatcherStuckStageQueryService {
     @TestVisible
     private static final Integer FALLBACK_DAYS = 5;
 
-    /** @description Terminal stages excluded from the sweep regardless of rule definitions. */
-    private static final Set<String> EXCLUDED_STAGES = new Set<String>{
-        'Done', 'Cancelled', 'Closed', 'Rejected', 'Deployed to Prod'
-    };
+    /** @description Stages excluded from the sweep regardless of rule definitions: CMT-driven cross-type terminal union + 'Deployed to Prod' (shipped items aren't stuck). */
+    private static Set<String> excludedStages {
+        get {
+            if (excludedStages == null) {
+                excludedStages = DeliveryWorkflowConfigService.getAllEffortTerminalStageValues();
+            }
+            return excludedStages;
+        }
+        set;
+    }
 
     /**
      * @description Test-only cluster override. When set, query() uses this
@@ -99,7 +105,7 @@ public with sharing class WatcherStuckStageQueryService {
         List<WorkflowEscalationRule__mdt> rules = queryActiveRules();
         for (WorkflowEscalationRule__mdt rule : rules) {
             if (String.isBlank(rule.TriggerStageTxt__c)
-                || EXCLUDED_STAGES.contains(rule.TriggerStageTxt__c)) {
+                || excludedStages.contains(rule.TriggerStageTxt__c)) {
                 continue;
             }
             Integer days = (rule.DaysThresholdNumber__c == null)
@@ -160,7 +166,7 @@ public with sharing class WatcherStuckStageQueryService {
                 FROM WorkItem__c
                 WHERE StageEnteredDateTime__c <= :cutoff
                   AND StageNamePk__c = :stageFilter
-                  AND StageNamePk__c NOT IN :EXCLUDED_STAGES
+                  AND StageNamePk__c NOT IN :excludedStages
                   AND SLAPausedDateTime__c = NULL
                   AND ActivatedDateTime__c != NULL
                   AND ArchivedDateTime__c = NULL

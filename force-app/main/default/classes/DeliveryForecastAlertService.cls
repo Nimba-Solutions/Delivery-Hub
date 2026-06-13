@@ -60,10 +60,16 @@ global with sharing class DeliveryForecastAlertService {
     @TestVisible
     private static final Integer MAX_WORKITEMS_PER_SWEEP = 20;
 
-    /** @description Terminal stages — exclude from sweep. */
-    private static final Set<String> TERMINAL_STAGES = new Set<String>{
-        'Done', 'Cancelled', 'Closed', 'Rejected'
-    };
+    /** @description Terminal stages — exclude from sweep (CMT-driven cross-type union). */
+    private static Set<String> terminalStages {
+        get {
+            if (terminalStages == null) {
+                terminalStages = DeliveryWorkflowConfigService.getAllTerminalStageValues();
+            }
+            return terminalStages;
+        }
+        set;
+    }
 
     /**
      * @description Runs the daily sweep. Called by DeliveryForecastAlertQueueable
@@ -92,7 +98,7 @@ global with sharing class DeliveryForecastAlertService {
               AND ActivatedDateTime__c != NULL
               AND ArchivedDateTime__c = NULL
               AND TemplateMarkedDateTime__c = NULL
-              AND StageNamePk__c NOT IN :TERMINAL_STAGES
+              AND StageNamePk__c NOT IN :terminalStages
               AND EstimatedHoursNumber__c != NULL
               AND EstimatedHoursNumber__c > 0
             WITH SYSTEM_MODE

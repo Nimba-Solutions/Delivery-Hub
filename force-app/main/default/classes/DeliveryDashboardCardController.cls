@@ -8,6 +8,17 @@
 @SuppressWarnings('PMD.ApexDoc, PMD.AvoidGlobalModifier')
 global with sharing class DeliveryDashboardCardController {
 
+    /** @description Terminal stages excluded from active-scope card counts (CMT-driven cross-type union). */
+    private static Set<String> terminalStages {
+        get {
+            if (terminalStages == null) {
+                terminalStages = DeliveryWorkflowConfigService.getAllTerminalStageValues();
+            }
+            return terminalStages;
+        }
+        set;
+    }
+
     @AuraEnabled(cacheable=true)
     global static List<CardConfig> getCardsForPage(String pageKey) {
         String currentProfile = [SELECT Profile.Name FROM User WHERE Id = :UserInfo.getUserId() WITH SYSTEM_MODE].Profile.Name;
@@ -103,7 +114,7 @@ global with sharing class DeliveryDashboardCardController {
                     WHERE EstimatedEndDevDate__c < :Date.today()
                     AND ActivatedDateTime__c != NULL
                     AND ArchivedDateTime__c = NULL
-                    AND StageNamePk__c NOT IN ('Done', 'Cancelled', 'Closed', 'Rejected')
+                    AND StageNamePk__c NOT IN :terminalStages
                     WITH SYSTEM_MODE
                 ];
             }
@@ -270,7 +281,7 @@ global with sharing class DeliveryDashboardCardController {
                     WHERE ActivatedDateTime__c != NULL
                     AND ArchivedDateTime__c = NULL
                     AND TemplateMarkedDateTime__c = NULL
-                    AND StageNamePk__c NOT IN ('Done', 'Cancelled', 'Closed', 'Rejected')
+                    AND StageNamePk__c NOT IN :terminalStages
                     AND EstimatedHoursNumber__c != NULL
                     AND EstimatedHoursNumber__c > 0
                     WITH SYSTEM_MODE

@@ -12,6 +12,21 @@
 @SuppressWarnings('PMD.AvoidGlobalModifier')
 global with sharing class DeliveryWorkItemETAService {
 
+    /**
+     * @description Stages carrying no remaining schedulable effort (CMT-driven
+     * cross-type terminal union + 'Deployed to Prod'): excluded from the
+     * simulation queue and treated as resolved when evaluating blockers.
+     */
+    private static Set<String> effortTerminalStages {
+        get {
+            if (effortTerminalStages == null) {
+                effortTerminalStages = DeliveryWorkflowConfigService.getAllEffortTerminalStageValues();
+            }
+            return effortTerminalStages;
+        }
+        set;
+    }
+
     // #################################################################################
     // SECTION 1: LWC Integration & DTOs
     // #################################################################################
@@ -66,7 +81,7 @@ global with sharing class DeliveryWorkItemETAService {
                 SELECT BlockedWorkItemLookup__c FROM WorkItemDependency__c
                 WHERE BlockedWorkItemLookup__c IN :processedIds
                 AND BlockingWorkItemLookup__c NOT IN (
-                    SELECT Id FROM WorkItem__c WHERE StageNamePk__c IN ('Done', 'Deployed to Prod', 'Cancelled')
+                    SELECT Id FROM WorkItem__c WHERE StageNamePk__c IN :DeliveryWorkItemETAService.effortTerminalStages
                 )
                 WITH SYSTEM_MODE
             ]) {
@@ -375,7 +390,7 @@ global with sharing class DeliveryWorkItemETAService {
                        DeveloperDaysSizeNumber__c, EstimatedHoursNumber__c,
                        SortOrderNumber__c, DeveloperLookup__c, CreatedDate
                 FROM WorkItem__c
-                WHERE StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')
+                WHERE StageNamePk__c NOT IN :DeliveryWorkItemETAService.effortTerminalStages
                   AND (
                       (DeveloperDaysSizeNumber__c != null AND DeveloperDaysSizeNumber__c > 0)
                       OR (EstimatedHoursNumber__c != null AND EstimatedHoursNumber__c > 0)
@@ -395,7 +410,7 @@ global with sharing class DeliveryWorkItemETAService {
             return [
                 SELECT Id
                 FROM WorkItem__c
-                WHERE StageNamePk__c NOT IN ('Done', 'Deployed to Prod', 'Cancelled')
+                WHERE StageNamePk__c NOT IN :DeliveryWorkItemETAService.effortTerminalStages
                   AND (DeveloperDaysSizeNumber__c = null OR DeveloperDaysSizeNumber__c <= 0)
                   AND (EstimatedHoursNumber__c = null OR EstimatedHoursNumber__c <= 0)
                   AND (

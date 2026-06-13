@@ -336,10 +336,16 @@ global with sharing class DeliveryHoursAnalyticsController {
     /** @description Months in a quarter — period stepping for Quarter granularity. */
     private static final Integer MONTHS_PER_QUARTER = 3;
 
-    /** @description Terminal stages excluded from the active-portfolio scope. */
-    private static final Set<String> TERMINAL_STAGES = new Set<String>{
-        'Done', 'Cancelled', 'Closed', 'Rejected'
-    };
+    /** @description Terminal stages excluded from the active-portfolio scope (CMT-driven cross-type union). */
+    private static Set<String> terminalStages {
+        get {
+            if (terminalStages == null) {
+                terminalStages = DeliveryWorkflowConfigService.getAllTerminalStageValues();
+            }
+            return terminalStages;
+        }
+        set;
+    }
 
     /**
      * @description Maps a WorkItem `PriorityGroupPk__c` lane onto the NG stacked-forecast
@@ -851,7 +857,7 @@ global with sharing class DeliveryHoursAnalyticsController {
               AND ActivatedDateTime__c != NULL
               AND ArchivedDateTime__c = NULL
               AND TemplateMarkedDateTime__c = NULL
-              AND StageNamePk__c NOT IN :TERMINAL_STAGES
+              AND StageNamePk__c NOT IN :terminalStages
             WITH SYSTEM_MODE
             LIMIT :MAX_PORTFOLIO_ROOTS
         ]) {
@@ -976,7 +982,7 @@ global with sharing class DeliveryHoursAnalyticsController {
             // their remaining here and in spreadScheduleBasedForecast via the same stage
             // flag (carried on ItemSchedule.stage).
             Boolean isTerminal = String.isNotBlank(wi.StageNamePk__c)
-                && TERMINAL_STAGES.contains(wi.StageNamePk__c);
+                && terminalStages.contains(wi.StageNamePk__c);
             Decimal estimate = (wi.EstimatedHoursNumber__c == null) ? 0 : wi.EstimatedHoursNumber__c;
             dto.totalEstimatedHours += estimate;
             Decimal logged = loggedByItem.containsKey(wi.Id) ? loggedByItem.get(wi.Id) : 0;
@@ -1308,7 +1314,7 @@ global with sharing class DeliveryHoursAnalyticsController {
         for (ItemSchedule sched : portfolioItemSchedules) {
             // Terminal-stage items contribute 0 remaining — never spread onto a forecast
             // bar and never pushed into the unscheduled bucket (dead work isn't forecast).
-            if (String.isNotBlank(sched.stage) && TERMINAL_STAGES.contains(sched.stage)) {
+            if (String.isNotBlank(sched.stage) && terminalStages.contains(sched.stage)) {
                 continue;
             }
             Decimal itemRemaining = sched.estimate - sched.logged;
