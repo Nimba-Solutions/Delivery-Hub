@@ -32,10 +32,16 @@ public with sharing class WatcherSLABreachQueryService {
     @TestVisible
     private static final Integer TOP_ENTRY_CAP = 5;
 
-    /** @description Terminal stages excluded from sweep (matches the SLA formula's `Met` carve-out + adds a couple more). */
-    private static final Set<String> EXCLUDED_STAGES = new Set<String>{
-        'Done', 'Cancelled', 'Closed', 'Rejected', 'Deployed to Prod'
-    };
+    /** @description Stages excluded from sweep: CMT-driven cross-type terminal union + 'Deployed to Prod' (shipped items don't breach SLA). */
+    private static Set<String> excludedStages {
+        get {
+            if (excludedStages == null) {
+                excludedStages = DeliveryWorkflowConfigService.getAllEffortTerminalStageValues();
+            }
+            return excludedStages;
+        }
+        set;
+    }
 
     /**
      * @description Run the signal. Single SOQL over WorkItem__c, filtered by
@@ -64,7 +70,7 @@ public with sharing class WatcherSLABreachQueryService {
               AND ActivatedDateTime__c != NULL
               AND ArchivedDateTime__c = NULL
               AND TemplateMarkedDateTime__c = NULL
-              AND StageNamePk__c NOT IN :EXCLUDED_STAGES
+              AND StageNamePk__c NOT IN :excludedStages
             WITH SYSTEM_MODE
             ORDER BY SLAStatusTxt__c ASC, SLATargetDate__c ASC NULLS LAST
             LIMIT :ROW_CAP

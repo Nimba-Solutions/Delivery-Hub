@@ -125,11 +125,11 @@ private class WatcherStuckStageQueryServiceTest {
     /**
      * @description Terminal stages must be discarded during cluster
      *              construction even when a rule somehow names one of them.
-     *              Validates the EXCLUDED_STAGES guard in buildClustersByStage.
+     *              Validates the excludedStages guard in buildClustersByStage.
      */
     @IsTest
     static void testTerminalStageClusterIsDropped() {
-        // 'Done' is in EXCLUDED_STAGES — should be filtered out at cluster build.
+        // 'Done' is in excludedStages — should be filtered out at cluster build.
         WatcherStuckStageQueryService.testClusterOverride = clusterMap(
             'In Development', 5, false
         );
