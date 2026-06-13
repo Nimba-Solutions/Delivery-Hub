@@ -267,6 +267,61 @@ global with sharing class DeliveryWorkflowConfigService {
     }
 
     /**
+     * @description The ship-loop stage: workflow-ACTIVE (the item still awaits ship
+     * verification before moving to Done) but carrying zero remaining delivery effort.
+     * Single authority for this value — do not re-hardcode it in consumers.
+     */
+    public static final String STAGE_DEPLOYED_TO_PROD = 'Deployed to Prod';
+
+    /**
+     * @description Returns the union of terminal stage ApiValues across ALL workflow
+     * types, for org-wide WorkItem__c queries that cannot filter per type (dashboard
+     * counts, portfolio scopes, sweeps). A value is included only when EVERY workflow
+     * type that uses it marks it terminal — e.g. 'Resolved' is excluded because it is
+     * terminal for Operations but an active stage for Support_Triage, and treating it
+     * as terminal would hide active Support_Triage items from org-wide counts.
+     * @return Set of ApiValue strings terminal in every workflow type that defines them
+     *         (defaults to 'Done','Cancelled' if CMT empty).
+     */
+    public static Set<String> getAllTerminalStageValues() {
+        Set<String> terminal = new Set<String>();
+        Set<String> nonTerminal = new Set<String>();
+        for (WorkflowStage__mdt s : [
+            SELECT ApiValueTxt__c, TerminalDateTime__c
+            FROM WorkflowStage__mdt
+            WITH SYSTEM_MODE
+        ]) {
+            if (s.TerminalDateTime__c != null) {
+                terminal.add(s.ApiValueTxt__c);
+            } else {
+                nonTerminal.add(s.ApiValueTxt__c);
+            }
+        }
+        terminal.removeAll(nonTerminal);
+        // Defensive: if CMT is empty (e.g. scratch org first deploy), default to 'Done'
+        if (terminal.isEmpty()) {
+            terminal.add('Done');
+            terminal.add('Cancelled');
+        }
+        return terminal;
+    }
+
+    /**
+     * @description getAllTerminalStageValues() plus 'Deployed to Prod' — the
+     * "no remaining delivery effort" set. 'Deployed to Prod' is deliberately NOT
+     * terminal in WorkflowStage__mdt (the item is still workflow-active while it
+     * awaits ship verification, so dashboards count it as active work), but it must
+     * not consume forecast/scheduling capacity (Gantt, ETA engine), block dependents,
+     * or raise stuck/SLA watcher signals.
+     * @return Cross-type terminal ApiValues plus the Deployed-to-Prod ship-loop stage.
+     */
+    public static Set<String> getAllEffortTerminalStageValues() {
+        Set<String> result = getAllTerminalStageValues();
+        result.add(STAGE_DEPLOYED_TO_PROD);
+        return result;
+    }
+
+    /**
      * @description Returns the set of attention stage ApiValues for a workflow type.
      * Used by DashboardController to build the Needs Attention section.
      * @param workflowTypeName DeveloperName of the WorkflowType__mdt record.

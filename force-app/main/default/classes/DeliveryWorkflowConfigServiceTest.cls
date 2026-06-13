@@ -106,6 +106,45 @@ private class DeliveryWorkflowConfigServiceTest {
         }
     }
 
+    /**
+     * @description Verifies the cross-type terminal union: includes every value
+     * that is terminal in all types defining it, and excludes collision values
+     * (terminal in one type, active in another) plus active stages.
+     */
+    @isTest
+    static void testGetAllTerminalStageValues() {
+        System.runAs(testUser) {
+            Set<String> terminals = DeliveryWorkflowConfigService.getAllTerminalStageValues();
+            System.assert(terminals.contains('Done'), 'Done (Software_Delivery) must be in the union');
+            System.assert(terminals.contains('Cancelled'), 'Cancelled must be in the union');
+            System.assert(terminals.contains('Closed'), 'Closed (Implementation_Project/Support_Triage) must be in the union');
+            System.assert(terminals.contains('Rejected'), 'Rejected (Change_Management) must be in the union');
+            System.assert(terminals.contains('Completed'), 'Completed (Change_Management/Onboarding) must be in the union');
+            System.assert(!terminals.contains('Resolved'),
+                'Resolved is terminal for Operations but ACTIVE for Support_Triage — the union must exclude it '
+                + 'or org-wide counts would hide active Support_Triage items');
+            System.assert(!terminals.contains('In Development'), 'Active stages must never be in the union');
+            System.assert(!terminals.contains('Deployed to Prod'),
+                'Deployed to Prod is workflow-active (awaits ship verification) — only the EFFORT-terminal set adds it');
+        }
+    }
+
+    /**
+     * @description Verifies the effort-terminal set = terminal union + 'Deployed to Prod'.
+     */
+    @isTest
+    static void testGetAllEffortTerminalStageValues() {
+        System.runAs(testUser) {
+            Set<String> effortTerminals = DeliveryWorkflowConfigService.getAllEffortTerminalStageValues();
+            Set<String> terminals = DeliveryWorkflowConfigService.getAllTerminalStageValues();
+            System.assert(effortTerminals.containsAll(terminals), 'Effort-terminal set must contain the full terminal union');
+            System.assert(effortTerminals.contains(DeliveryWorkflowConfigService.STAGE_DEPLOYED_TO_PROD),
+                'Effort-terminal set must add Deployed to Prod');
+            System.assertEquals(terminals.size() + 1, effortTerminals.size(),
+                'Effort-terminal set must be exactly the terminal union plus Deployed to Prod');
+        }
+    }
+
     @isTest
     static void testGetAttentionStageValues() {
         System.runAs(testUser) {

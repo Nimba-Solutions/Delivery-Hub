@@ -49,15 +49,20 @@ public with sharing class DeliveryApprovalSummaryController {
     };
 
     /**
-     * WorkItem__c stages excluded from the active portfolio scope. Mirrors
-     * DeliveryHoursAnalyticsController's portfolio filter (the board's
-     * canonical "Active" definition) so the pitch denominator matches the
-     * numbers the forecast and gantt board already show.
+     * @description WorkItem__c stages excluded from the active portfolio scope.
+     * CMT-driven cross-type terminal union so the pitch denominator matches the
+     * active definition every other dashboard/forecast count uses.
      */
     @TestVisible
-    private static final Set<String> TERMINAL_STAGES = new Set<String>{
-        'Done', 'Cancelled', 'Closed', 'Rejected'
-    };
+    private static Set<String> terminalStages {
+        get {
+            if (terminalStages == null) {
+                terminalStages = DeliveryWorkflowConfigService.getAllTerminalStageValues();
+            }
+            return terminalStages;
+        }
+        set;
+    }
 
     /**
      * @description The three agenda tiles, the approved-vs-total pitch pair,
@@ -176,7 +181,7 @@ public with sharing class DeliveryApprovalSummaryController {
             WHERE ActivatedDateTime__c != NULL
               AND ArchivedDateTime__c = NULL
               AND TemplateMarkedDateTime__c = NULL
-              AND StageNamePk__c NOT IN :TERMINAL_STAGES
+              AND StageNamePk__c NOT IN :terminalStages
             WITH SYSTEM_MODE
         ];
         Decimal est = (Decimal) row.get('est');
