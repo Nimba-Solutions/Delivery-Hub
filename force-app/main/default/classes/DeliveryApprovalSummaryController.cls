@@ -49,9 +49,9 @@ public with sharing class DeliveryApprovalSummaryController {
     };
 
     /**
-     * WorkItem__c stages excluded from the active portfolio scope. CMT-driven
-     * cross-type terminal union so the pitch denominator matches the active
-     * definition every other dashboard/forecast count uses.
+     * @description WorkItem__c stages excluded from the active portfolio scope.
+     * CMT-driven cross-type terminal union so the pitch denominator matches the
+     * active definition every other dashboard/forecast count uses.
      */
     @TestVisible
     private static Set<String> terminalStages {
