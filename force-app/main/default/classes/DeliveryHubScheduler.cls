@@ -34,6 +34,24 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         runReconciliation();
         recalcWorkItemETAsIfTopOfHour();
         enqueueActivityLogCleanupIfDue();
+        runAutoDiagnoseIfEnabled();
+    }
+
+    /**
+     * @description Runs the self-heal Move-1 sweep: reads the captured
+     *              field-change stream and auto-drafts a quoted work request
+     *              into the approval queue when a DiagnoseRule__mdt threshold is
+     *              crossed. Self-gated (master flag OFF by default) and
+     *              once-per-day, so calling it every tick is safe and a no-op
+     *              until an admin turns it on. Failures never break the tick.
+     */
+    private static void runAutoDiagnoseIfEnabled() {
+        try {
+            DeliveryAutoDiagnoseService.runSweep();
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryHubScheduler.runAutoDiagnoseIfEnabled] failed: ' + e.getMessage());
+        }
     }
 
     /**
