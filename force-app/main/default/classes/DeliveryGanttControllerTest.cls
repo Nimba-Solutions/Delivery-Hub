@@ -1291,15 +1291,20 @@ private class DeliveryGanttControllerTest {
     }
 
     /**
-     * @description Blank/unset TeamPoolTxt__c resolves to an empty pool so the
-     *              LWC omits options.team and NG applies its own fallback.
+     * @description Blank/unset TeamPoolTxt__c resolves to a single NAMELESS
+     *              fallback line (not empty) so the LWC always passes options.team
+     *              and NG never reaches its named vendor roster — no staff names
+     *              leak to an unconfigured subscriber.
      */
     @IsTest
-    static void testGetTeamPoolBlankSettingReturnsEmpty() {
+    static void testGetTeamPoolBlankSettingReturnsNamelessDefault() {
         Test.startTest();
         List<DeliveryGanttController.TeamPoolMemberDTO> pool = DeliveryGanttController.getTeamPool();
         Test.stopTest();
-        System.assertEquals(0, pool.size(), 'unconfigured setting yields an empty pool, never an exception');
+        System.assertEquals(1, pool.size(), 'unconfigured setting yields one nameless fallback line');
+        System.assertEquals('Delivery Team', pool[0].name, 'fallback line is a role label, not a person');
+        System.assert(pool[0].hoursPerMonth > 0, 'fallback carries a sane capacity denominator');
+        System.assertEquals(true, pool[0].active, 'fallback line is active so NG counts it');
     }
 
 }
