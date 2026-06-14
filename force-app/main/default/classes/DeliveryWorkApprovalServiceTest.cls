@@ -1109,6 +1109,51 @@ private class DeliveryWorkApprovalServiceTest {
     }
 
     /**
+     * @description The queue feed carries the parent (epic) join so the LWC can
+     *              group requests by epic; an item with a parent surfaces the
+     *              parent id + label, an orphan leaves parentWorkItemId null.
+     */
+    @IsTest
+    static void testGetPendingCarriesParentEpic() {
+        configureSettings(null, null, null);
+        WorkItem__c epic = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'BriefDescriptionTxt__c' => 'Billing epic',
+            'EstimatedHoursNumber__c' => 0
+        });
+        WorkItem__c child = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 20,
+            'ParentWorkItemLookup__c' => epic.Id
+        });
+        WorkItem__c orphan = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'EstimatedHoursNumber__c' => 15
+        });
+        DeliveryWorkApprovalService.submitForApproval(new Set<Id>{ child.Id, orphan.Id });
+
+        Test.startTest();
+        List<DeliveryWorkApprovalService.PendingApprovalDTO> queue =
+            DeliveryWorkApprovalService.getPendingForApprover(null);
+        Test.stopTest();
+
+        DeliveryWorkApprovalService.PendingApprovalDTO childDto;
+        DeliveryWorkApprovalService.PendingApprovalDTO orphanDto;
+        for (DeliveryWorkApprovalService.PendingApprovalDTO dto : queue) {
+            if (dto.workItemId == child.Id) {
+                childDto = dto;
+            } else if (dto.workItemId == orphan.Id) {
+                orphanDto = dto;
+            }
+        }
+        System.assertNotEquals(null, childDto, 'child item pends');
+        System.assertEquals(epic.Id, childDto.parentWorkItemId,
+            'parent epic id surfaced for queue grouping');
+        System.assertEquals('Billing epic', childDto.parentLabel,
+            'parent label surfaced (brief description)');
+        System.assertNotEquals(null, orphanDto, 'orphan item pends');
+        System.assertEquals(null, orphanDto.parentWorkItemId,
+            'orphan has no parent epic');
+    }
+
+    /**
      * @description Unassigned Offer-Sent requests (no default approver
      *              configured) still surface in any approver's queue — the
      *              queue never silently hides work.
