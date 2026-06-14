@@ -269,3 +269,43 @@
     color: #9ca3af;
     margin-top: 0.25rem;
 }
+
+/* ── Epic sections ─────────────────────────────────────────────── */
+.queue-section {
+    border-top: 1px solid #e5e7eb;
+}
+.queue-section:first-of-type {
+    border-top: none;
+}
+.queue-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 1.5rem;
+    background: #f9fafb;
+    border-bottom: 1px solid #eef2f7;
+}
+.queue-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+.queue-section-icon {
+    color: #7c3aed;
+    flex: none;
+}
+.queue-section-name {
+    font-weight: 600;
+    color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.queue-section-meta {
+    color: #6b7280;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    flex: none;
+}

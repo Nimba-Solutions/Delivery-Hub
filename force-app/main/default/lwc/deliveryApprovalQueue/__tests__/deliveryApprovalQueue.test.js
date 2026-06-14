@@ -49,6 +49,48 @@ function samplePending() {
     ];
 }
 
+function samplePendingWithEpics() {
+    const base = {
+        requestedIncrease: null,
+        requestStatus: "Offer Sent",
+        submittedAt: new Date().toISOString(),
+        approverUserId: null,
+        latestProposalNote: null
+    };
+    return [
+        {
+            ...base,
+            requestId: "a0G000000000010AAA",
+            workItemId: "a42000000000010AAA",
+            workItemName: "T-2001",
+            workItemLabel: "Stripe webhook",
+            quotedHours: 10,
+            parentWorkItemId: "a42000000000EPCAAA",
+            parentLabel: "Billing epic"
+        },
+        {
+            ...base,
+            requestId: "a0G000000000011AAA",
+            workItemId: "a42000000000011AAA",
+            workItemName: "T-2002",
+            workItemLabel: "Invoice PDF",
+            quotedHours: 6,
+            parentWorkItemId: "a42000000000EPCAAA",
+            parentLabel: "Billing epic"
+        },
+        {
+            ...base,
+            requestId: "a0G000000000012AAA",
+            workItemId: "a42000000000012AAA",
+            workItemName: "T-2003",
+            workItemLabel: "Login redesign",
+            quotedHours: 8,
+            parentWorkItemId: "a42000000000EPCBBB",
+            parentLabel: "UX epic"
+        }
+    ];
+}
+
 function createComponent() {
     const element = createElement("c-delivery-approval-queue", {
         is: DeliveryApprovalQueue
@@ -305,5 +347,41 @@ describe("c-delivery-approval-queue", () => {
         await flushPromises();
 
         expect(element.shadowRoot.querySelector(".queue-error")).not.toBeNull();
+    });
+
+    it("groups the queue into epic sections with per-epic headers", async () => {
+        const element = createComponent();
+        getPendingForApprover.emit(samplePendingWithEpics());
+        await flushPromises();
+
+        const sections = element.shadowRoot.querySelectorAll(".queue-section");
+        expect(sections.length).toBe(2);
+        const names = Array.from(
+            element.shadowRoot.querySelectorAll(".queue-section-name")
+        ).map((n) => n.textContent);
+        expect(names).toContain("Billing epic");
+        expect(names).toContain("UX epic");
+        // every row still renders, just nested under its epic
+        expect(element.shadowRoot.querySelectorAll(".queue-row").length).toBe(3);
+    });
+
+    it("approve-all on an epic section bulk-approves only that epic's requests", async () => {
+        approveMany.mockResolvedValue({
+            approvedIds: ["a0G000000000010AAA", "a0G000000000011AAA"],
+            failures: []
+        });
+        const element = createComponent();
+        getPendingForApprover.emit(samplePendingWithEpics());
+        await flushPromises();
+
+        const billingApproveAll = findButtonByLabel(element, "Approve all (2)");
+        expect(billingApproveAll).toBeTruthy();
+        billingApproveAll.click();
+        await flushPromises();
+
+        expect(approveMany).toHaveBeenCalledWith({
+            workRequestIds: ["a0G000000000010AAA", "a0G000000000011AAA"],
+            note: null
+        });
     });
 });
