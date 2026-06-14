@@ -18,9 +18,9 @@ private class DeliveryAutoDiagnoseServiceTest {
     private static final String FIELD = 'StatusField__c';
     private static final String BAD = 'Error';
 
-    private static void enable(Boolean on) {
+    private static void enable(Boolean isEnabled) {
         DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
-        s.EnableAutoDiagnoseDateTime__c = on ? Datetime.now() : null;
+        s.EnableAutoDiagnoseDateTime__c = isEnabled ? Datetime.now() : null;
         s.LastAutoDiagnoseScanDateTime__c = null;
         // Threshold low so an 8h auto-draft lands Offer-Sent, not auto-accepted.
         s.DiscretionaryThresholdHoursNumber__c = 1;
