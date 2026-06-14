@@ -12,6 +12,7 @@
  * @author Cloud Nimbus LLC
  */
 @IsTest
+@SuppressWarnings('PMD.ApexDoc')
 private class DeliveryAutoDiagnoseServiceTest {
 
     private static final String OBJ = 'AcmeTxn__c';
