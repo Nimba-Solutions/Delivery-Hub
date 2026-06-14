@@ -1658,35 +1658,62 @@ public with sharing class DeliveryGanttController {
         try {
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
             String raw = settings == null ? null : settings.TeamPoolTxt__c;
-            if (String.isBlank(raw)) {
-                return out;
-            }
-            for (String entry : raw.split(';')) {
-                List<String> parts = entry.trim().split('\\|');
-                if (parts.size() < 3) {
-                    continue;
+            if (String.isNotBlank(raw)) {
+                for (String entry : raw.split(';')) {
+                    List<String> parts = entry.trim().split('\\|');
+                    if (parts.size() < 3) {
+                        continue;
+                    }
+                    Decimal hours;
+                    try {
+                        hours = Decimal.valueOf(parts[2].trim());
+                    } catch (Exception e) {
+                        continue;
+                    }
+                    if (String.isBlank(parts[0].trim()) || hours <= 0) {
+                        continue;
+                    }
+                    TeamPoolMemberDTO m = new TeamPoolMemberDTO();
+                    m.name = parts[0].trim();
+                    m.role = parts[1].trim();
+                    m.hoursPerMonth = hours;
+                    m.active = true;
+                    out.add(m);
                 }
-                Decimal hours;
-                try {
-                    hours = Decimal.valueOf(parts[2].trim());
-                } catch (Exception e) {
-                    continue;
-                }
-                if (String.isBlank(parts[0].trim()) || hours <= 0) {
-                    continue;
-                }
-                TeamPoolMemberDTO m = new TeamPoolMemberDTO();
-                m.name = parts[0].trim();
-                m.role = parts[1].trim();
-                m.hoursPerMonth = hours;
-                m.active = true;
-                out.add(m);
             }
         } catch (Exception e) {
             System.debug(LoggingLevel.WARN,
                 '[DeliveryGanttController.getTeamPool] parse failed: ' + e.getMessage());
             out.clear();
         }
+        // Never hand the gantt an EMPTY pool. An empty options.team makes NG fall
+        // back to its vendored vendor-default roster — real, named Cloud Nimbus
+        // staff at 170h/mo — which leaks those names + hours to EVERY subscriber
+        // that hasn't seeded TeamPoolTxt__c (a live demo-exposure risk). A single
+        // NAMELESS role line keeps the forecast denominator sane and exposes
+        // nobody; the org overrides it the moment it seeds TeamPoolTxt__c.
+        if (out.isEmpty()) {
+            out.add(defaultTeamMember());
+        }
         return out;
     }
+
+    /**
+     * @description The nameless fallback team line used when TeamPoolTxt__c is
+     *              unset/unparseable, so NG never reaches its named vendor roster.
+     * @return A single active, role-labelled (not person-named) pool member.
+     */
+    private static TeamPoolMemberDTO defaultTeamMember() {
+        TeamPoolMemberDTO m = new TeamPoolMemberDTO();
+        m.name = 'Delivery Team';
+        m.role = 'Delivery';
+        m.hoursPerMonth = DEFAULT_TEAM_CAPACITY_HOURS;
+        m.active = true;
+        return m;
+    }
+
+    /** @description Baseline monthly capacity for the nameless fallback team
+     *              line. A sane denominator only — the Pace dial (1x/2x/3x) is
+     *              the real staffing lever; seed TeamPoolTxt__c to replace it. */
+    private static final Decimal DEFAULT_TEAM_CAPACITY_HOURS = 160;
 }
