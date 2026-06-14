@@ -1698,8 +1698,11 @@ public with sharing class DeliveryGanttController {
         return out;
     }
 
-    /** @description The nameless fallback team line used when TeamPoolTxt__c is
-     *              unset/unparseable, so NG never reaches its named vendor roster. */
+    /**
+     * @description The nameless fallback team line used when TeamPoolTxt__c is
+     *              unset/unparseable, so NG never reaches its named vendor roster.
+     * @return A single active, role-labelled (not person-named) pool member.
+     */
     private static TeamPoolMemberDTO defaultTeamMember() {
         TeamPoolMemberDTO m = new TeamPoolMemberDTO();
         m.name = 'Delivery Team';
