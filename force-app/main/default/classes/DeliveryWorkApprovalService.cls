@@ -152,6 +152,13 @@ global with sharing class DeliveryWorkApprovalService {
         @AuraEnabled public DateTime submittedAt;
         @AuraEnabled public Id approverUserId;
         /**
+         * Parent (epic) WorkItem the queued item rolls up to, so the queue LWC
+         * can group requests by epic and offer "Approve all in this epic".
+         * Null when the work item has no parent (an orphan / top-level item).
+         */
+        @AuraEnabled public Id parentWorkItemId;
+        @AuraEnabled public String parentLabel;
+        /**
          * Body of the newest PROPOSAL_NOTE_PREFIX-marked WorkItemComment__c
          * on the work item ("why this estimate"); null when no proposal
          * comment exists.
@@ -673,7 +680,10 @@ global with sharing class DeliveryWorkApprovalService {
                 SELECT Id, StatusPk__c, QuotedHoursNumber__c,
                        RequestedBudgetIncreaseNumber__c, ApproverUserLookup__c,
                        CreatedDate, WorkItemId__c, WorkItemId__r.Name,
-                       WorkItemId__r.BriefDescriptionTxt__c
+                       WorkItemId__r.BriefDescriptionTxt__c,
+                       WorkItemId__r.ParentWorkItemLookup__c,
+                       WorkItemId__r.ParentWorkItemLookup__r.Name,
+                       WorkItemId__r.ParentWorkItemLookup__r.BriefDescriptionTxt__c
                 FROM WorkRequest__c
                 WHERE StatusPk__c = :REQUEST_OFFER_SENT
                   AND (ApproverUserLookup__c IN :approverIds
@@ -757,6 +767,13 @@ global with sharing class DeliveryWorkApprovalService {
             dto.workItemLabel = String.isNotBlank(brief)
                 ? brief
                 : req.WorkItemId__r.Name;
+            dto.parentWorkItemId = req.WorkItemId__r.ParentWorkItemLookup__c;
+            if (req.WorkItemId__r.ParentWorkItemLookup__r != null) {
+                String parentBrief = req.WorkItemId__r.ParentWorkItemLookup__r.BriefDescriptionTxt__c;
+                dto.parentLabel = String.isNotBlank(parentBrief)
+                    ? parentBrief
+                    : req.WorkItemId__r.ParentWorkItemLookup__r.Name;
+            }
         }
         return dto;
     }
