@@ -2,7 +2,7 @@
 
 This guide walks you through installing Delivery Hub, running the setup wizard, creating your first work item, and optionally configuring cross-org sync, document signing, and external API access.
 
-**Current release**: `release/0.248.0.3` (production-promoted 2026-05-25). See [GitHub Releases](https://github.com/Nimba-Solutions/Delivery-Hub/releases) for the full version history (CHANGELOG entries through 0.200 are PR-by-PR; later releases ship as named PRs tagged in GitHub Releases). For the install + smoke-test runbook, see [SETUP.md](SETUP.md). For the cockpit-era 8-layer architecture, see [COCKPIT.md](COCKPIT.md).
+**Current release**: `release/0.281.0.1` (production-promoted 2026-06-13). See [GitHub Releases](https://github.com/Nimba-Solutions/Delivery-Hub/releases) for the full version history (CHANGELOG entries through 0.200 are PR-by-PR; later releases ship as named PRs tagged in GitHub Releases). For the install + smoke-test runbook, see [SETUP.md](SETUP.md). For the cockpit-era 8-layer architecture, see [COCKPIT.md](COCKPIT.md).
 
 ---
 
@@ -12,8 +12,8 @@ Install Delivery Hub into your Salesforce org:
 
 | Environment | Link |
 |---|---|
-| **Production** | [Install in Production](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000T0SrIAK) |
-| **Sandbox** | [Install in Sandbox](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000T0SrIAK) |
+| **Production** | [Install in Production](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000W0GDIA0) |
+| **Sandbox** | [Install in Sandbox](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000W0GDIA0) |
 
 When prompted, select **Install for All Users** (recommended) or configure per-profile access. The install links always point to the latest promoted release; check `release/*` tags in the repo if you need a specific version.
 
