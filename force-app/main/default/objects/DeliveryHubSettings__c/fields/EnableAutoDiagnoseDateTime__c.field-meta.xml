@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableAutoDiagnoseDateTime__c</fullName>
+    <description>When set, the auto-diagnose sweep is active (DateTime-stamp toggle; null = OFF, the safe default).</description>
+    <externalId>false</externalId>
+    <label>Enable Auto Diagnose DateTime</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
