@@ -71,29 +71,76 @@ export default class DeliveryApprovalQueue extends NavigationMixin(LightningElem
     // ── Row shaping (templates can't do ternaries — precompute) ──
 
     get rows() {
-        return this.pendingRaw.map((dto) => {
-            const isActive = dto.requestId === this.activeRequestId;
-            const hasProposalNote = Boolean(dto.latestProposalNote);
-            const isProposalOpen = hasProposalNote && this.expandedNoteIds.includes(dto.requestId);
+        return this.pendingRaw.map((dto) => this._shapeRow(dto));
+    }
+
+    // Queue grouped by parent (epic). Each section carries its own rows, a
+    // header summary, and an "Approve all in this epic" action that reuses the
+    // bulk-approve path. Items without a parent collect in an "Ungrouped"
+    // section that always sorts last. Section order otherwise follows first
+    // appearance in the oldest-first feed, so the longest-waiting epic leads.
+    get sections() {
+        const UNGROUPED = "__ungrouped__";
+        const order = [];
+        const byKey = new Map();
+        for (const dto of this.pendingRaw) {
+            const key = dto.parentWorkItemId || UNGROUPED;
+            if (!byKey.has(key)) {
+                order.push(key);
+                byKey.set(key, {
+                    key,
+                    hasParent: Boolean(dto.parentWorkItemId),
+                    parentWorkItemId: dto.parentWorkItemId || null,
+                    title: dto.parentWorkItemId ? dto.parentLabel || "(epic)" : "Ungrouped",
+                    rows: [],
+                    count: 0,
+                    totalHours: 0
+                });
+            }
+            const group = byKey.get(key);
+            group.rows.push(this._shapeRow(dto));
+            group.count += 1;
+            group.totalHours += dto.quotedHours || 0;
+        }
+        const sorted = order.sort((a, b) => {
+            if (a === UNGROUPED) return 1;
+            if (b === UNGROUPED) return -1;
+            return 0;
+        });
+        return sorted.map((key) => {
+            const group = byKey.get(key);
             return {
-                key: dto.requestId,
-                workItemId: dto.workItemId,
-                label: dto.workItemLabel || dto.workItemName || "(unnamed item)",
-                quotedDisplay: `${this._formatHours(dto.quotedHours)}h quoted`,
-                hasIncrease: dto.requestedIncrease > 0,
-                increaseBadge: `increase +${this._formatHours(dto.requestedIncrease)}h`,
-                ageDisplay: this._ageDisplay(dto.submittedAt),
-                isSelected: this.selectedIds.includes(dto.requestId),
-                isChangeOpen: isActive && this.activeMode === MODE_CHANGE,
-                isDeclineOpen: isActive && this.activeMode === MODE_DECLINE,
-                hasProposalNote,
-                isProposalOpen,
-                proposalNote: dto.latestProposalNote || "",
-                proposalToggleLabel: isProposalOpen
-                    ? "Hide why this estimate"
-                    : "Why this estimate"
+                ...group,
+                countDisplay: `${group.count} ${group.count === 1 ? "item" : "items"}`,
+                hoursDisplay: `${this._formatHours(group.totalHours)}h`,
+                approveAllLabel: `Approve all (${group.count})`,
+                isApproveAllDisabled: this.isSaving
             };
         });
+    }
+
+    _shapeRow(dto) {
+        const isActive = dto.requestId === this.activeRequestId;
+        const hasProposalNote = Boolean(dto.latestProposalNote);
+        const isProposalOpen = hasProposalNote && this.expandedNoteIds.includes(dto.requestId);
+        return {
+            key: dto.requestId,
+            workItemId: dto.workItemId,
+            label: dto.workItemLabel || dto.workItemName || "(unnamed item)",
+            quotedDisplay: `${this._formatHours(dto.quotedHours)}h quoted`,
+            hasIncrease: dto.requestedIncrease > 0,
+            increaseBadge: `increase +${this._formatHours(dto.requestedIncrease)}h`,
+            ageDisplay: this._ageDisplay(dto.submittedAt),
+            isSelected: this.selectedIds.includes(dto.requestId),
+            isChangeOpen: isActive && this.activeMode === MODE_CHANGE,
+            isDeclineOpen: isActive && this.activeMode === MODE_DECLINE,
+            hasProposalNote,
+            isProposalOpen,
+            proposalNote: dto.latestProposalNote || "",
+            proposalToggleLabel: isProposalOpen
+                ? "Hide why this estimate"
+                : "Why this estimate"
+        };
     }
 
     // ── State flags ──────────────────────────────────────────────
@@ -180,7 +227,24 @@ export default class DeliveryApprovalQueue extends NavigationMixin(LightningElem
     }
 
     handleBulkApprove() {
-        const ids = this._selectedPendingIds();
+        this._approveIds(this._selectedPendingIds());
+    }
+
+    // Approve every pending request under one epic section in a single bulk
+    // call — the section's ids are derived live from the feed so a row decided
+    // elsewhere (and refreshed away) is never re-submitted.
+    handleApproveSection(event) {
+        const sectionKey = event.currentTarget.dataset.sectionKey;
+        if (!sectionKey) {
+            return;
+        }
+        const ids = this.pendingRaw
+            .filter((dto) => (dto.parentWorkItemId || "__ungrouped__") === sectionKey)
+            .map((dto) => dto.requestId);
+        this._approveIds(ids);
+    }
+
+    _approveIds(ids) {
         if (ids.length === 0 || this.isSaving) {
             return;
         }
