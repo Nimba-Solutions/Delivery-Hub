@@ -29,12 +29,12 @@ It is open source under the [BSL 1.1 license](LICENSE.md) and ships as an unlock
 
 ## Install
 
-**Current release**: [`release/0.276.0.2`](https://github.com/Nimba-Solutions/Delivery-Hub/releases) (production-promoted 2026-06-12). Completes the work-approval queue arc on top of 0.273's foundation (estimate → approve rails, pending-approval queue on Home, approval reports + agenda card, Deployed-to-Prod ship loop, NimbusGantt 0.204.0, de-cluttered Pacing view). 0.274 → 0.276 add: **approval pings** (submit notifies the approver, decisions notify the dev), **WorkLog cap enforcement** (over-cap logs flag by default, hard-block via `EnforceApprovalCapDateTime__c`), NimbusGantt **0.204.1** (empty-state fix), **approved-green forecast cohort** (greenlit tier = client-approved hours, not lane), **ETA write-back** on gantt apply (`CalculatedETADate__c`) + pace-divergence alerts, and the **approved-vs-total pitch stat** + backup approver + `global` `DeliveryWorkApprovalService`. See [GitHub Releases](https://github.com/Nimba-Solutions/Delivery-Hub/releases) for the full version history.
+**Current release**: [`release/0.281.0.1`](https://github.com/Nimba-Solutions/Delivery-Hub/releases) (production-promoted 2026-06-13). Builds on the work-approval queue arc (estimate → approve rails, pending-approval queue on Home, approval reports + agenda card, Deployed-to-Prod ship loop, WorkLog cap enforcement via `EnforceApprovalCapDateTime__c`, pace-divergence alerts). 0.277 → 0.281 add: **Home active-count truth fixes** (Exec/active counts exclude terminal + archived + non-activated items), the **worklog-relay sync fix** (relays now mint under the guest REST path), **terminal-stage unification** (one cross-workflow-type terminal set drives all active counts/forecast/watchers), and the **epic-sectioned approval queue** (requests group by parent epic with per-epic "Approve all"). See [GitHub Releases](https://github.com/Nimba-Solutions/Delivery-Hub/releases) for the full version history.
 
 | Environment | Link |
 |---|---|
-| **Production** | [![Install in Production](https://img.shields.io/badge/Install-Production-0070d2?logo=salesforce&style=for-the-badge)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000VyeDIAS) |
-| **Sandbox** | [![Install in Sandbox](https://img.shields.io/badge/Install-Sandbox-3e8b3e?logo=salesforce&style=for-the-badge)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000VyeDIAS) |
+| **Production** | [![Install in Production](https://img.shields.io/badge/Install-Production-0070d2?logo=salesforce&style=for-the-badge)](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000W0GDIA0) |
+| **Sandbox** | [![Install in Sandbox](https://img.shields.io/badge/Install-Sandbox-3e8b3e?logo=salesforce&style=for-the-badge)](https://test.salesforce.com/packaging/installPackage.apexp?p0=04tQr000000W0GDIA0) |
 
 **Quickstart (≈5 minutes):**
 
