@@ -48,8 +48,15 @@ global with sharing class DeliveryFieldChangeService {
      *              tracking never disrupts the caller's process.
      * @param requests List of FieldChangeRequest inputs from Flow or Apex callers
      */
+    // global (not public): a managed-package @InvocableMethod must be global to
+    // appear in a SUBSCRIBER org's Flow Builder action picker. As public it was
+    // reachable only from this package's own Apex/Flows — so a subscriber could
+    // never wire a Record-Triggered Flow on their OWN business object (an
+    // Opportunity, a QuickBooks transaction, etc.) to the capture engine. That
+    // is why field tracking, though ON and capturing, only ever covered Delivery
+    // Hub's own objects. The FieldChangeRequest param is already global.
     @InvocableMethod(label='Capture Field Change' description='Logs a field value change to the Delivery Hub activity log for history tracking and trend analysis.' category='Delivery Hub')
-    public static void captureFieldChanges(List<FieldChangeRequest> requests) {
+    global static void captureFieldChanges(List<FieldChangeRequest> requests) {
         try {
             // Gate: activity logging must be explicitly enabled in org settings
             DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
