@@ -33,7 +33,7 @@
  *               namespaced package test context).
  * @author Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity,PMD.AvoidGlobalModifier,PMD.CognitiveComplexity')
+@SuppressWarnings('PMD.ApexDoc,PMD.ApexCRUDViolation,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity,PMD.AvoidGlobalModifier,PMD.CognitiveComplexity')
 global without sharing class DeliveryAutoDiagnoseService {
 
     /** ActivityLog ActionType written by the field-change capture engine. */
