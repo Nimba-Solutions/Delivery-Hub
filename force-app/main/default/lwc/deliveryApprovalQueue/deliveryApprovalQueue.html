@@ -62,8 +62,24 @@
                 </lightning-button>
             </div>
 
-            <ul class="queue-list">
-                <template for:each={rows} for:item="row">
+            <template for:each={sections} for:item="section">
+              <div key={section.key} class="queue-section">
+                <div class="queue-section-header">
+                    <div class="queue-section-title">
+                        <lightning-icon icon-name="utility:rows" size="xx-small" class="queue-section-icon"></lightning-icon>
+                        <span class="queue-section-name">{section.title}</span>
+                        <span class="queue-section-meta">{section.countDisplay} &middot; {section.hoursDisplay}</span>
+                    </div>
+                    <lightning-button
+                        variant="brand-outline"
+                        label={section.approveAllLabel}
+                        data-section-key={section.key}
+                        disabled={section.isApproveAllDisabled}
+                        onclick={handleApproveSection}>
+                    </lightning-button>
+                </div>
+                <ul class="queue-list">
+                    <template for:each={section.rows} for:item="row">
                     <li key={row.key} class="queue-row">
                         <div class="queue-row-main">
                             <lightning-input
@@ -184,8 +200,10 @@
                             </div>
                         </template>
                     </li>
-                </template>
-            </ul>
+                    </template>
+                </ul>
+              </div>
+            </template>
         </template>
 
         <template lwc:if={isEmpty}>
