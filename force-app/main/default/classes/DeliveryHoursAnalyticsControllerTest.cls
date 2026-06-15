@@ -1489,4 +1489,93 @@ private class DeliveryHoursAnalyticsControllerTest {
         }
         System.assertEquals(0, totalItemHours, 'No placed item hours for an unscheduled item');
     }
+
+    // ════════════════════════════════════════════════════════════════════
+    // getForecastItems — flat leaf-only item feed for the capacity slider
+    // ════════════════════════════════════════════════════════════════════
+
+    /** @description Indexes a ForecastItemDTO list by WorkItem id. */
+    private static Map<Id, DeliveryHoursAnalyticsController.ForecastItemDTO> byId(
+        List<DeliveryHoursAnalyticsController.ForecastItemDTO> items
+    ) {
+        Map<Id, DeliveryHoursAnalyticsController.ForecastItemDTO> out =
+            new Map<Id, DeliveryHoursAnalyticsController.ForecastItemDTO>();
+        for (DeliveryHoursAnalyticsController.ForecastItemDTO d : items) {
+            out.put(d.id, d);
+        }
+        return out;
+    }
+
+    @IsTest
+    static void testForecastItemsLeafOnlyWithRemainingAndTier() {
+        // Container parent (excluded by leaf-only) + leaf child, a greenlit leaf, and
+        // a partially-logged leaf so remaining = estimate - logged.
+        WorkItem__c parent = insertWi('FiParent', 200, Date.today(), Date.today().addMonths(2), null);
+        WorkItem__c child = insertWi('FiChild', 60, Date.today(), Date.today().addMonths(1), parent.Id);
+        WorkItem__c greenlit = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'BriefDescriptionTxt__c' => 'FiGreenlit',
+            'EstimatedHoursNumber__c' => 40,
+            'EstimatedStartDevDate__c' => Date.today(),
+            'EstimatedEndDevDate__c' => Date.today().addMonths(1),
+            'ClientPreApprovedHoursNumber__c' => 40
+        });
+        insert buildLog(child.Id, 25, Date.today()); // child remaining = 60 - 25 = 35
+
+        Test.startTest();
+        List<DeliveryHoursAnalyticsController.ForecastItemDTO> items =
+            DeliveryHoursAnalyticsController.getForecastItems();
+        Test.stopTest();
+
+        Map<Id, DeliveryHoursAnalyticsController.ForecastItemDTO> m = byId(items);
+        System.assert(!m.containsKey(parent.Id),
+            'Leaf-only: the container parent must be excluded (its work is counted via the child)');
+        System.assert(m.containsKey(child.Id), 'The leaf child is in scope');
+        System.assert(m.containsKey(greenlit.Id), 'The greenlit leaf is in scope');
+
+        System.assertEquals(35, m.get(child.Id).remaining,
+            'remaining = estimate(60) - logged(25)');
+        System.assertEquals(false, m.get(child.Id).isTerminal, 'Backlog stage is not terminal');
+        System.assertEquals('greenlit', m.get(greenlit.Id).tier,
+            'ClientPreApprovedHoursNumber__c > 0 → greenlit tier (drains first in the packer)');
+        System.assertEquals(40, m.get(greenlit.Id).remaining,
+            'remaining floors at estimate when nothing is logged');
+    }
+
+    @IsTest
+    static void testForecastItemsRemainingFlooredAndTerminalFlagged() {
+        // Over-logged item → remaining floored at 0. A terminal-stage item only stays
+        // in scope as a non-root CHILD (queryActiveRootIds filters terminal ROOTS out),
+        // so the Done item hangs under an active parent and is flagged terminal there.
+        WorkItem__c overLogged = insertWi('FiOver', 10, Date.today(), Date.today().addMonths(1), null);
+        WorkItem__c termParent = insertWi('FiTermParent', 100, Date.today(), Date.today().addMonths(2), null);
+        WorkItem__c doneItem = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'BriefDescriptionTxt__c' => 'FiDone',
+            'EstimatedHoursNumber__c' => 30,
+            'StageNamePk__c' => 'Done',
+            'ParentWorkItemLookup__c' => termParent.Id
+        });
+        insert buildLog(overLogged.Id, 18, Date.today()); // 10 - 18 → floored to 0
+
+        Test.startTest();
+        List<DeliveryHoursAnalyticsController.ForecastItemDTO> items =
+            DeliveryHoursAnalyticsController.getForecastItems();
+        Test.stopTest();
+
+        Map<Id, DeliveryHoursAnalyticsController.ForecastItemDTO> m = byId(items);
+        System.assertEquals(0, m.get(overLogged.Id).remaining,
+            'remaining never goes negative — floored at 0');
+        System.assertEquals(true, m.get(doneItem.Id).isTerminal,
+            'Done is a terminal stage — the packer skips it so it never inflates the future');
+    }
+
+    @IsTest
+    static void testForecastItemsEmptyScopeReturnsEmptyList() {
+        Test.startTest();
+        List<DeliveryHoursAnalyticsController.ForecastItemDTO> items =
+            DeliveryHoursAnalyticsController.getForecastItems();
+        Test.stopTest();
+
+        System.assertNotEquals(null, items, 'Never null — empty list when no active items');
+        System.assertEquals(0, items.size(), 'No active portfolio items → empty');
+    }
 }
