@@ -1,0 +1,68 @@
+.dev-slider {
+    width: 100%;
+    accent-color: #1b1b3a;
+}
+
+.lands {
+    color: #b45309;
+    font-weight: 700;
+}
+
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #514f4d;
+    margin-bottom: 0.25rem;
+}
+
+.swatch {
+    display: inline-block;
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 2px;
+    margin-right: 0.35rem;
+}
+
+.chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.4rem;
+    height: 280px;
+    overflow-x: auto;
+}
+
+.col {
+    display: flex;
+    flex: 1 0 2.2rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.total {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #514f4d;
+    margin-bottom: 0.25rem;
+}
+
+.bar {
+    display: flex;
+    flex-direction: column-reverse;
+    width: 100%;
+    border-radius: 3px 3px 0 0;
+    overflow: hidden;
+}
+
+.seg {
+    width: 100%;
+}
+
+.mlabel {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #706e6b;
+    margin-top: 0.4rem;
+    white-space: nowrap;
+}

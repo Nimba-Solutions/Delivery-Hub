@@ -1,0 +1,86 @@
+<template>
+    <lightning-card title="Capacity forecast — you set the pace" icon-name="utility:trending">
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+
+            <template if:true={loading}>
+                <lightning-spinner alternative-text="Loading forecast" size="small"></lightning-spinner>
+            </template>
+
+            <template if:true={error}>
+                <div class="slds-text-color_error slds-p-vertical_small">{error}</div>
+            </template>
+
+            <template if:true={isEmpty}>
+                <div class="slds-text-color_weak slds-p-vertical_small">
+                    No active work in scope to forecast yet.
+                </div>
+            </template>
+
+            <template if:true={hasItems}>
+                <!-- Pace dial -->
+                <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-end slds-wrap">
+                    <div>
+                        <p class="slds-text-title_caps slds-text-color_weak">Your pace ceiling</p>
+                        <p class="slds-text-heading_medium">{devLabel}</p>
+                        <p class="slds-text-body_small slds-text-color_weak">{paceHint}</p>
+                    </div>
+                    <div class="slds-text-align_right">
+                        <p class="slds-text-title_caps slds-text-color_weak">Everything lands by</p>
+                        <p class="slds-text-heading_medium lands">{landsBy}</p>
+                    </div>
+                </div>
+
+                <input
+                    type="range"
+                    min="1"
+                    max="6"
+                    step="1"
+                    value={devs}
+                    onchange={handleDevs}
+                    class="slds-slider__range slds-m-top_small dev-slider"
+                />
+                <div class="slds-grid slds-grid_align-spread slds-text-body_small slds-text-color_weak">
+                    <span>1 dev</span><span>6 devs</span>
+                </div>
+
+                <!-- View toggle + legend -->
+                <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center slds-wrap slds-m-top_medium">
+                    <div class="slds-grid slds-wrap slds-grid_vertical-align-center legend">
+                        <template for:each={legend} for:item="l">
+                            <span key={l.key} class="slds-m-right_small legend-item">
+                                <span class="swatch" style={l.swatch}></span>{l.label}
+                            </span>
+                        </template>
+                    </div>
+                    <lightning-button
+                        label={cumulativeLabel}
+                        variant="neutral"
+                        onclick={toggleCumulative}
+                        title="Toggle per-month vs cumulative"
+                    ></lightning-button>
+                </div>
+
+                <!-- Stacked bars -->
+                <div class="chart slds-m-top_medium">
+                    <template for:each={chartMonths} for:item="mo">
+                        <div key={mo.key} class="col">
+                            <span class="total">{mo.total}h</span>
+                            <div class="bar" style={mo.barStyle}>
+                                <template for:each={mo.segments} for:item="seg">
+                                    <div key={seg.key} class="seg" style={seg.style} title={seg.title}></div>
+                                </template>
+                            </div>
+                            <span class="mlabel">{mo.label}</span>
+                        </div>
+                    </template>
+                </div>
+
+                <p class="slds-text-body_small slds-text-color_weak slds-m-top_small">
+                    Set the ceiling → the schedule reflows → the dates appear. The stack climbs to your
+                    pace as the team staffs up. Greenlit work drains first; build-out packs into what’s
+                    left. Maintenance and run-point are modeled reserves, not a board figure.
+                </p>
+            </template>
+        </div>
+    </lightning-card>
+</template>
