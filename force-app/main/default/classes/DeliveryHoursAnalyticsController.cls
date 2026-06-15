@@ -516,6 +516,95 @@ global with sharing class DeliveryHoursAnalyticsController {
     }
 
     /**
+     * @description One in-scope WorkItem as the capacity-forecast slider
+     *              (deliveryCapacityForecast LWC) consumes it: the flat,
+     *              leaf-only, board-active item with its estimate, logged,
+     *              remaining, dates, and commitment tier. The slider's
+     *              client-side greedy packer reflows these against a
+     *              dev-count ceiling to show when work lands per pace.
+     *
+     *              BUYER-FACING: this DTO is shown to the client. It carries
+     *              NO person identity — ItemSchedule.assignee
+     *              (DeveloperLookup__r.Name) is deliberately NOT mapped here.
+     *              `name` is the work-item label (BriefDescriptionTxt__c, else
+     *              the T-NNNN auto-number), never a developer. Keep it that way
+     *              in pass two — do not re-add assignee.
+     */
+    public class ForecastItemDTO {
+        @AuraEnabled public Id id;
+        @AuraEnabled public String name;
+        @AuraEnabled public String stage;
+        @AuraEnabled public Decimal estimate;
+        @AuraEnabled public Decimal logged;
+        /** estimate - logged, floored at 0 — the hours the packer schedules. */
+        @AuraEnabled public Decimal remaining;
+        @AuraEnabled public Date startDate;
+        @AuraEnabled public Date endDate;
+        /** PacingSegment.id (greenlit / predicted / ...) — same tier the stacked
+         *  forecast colors by; greenlit = client-approved (drains first). */
+        @AuraEnabled public String tier;
+        /** Terminal-stage (Done/Cancelled/...) — real history, no forward work;
+         *  the packer skips these so they never inflate the future schedule. */
+        @AuraEnabled public Boolean isTerminal;
+    }
+
+    /**
+     * @description The flat in-scope item list backing the capacity-forecast
+     *              slider — the SAME active portfolio scope, leaf-only counting,
+     *              terminal-stage handling, and tier resolution the stacked
+     *              forecast (getPacing) uses, exposed as raw items so the LWC
+     *              can repack them client-side against a dev-count ceiling
+     *              without an Apex round-trip per drag. Reuses
+     *              queryActiveRootIds + collectPortfolioTree + rollupPortfolioTotals
+     *              (which populates portfolioItemSchedules as it computes the
+     *              rollup) so this list and the headline forecast can never drift.
+     *
+     *              NOT cacheable — same live-edit / reprioritize staleness
+     *              landmine documented on getPacing below: the slider issues
+     *              reorder writes (updateWorkItemSortOrder) and the list must
+     *              reflect them on the next read, not serve a stale LDS cache.
+     * @return Every board-active leaf WorkItem in scope as a ForecastItemDTO
+     *         (estimate / logged / remaining / dates / tier); empty when none.
+     */
+    @AuraEnabled
+    public static List<ForecastItemDTO> getForecastItems() {
+        try {
+            Set<Id> rootIds = queryActiveRootIds();
+            Set<Id> portfolioIds = collectPortfolioTree(rootIds);
+            PortfolioPacingDTO dto = new PortfolioPacingDTO();
+            // Side effect: populates the static portfolioItemSchedules with the
+            // leaf-only, tier-resolved per-item schedules we map below.
+            rollupPortfolioTotals(dto, portfolioIds);
+
+            List<ForecastItemDTO> out = new List<ForecastItemDTO>();
+            for (ItemSchedule s : portfolioItemSchedules) {
+                ForecastItemDTO d = new ForecastItemDTO();
+                d.id = s.workItemId;
+                d.name = s.name;
+                d.stage = s.stage;
+                d.estimate = s.estimate == null ? 0 : s.estimate;
+                d.logged = s.logged == null ? 0 : s.logged;
+                Decimal rem = d.estimate - d.logged;
+                d.remaining = rem > 0 ? rem : 0;
+                d.startDate = s.startDate;
+                d.endDate = s.endDate;
+                d.tier = s.tier;
+                d.isTerminal = String.isNotBlank(s.stage)
+                    && terminalStages.contains(s.stage);
+                // s.assignee intentionally dropped — buyer-facing, no names.
+                out.add(d);
+            }
+            return out;
+        } catch (AuraHandledException ahe) {
+            throw ahe;
+        } catch (Exception e) {
+            AuraHandledException ahe = new AuraHandledException(e.getMessage());
+            ahe.setMessage(e.getMessage());
+            throw ahe;
+        }
+    }
+
+    /**
      * @description Serializes getPortfolioPacing into nimbus-gantt's render-ready
      *              PacingData shape (the DH->NG forecast contract,
      *              nimbus-gantt/docs/dispatch-pacing-view-0195.md) and returns it
