@@ -14,6 +14,7 @@
  * @author Cloud Nimbus LLC
  */
 @IsTest
+@SuppressWarnings('PMD.ApexDoc')
 private class DeliveryApprovalSummaryControllerTest {
 
     /**
