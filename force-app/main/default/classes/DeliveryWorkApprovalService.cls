@@ -872,7 +872,7 @@ global with sharing class DeliveryWorkApprovalService {
      * @param approverId The user the queue is being fetched for.
      * @return Non-empty set of assignee ids to match ApproverUserLookup__c.
      */
-    private static Set<Id> resolveQueueApproverIds(Id approverId) {
+    public static Set<Id> resolveQueueApproverIds(Id approverId) {
         Set<Id> approverIds = new Set<Id>{ approverId };
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
         Id primaryId = resolveDefaultApproverId(settings);
