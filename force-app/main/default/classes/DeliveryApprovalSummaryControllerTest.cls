@@ -107,6 +107,68 @@ private class DeliveryApprovalSummaryControllerTest {
     }
 
     /**
+     * @description The pending tile must reconcile to the approval QUEUE: the
+     *              queue only shows the running approver's + unassigned requests,
+     *              so a request assigned to a DIFFERENT approver must be excluded
+     *              from the agenda's pending count too. (Pre-fix the agenda
+     *              counted every Offer-Sent request org-wide and silently
+     *              over-counted vs. the queue card directly below it.)
+     */
+    @IsTest
+    static void testPendingReconcilesToApproverScopedQueue() {
+        Id otherApprover = otherActiveUserId();
+        WorkItem__c mine = seedItem('Ready for Final Approval', null);
+        WorkItem__c theirs = seedItem('Ready for Final Approval', null);
+        // Unassigned → visible in both the queue and the agenda.
+        seedRequest(mine.Id, new Map<String, Object>{
+            'StatusPk__c' => 'Offer Sent',
+            'QuotedHoursNumber__c' => 10
+        });
+        // Assigned to another approver → in NEITHER this user's queue nor agenda.
+        seedRequest(theirs.Id, new Map<String, Object>{
+            'StatusPk__c' => 'Offer Sent',
+            'QuotedHoursNumber__c' => 99,
+            'ApproverUserLookup__c' => otherApprover
+        });
+
+        Test.startTest();
+        DeliveryApprovalSummaryController.ApprovalSummaryDTO dto =
+            DeliveryApprovalSummaryController.getApprovalSummary();
+        Test.stopTest();
+
+        System.assertEquals(1, dto.pendingCount,
+            'only the unassigned request counts — the other approver\'s is excluded, matching the queue');
+        System.assertEquals(10, dto.pendingQuotedHours,
+            'quoted-hours total excludes the other approver\'s request');
+    }
+
+    /** An active user other than the running user (created if the org has none). */
+    private static Id otherActiveUserId() {
+        List<User> others = [
+            SELECT Id FROM User
+            WHERE IsActive = true AND Id != :UserInfo.getUserId()
+            LIMIT 1
+        ];
+        if (!others.isEmpty()) {
+            return others[0].Id;
+        }
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        String uniq = String.valueOf(Crypto.getRandomInteger()).replace('-', '')
+            + String.valueOf(Datetime.now().getTime());
+        User u = new User(
+            FirstName = 'Other', LastName = 'Approver', Alias = 'oappr',
+            Email = 'other.approver@example.com',
+            Username = 'other.approver.' + uniq + '@example.com',
+            ProfileId = p.Id, TimeZoneSidKey = 'America/New_York',
+            LocaleSidKey = 'en_US', EmailEncodingKey = 'UTF-8', LanguageLocaleKey = 'en_US'
+        );
+        System.runAs(new User(Id = UserInfo.getUserId())) {
+            insert u;
+        }
+        return u.Id;
+    }
+
+    /**
      * @description In-flight aggregate requires BOTH a positive client cap
      *              AND a stage inside the dev → deploying band: a capped
      *              Backlog item and an uncapped In-Development item are

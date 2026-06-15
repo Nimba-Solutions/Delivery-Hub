@@ -131,10 +131,20 @@ public with sharing class DeliveryApprovalSummaryController {
      * @param dto DTO to fill (pendingCount / pendingQuotedHours).
      */
     private static void fillPendingAggregates(ApprovalSummaryDTO dto) {
+        // Scope to the SAME approver set the queue feed uses
+        // (DeliveryWorkApprovalService.getPendingForApprover) so this tile always
+        // reconciles to the queue card shown directly below it. Counting every
+        // Offer-Sent request org-wide made the agenda over-count the moment a
+        // request was assigned to a different approver — the numbers stopped
+        // matching the queue and the card lost trust.
+        Set<Id> approverIds =
+            DeliveryWorkApprovalService.resolveQueueApproverIds(UserInfo.getUserId());
         AggregateResult row = [
             SELECT COUNT(Id) cnt, SUM(QuotedHoursNumber__c) quoted
             FROM WorkRequest__c
             WHERE StatusPk__c = :REQUEST_OFFER_SENT
+              AND (ApproverUserLookup__c IN :approverIds
+                   OR ApproverUserLookup__c = NULL)
             WITH SYSTEM_MODE
         ];
         Integer cnt = (Integer) row.get('cnt');
