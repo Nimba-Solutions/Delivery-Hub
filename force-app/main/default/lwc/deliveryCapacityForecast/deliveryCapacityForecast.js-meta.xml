@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <masterLabel>Delivery Capacity Forecast</masterLabel>
+    <description>Buyer-facing capacity-forecast slider: drag the developer-count ceiling and the active portfolio reflows into a staffing-ramped per-month or cumulative stacked forecast with a live "lands by" date. Aggregate hours and tiers only — no names.</description>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__AppPage</target>
+        <target>lightning__HomePage</target>
+        <target>lightning__RecordPage</target>
+        <target>lightning__Tab</target>
+    </targets>
+</LightningComponentBundle>
