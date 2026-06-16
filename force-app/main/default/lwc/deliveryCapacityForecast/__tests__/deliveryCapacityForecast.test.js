@@ -6,7 +6,10 @@
  *               terminal / zero-remaining items dropped), the per-month vs
  *               cumulative toggle (cumulative totals never decrease), the live
  *               "lands by" readout, and the empty / error states. Mirrors the
- *               prototype buildSchedule the slider productizes.
+ *               prototype buildSchedule the slider productizes. getForecastItems
+ *               is called IMPERATIVELY (the Apex is non-cacheable by design, so
+ *               it cannot be @wired) — the mock is a jest.fn resolved/rejected
+ *               per case before the component mounts.
  * @author       Cloud Nimbus LLC
  */
 import { createElement } from "lwc";
@@ -50,12 +53,12 @@ describe("c-delivery-capacity-forecast", () => {
         jest.clearAllMocks();
     });
 
-    it("renders staffing-ramped stacked bars from the wire data", async () => {
-        const element = createComponent();
-        getForecastItems.emit([
+    it("renders staffing-ramped stacked bars from the apex data", async () => {
+        getForecastItems.mockResolvedValue([
             item({ id: "a01", remaining: 300, tier: "predicted" }),
             item({ id: "a02", remaining: 200, tier: "greenlit" })
         ]);
+        const element = createComponent();
         await flushPromises();
 
         const cols = element.shadowRoot.querySelectorAll(".chart .col");
@@ -70,11 +73,11 @@ describe("c-delivery-capacity-forecast", () => {
     });
 
     it("drops terminal and zero-remaining items from the schedule", async () => {
-        const element = createComponent();
-        getForecastItems.emit([
+        getForecastItems.mockResolvedValue([
             item({ id: "a01", remaining: 100, isTerminal: true }),
             item({ id: "a02", remaining: 0 })
         ]);
+        const element = createComponent();
         await flushPromises();
 
         // Nothing forward to pack → empty state, not a chart.
@@ -83,19 +86,19 @@ describe("c-delivery-capacity-forecast", () => {
     });
 
     it("shows a live 'lands by' readout", async () => {
+        getForecastItems.mockResolvedValue([item({ id: "a01", remaining: 120, tier: "predicted" })]);
         const element = createComponent();
-        getForecastItems.emit([item({ id: "a01", remaining: 120, tier: "predicted" })]);
         await flushPromises();
 
         expect(element.shadowRoot.textContent).toContain("Everything lands by");
     });
 
     it("cumulative toggle makes per-column totals non-decreasing", async () => {
-        const element = createComponent();
-        getForecastItems.emit([
+        getForecastItems.mockResolvedValue([
             item({ id: "a01", remaining: 600, tier: "predicted" }),
             item({ id: "a02", remaining: 300, tier: "greenlit" })
         ]);
+        const element = createComponent();
         await flushPromises();
 
         const toggle = element.shadowRoot.querySelector("lightning-button");
@@ -109,8 +112,8 @@ describe("c-delivery-capacity-forecast", () => {
     });
 
     it("reflows when the dev-count slider changes", async () => {
+        getForecastItems.mockResolvedValue([item({ id: "a01", remaining: 800, tier: "predicted" })]);
         const element = createComponent();
-        getForecastItems.emit([item({ id: "a01", remaining: 800, tier: "predicted" })]);
         await flushPromises();
 
         // Month 0 always exists; raising the dev ceiling lifts its packed total.
@@ -126,17 +129,17 @@ describe("c-delivery-capacity-forecast", () => {
     });
 
     it("shows the empty state when no items are in scope", async () => {
+        getForecastItems.mockResolvedValue([]);
         const element = createComponent();
-        getForecastItems.emit([]);
         await flushPromises();
 
         expect(element.shadowRoot.textContent).toContain("No active work in scope");
         expect(element.shadowRoot.querySelector(".chart")).toBeNull();
     });
 
-    it("shows an error when the wire errors", async () => {
+    it("shows an error when the apex call fails", async () => {
+        getForecastItems.mockRejectedValue({ body: { message: "boom" } });
         const element = createComponent();
-        getForecastItems.error();
         await flushPromises();
 
         expect(element.shadowRoot.querySelector(".slds-text-color_error")).not.toBeNull();
