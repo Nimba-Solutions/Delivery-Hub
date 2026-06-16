@@ -1,4 +1,4 @@
-import { LightningElement, wire, track } from 'lwc';
+import { LightningElement, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import getForecastItems from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHoursAnalyticsController.getForecastItems';
 
@@ -31,26 +31,40 @@ export default class DeliveryCapacityForecast extends NavigationMixin(LightningE
     error;
     loading = true;
 
-    @wire(getForecastItems)
-    wiredItems({ data, error }) {
-        this.loading = false;
-        if (data) {
-            // Only forward work packs: drop terminal-stage items and anything with
-            // no remaining hours — they are history, not future schedule.
-            this.items = data
-                .filter((d) => !d.isTerminal && (d.remaining || 0) > 0)
-                .map((d) => ({
-                    id: d.id,
-                    name: d.name,
-                    tier: d.tier,
-                    remaining: d.remaining || 0,
-                    startDate: d.startDate
-                }));
-            this.error = undefined;
-        } else if (error) {
-            this.error = (error.body && error.body.message) || 'Unable to load forecast items.';
-            this.items = [];
-        }
+    // getForecastItems is non-cacheable by design (it must reflect reorder
+    // writes on the next read, never a stale LDS cache), so it cannot be @wired
+    // — a wired Apex method must be @AuraEnabled(cacheable=true), and wiring a
+    // plain @AuraEnabled method throws "Apex methods that are to be cached must
+    // be marked as @AuraEnabled(cacheable=true)" at render. Call it imperatively
+    // on mount instead; the slider then reflows client-side with no further hops.
+    connectedCallback() {
+        this.loadItems();
+    }
+
+    loadItems() {
+        this.loading = true;
+        getForecastItems()
+            .then((data) => {
+                // Only forward work packs: drop terminal-stage items and anything
+                // with no remaining hours — they are history, not future schedule.
+                this.items = (data || [])
+                    .filter((d) => !d.isTerminal && (d.remaining || 0) > 0)
+                    .map((d) => ({
+                        id: d.id,
+                        name: d.name,
+                        tier: d.tier,
+                        remaining: d.remaining || 0,
+                        startDate: d.startDate
+                    }));
+                this.error = undefined;
+            })
+            .catch((error) => {
+                this.error = (error && error.body && error.body.message) || 'Unable to load forecast items.';
+                this.items = [];
+            })
+            .finally(() => {
+                this.loading = false;
+            });
     }
 
     // ── Slider / toggle handlers ────────────────────────────────────────────
