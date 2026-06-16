@@ -147,18 +147,26 @@ public with sharing class DeliveryGanttController {
                 + 'FROM WorkItem__c '
                 + 'WHERE TemplateMarkedDateTime__c = null ';
 
+            // Stages with no remaining schedulable effort (cross-type terminal union
+            // plus 'Deployed to Prod'). The default timeline is "active work", so these
+            // must be excluded. Pre-fix this set was computed for bar styling but never
+            // filtered on, so Done/Cancelled/Deployed-to-Prod items lingered on the
+            // buyer timeline forever — disagreeing with every other active-work surface.
+            Set<String> stageFilter = terminalStages;
+
             if (showCompleted == true) {
                 // Active items always show; inactive items must be recently modified.
                 query += 'AND (ActivatedDateTime__c != null '
                     + 'OR LastModifiedDate >= LAST_N_DAYS:' + DEFAULT_STALE_CUTOFF_DAYS + ') ';
             } else {
-                // Default view: canonical active scope — activated AND not archived.
-                // Pre-fix the archived filter was missing, so archived items still
-                // rendered on the timeline and its count disagreed with every other
-                // "active items" surface on Home. (showCompleted=true deliberately
-                // keeps archived/inactive items, bounded by the freshness window.)
+                // Default view: canonical active scope — activated, not archived, and
+                // not in a terminal/effort-complete stage. (showCompleted=true
+                // deliberately keeps archived/inactive items, bounded by freshness.)
                 query += 'AND ActivatedDateTime__c != null '
                     + 'AND ArchivedDateTime__c = null ';
+                if (!stageFilter.isEmpty()) {
+                    query += 'AND StageNamePk__c NOT IN :stageFilter ';
+                }
             }
 
             query += 'WITH SYSTEM_MODE '
@@ -1103,14 +1111,21 @@ public with sharing class DeliveryGanttController {
                 + 'FROM WorkItem__c '
                 + 'WHERE TemplateMarkedDateTime__c = null ';
 
+            // No remaining schedulable effort — exclude from the default "active work"
+            // timeline (mirrors getGanttData; was computed for styling but not filtered).
+            Set<String> stageFilter = terminalStages;
+
             if (showCompleted == true) {
                 query += 'AND (ActivatedDateTime__c != null '
                     + 'OR LastModifiedDate >= LAST_N_DAYS:' + DEFAULT_STALE_CUTOFF_DAYS + ') ';
             } else {
-                // Default view: canonical active scope — activated AND not archived
-                // (mirrors getGanttData; pre-fix archived items still rendered).
+                // Default view: canonical active scope — activated, not archived, and
+                // not in a terminal/effort-complete stage (mirrors getGanttData).
                 query += 'AND ActivatedDateTime__c != null '
                     + 'AND ArchivedDateTime__c = null ';
+                if (!stageFilter.isEmpty()) {
+                    query += 'AND StageNamePk__c NOT IN :stageFilter ';
+                }
             }
 
             // SortOrderNumber__c is the primary sort — drag-to-reorder writes it,
