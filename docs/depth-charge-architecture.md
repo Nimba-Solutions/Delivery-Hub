@@ -1,6 +1,6 @@
 # Depth-charge audit architecture
 
-**Status:** scaffold shipped in PR #760 (schema + local-segment assembly). Recursive cross-org probe + response handling is a follow-on PR — see "Follow-on PR" section below.
+**Status:** ✅ Fully shipped — scaffold in #760 (schema + local-segment assembly), and the recursive cross-org probe + response handling in #769/#772 (`DeliveryDepthProbeService` with `invokePeerProbe`, `MAX_DEPTH`, per-probe callout budget, re-probe window, and `ActivityLog__c` audit writes). The "Follow-on PR" section below is the original plan and is now historical. Only the CloudNimbus-side visualization remains out of package scope.
 
 ## What it is
 

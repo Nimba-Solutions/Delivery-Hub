@@ -1,6 +1,6 @@
 # Phase 2 Watcher v1 — Design (2026-05-18)
 
-> **Status:** Design-only recon. No production logic in the PR that introduces this doc. Read, weigh in on the **Open Questions for Glen** at the bottom, then a follow-on PR implements.
+> **Status:** ✅ SHIPPED at 0.246 (#807/#809/#810) — `DeliveryWatcherService`, the `WatcherDigest__c` object, `DeliveryWatcherDigestFormatter`, the setup LWC, and the top-3 live signals plus 4 stubbed signals all exist in the package. This document is the original design recon, retained for history; it is no longer "design-only / not implemented." (The 4 stub signals remain gated behind their own `Enable…DateTime__c` flags.)
 
 > **Parent plan:** `C:\Users\globa\.claude\plans\wild-roaming-rocket.md` — Phase 2 (Watcher v1 ~14h, top 3 signals implemented + 4 stubs, Slack + WatcherDigest__c audit record, Glen-only via `WatcherDigestRecipientUserIdsTxt__c`).
 
