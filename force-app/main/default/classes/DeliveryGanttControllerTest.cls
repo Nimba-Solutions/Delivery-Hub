@@ -251,6 +251,68 @@ private class DeliveryGanttControllerTest {
         }
     }
 
+    /**
+     * @description Regression guard for the terminal-stage filter fix. The default
+     *              (showCompleted=false) timeline is "active work", so items in a
+     *              terminal / effort-complete stage (Done, Cancelled, Deployed to
+     *              Prod) must NOT render even when still activated and un-archived.
+     *              Pre-fix the Gantt computed getAllEffortTerminalStageValues() only
+     *              to style bars and never filtered the query by it, so these items
+     *              lingered on the buyer timeline forever. 'Resolved' is intentionally
+     *              NOT in the effort-terminal set (terminal for Operations but an
+     *              active stage for Support_Triage), so an active 'Resolved' item must
+     *              still render — guarded on the live config so it can't flake.
+     */
+    @IsTest
+    static void testDefaultViewExcludesActiveTerminalStages() {
+        System.runAs(testUser) {
+            insert new List<WorkItem__c>{
+                new WorkItem__c(BriefDescriptionTxt__c = 'Active Done',
+                    StageNamePk__c = 'Done', ActivatedDateTime__c = Datetime.now()),
+                new WorkItem__c(BriefDescriptionTxt__c = 'Active Deployed',
+                    StageNamePk__c = 'Deployed to Prod', ActivatedDateTime__c = Datetime.now()),
+                new WorkItem__c(BriefDescriptionTxt__c = 'Active Cancelled',
+                    StageNamePk__c = 'Cancelled', ActivatedDateTime__c = Datetime.now()),
+                new WorkItem__c(BriefDescriptionTxt__c = 'Active Resolved',
+                    StageNamePk__c = 'Resolved', ActivatedDateTime__c = Datetime.now())
+            };
+
+            Test.startTest();
+            List<DeliveryGanttController.GanttTask> gantt =
+                DeliveryGanttController.getGanttData(false);
+            List<DeliveryGanttController.ProFormaTimelineRow> rows =
+                DeliveryGanttController.getProFormaTimelineData(false);
+            Test.stopTest();
+
+            Set<String> ganttTitles = new Set<String>();
+            for (DeliveryGanttController.GanttTask t : gantt) { ganttTitles.add(t.description); }
+            Set<String> rowTitles = new Set<String>();
+            for (DeliveryGanttController.ProFormaTimelineRow r : rows) { rowTitles.add(r.title); }
+
+            for (String terminal : new List<String>{ 'Active Done', 'Active Deployed', 'Active Cancelled' }) {
+                System.assert(!ganttTitles.contains(terminal),
+                    terminal + ' (terminal stage) must be excluded from the default Gantt view');
+                System.assert(!rowTitles.contains(terminal),
+                    terminal + ' (terminal stage) must be excluded from the default Pro Forma timeline');
+            }
+
+            // Active non-terminal work must still render (both methods).
+            System.assert(ganttTitles.contains('Build login page'),
+                'Active non-terminal work must still render (Gantt)');
+            System.assert(rowTitles.contains('Build login page'),
+                'Active non-terminal work must still render (Pro Forma)');
+
+            // 'Resolved' must NOT be treated as effort-terminal — confirm against the
+            // live config, then assert it still renders (the #915 cross-type collision).
+            Set<String> effortTerminal =
+                DeliveryWorkflowConfigService.getAllEffortTerminalStageValues();
+            System.assert(!effortTerminal.contains('Resolved'),
+                'Resolved must be excluded from the effort-terminal set (active for Support_Triage)');
+            System.assert(ganttTitles.contains('Active Resolved'),
+                'Active Resolved must still render — it is not effort-terminal');
+        }
+    }
+
     @IsTest
     static void testGetGanttDataIncludesCompleted() {
         System.runAs(testUser) {
