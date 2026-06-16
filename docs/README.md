@@ -22,7 +22,7 @@ current guidance.
 | [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md) | Product/engineering design principles. |
 | [COCKPIT.md](COCKPIT.md) | Operator cockpit / admin surface overview. |
 | [FLOW_REFERENCE.md](FLOW_REFERENCE.md) | Flow reference. |
-| [depth-charge-architecture.md](depth-charge-architecture.md) | Audit-chain ("depth-charge") feature architecture (scaffold shipped; recursive probe is a follow-on). |
+| [depth-charge-architecture.md](depth-charge-architecture.md) | Audit-chain ("depth-charge") feature architecture (scaffold + recursive cross-org probe BOTH shipped — #760, #769, #772). |
 
 ## Conventions & integrity
 
@@ -52,7 +52,7 @@ current guidance.
 
 | Doc | What it covers |
 |-----|----------------|
-| [plans/phase-2-watcher-design.md](plans/phase-2-watcher-design.md) | Design-only recon for the Watcher v1 aggregation layer (not yet implemented). |
+| [plans/phase-2-watcher-design.md](plans/phase-2-watcher-design.md) | Original design recon for the Watcher v1 aggregation layer (now SHIPPED at 0.246 — #807/#809/#810; kept for design history). |
 
 ## Archive
 

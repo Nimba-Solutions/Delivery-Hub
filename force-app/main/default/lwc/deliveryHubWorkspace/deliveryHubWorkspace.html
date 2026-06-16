@@ -32,8 +32,10 @@
             <c-delivery-approval-queue></c-delivery-approval-queue>
         </lightning-tab>
 
+        <!-- Buyer forecast = the "you set the pace" capacity slider (the controllable
+             forward projection). The retrospective pacing card is now admin-only (moved
+             to the Velocity tab) so buyers have ONE forecast surface, not two stacked. -->
         <lightning-tab label="Forecast" value="forecast" icon-name="standard:forecasts">
-            <c-delivery-pacing-forecast></c-delivery-pacing-forecast>
             <c-delivery-capacity-forecast></c-delivery-capacity-forecast>
         </lightning-tab>
 
@@ -48,6 +50,9 @@
 
             <lightning-tab label="Velocity" value="velocity" icon-name="standard:metrics">
                 <c-delivery-velocity-dashboard></c-delivery-velocity-dashboard>
+                <!-- Retrospective portfolio pacing (logged-vs-target) — admin-only;
+                     buyers see the forward capacity slider on the Forecast tab. -->
+                <c-delivery-pacing-forecast></c-delivery-pacing-forecast>
             </lightning-tab>
 
             <lightning-tab label="Settings" value="settings" icon-name="standard:settings">
