@@ -520,6 +520,12 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         }
     }
 
+    /**
+     * @description Before-insert defaults for new WorkItems: stamps ActivatedDateTime__c
+     *              (unless the inbound-sync ingestor owns it), defaults StageEnteredDateTime__c,
+     *              and mints a bounty token when the item is published as a bounty.
+     * @param newWorkItems List of WorkItem__c records being inserted.
+     */
     public static void handleBeforeInsert(List<WorkItem__c> newWorkItems) {
         Datetime now = Datetime.now();
         // When the inbound-sync ingestor is performing the insert, the source
@@ -742,7 +748,18 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         }
 
         if (!logs.isEmpty()) {
-            Database.insert(logs, AccessLevel.SYSTEM_MODE);
+            // Audit logging is best-effort. A failure here — e.g. STORAGE_LIMIT_EXCEEDED on a
+            // receiving org during cross-org sync — must NEVER roll back the core WorkItem
+            // write or drop a billable synced item from the invoice. Partial-success +
+            // swallow, mirroring the guarded pattern in DeliveryFieldChangeService.
+            try {
+                Database.insert(logs, false, AccessLevel.SYSTEM_MODE);
+            } catch (Exception e) {
+                System.debug(
+                    LoggingLevel.WARN,
+                    'logStageChanges audit insert failed (non-fatal): ' + e.getMessage()
+                );
+            }
         }
     }
 

@@ -104,6 +104,34 @@ private class DeliverySyncRetryControllerTest {
     }
 
     @IsTest
+    static void testRetryFailedExcludesInbound() {
+        System.runAs(testUser) {
+            WorkItem__c wi = [SELECT Id FROM WorkItem__c LIMIT 1];
+            // An inbound Failed item (e.g. a comment whose parent hasn't synced yet) must
+            // NOT be reset by admin retry — the processor only dispatches Outbound, so
+            // flipping it to Queued strands it and removes it from the pending-resolver's
+            // self-heal scan (recoverFailedWithResolvedParent).
+            SyncItem__c inbound = new SyncItem__c(
+                ObjectTypePk__c     = 'WorkItem__c',
+                LocalRecordIdTxt__c = wi.Id,
+                WorkItemLookup__c   = wi.Id,
+                DirectionPk__c      = 'Inbound',
+                StatusPk__c         = 'Failed',
+                ErrorLogTxt__c      = 'Parent WorkItem did not arrive within 10 retry attempts.'
+            );
+            insert inbound;
+
+            Test.startTest();
+            DeliverySyncRetryController.retryFailed();
+            Test.stopTest();
+
+            SyncItem__c after = [SELECT StatusPk__c FROM SyncItem__c WHERE Id = :inbound.Id];
+            System.assertEquals('Failed', after.StatusPk__c,
+                'Inbound Failed items must stay Failed — retryFailed is Outbound-only so it does not strand them.');
+        }
+    }
+
+    @IsTest
     static void testDismissFailedEndpoint() {
         System.runAs(testUser) {
             List<SyncItem__c> failed = [SELECT Id FROM SyncItem__c WHERE StatusPk__c = 'Failed'];
