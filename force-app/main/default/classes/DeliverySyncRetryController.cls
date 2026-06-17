@@ -100,9 +100,13 @@ global with sharing class DeliverySyncRetryController {
     }
 
     /**
-     * @description Resets all non-dismissed failed SyncItem__c records to Queued
-     *              so the scheduler retries them. Dismissed items are intentionally
-     *              skipped — admins must restore them first if a retry is desired.
+     * @description Resets non-dismissed failed OUTBOUND SyncItem__c records to Queued so
+     *              the scheduler re-pushes them. Inbound failures are intentionally excluded:
+     *              the processor only dispatches Outbound, so flipping an inbound row to
+     *              Queued strands it AND removes it from the pending-resolver's self-heal
+     *              scan (recoverFailedWithResolvedParent), which resets inbound rows to
+     *              Pending once their parent arrives. Dismissed items are skipped — admins
+     *              must restore them first if a retry is desired.
      */
     @AuraEnabled
     global static void retryFailed() {
@@ -111,6 +115,7 @@ global with sharing class DeliverySyncRetryController {
             FROM SyncItem__c
             WHERE StatusPk__c = 'Failed'
             AND DismissedDateTime__c = NULL
+            AND DirectionPk__c = 'Outbound'
             WITH SYSTEM_MODE
             LIMIT 200
         ];
