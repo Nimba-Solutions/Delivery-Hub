@@ -1,0 +1,39 @@
+# Delivery Hub — End-to-End Flow & Instruction Engine
+> Grounded operating documentation for the DH managed package (`delivery__`), assembled 2026-06-18 from a read-only audit of the live codebase. Two jobs at once: **(1) shareable, honest documentation** of what DH does end-to-end, and **(2) a partitioned Cowork validation harness** — every phase carries an exhaustive Pre→Action→Expected→Verify scenario set so multiple Coworks can run them in parallel and confirm outcomes / detect + fix errors. **First instance documented = MF.**
+
+This is also the **instruction engine** Glen asked for (ref `cloudnimbusllc.com/glen/the-machine-0610`): each phase's §7 "AGENT OPERATING INSTRUCTIONS" is the canonical operating manual an agent reads to run that part of the business — what it watches, reads, decides, writes, and what it must route to a human. Phase G §7 is the synthesis that ties them into a maturity ladder.
+
+## How to read this
+- **Honest by design.** Every phase has a §4 GAPS/CAVEATS that flags what's stubbed, gated-OFF, or broken. We do not oversell. The recurring truth: *the engine is mostly real, but much of it ships dark (config-gated) and a few claims (hash-chain validator, "ingest any process," "cap enforced") are aspirational until configured.*
+- **Generalizable vs MF.** Each phase §3 separates what ships in the package (works for any subscriber) from MF-specific data/config.
+- **The scenarios ARE the test plan.** Each §6 is a numbered, standalone Cowork chunk. Run them in a sandbox; never prod DML.
+
+## The end-to-end flow (one paragraph per phase)
+- **[A — Onboarding · contracting · e-signature](phase-a-onboarding-contracting-esign.md):** `onboardClient` creates a Client `NetworkEntity__c` + a frozen-snapshot `Client_Agreement` doc (8 clauses incl. confidentiality + IP, Florida law) + portal access; PDF/email/e-sign via VF pages + signature slots. *Gaps: hash-chain validator can't reconcile; no packaged Site host for public signing; no standalone NDA/non-compete; cross-org registration is NOT part of onboarding.*
+- **[B — Process ingestion / definition](phase-b-process-ingestion.md):** a CMT-driven workflow engine (`WorkflowType/Stage/PersonaView/Requirement/Escalation __mdt`) read by `DeliveryWorkflowConfigService`; 7 workflow types ship. *Gap: a non-dev process can only DISPLAY, not RUN — `StageNamePk__c` is hardcoded to the 37 Software_Delivery values; the builder emits ~30% of the model; transitions/requirements are advisory (client-side only).*
+- **[C — Org install · cross-org connection · sandbox · team](phase-c-org-setup-cross-org-sync.md):** zero-touch install handler + 4-cron scheduler; NetworkEntity handshake; the bidirectional sync engine (push vs poll); CumulusCI dev flow. *Gaps: API keys NOT auto-minted; handshake approval is a manual queue; blank endpoint → silent Staged; sandbox sync + post-refresh re-init are NOT turnkey.*
+- **[D — Inbound capture → intake](phase-d-inbound-capture-intake.md):** five channels (Slack, email, cross-org sync, public submit, portal API) → `WorkItem__c`/`WorkItemComment__c`, plus the auto-diagnose agent → quoted `WorkRequest__c`. *Gaps: Slack ships OFF; no Email Service in metadata (manual setup); Slack/email only comment, never create intake; auto-diagnose ships rule-less.*
+- **[E — Quote → approve → deliver → ship](phase-e-quote-approve-deliver.md):** decision-on-`WorkRequest__c` (propose → offer → approve/decline/counter/increase), CMT board stages, deploy-to-prod ping + ship report, forecast/pacing + capacity slider. *Gaps: cap defaults to FLAG not block; no packaged estimate-creation UI; shipping clobbers the developer field; forecast hides date-less work.*
+- **[F — Billing / get paid + reporting](phase-f-billing-get-paid-reporting.md):** worklog relay → frozen invoice snapshot → send → A/R → Stripe/manual payment → overdue/dispute; Watcher digest. *This is the #1 pain. Root cause: the invoice is a frozen day-1 snapshot, so late-arriving / stuck-Failed / Hub-only-orphan / un-minted worklogs are silently missing until manual regeneration; mirror risk is double-billing; the two Watcher signals that would detect it are empty stubs.*
+- **[G — "The Machine" + the instruction engine](phase-g-the-machine-instruction-engine.md):** SEE capture → `ActivityLog__c` → auto-diagnose → approval queue, driven by the scheduler; the manual→approver→autonomous ladder. *The spine is real + shipped but DARK (~rung 1.5): eyes configured, brain wired, queue ready, but zero DiagnoseRules ship, the confidence ladder doesn't exist, and MCP is a design doc. §7 is the instruction-engine synthesis.*
+
+## The instruction engine (cross-phase)
+Each phase §7 follows one canonical shape so an agent can read any phase as an operating manual. A complete per-phase instruction has **eight parts**: PURPOSE · WATCHES · READS (safe) · DECISION RULES (deterministic) · AUTOMATABLE-NOW · MUST-ROUTE-TO-HUMAN · AUTONOMY RUNG · ERROR/ESCALATION. Phases A–F author all but the **autonomy rung** (part 7) — which has no home in the data model today. That missing rung is the single biggest structural gap between "documented instructions" and a working instruction engine. **The approval queue is the universal rung-2 substrate** (agent drafts, human approves); **auto-diagnose is the one shipped mechanism that produces a rung-2 draft from a watched signal.** Full synthesis + the maturity-ladder table + the three things that must be built for "an agent runs MF" (MCP tool surface · autonomy-rung + confidence ledger · inbound→draft path) are in [Phase G §7](phase-g-the-machine-instruction-engine.md).
+
+## Cowork validation — partition map (run in parallel)
+Each phase §6 is a self-contained chunk. Suggested partitioning for parallel Coworks (~485 enumerated scenarios + sub-steps ≈ Glen's "~1000 action items"). Each Cowork: run against a **sandbox**, log Pre→Action→Expected→**Actual**, mark PASS/FAIL, and for FAIL capture the exact error + a proposed fix (route code fixes to DH-Claude, data/config to MF-Claude).
+
+| Cowork | Phase(s) | Scenario count | Focus |
+|---|---|---|---|
+| CW-1 | A (onboarding/e-sign) | ~80 | onboarding, doc-gen, PDF/email, admin + public sign, certificate/audit, **the hash-validator known defect** |
+| CW-2 | B (process-def) | ~61 | config read, builder LWC, **the picklist-coupling gap**, movement/requirements (UI vs Apex bypass), escalation, templates |
+| CW-3 | C (org/sync) | 84 | install/permsets, handshake + status transitions, key/HMAC, **push & poll both**, ingestor/dedup, reconciler/health/repair, sandbox refresh |
+| CW-4 | D (inbound) | 84 | Slack in/out, **inbound email (incl. the no-Email-Service gap)**, cross-org sync inbound, public/portal, agent intake, live-push |
+| CW-5 | E (quote→ship) | 69 | propose/submit/approve/decline/increase, bulk, stage moves, **deploy-to-prod + ship report**, cap (flag vs enforce), forecast/slider |
+| CW-6 | F (billing) | 54 | worklog relay, invoice assembly, **MISSING-ITEM detection (the keystone)**, PDF/email, A/R + Stripe, overdue/dispute, Watcher |
+| CW-7 | G (the machine) | ~60 | SEE gating, tracked-field config, **hash-chain known defect**, auto-diagnose firing → queue draft, scheduler wiring, end-to-end loop, **rung-3 absence** |
+
+Coworks can run independently; the only ordering preference is **C before D/F** (a working cross-org connection makes the sync-inbound and billing-relay scenarios reproducible). For a clean MF demo cold-open, CW-3 + CW-6 expose the operationally-fragile paths first.
+
+## Status & provenance
+Each phase doc was produced by a dedicated read-only research agent grounded in `C:\Projects\Delivery-Hub` code (agent IDs in each doc footer; full per-scenario Pre→Action→Expected→Verify detail is in those runs). This README + phase docs are the durable, shareable artifacts. Pair with the live-validation memory: `project-dh-remediation-grounded-0616`.
