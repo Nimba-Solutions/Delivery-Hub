@@ -39,6 +39,15 @@
 @SuppressWarnings('PMD.ApexCRUDViolation,PMD.AvoidGlobalModifier,PMD.CyclomaticComplexity,PMD.StdCyclomaticComplexity,PMD.ExcessivePublicCount')
 global with sharing class DeliveryNotificationService {
 
+    // Per-event notification control (Stage 1 convergence onto the
+    // NotificationPreference__c model — see DeliveryNotificationPreferenceService,
+    // the pattern DeliveryForecastAlertService already follows). Opt-out:
+    // shouldNotify returns true (send) when no preference row exists, so this
+    // changes NO current behavior until an approver opts a specific event out.
+    @TestVisible private static final String CHANNEL_BELL = 'Bell';
+    @TestVisible private static final String EVENT_APPROVAL_REQUEST = 'Approval_Request';
+    @TestVisible private static final String EVENT_SHIP_VERIFICATION = 'Ship_Verification';
+
     // ────────────────────────────────────────────────────────────────────
     // FEATURE TOGGLE
     // ────────────────────────────────────────────────────────────────────
@@ -193,6 +202,12 @@ global with sharing class DeliveryNotificationService {
             if (approverId == null) {
                 return;
             }
+            // Per-event control: a disabled Bell/Ship_Verification preference
+            // suppresses the deploy-verify ping for this approver (opt-out).
+            if (!DeliveryNotificationPreferenceService.shouldNotify(
+                    approverId, CHANNEL_BELL, EVENT_SHIP_VERIFICATION)) {
+                return;
+            }
             Integer count = workItemIds.size();
             String title = 'Deployed to production';
             String body = count + ' item(s) deployed to production ' + '\u2014' + ' please verify.';
@@ -254,7 +269,17 @@ global with sharing class DeliveryNotificationService {
                 return;
             }
             Map<Id, List<WorkRequest__c>> byApprover = groupRequestsByApprover(rows);
+            // Per-event control: honor each approver's Bell/Approval_Request
+            // preference (bulk-checked in ONE SOQL to stay governor-safe when
+            // several distinct approvers are involved). Opt-out: a missing row
+            // means send, so this changes nothing until an approver opts out.
+            Map<String, Boolean> prefs = DeliveryNotificationPreferenceService.shouldNotifyBulk(
+                byApprover.keySet(), new Set<String>{ CHANNEL_BELL }, EVENT_APPROVAL_REQUEST);
             for (Id approverId : byApprover.keySet()) {
+                if (!DeliveryNotificationPreferenceService.shouldNotifyFromMap(
+                        prefs, approverId, CHANNEL_BELL)) {
+                    continue;
+                }
                 sendApproverDigest(approverId, byApprover.get(approverId));
             }
         } catch (Exception e) {
