@@ -202,4 +202,34 @@ private class DeliveryShipVerificationTest {
         System.assertEquals(asyncBefore, asyncAfter,
             'null list, empty list, and blank setting must not enqueue a notification');
     }
+
+    /**
+     * @description Per-event control (Stage 1): a disabled
+     *              Bell / Ship_Verification preference for the configured
+     *              approver suppresses the deploy-verify ping — no queueable
+     *              enqueued — even though the approver IS configured and would
+     *              otherwise be notified. This is the surgical mute that lets a
+     *              buyer-persona approver keep approval pings while dropping
+     *              deploy-confirmation noise.
+     */
+    @IsTest
+    static void testShipVerificationSuppressedByDisabledPreference() {
+        setApproverSetting(String.valueOf(UserInfo.getUserId()));
+        insert new NotificationPreference__c(
+            UserIdTxt__c = String.valueOf(UserInfo.getUserId()).left(18),
+            ChannelPk__c = 'Bell',
+            EventTypePk__c = 'Ship_Verification',
+            EnabledDateTime__c = null // disabled = opted out of this event on this channel
+        );
+        WorkItem__c wi = seedItemAt(STAGE_DEPLOYING);
+
+        Test.startTest();
+        Integer asyncBefore = [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable'];
+        DeliveryNotificationService.notifyDeployedToProd(new List<Id>{ wi.Id });
+        Integer asyncAfter = [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable'];
+        Test.stopTest();
+
+        System.assertEquals(asyncBefore, asyncAfter,
+            'a disabled Ship_Verification Bell preference must suppress the deploy ping');
+    }
 }
