@@ -1488,4 +1488,42 @@ private class DeliveryWorkApprovalServiceTest {
         System.assertEquals(asyncBefore, asyncAfter,
             'null, empty, and missing-record inputs must never enqueue or throw');
     }
+
+    /**
+     * @description Per-event control (Stage 1): a disabled
+     *              Bell / Approval_Request preference for the assigned approver
+     *              suppresses the "approval needed" ping — no queueable
+     *              enqueued — even with an Offer-Sent request assigned to them.
+     *              Guards test validity by asserting the request is genuinely
+     *              Offer Sent before acting (so a status-flip trigger can't make
+     *              the suppression assertion pass vacuously).
+     */
+    @IsTest
+    static void testApprovalSubmitSuppressedByDisabledPreference() {
+        WorkItem__c wi = TestDataFactory.createWorkItem(null);
+        WorkRequest__c wr = TestDataFactory.createWorkRequest(wi.Id, new Map<String, Object>{
+            'StatusPk__c' => 'Offer Sent',
+            'ApproverUserLookup__c' => UserInfo.getUserId(),
+            'QuotedHoursNumber__c' => 10
+        });
+        System.assertEquals('Offer Sent',
+            [SELECT StatusPk__c FROM WorkRequest__c WHERE Id = :wr.Id].StatusPk__c,
+            'setup guard: the request must be Offer Sent for this test to mean anything');
+
+        insert new NotificationPreference__c(
+            UserIdTxt__c = String.valueOf(UserInfo.getUserId()).left(18),
+            ChannelPk__c = 'Bell',
+            EventTypePk__c = 'Approval_Request',
+            EnabledDateTime__c = null // disabled = opted out
+        );
+
+        Test.startTest();
+        Integer asyncBefore = [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable'];
+        DeliveryNotificationService.notifyWorkApprovalSubmitted(new List<Id>{ wr.Id });
+        Integer asyncAfter = [SELECT COUNT() FROM AsyncApexJob WHERE JobType = 'Queueable'];
+        Test.stopTest();
+
+        System.assertEquals(asyncBefore, asyncAfter,
+            'a disabled Approval_Request Bell preference must suppress the approval ping');
+    }
 }
