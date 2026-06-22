@@ -1,0 +1,105 @@
+/* Burn-up bar — SLDS-native palette, green family for the nested fills, red for
+   over-cap. The whole thing scales with the block-texture overlay so 8h and 800h
+   render identically. */
+
+.bu-track {
+    position: relative;
+    display: flex;
+    width: 100%;
+    height: 1.75rem;
+    border-radius: 0.25rem;
+    overflow: hidden;
+    background: #f3f3f3;
+    box-shadow: inset 0 0 0 1px #e5e5e5;
+}
+
+.bu-fill {
+    height: 100%;
+    flex: 0 0 auto;
+    transition: width 0.35s ease;
+}
+
+/* shipped ⊆ approved ⊆ estimated — three green shades, dark → light */
+.bu-fill_shipped {
+    background: #16a34a; /* darkest: done + logged */
+}
+.bu-fill_approved {
+    background: #86efac; /* medium: approved, in flight */
+}
+.bu-fill_estimated {
+    background: #dcfce7; /* lightest: scoped, not yet approved */
+}
+.bu-fill_over {
+    background: #dc2626; /* logged past the cap */
+}
+.bu-fill_headroom {
+    background: transparent;
+    background-image: repeating-linear-gradient(
+        45deg,
+        #e5e7eb 0,
+        #e5e7eb 1px,
+        transparent 1px,
+        transparent 6px
+    );
+}
+
+/* block separators — drawn over the fills, period set inline from blockUnit */
+.bu-blocks {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+/* the ceiling you set */
+.bu-ceiling {
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: 2px;
+    background: #b91c1c;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+/* health accent on the track border */
+.burnup--over .bu-track {
+    box-shadow: inset 0 0 0 1px #fca5a5;
+}
+.burnup--approaching .bu-track {
+    box-shadow: inset 0 0 0 1px #fcd34d;
+}
+
+/* legend */
+.bu-legend {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.75rem;
+    color: #514f4d;
+}
+.bu-legend li {
+    display: inline-flex;
+    align-items: center;
+}
+.bu-key {
+    display: inline-block;
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 0.15rem;
+    margin-right: 0.3rem;
+}
+.bu-key_shipped {
+    background: #16a34a;
+}
+.bu-key_approved {
+    background: #86efac;
+}
+.bu-key_estimated {
+    background: #dcfce7;
+    box-shadow: inset 0 0 0 1px #bbf7d0;
+}
+.bu-key_over {
+    background: #dc2626;
+}
