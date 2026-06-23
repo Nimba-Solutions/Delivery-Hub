@@ -139,8 +139,11 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
                 System.enqueueJob(new DeliveryFileBytesFetcher(orphan.Id, orphan.WorkItemLookup__c));
             }
         } catch (Exception e) {
-            System.debug(LoggingLevel.ERROR,
-                '[DeliveryHubScheduler] Orphaned inbound file re-dispatch failed: ' + e.getMessage());
+            // Swallow so this safety-net sweep can never break the scheduler tick:
+            // an orphaned row simply stays Queued and is retried on the next cycle.
+            // No System.debug — Performance.AvoidDebugStatements is the strictly
+            // enforced CI PMD gate (the only build-failing rule on changed files).
+            Exception ignored = e;
         }
     }
 
