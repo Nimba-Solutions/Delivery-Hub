@@ -1,0 +1,57 @@
+<template>
+    <lightning-card icon-name="utility:progress_ring" title="Hours Burn-Up">
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+            <!-- Empty state: no ceiling to draw -->
+            <template if:true={isEmpty}>
+                <div class="slds-text-color_weak slds-text-body_small slds-p-vertical_small">
+                    No ceiling set yet — add <b>Client Pre-Approved</b> or <b>Estimated Hours</b> to
+                    see work fill toward it.
+                </div>
+            </template>
+
+            <template if:true={hasBar}>
+                <div class={rootClass}>
+                    <!-- status line -->
+                    <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center slds-m-bottom_x-small">
+                        <span class="bu-status slds-grid slds-grid_vertical-align-center">
+                            <lightning-icon
+                                icon-name={health.icon}
+                                size="x-small"
+                                variant={health.variant}
+                                class="slds-m-right_xx-small"
+                            ></lightning-icon>
+                            <span class="slds-text-title_caps">{health.label}</span>
+                        </span>
+                        <span class="slds-text-body_small slds-text-color_weak">{ceilingLabel}: {ceilingHoursLabel}h</span>
+                    </div>
+
+                    <!-- the bar -->
+                    <div class="bu-track">
+                        <div class="bu-fill bu-fill_shipped" style={shippedStyle}></div>
+                        <div class="bu-fill bu-fill_over" style={overCapStyle}></div>
+                        <div class="bu-fill bu-fill_approved" style={approvedRemainingStyle}></div>
+                        <div class="bu-fill bu-fill_estimated" style={estimatedBeyondStyle}></div>
+                        <div class="bu-fill bu-fill_headroom" style={headroomStyle}></div>
+                        <!-- block texture overlay -->
+                        <div class="bu-blocks" style={blockOverlayStyle}></div>
+                        <!-- the ceiling you set -->
+                        <div class="bu-ceiling" style={ceilingLineStyle}></div>
+                    </div>
+
+                    <!-- legend + numbers -->
+                    <div class="slds-grid slds-grid_align-spread slds-m-top_x-small slds-wrap">
+                        <ul class="bu-legend slds-grid slds-wrap">
+                            <li class="slds-m-right_small"><span class="bu-key bu-key_shipped"></span>Shipped {loggedLabel}h</li>
+                            <li class="slds-m-right_small"><span class="bu-key bu-key_approved"></span>Approved {approvedLabel}h</li>
+                            <li class="slds-m-right_small"><span class="bu-key bu-key_estimated"></span>Estimated {estimatedLabel}h</li>
+                            <template if:true={hasOverCap}>
+                                <li class="slds-m-right_small"><span class="bu-key bu-key_over"></span>Over cap</li>
+                            </template>
+                        </ul>
+                        <span class="slds-text-body_small slds-text-color_weak">{blockCaption}</span>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </lightning-card>
+</template>
