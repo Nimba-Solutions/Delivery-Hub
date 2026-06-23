@@ -71,10 +71,10 @@ describe("c-delivery-hours-pills", () => {
         jest.clearAllMocks();
     });
 
-    it("shows a neutral placeholder (not Infinity / a huge %) when hours logged is 0", async () => {
+    it("shows 0% (not Infinity / a huge %) when hours logged is 0", async () => {
         const element = await mountWith({ estimated: 8, logged: 0, eta: "2099-01-01" });
         const [onBudget] = badgeTexts(element);
-        expect(onBudget).toBe("—");
+        expect(onBudget).toBe("0%"); // 0 logged / 8 estimated = 0% of budget used
         expect(onBudget).not.toMatch(/infinity/i);
         expect(onBudget).not.toMatch(/\d{4,}/); // no runaway 8,000,000% style number
     });
@@ -88,7 +88,7 @@ describe("c-delivery-hours-pills", () => {
     it("flags over-budget when logged exceeds estimate", async () => {
         const element = await mountWith({ estimated: 4, logged: 8, eta: "2099-01-01" });
         const [onBudget] = badgeTexts(element);
-        expect(onBudget).toBe("50%");
+        expect(onBudget).toBe("200%"); // 8 logged / 4 estimated = 200% of budget used
     });
 
     it("shows a neutral placeholder when no estimate is set", async () => {
