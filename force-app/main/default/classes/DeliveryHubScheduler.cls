@@ -122,6 +122,7 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
      *              there is no re-enqueue loop.
      */
     @TestVisible
+    @SuppressWarnings('PMD.OperationWithLimitsInLoop')
     private static void requeueOrphanedInboundFiles() {
         try {
             Datetime cutoff = Datetime.now().addMinutes(-15);
@@ -135,15 +136,17 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
                 WITH SYSTEM_MODE
                 LIMIT 25
             ];
+            // Bounded to LIMIT 25 — well under the 50 enqueueJob-per-transaction
+            // ceiling for this Schedulable context — so enqueueing one fetcher per
+            // orphan is safe (mirrors scheduleAll's bounded System.schedule loop).
             for (SyncItem__c orphan : orphans) {
                 System.enqueueJob(new DeliveryFileBytesFetcher(orphan.Id, orphan.WorkItemLookup__c));
             }
         } catch (Exception e) {
             // Swallow so this safety-net sweep can never break the scheduler tick:
             // an orphaned row simply stays Queued and is retried on the next cycle.
-            // No System.debug — Performance.AvoidDebugStatements is the strictly
-            // enforced CI PMD gate (the only build-failing rule on changed files).
-            Exception ignored = e;
+            System.debug(LoggingLevel.ERROR,
+                '[DeliveryHubScheduler] Orphaned inbound file re-dispatch failed: ' + e.getMessage());
         }
     }
 
