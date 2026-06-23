@@ -1059,6 +1059,12 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryHoursBurnup</componentName>
+                <identifier>c_deliveryHoursBurnup</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryScore</componentName>
                 <identifier>c_deliveryScore</identifier>
             </componentInstance>
