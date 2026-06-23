@@ -79,26 +79,23 @@ export default class DeliveryHoursPills extends LightningElement {
         if (this._estimated <= 0) {
             return this._pill("On-Budget", "—", "neutral", "No estimate set", "No data");
         }
-        // Guard divide-by-zero BEFORE computing the ratio. The old
-        // `this._estimated / (this._logged || 0.0001)` produced a ~8,000,000%
-        // label when no hours were logged — rendered as a nonsense
-        // "Infinity"-looking figure on MF prod. With nothing logged there is
-        // no budget signal yet, so show a neutral placeholder.
-        if (this._logged <= 0) {
-            return this._pill("On-Budget", "—", "neutral", "No hours logged yet",
-                `Est ${this._formatHours(this._estimated)}h · Logged 0h`);
-        }
-        const pct = Math.round((this._estimated / this._logged) * 100);
+        // Budget consumed = logged / estimated. Estimated is guaranteed > 0 here
+        // (guarded above), so there is no divide-by-zero, and logged = 0 reads as
+        // a correct 0% used. This previously computed estimated / logged, which
+        // INVERTED the ratio — 14h logged against a 60h estimate rendered "429%"
+        // under an "On-Budget" label instead of the correct 23% (F9). The label
+        // means "percent of the estimate consumed," so over 100% is over budget.
+        const pct = Math.round((this._logged / this._estimated) * 100);
         let band, tooltip;
-        if (pct >= 100) {
-            band = "green";
-            tooltip = `Earning ${pct}% of estimated hours per actual hour — at or under budget.`;
+        if (pct > 100) {
+            band = "red";
+            tooltip = `${pct}% of the estimated budget used — over budget.`;
         } else if (pct >= 80) {
             band = "yellow";
-            tooltip = `Earning ${pct}% of estimated hours per actual hour — drifting over.`;
+            tooltip = `${pct}% of the estimated budget used — approaching the estimate.`;
         } else {
-            band = "red";
-            tooltip = `Earning only ${pct}% of estimated hours per actual hour — significantly over budget.`;
+            band = "green";
+            tooltip = `${pct}% of the estimated budget used — under budget.`;
         }
         return this._pill("On-Budget", `${pct}%`, band, tooltip,
             `Est ${this._formatHours(this._estimated)}h · Logged ${this._formatHours(this._logged)}h`);
