@@ -12,6 +12,10 @@ public with sharing class DeliveryHubHealthService {
 
     private static final Integer STALE_FAILED_DAYS = 7;
     private static final Integer ENDPOINT_REACHABILITY_LIMIT = 5;
+    // Bound the per-invoice snapshot rebuilds (each calls DeliveryDocGenerationService.buildSnapshot,
+    // ~5-6 SOQL) so the stale-invoice check stays well under the synchronous query ceiling alongside
+    // the other checks. The scan is most-recent-first; the cap is surfaced in the result message.
+    private static final Integer INVOICE_SCAN_LIMIT = 10;
 
     /**
      * @description Run every check and return their results in a stable order.
@@ -33,6 +37,7 @@ public with sharing class DeliveryHubHealthService {
         out.add(safe('mothershipHandshake', 'Mothership Handshake', new MothershipCheck()));
         out.add(safe('inboundWebhookProviders', 'Inbound Webhook Providers', new InboundWebhookCheck()));
         out.add(safe('sortOrderHealth', 'SortOrder Integrity', new SortOrderCheck()));
+        out.add(safe('staleInvoices', 'Invoices Pending Re-bill', new StaleInvoiceCheck()));
         return out;
     }
 
@@ -101,6 +106,64 @@ public with sharing class DeliveryHubHealthService {
             return DeliveryHubHealthCheckResult.warn(key, label,
                 count + ' SyncItem__c rows have been Failed for over ' + STALE_FAILED_DAYS + ' days.',
                 'requeueFailedSyncs');
+        }
+    }
+
+    /**
+     * @description Flags issued invoices that have accrued billable hours AFTER
+     *              they were generated. Invoices freeze a tamper-evident snapshot
+     *              at generation; if an in-period billable WorkLog lands later
+     *              (e.g. a delayed time entry or a cross-org relay), nothing tells
+     *              the biller to regenerate, so the client is under-billed silently.
+     *              This is the missing-billable detector for the Phase F billing gap.
+     *
+     *              Method: for each recent non-superseded Invoice, rebuild the
+     *              period snapshot with the SAME scoping the generator uses
+     *              (DeliveryDocGenerationService.buildSnapshot + calculateTotalHours)
+     *              and compare the current period hours to the frozen
+     *              TotalHoursNumber__c. A positive delta means unbilled time exists.
+     *              Reusing the generator's own scoping guarantees the detector can
+     *              never diverge from how the invoice was actually computed.
+     */
+    public class StaleInvoiceCheck implements IHealthCheck {
+        public DeliveryHubHealthCheckResult run(String key, String label) {
+            List<DeliveryDocument__c> invoices = [
+                SELECT Id, Name, NetworkEntityId__c, PeriodStartDate__c,
+                       PeriodEndDate__c, TotalHoursNumber__c
+                FROM DeliveryDocument__c
+                WHERE TemplatePk__c = 'Invoice'
+                AND StatusPk__c NOT IN ('Superseded', 'Void', 'Paid')
+                AND NetworkEntityId__c != NULL
+                AND PeriodStartDate__c != NULL
+                AND PeriodEndDate__c != NULL
+                WITH SYSTEM_MODE
+                ORDER BY CreatedDate DESC
+                LIMIT :INVOICE_SCAN_LIMIT
+            ];
+
+            List<String> stale = new List<String>();
+            for (DeliveryDocument__c inv : invoices) {
+                Map<String, Object> snap = DeliveryDocGenerationService.buildSnapshot(
+                    inv.NetworkEntityId__c, 'Invoice', inv.PeriodStartDate__c, inv.PeriodEndDate__c);
+                Decimal currentHours = DeliveryDocGenerationService.calculateTotalHours(snap);
+                Decimal frozen = inv.TotalHoursNumber__c != null ? inv.TotalHoursNumber__c : 0;
+                // Tolerance guards against Decimal scale noise; only a real positive delta counts.
+                if (currentHours - frozen > 0.001) {
+                    stale.add(inv.Name + ' (+' + (currentHours - frozen).setScale(2) + 'h unbilled)');
+                }
+            }
+
+            String scope = invoices.size() == INVOICE_SCAN_LIMIT
+                ? ' (checked ' + INVOICE_SCAN_LIMIT + ' most recent)'
+                : '';
+            if (stale.isEmpty()) {
+                return DeliveryHubHealthCheckResult.pass(key, label,
+                    'No issued invoices have billable hours logged after generation' + scope + '.');
+            }
+            return DeliveryHubHealthCheckResult.warn(key, label,
+                stale.size() + ' invoice(s) have billable hours logged after generation — '
+                + 'regenerate to capture: ' + String.join(stale, '; ') + scope + '.',
+                null);
         }
     }
 
