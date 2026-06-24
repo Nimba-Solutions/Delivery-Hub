@@ -1324,7 +1324,26 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
 
         this.refreshWorkItems();
     }
-    
+
+    handleCreateError(event) {
+        // F11: the create form previously had no onerror handler, so a rejected
+        // create (validation rule, a required field not on the form, a trigger
+        // addError, or a duplicate rule) failed silently — the modal stayed open
+        // with no record and no feedback, which read as a frozen/broken Create.
+        // Surface it: keep the modal open so the user can correct, and toast the
+        // platform's own reason. <lightning-messages> in the form shows the
+        // field-level detail inline.
+        this.isAiProcessing = false;
+        const detail = event && event.detail ? event.detail : {};
+        let message = detail.message || 'Could not create the work item. Please review the fields and try again.';
+        const errors = detail.output && detail.output.errors ? detail.output.errors : [];
+        const specific = errors.map((e) => e && e.message).filter(Boolean);
+        if (specific.length > 0) {
+            message = specific.join(' ');
+        }
+        this.showToast('Could not create work item', message, 'error');
+    }
+
     // ... [Search Handlers & AI Handlers (handleFieldChange, handleAiEnhance, applyAiSuggestions, setFieldValue, dismissAiSuggestions)] ...
     
     handleFieldChange(event) {
