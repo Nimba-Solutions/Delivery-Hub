@@ -619,11 +619,17 @@
                     </template>
                     
                     <template lwc:if={isNotAiProcessing}>
-                        <lightning-record-edit-form object-api-name="%%%NAMESPACE_DOT%%%WorkItem__c" 
-                            default-field-values={createDefaults} 
+                        <lightning-record-edit-form object-api-name="%%%NAMESPACE_DOT%%%WorkItem__c"
+                            default-field-values={createDefaults}
                             onsubmit={handleCreateSubmit}
-                            onsuccess={handleCreateSuccess}>
-                            
+                            onsuccess={handleCreateSuccess}
+                            onerror={handleCreateError}>
+
+                            <!-- Surfaces page-level DML/validation/trigger errors inline so a
+                                 rejected create never fails silently (F11): without this the
+                                 modal would stay open with no record and no feedback. -->
+                            <lightning-messages></lightning-messages>
+
                             <lightning-input-field field-name="%%%NAMESPACE_DOT%%%BriefDescriptionTxt__c" required onchange={handleFieldChange} value={createWorkItemTitle}></lightning-input-field>
                             <lightning-input-field field-name="%%%NAMESPACE_DOT%%%DetailsTxt__c" onchange={handleFieldChange} value={createWorkItemDescription}></lightning-input-field>
                             <lightning-input-field field-name="%%%NAMESPACE_DOT%%%PriorityPk__c" value={createDefaults.PriorityPk__c}></lightning-input-field>
