@@ -5,6 +5,10 @@
             <c-delivery-hub-board></c-delivery-hub-board>
         </lightning-tab>
 
+        <lightning-tab label="New Request" value="newRequest" icon-name="standard:work_order_item">
+            <c-delivery-quick-request embedded={requestEmbedded}></c-delivery-quick-request>
+        </lightning-tab>
+
         <lightning-tab label="Timeline" value="timeline" icon-name="standard:date_input">
             <c-delivery-pro-forma-timeline></c-delivery-pro-forma-timeline>
         </lightning-tab>

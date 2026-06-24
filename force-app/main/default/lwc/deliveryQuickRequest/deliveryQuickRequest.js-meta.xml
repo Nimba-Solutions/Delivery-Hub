@@ -6,5 +6,8 @@
     <description>Global Quick Action for creating work requests from any page in Salesforce, with optional AI enhancement.</description>
     <targets>
         <target>lightning__GlobalAction</target>
+        <target>lightning__AppPage</target>
+        <target>lightning__HomePage</target>
+        <target>lightning__Tab</target>
     </targets>
 </LightningComponentBundle>
