@@ -21,6 +21,7 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         requeueFailedItems();
         requeueStagedItemsWithEndpoint();
         requeuePendingItems();
+        requeueOrphanedInboundFiles();
         autoDismissAgedFailedItems();
         processEscalations();
         processRecurringItems();
@@ -88,6 +89,64 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         } catch (Exception e) {
             System.debug(LoggingLevel.ERROR,
                 '[DeliveryHubScheduler] Pending-item sweep failed: ' + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Re-dispatches orphaned inbound ContentVersion file fetches.
+     *              DeliverySyncItemIngestor.handlePullCalloutFile parks an inbound
+     *              SyncItem__c as 'Queued' and then enqueues DeliveryFileBytesFetcher
+     *              to pull the bytes from the source org — but that enqueue is
+     *              best-effort: it is silently skipped when the ingestor runs in a
+     *              context whose queueable depth is already exhausted. The poll path
+     *              hits exactly this — DeliveryHubPoller.pollUpdates() runs inside the
+     *              @future runSyncAsync() and has already made its own HTTP callout,
+     *              so the depth guard at DeliverySyncItemIngestor (the
+     *              "unless we're in a context that already has pending callouts"
+     *              check) declines to enqueue the fetcher. When that happens nothing
+     *              ever pulls the bytes and the row sits 'Queued' forever: no other
+     *              sweep covers inbound Queued ContentVersion rows (requeueFailedItems
+     *              is Outbound-only, requeuePendingItems handles 'Pending',
+     *              requeueStagedItemsWithEndpoint handles 'Staged').
+     *
+     *              Empirical motivator: T6 cross-org file-sync validation 2026-06-23 —
+     *              a file dispatched 'Synced' on the sender but its receiver-side
+     *              inbound ContentVersion SyncItem stayed 'Queued' with 0
+     *              ContentVersion landed.
+     *
+     *              Age gate: only rows older than one scheduler cycle (15 min) are
+     *              re-dispatched, so a fetcher enqueued normally at ingest time is
+     *              never raced or duplicated by this safety net — only genuinely
+     *              orphaned rows qualify. The fetcher itself moves the row to
+     *              Synced/Failed, which removes it from this sweep's Queued scope, so
+     *              there is no re-enqueue loop.
+     */
+    @TestVisible
+    @SuppressWarnings('PMD.OperationWithLimitsInLoop')
+    private static void requeueOrphanedInboundFiles() {
+        try {
+            Datetime cutoff = Datetime.now().addMinutes(-15);
+            List<SyncItem__c> orphans = [
+                SELECT Id, WorkItemLookup__c
+                FROM SyncItem__c
+                WHERE DirectionPk__c = 'Inbound'
+                AND ObjectTypePk__c = 'ContentVersion'
+                AND StatusPk__c = 'Queued'
+                AND CreatedDate < :cutoff
+                WITH SYSTEM_MODE
+                LIMIT 25
+            ];
+            // Bounded to LIMIT 25 — well under the 50 enqueueJob-per-transaction
+            // ceiling for this Schedulable context — so enqueueing one fetcher per
+            // orphan is safe (mirrors scheduleAll's bounded System.schedule loop).
+            for (SyncItem__c orphan : orphans) {
+                System.enqueueJob(new DeliveryFileBytesFetcher(orphan.Id, orphan.WorkItemLookup__c));
+            }
+        } catch (Exception e) {
+            // Swallow so this safety-net sweep can never break the scheduler tick:
+            // an orphaned row simply stays Queued and is retried on the next cycle.
+            System.debug(LoggingLevel.ERROR,
+                '[DeliveryHubScheduler] Orphaned inbound file re-dispatch failed: ' + e.getMessage());
         }
     }
 
