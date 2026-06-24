@@ -6,12 +6,19 @@
  *               acceptance criteria, and hour estimates.
  * @author Cloud Nimbus LLC
  */
-import { LightningElement, track } from 'lwc';
+import { LightningElement, api, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { CloseActionScreenEvent } from 'lightning/actions';
 import createWorkRequest from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryQuickRequestController.createWorkRequest';
 
 export default class DeliveryQuickRequest extends LightningElement {
+    // When placed on a page/workspace tab (vs. the global quick-action modal) set
+    // embedded=true: on submit/cancel the form resets in place instead of firing
+    // CloseActionScreenEvent (which only makes sense inside an action modal).
+    // Defaults false so the global-action behavior is unchanged (and avoids LWC1503,
+    // which forbids a boolean @api defaulting to true).
+    @api embedded = false;
+
     @track title = '';
     @track priority = 'Medium';
     @track description = '';
@@ -52,7 +59,20 @@ export default class DeliveryQuickRequest extends LightningElement {
     }
 
     handleCancel() {
-        this.dispatchEvent(new CloseActionScreenEvent());
+        this.closeOrReset();
+    }
+
+    // Close the action modal when launched as a quick action; reset the form in
+    // place when embedded on a page/workspace tab.
+    closeOrReset() {
+        if (this.embedded) {
+            this.title = '';
+            this.description = '';
+            this.priority = 'Medium';
+            this.showDescription = false;
+        } else {
+            this.dispatchEvent(new CloseActionScreenEvent());
+        }
     }
 
     handleCreate() {
@@ -87,7 +107,7 @@ export default class DeliveryQuickRequest extends LightningElement {
                 : `Created ${result.recordName}`;
 
             this.showToast('Work Request Created', message, 'success');
-            this.dispatchEvent(new CloseActionScreenEvent());
+            this.closeOrReset();
         } catch (error) {
             const msg = error.body ? error.body.message : error.message;
             this.showToast('Error', msg, 'error');
