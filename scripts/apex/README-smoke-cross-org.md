@@ -53,3 +53,10 @@ The **payload-carries-X** flags catch the namespace-stripping bug class (PR #742
 ## Promote/install gate
 
 Run sender → wait → receiver after every install on each org pair. If any leg fails, hold the promote rollout to the rest of the orgs until the underlying outbound or ingestor bug is fixed.
+
+## Non-namespaced (dev scratch) orgs
+
+The scripts above are `delivery__`-prefixed for **subscriber/managed** orgs. On a
+**non-namespaced dev scratch org** they fail to compile (`Invalid type:
+delivery__WorkRequest__c`). Use the `*-unmanaged.apex` variants in this folder
+instead (same logic, namespace prefix stripped). Keep the two in sync.
