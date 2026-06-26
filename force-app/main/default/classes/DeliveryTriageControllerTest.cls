@@ -138,6 +138,10 @@ private class DeliveryTriageControllerTest {
     static void testMarkDonePartialFailureReconciles() {
         WorkItem__c wi = seedDeployed(Datetime.now().addDays(-2), null);
 
+        // Isolate the controller's stage flip from unrelated WorkItem update-
+        // trigger side-effects (the same flag the factory uses); the static
+        // persists into the controller's DML.
+        DeliveryWorkItemTriggerHandler.triggerDisabled = true;
         Test.startTest();
         DeliveryTriageController.BulkResultDTO result =
             DeliveryTriageController.markDone(new List<Id>{ wi.Id, phantomWorkItemId() });
@@ -157,6 +161,7 @@ private class DeliveryTriageControllerTest {
         WorkItem__c wi = seedIntake(null);
         Id dev = UserInfo.getUserId();
 
+        DeliveryWorkItemTriggerHandler.triggerDisabled = true;
         Test.startTest();
         DeliveryTriageController.BulkResultDTO result =
             DeliveryTriageController.routeToDev(new List<Id>{ wi.Id }, dev);
@@ -179,6 +184,7 @@ private class DeliveryTriageControllerTest {
     static void testDismissIntakeMovesToTerminalStage() {
         WorkItem__c wi = seedIntake(null);
 
+        DeliveryWorkItemTriggerHandler.triggerDisabled = true;
         Test.startTest();
         DeliveryTriageController.BulkResultDTO result =
             DeliveryTriageController.dismissIntake(new List<Id>{ wi.Id });
