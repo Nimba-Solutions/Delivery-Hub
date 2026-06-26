@@ -1,0 +1,112 @@
+<template>
+    <div class="queue-card">
+
+        <div class="queue-header">
+            <div class="queue-header-left">
+                <lightning-icon icon-name="standard:task2" alternative-text="Close-out queue" size="small" class="queue-header-icon"></lightning-icon>
+                <div>
+                    <h2 class="queue-title">Close Outs</h2>
+                    <p class="queue-subtitle">Deployed to Prod &mdash; verify and mark done</p>
+                </div>
+            </div>
+            <div class="queue-controls">
+                <lightning-button-icon
+                    icon-name="utility:refresh"
+                    variant="border-filled"
+                    alternative-text="Refresh"
+                    title="Refresh"
+                    onclick={handleRefresh}>
+                </lightning-button-icon>
+            </div>
+        </div>
+
+        <template lwc:if={isLoading}>
+            <div class="queue-loading">
+                <lightning-spinner alternative-text="Loading close-out queue..." size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <template lwc:if={hasError}>
+            <div class="queue-error">
+                <lightning-icon icon-name="utility:error" size="x-small"></lightning-icon>
+                <span>{errorMessage}</span>
+            </div>
+        </template>
+
+        <template lwc:if={hasRows}>
+            <div class="queue-headline-row">
+                <span class="queue-headline">{headlineDisplay}</span>
+                <lightning-button
+                    variant="neutral"
+                    label="Open full report"
+                    icon-name="utility:new_window"
+                    disabled={hasNoReport}
+                    onclick={handleOpenReport}>
+                </lightning-button>
+            </div>
+
+            <div class="queue-bulk-bar">
+                <lightning-input
+                    type="checkbox"
+                    label="Select all"
+                    checked={isAllSelected}
+                    onchange={handleSelectAll}
+                    class="queue-select-all">
+                </lightning-input>
+                <lightning-button
+                    variant="brand"
+                    label={bulkDoneLabel}
+                    disabled={isBulkDoneDisabled}
+                    onclick={handleBulkDone}>
+                </lightning-button>
+            </div>
+
+            <ul class="queue-list">
+                <template for:each={rows} for:item="row">
+                <li key={row.key} class="queue-row">
+                    <div class="queue-row-main">
+                        <lightning-input
+                            type="checkbox"
+                            label="Select item"
+                            variant="label-hidden"
+                            data-work-item-id={row.key}
+                            checked={row.isSelected}
+                            onchange={handleRowSelect}
+                            class="queue-row-select">
+                        </lightning-input>
+                        <div class="queue-row-info">
+                            <button class="queue-item-link"
+                                    data-work-item-id={row.workItemId}
+                                    onclick={handleItemClick}>{row.name}</button>
+                            <template lwc:if={row.hasBrief}>
+                                <div class="queue-row-brief">{row.briefDescription}</div>
+                            </template>
+                            <div class="queue-row-meta">
+                                <span class="queue-dev">{row.developerDisplay}</span>
+                                <span class="queue-age">{row.waitingDisplay}</span>
+                            </div>
+                        </div>
+                        <div class="queue-row-actions">
+                            <lightning-button
+                                variant="brand"
+                                label="Mark Done"
+                                data-work-item-id={row.key}
+                                disabled={isSaving}
+                                onclick={handleRowDone}>
+                            </lightning-button>
+                        </div>
+                    </div>
+                </li>
+                </template>
+            </ul>
+        </template>
+
+        <template lwc:if={isEmpty}>
+            <div class="queue-empty">
+                <lightning-icon icon-name="utility:success" size="medium" class="queue-empty-icon"></lightning-icon>
+                <p>Nothing awaiting close-out &mdash; you&rsquo;re caught up.</p>
+            </div>
+        </template>
+
+    </div>
+</template>
