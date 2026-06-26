@@ -1,0 +1,126 @@
+<template>
+    <div class="queue-card">
+
+        <div class="queue-header">
+            <div class="queue-header-left">
+                <lightning-icon icon-name="standard:work_queue" alternative-text="Intake queue" size="small" class="queue-header-icon"></lightning-icon>
+                <div>
+                    <h2 class="queue-title">Intake</h2>
+                    <p class="queue-subtitle">New inbound work &mdash; route onto the timeline or resolve</p>
+                </div>
+            </div>
+            <div class="queue-controls">
+                <lightning-button-icon
+                    icon-name="utility:refresh"
+                    variant="border-filled"
+                    alternative-text="Refresh"
+                    title="Refresh"
+                    onclick={handleRefresh}>
+                </lightning-button-icon>
+            </div>
+        </div>
+
+        <template lwc:if={isLoading}>
+            <div class="queue-loading">
+                <lightning-spinner alternative-text="Loading intake queue..." size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <template lwc:if={hasError}>
+            <div class="queue-error">
+                <lightning-icon icon-name="utility:error" size="x-small"></lightning-icon>
+                <span>{errorMessage}</span>
+            </div>
+        </template>
+
+        <template lwc:if={hasRows}>
+            <div class="queue-headline-row">
+                <span class="queue-headline">{headlineDisplay}</span>
+            </div>
+
+            <div class="queue-bulk-bar">
+                <div class="queue-bulk-left">
+                    <lightning-input
+                        type="checkbox"
+                        label="Select all"
+                        checked={isAllSelected}
+                        onchange={handleSelectAll}
+                        class="queue-select-all">
+                    </lightning-input>
+                    <lightning-record-picker
+                        label="Developer"
+                        placeholder="Assign a developer (optional)"
+                        object-api-name="User"
+                        variant="label-hidden"
+                        value={developerId}
+                        onchange={handleDeveloperChange}
+                        class="queue-dev-picker">
+                    </lightning-record-picker>
+                </div>
+                <lightning-button
+                    variant="brand"
+                    label={bulkRouteLabel}
+                    disabled={isBulkRouteDisabled}
+                    onclick={handleBulkRoute}>
+                </lightning-button>
+            </div>
+
+            <ul class="queue-list">
+                <template for:each={rows} for:item="row">
+                <li key={row.key} class="queue-row">
+                    <div class="queue-row-main">
+                        <lightning-input
+                            type="checkbox"
+                            label="Select item"
+                            variant="label-hidden"
+                            data-work-item-id={row.key}
+                            checked={row.isSelected}
+                            onchange={handleRowSelect}
+                            class="queue-row-select">
+                        </lightning-input>
+                        <div class="queue-row-info">
+                            <button class="queue-item-link"
+                                    data-work-item-id={row.workItemId}
+                                    onclick={handleItemClick}>{row.name}</button>
+                            <template lwc:if={row.hasBrief}>
+                                <div class="queue-row-brief">{row.briefDescription}</div>
+                            </template>
+                            <div class="queue-row-meta">
+                                <span class="queue-stage">{row.stageDisplay}</span>
+                                <template lwc:if={row.hasRequestedBy}>
+                                    <span class="queue-requester">{row.requestedByDisplay}</span>
+                                </template>
+                                <span class="queue-age">{row.arrivedDisplay}</span>
+                            </div>
+                        </div>
+                        <div class="queue-row-actions">
+                            <lightning-button
+                                variant="brand"
+                                label="Route to dev"
+                                data-work-item-id={row.key}
+                                disabled={isSaving}
+                                onclick={handleRowRoute}>
+                            </lightning-button>
+                            <lightning-button
+                                variant="destructive-text"
+                                label="Dismiss"
+                                data-work-item-id={row.key}
+                                disabled={isSaving}
+                                onclick={handleRowDismiss}>
+                            </lightning-button>
+                        </div>
+                    </div>
+                </li>
+                </template>
+            </ul>
+        </template>
+
+        <template lwc:if={isEmpty}>
+            <div class="queue-empty">
+                <lightning-icon icon-name="utility:success" size="medium" class="queue-empty-icon"></lightning-icon>
+                <p>No new inbound items to triage.</p>
+            </div>
+        </template>
+
+    </div>
+</template>

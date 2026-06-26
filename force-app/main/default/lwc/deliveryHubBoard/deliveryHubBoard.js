@@ -460,7 +460,11 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
             [FIELDS.STAGE]:     'Backlog',
             [FIELDS.SORT_ORDER]: this.nextSortOrder,
             [FIELDS.PRIORITY]:  'Medium',
-            [FIELDS.IS_ACTIVE]: true,
+            // ActivatedDateTime__c is a DateTime "activated at" stamp (DH's
+            // DateTime-as-toggle pattern), NOT a Boolean. Stamp "now" to activate
+            // the new item — a Boolean here is rejected as an invalid date and
+            // silently broke the entire create flow (F16).
+            [FIELDS.IS_ACTIVE]: new Date().toISOString(),
             [FIELDS.STATUS_PK]: 'New',
         };
     }
@@ -1278,8 +1282,9 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
         event.preventDefault(); 
         const fields = event.detail.fields;
         
-        // Force defaults (namespaced keys)
-        fields[FIELDS.IS_ACTIVE]     = true;
+        // Force defaults (namespaced keys). ActivatedDateTime__c is a DateTime
+        // stamp, not a Boolean — set "now" to activate (a Boolean breaks create, F16).
+        fields[FIELDS.IS_ACTIVE]     = new Date().toISOString();
         fields[FIELDS.STATUS_PK]     = 'New';
         fields[FIELDS.WORKFLOW_TYPE] = this.activeWorkflowType;
         if (!fields[FIELDS.PRIORITY]) {

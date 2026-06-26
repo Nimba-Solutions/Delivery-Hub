@@ -15,6 +15,10 @@ export default class DeliveryHubWorkspace extends LightningElement {
     @track activeTab = 'board';
     @track isAdmin = false;
     _userPicked = false;
+    // Tells the embedded Quick Request component to reset-in-place on submit
+    // rather than fire CloseActionScreenEvent (which only applies in the global
+    // action modal). Bound as a property so the boolean reaches the child as true.
+    requestEmbedded = true;
 
     @wire(isAdminUser)
     wiredAdmin({ data }) {
