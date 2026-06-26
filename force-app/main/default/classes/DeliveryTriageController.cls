@@ -69,7 +69,10 @@ public with sharing class DeliveryTriageController {
     // DTOs
     // ────────────────────────────────────────────────────────────────────
 
-    /** One row in the close-out queue (Deployed to Prod, awaiting verification). */
+    /**
+     * @description One row in the close-out queue (Deployed to Prod, awaiting
+     *              verification).
+     */
     public class CloseOutItemDTO {
         @AuraEnabled public Id workItemId;
         @AuraEnabled public String name;
@@ -79,7 +82,10 @@ public with sharing class DeliveryTriageController {
         @AuraEnabled public Id developerId;
     }
 
-    /** One row in the intake queue (arrived, not yet activated onto the timeline). */
+    /**
+     * @description One row in the intake queue (arrived, not yet activated onto
+     *              the timeline).
+     */
     public class IntakeItemDTO {
         @AuraEnabled public Id workItemId;
         @AuraEnabled public String name;
@@ -89,21 +95,31 @@ public with sharing class DeliveryTriageController {
         @AuraEnabled public String currentStage;
     }
 
-    /** Per-row failure entry for a bulk mutation. */
+    /**
+     * @description Per-row failure entry for a bulk mutation.
+     */
     public class FailureDTO {
         @AuraEnabled public Id workItemId;
         @AuraEnabled public String error;
+        /**
+         * @description Builds a per-row failure entry.
+         * @param workItemId The work item id that failed.
+         * @param error The failure message to surface.
+         */
         public FailureDTO(Id workItemId, String error) {
             this.workItemId = workItemId;
             this.error = error;
         }
     }
 
-    /** Result of a bulk mutation: which items landed and one entry per failure. */
+    /**
+     * @description Result of a bulk mutation: which items landed and one entry
+     *              per failure, plus convenience counts so the LWC never has to
+     *              length-check nulls.
+     */
     public class BulkResultDTO {
         @AuraEnabled public List<Id> succeededIds = new List<Id>();
         @AuraEnabled public List<FailureDTO> failures = new List<FailureDTO>();
-        /** Convenience counts so the LWC never has to length-check nulls. */
         @AuraEnabled public Integer succeededCount = 0;
         @AuraEnabled public Integer failedCount = 0;
     }
@@ -317,18 +333,27 @@ public with sharing class DeliveryTriageController {
         // allOrNone=false: one bad row never blocks the rest.
         Database.SaveResult[] saveResults =
             Database.update(toUpdate, false, AccessLevel.SYSTEM_MODE);
+        recordSaveResults(result, saveResults, toUpdate);
+
+        finalizeCounts(result);
+        return result;
+    }
+
+    // Splits a parallel SaveResult[] / row list into the result's succeeded ids
+    // and per-row failures. Extracted from applyStageUpdate to keep that method
+    // under the cyclomatic-complexity gate.
+    private static void recordSaveResults(
+        BulkResultDTO result, Database.SaveResult[] saveResults, List<WorkItem__c> rows
+    ) {
         for (Integer i = 0; i < saveResults.size(); i++) {
             Database.SaveResult sr = saveResults[i];
-            Id rowId = toUpdate[i].Id;
+            Id rowId = rows[i].Id;
             if (sr.isSuccess()) {
                 result.succeededIds.add(rowId);
             } else {
                 result.failures.add(new FailureDTO(rowId, firstError(sr)));
             }
         }
-
-        finalizeCounts(result);
-        return result;
     }
 
     private static String firstError(Database.SaveResult sr) {
