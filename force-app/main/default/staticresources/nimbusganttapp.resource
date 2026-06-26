@@ -4090,6 +4090,7 @@ var NimbusGanttApp = (function(exports) {
     let viewsMenuOpen = false;
     let viewsDismiss = null;
     function render(p) {
+      var _a;
       clear(root);
       const { config, state, dispatch, data } = p;
       const rowViews = el$2("div", CLS_TITLEBAR_ROW);
@@ -4133,7 +4134,17 @@ var NimbusGanttApp = (function(exports) {
       rowMain.appendChild(toggleBtn("Sidebar", state.sidebarOpen, () => dispatch({ type: "TOGGLE_SIDEBAR" })));
       rowMain.appendChild(toggleBtn("Stats", state.statsOpen, () => dispatch({ type: "TOGGLE_STATS" })));
       if (config.features.auditPanel) {
-        rowMain.appendChild(toggleBtn("Audit", state.auditPanelOpen, () => dispatch({ type: "TOGGLE_AUDIT_PANEL" })));
+        const auditBtn = toggleBtn("Audit", state.auditPanelOpen, () => dispatch({ type: "TOGGLE_AUDIT_PANEL" }));
+        const pendingCount = ((_a = config.pendingChanges) == null ? void 0 : _a.length) ?? state.pendingPatchCount ?? 0;
+        if (pendingCount > 0) {
+          auditBtn.style.position = "relative";
+          const badge = el$2("span");
+          badge.setAttribute("data-testid", "audit-badge");
+          badge.textContent = pendingCount > 99 ? "99+" : String(pendingCount);
+          badge.style.cssText = "margin-left:6px;display:inline-block;min-width:16px;height:16px;padding:0 4px;border-radius:9999px;background:#7e22ce;color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;vertical-align:middle";
+          auditBtn.appendChild(badge);
+        }
+        rowMain.appendChild(auditBtn);
       }
       if (config.features.hrsWkStrip) {
         rowMain.appendChild(toggleBtn("Hrs/Wk", state.hrsWkStripOpen, () => dispatch({ type: "TOGGLE_HRSWK_STRIP" })));
@@ -6361,6 +6372,65 @@ var NimbusGanttApp = (function(exports) {
     body.innerHTML = '<p style="margin:0 0 8px 0"><strong>Coming in a later cut.</strong></p><p style="margin:0 0 8px 0">Advisor mode turns the visible task list + date range into a Claude-generated narrative walkthrough of what the timeline actually says.</p><p style="margin:0;color:#64748b">Restoration pending API infrastructure decisions (auth, CSP under LWS, streaming UX, error handling).</p>';
     panel.appendChild(body);
   }
+  function renderDirtyPill(container, count, onReview) {
+    const id = "nga-dirty-pill";
+    let pill = container.querySelector(`#${id}`);
+    if (count <= 0) {
+      if (pill) pill.remove();
+      return;
+    }
+    const noun = count === 1 ? "unsaved change" : "unsaved changes";
+    if (!pill) {
+      pill = document.createElement("div");
+      pill.id = id;
+      pill.setAttribute("role", "status");
+      pill.setAttribute("aria-live", "polite");
+      pill.style.cssText = [
+        "position:absolute",
+        "bottom:18px",
+        "right:18px",
+        "display:flex",
+        "align-items:center",
+        "gap:10px",
+        "background:#7e22ce",
+        "color:#fff",
+        "border-radius:9999px",
+        "padding:8px 8px 8px 14px",
+        "box-shadow:0 10px 28px rgba(126,34,206,0.35)",
+        "z-index:9997",
+        "font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif",
+        "font-size:12.5px",
+        "font-weight:600",
+        "user-select:none"
+      ].join(";");
+      container.appendChild(pill);
+    }
+    pill.innerHTML = "";
+    const label = document.createElement("span");
+    label.setAttribute("data-testid", "dirty-pill-label");
+    label.style.cssText = "display:inline-flex;align-items:center;gap:7px";
+    const dot = document.createElement("span");
+    dot.style.cssText = "display:inline-block;width:18px;height:18px;border-radius:9999px;background:rgba(255,255,255,0.22);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center";
+    dot.textContent = count > 99 ? "99+" : String(count);
+    label.appendChild(dot);
+    const txt = document.createElement("span");
+    txt.textContent = noun;
+    label.appendChild(txt);
+    pill.appendChild(label);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.setAttribute("data-testid", "dirty-pill-review");
+    btn.textContent = "Review & commit";
+    btn.style.cssText = "background:#fff;color:#7e22ce;border:0;border-radius:9999px;padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;line-height:1.2;white-space:nowrap";
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      try {
+        onReview();
+      } catch (_e) {
+      }
+    });
+    pill.appendChild(btn);
+  }
   function renderComingSoon(container, viewLabel) {
     container.innerHTML = "";
     const wrap = el("div", [
@@ -6477,6 +6547,7 @@ var NimbusGanttApp = (function(exports) {
       if (options.cssUrl) tplConfig.stylesheet = { ...tplConfig.stylesheet, url: options.cssUrl };
       if (options.engine) tplConfig.engine = options.engine;
       if (options.recordUrlTemplate) tplConfig.recordUrlTemplate = options.recordUrlTemplate;
+      if (options.onAuditSubmit) tplConfig.onAuditSubmit = options.onAuditSubmit;
       if (options.fieldSchema) tplConfig.fieldSchema = options.fieldSchema;
       if (options.titleBarButtons) tplConfig.titleBarButtons = options.titleBarButtons;
       tplConfig.features.enableDragReparent = options.enableDragReparent === true;
@@ -7991,6 +8062,51 @@ var NimbusGanttApp = (function(exports) {
         }
         renderAdminPanel(container, state, dispatch, tplConfig);
         renderAdvisorPanel(container, state, dispatch);
+        if (options.batchMode) {
+          renderDirtyPill(container, pendingEditCount(), () => {
+            var _a2;
+            try {
+              (_a2 = tplConfig.toggleChrome) == null ? void 0 : _a2.call(tplConfig, true);
+            } catch (_e2) {
+            }
+            if (!state.auditPanelOpen) dispatch({ type: "TOGGLE_AUDIT_PANEL" });
+          });
+        } else {
+          const stale = container.querySelector("#nga-dirty-pill");
+          if (stale) stale.remove();
+        }
+        notifyPendingChange();
+      }
+      function pendingEditCount() {
+        var _a2;
+        return ((_a2 = tplConfig.pendingChanges) == null ? void 0 : _a2.length) ?? state.pendingPatchCount ?? 0;
+      }
+      let lastPendingCount = -1;
+      let beforeUnloadHandler = null;
+      function notifyPendingChange() {
+        var _a2;
+        const count = pendingEditCount();
+        if (count === lastPendingCount) return;
+        lastPendingCount = count;
+        try {
+          (_a2 = options.onPendingChange) == null ? void 0 : _a2.call(options, count);
+        } catch (_e2) {
+        }
+        const guardEnabled = !!options.batchMode && options.pendingChangesGuard !== false;
+        try {
+          if (count > 0 && guardEnabled && !beforeUnloadHandler) {
+            beforeUnloadHandler = (e) => {
+              e.preventDefault();
+              e.returnValue = "";
+              return "";
+            };
+            window.addEventListener("beforeunload", beforeUnloadHandler);
+          } else if ((count === 0 || !guardEnabled) && beforeUnloadHandler) {
+            window.removeEventListener("beforeunload", beforeUnloadHandler);
+            beforeUnloadHandler = null;
+          }
+        } catch (_e2) {
+        }
       }
       let ganttInst = null;
       let cleanupShading = null;
@@ -8622,6 +8738,13 @@ var NimbusGanttApp = (function(exports) {
         }
         slotInstances.forEach((inst) => inst.destroy());
         slotInstances.clear();
+        if (beforeUnloadHandler) {
+          try {
+            window.removeEventListener("beforeunload", beforeUnloadHandler);
+          } catch (_e2) {
+          }
+          beforeUnloadHandler = null;
+        }
         removeTemplateCss(container);
         try {
           themeStyleEl.remove();
