@@ -24,9 +24,9 @@
     <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%HoursVarianceNumber__c</field>
     </columns>
-    <description>Work items completed (Done stage) and modified this month. Matches the Completed metric tile on the client dashboard.</description>
+    <description>Work items completed (Done stage), modified THIS MONTH. Intentionally broader than the "Completed (This Week)" tile, which counts only the current week — so this month report total is expected to be larger than the week tile. (Prior description wrongly claimed it matched the tile.)</description>
     <filter>
-        <booleanFilter>1 AND 2</booleanFilter>
+        <booleanFilter>1 AND 2 AND 3</booleanFilter>
         <criteriaItems>
             <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
             <columnToColumn>false</columnToColumn>
@@ -40,6 +40,13 @@
             <isUnlocked>true</isUnlocked>
             <operator>equals</operator>
             <value>THIS_MONTH</value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%TemplateMarkedDateTime__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>equals</operator>
+            <value></value>
         </criteriaItems>
     </filter>
     <format>Tabular</format>

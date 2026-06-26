@@ -36,11 +36,14 @@ global with sharing class DeliveryHubDashboardController {
     global static Map<String, Object> getBudgetMetrics() {
         Map<String, Object> metrics = new Map<String, Object>();
 
-        // 1. Work Item Metrics (Active Count) — use CMT terminal stages so no hardcoded 'Closed'.
-        // Also requires the standard active-item filter set so this metric reconciles with
-        // every other dashboard count: must be activated, must not be a template, must not
-        // be archived. Pre-fix this query was missing the activated + archived checks.
-        Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues('Software_Delivery');
+        // 1. Work Item Metrics (Active Count) — use the canonical EFFORT-terminal set
+        // (Done, Cancelled, AND Deployed to Prod) so this number is identical to the
+        // Exec Dashboard's activeWorkItems tile and the In_Flight_Work_Items report.
+        // Requires the full active-item filter set so the metric reconciles with every
+        // other dashboard count: activated + non-template + non-archived + non-effort-
+        // terminal. Pre-fix this used the plain Software_Delivery terminal set, which
+        // excluded only Done/Cancelled, so Deployed-to-Prod counted as active here.
+        Set<String> terminalStages = DeliveryWorkflowConfigService.getAllEffortTerminalStageValues();
         AggregateResult[] workItemStats = [
             SELECT Count(Id) total
             FROM WorkItem__c
@@ -316,18 +319,21 @@ global with sharing class DeliveryHubDashboardController {
 
     private static List<PhaseItem> fetchPhaseList(String workflowType) {
         Map<String, String> stageToPhase = DeliveryWorkflowConfigService.getStagePhaseMap(workflowType);
-        Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues(workflowType);
+        Set<String> terminalStages = DeliveryWorkflowConfigService.getAllEffortTerminalStageValues();
         Map<String, Integer> phaseCounts = new Map<String, Integer>{
             'Planning' => 0, 'Approval' => 0, 'Development' => 0,
             'Testing' => 0, 'UAT' => 0, 'Deployment' => 0
         };
 
         // The What's-In-Flight tile is meant to show items that are CURRENTLY being
-        // worked on. Pre-fix the SOQL only excluded terminal stages — it included
-        // unactivated/backlog items, recurring-item templates, and archived items,
-        // which made the per-phase counts diverge from every other "active items"
-        // metric on the dashboard. Adding the standard active-item filters here so
-        // the breakdown reconciles with activeRequests, hoursThisMonth scoping, etc.
+        // worked on. Computed over the SAME canonical active universe as activeRequests
+        // (activated + non-template + non-archived + non-EFFORT-terminal) so the
+        // per-phase counts SUM EXACTLY to the headline Active number. The effort-terminal
+        // set excludes Deployed to Prod, so the Deployment bucket reflects only pre-deploy
+        // work (Ready for Deployment / Deploying) — shipped items live in Close Outs, not
+        // in-flight. Pre-fix the SOQL only excluded the plain terminal stages and included
+        // unactivated/backlog, template, archived, AND Deployed-to-Prod items, which made
+        // the per-phase counts diverge from every other "active items" metric.
         for (AggregateResult ar : [
             SELECT StageNamePk__c stage, Count(Id) cnt
             FROM WorkItem__c
@@ -472,7 +478,15 @@ global with sharing class DeliveryHubDashboardController {
         Datetime startDt = Datetime.newInstance(startDate, Time.newInstance(0, 0, 0, 0));
         Datetime endDt = endDate != null ? Datetime.newInstance(endDate, Time.newInstance(0, 0, 0, 0)) : null;
 
+        // Plain-terminal set (Done, Cancelled) for the "completed" metric — a
+        // Deployed-to-Prod item is awaiting verification, NOT completed, so it must
+        // not count as done here.
         Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues(workflowType);
+        // Effort-terminal set (Done, Cancelled, Deployed to Prod) for the active
+        // "In Progress" (moved) count so it reconciles with the canonical activeRequests
+        // headline and the What's-In-Flight phase buckets — all of which exclude
+        // Deployed-to-Prod from "active".
+        Set<String> effortTerminalStages = DeliveryWorkflowConfigService.getAllEffortTerminalStageValues();
 
         // Items completed in range — exclude templates so the count reflects real work.
         Integer completed;
@@ -498,10 +512,11 @@ global with sharing class DeliveryHubDashboardController {
 
         // Items modified (stage changed) in range — surfaced as the "In Progress"
         // tile. Requires the full canonical active-item filter set (activated +
-        // non-template + non-archived + non-terminal) so this count reconciles
+        // non-template + non-archived + non-EFFORT-terminal) so this count reconciles
         // with System Pulse's activeRequests and the What's-In-Flight phase
-        // tiles. Pre-fix the ActivatedDateTime__c check was missing, so
-        // unactivated backlog items modified in the window inflated the number.
+        // tiles. Pre-fix the ActivatedDateTime__c check was missing AND it used the
+        // plain terminal set, so unactivated backlog items and Deployed-to-Prod items
+        // modified in the window inflated the number above the active headline.
         Integer moved;
         if (endDt != null) {
             moved = [
@@ -509,7 +524,7 @@ global with sharing class DeliveryHubDashboardController {
                 FROM WorkItem__c
                 WHERE LastModifiedDate >= :startDt
                 AND LastModifiedDate < :endDt
-                AND StageNamePk__c NOT IN :terminalStages
+                AND StageNamePk__c NOT IN :effortTerminalStages
                 AND ActivatedDateTime__c != null
                 AND TemplateMarkedDateTime__c = null
                 AND ArchivedDateTime__c = null
@@ -519,7 +534,7 @@ global with sharing class DeliveryHubDashboardController {
                 SELECT COUNT()
                 FROM WorkItem__c
                 WHERE LastModifiedDate >= :startDt
-                AND StageNamePk__c NOT IN :terminalStages
+                AND StageNamePk__c NOT IN :effortTerminalStages
                 AND ActivatedDateTime__c != null
                 AND TemplateMarkedDateTime__c = null
                 AND ArchivedDateTime__c = null
@@ -546,18 +561,23 @@ global with sharing class DeliveryHubDashboardController {
         Decimal hours = hoursAgg[0].get('total') != null ? (Decimal)hoursAgg[0].get('total') : 0;
         metrics.put('hoursLogged', hours);
 
-        // Currently blocked items (not time-bounded — always current state)
-        Set<Id> blockedIds = new Set<Id>();
-        for (WorkItemDependency__c dep : [
-            SELECT BlockedWorkItemLookup__c
-            FROM WorkItemDependency__c
-            WHERE BlockingWorkItemLookup__c IN (
-                SELECT Id FROM WorkItem__c WHERE StageNamePk__c NOT IN :terminalStages
-            )
-        ]) {
-            blockedIds.add(dep.BlockedWorkItemLookup__c);
-        }
-        metrics.put('blocked', blockedIds.size());
+        // Currently blocked items (not time-bounded — always current state).
+        // DEFINITION FIX: this tile previously counted the dependency graph (items
+        // blocked by a non-terminal blocker) but its drill-through links to the
+        // Blocked_Work_Items report, which is a STAGE-based "stage contains Blocked"
+        // population — two different sets, so tile and report never matched. Aligned
+        // here to the report's definition: stage contains 'Blocked' + the canonical
+        // active guards (activated, non-archived, non-template). Now tile == report,
+        // and it also matches the Exec Dashboard's blockedItems tile.
+        Integer blocked = [
+            SELECT COUNT()
+            FROM WorkItem__c
+            WHERE StageNamePk__c LIKE '%Blocked%'
+            AND ActivatedDateTime__c != null
+            AND ArchivedDateTime__c = null
+            AND TemplateMarkedDateTime__c = null
+        ];
+        metrics.put('blocked', blocked);
 
         return metrics;
     }
