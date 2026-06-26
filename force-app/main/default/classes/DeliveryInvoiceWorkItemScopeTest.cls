@@ -46,13 +46,16 @@ private class DeliveryInvoiceWorkItemScopeTest {
         );
         insert new List<WorkItem__c>{ wi1, wi2 };
 
+        // buildWorkLog auto-mints the required WorkRequest__c master (RequestId__c)
+        // per WI and caches it — a raw `new WorkLog__c` omits that master-detail and
+        // fails REQUIRED_FIELD_MISSING during package-version test runs.
         insert new List<WorkLog__c>{
-            new WorkLog__c(WorkItemLookup__c = wi1.Id, HoursLoggedNumber__c = 8,
-                WorkDateDate__c = Date.newInstance(2026, 3, 10), WorkDescriptionTxt__c = 'in', StatusPk__c = 'Approved'),
-            new WorkLog__c(WorkItemLookup__c = wi1.Id, HoursLoggedNumber__c = 4,
-                WorkDateDate__c = Date.newInstance(2026, 2, 10), WorkDescriptionTxt__c = 'before', StatusPk__c = 'Approved'),
-            new WorkLog__c(WorkItemLookup__c = wi2.Id, HoursLoggedNumber__c = 5,
-                WorkDateDate__c = Date.newInstance(2026, 2, 15), WorkDescriptionTxt__c = 'before', StatusPk__c = 'Approved')
+            TestDataFactory.buildWorkLog(wi1.Id, 8, Date.newInstance(2026, 3, 10),
+                new Map<String, Object>{ 'WorkDescriptionTxt__c' => 'in', 'StatusPk__c' => 'Approved' }),
+            TestDataFactory.buildWorkLog(wi1.Id, 4, Date.newInstance(2026, 2, 10),
+                new Map<String, Object>{ 'WorkDescriptionTxt__c' => 'before', 'StatusPk__c' => 'Approved' }),
+            TestDataFactory.buildWorkLog(wi2.Id, 5, Date.newInstance(2026, 2, 15),
+                new Map<String, Object>{ 'WorkDescriptionTxt__c' => 'before', 'StatusPk__c' => 'Approved' })
         };
         DeliveryTriggerControl.enableAfterLogic();
 

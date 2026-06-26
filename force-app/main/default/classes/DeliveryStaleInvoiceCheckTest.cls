@@ -43,15 +43,18 @@ private class DeliveryStaleInvoiceCheckTest {
         );
         insert item;
 
+        // buildWorkLog auto-mints+caches the required WorkRequest__c master
+        // (RequestId__c) for the WI; a raw `new WorkLog__c` omits it and fails
+        // REQUIRED_FIELD_MISSING during package-version test runs.
         List<WorkLog__c> logs = new List<WorkLog__c>();
         Integer i = 0;
         for (Decimal h : hours) {
-            logs.add(new WorkLog__c(
-                WorkItemLookup__c = item.Id,
-                HoursLoggedNumber__c = h,
-                WorkDateDate__c = pStart.addDays(5 + i),
-                WorkDescriptionTxt__c = 'work',
-                StatusPk__c = 'Approved'
+            logs.add(TestDataFactory.buildWorkLog(
+                item.Id, h, pStart.addDays(5 + i),
+                new Map<String, Object>{
+                    'WorkDescriptionTxt__c' => 'work',
+                    'StatusPk__c' => 'Approved'
+                }
             ));
             i++;
         }
@@ -74,12 +77,12 @@ private class DeliveryStaleInvoiceCheckTest {
         // A late billable lands in-period AFTER the invoice froze.
         DeliveryTriggerControl.disableAfterLogic();
         WorkItem__c wi = [SELECT Id FROM WorkItem__c WHERE ClientNetworkEntityLookup__c = :client.Id LIMIT 1];
-        insert new WorkLog__c(
-            WorkItemLookup__c = wi.Id,
-            HoursLoggedNumber__c = 3,
-            WorkDateDate__c = pStart.addDays(20),
-            WorkDescriptionTxt__c = 'late entry',
-            StatusPk__c = 'Approved'
+        insert TestDataFactory.buildWorkLog(
+            wi.Id, 3, pStart.addDays(20),
+            new Map<String, Object>{
+                'WorkDescriptionTxt__c' => 'late entry',
+                'StatusPk__c' => 'Approved'
+            }
         );
         DeliveryTriggerControl.enableAfterLogic();
 
