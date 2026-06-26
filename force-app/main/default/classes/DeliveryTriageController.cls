@@ -143,8 +143,8 @@ public with sharing class DeliveryTriageController {
                 rows.add(dto);
             }
         } catch (Exception e) {
-            System.debug(LoggingLevel.WARN,
-                '[DeliveryTriageController.getCloseOutItems] failed: ' + e.getMessage());
+            // No System.debug — AvoidDebugStatements is strictly enforced by the
+            // CI PMD scan; the AuraHandledException carries the operator-facing text.
             throw new AuraHandledException('Unable to load the close-out queue.');
         }
         return rows;
@@ -189,8 +189,8 @@ public with sharing class DeliveryTriageController {
                 rows.add(dto);
             }
         } catch (Exception e) {
-            System.debug(LoggingLevel.WARN,
-                '[DeliveryTriageController.getIntakeItems] failed: ' + e.getMessage());
+            // No System.debug — AvoidDebugStatements is strictly enforced by the
+            // CI PMD scan; the AuraHandledException carries the operator-facing text.
             throw new AuraHandledException('Unable to load the intake queue.');
         }
         return rows;
@@ -274,11 +274,11 @@ public with sharing class DeliveryTriageController {
      * @param workItemIds Requested ids.
      * @param stage       Stage value to write.
      * @param developerUserId Developer lookup to set (ignored when routeToDev=false).
-     * @param activate    When true, set DeveloperLookup__c + stamp ActivatedDateTime__c.
+     * @param doActivate  When true, set DeveloperLookup__c + stamp ActivatedDateTime__c.
      * @return BulkResultDTO.
      */
     private static BulkResultDTO applyStageUpdate(
-        List<Id> workItemIds, String stage, Id developerUserId, Boolean activate
+        List<Id> workItemIds, String stage, Id developerUserId, Boolean doActivate
     ) {
         BulkResultDTO result = new BulkResultDTO();
         if (workItemIds == null || workItemIds.isEmpty()) {
@@ -307,7 +307,7 @@ public with sharing class DeliveryTriageController {
         List<WorkItem__c> toUpdate = new List<WorkItem__c>();
         for (WorkItem__c wi : found.values()) {
             wi.StageNamePk__c = stage;
-            if (activate) {
+            if (doActivate) {
                 wi.DeveloperLookup__c = developerUserId;
                 wi.ActivatedDateTime__c = now;
             }
