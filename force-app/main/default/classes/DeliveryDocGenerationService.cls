@@ -231,6 +231,41 @@ public with sharing class DeliveryDocGenerationService {
         }
         snapshot.put('workLogs', serializeWorkLogs(logs));
 
+        // F13: period-scope the WORK ITEMS section for money templates. The
+        // workItems query above is entity-wide, so each item carries its ALL-TIME
+        // TotalLoggedHoursSum__c — which over-states a period invoice (e.g. 108h
+        // all-time displayed as line items against a 60h period total, so the
+        // line items don't reconcile to the bill). Rewrite each item's displayed
+        // hours to its in-period billable sum and drop items with no period
+        // activity. The dollar figures are computed downstream as hours x rate,
+        // so correcting the hours corrects the line-item dollars too. This is
+        // display-only: calculateTotalHours sums workLogs and calculateTotalCost
+        // reads only the rate from workItems, so the (already-correct) totals are
+        // unchanged — the fix purely makes the line items tie out to the total.
+        if (templateType == 'Invoice' || templateType == 'Daily_Hours_Summary') {
+            Map<Id, Decimal> periodHoursByWi = new Map<Id, Decimal>();
+            for (WorkLog__c wl : logs) {
+                if (wl.WorkItemLookup__c != null && wl.HoursLoggedNumber__c != null) {
+                    Decimal acc = periodHoursByWi.containsKey(wl.WorkItemLookup__c)
+                        ? periodHoursByWi.get(wl.WorkItemLookup__c) : 0;
+                    periodHoursByWi.put(wl.WorkItemLookup__c, acc + wl.HoursLoggedNumber__c);
+                }
+            }
+            List<Map<String, Object>> scopedItems = new List<Map<String, Object>>();
+            for (Object itemObj : (List<Object>) snapshot.get('workItems')) {
+                Map<String, Object> m = (Map<String, Object>) itemObj;
+                Id wiId = (Id) m.get('id');
+                Decimal periodHours = periodHoursByWi.containsKey(wiId) ? periodHoursByWi.get(wiId) : 0;
+                if (periodHours <= 0) {
+                    // No billable hours in this period — omit from the invoice line items.
+                    continue;
+                }
+                m.put('totalLoggedHours', periodHours);
+                scopedItems.add(m);
+            }
+            snapshot.put('workItems', scopedItems);
+        }
+
         // Work requests (for rates and status). Scope to the work items that
         // actually carry logged time in the period for money/hours templates.
         // Previously this pulled EVERY WorkRequest ever linked to the entity (no
