@@ -329,6 +329,10 @@ private class DeliveryHubDashboardControllerTest {
      *              from the Deployment bucket and (b) sum EXACTLY to the active headline.
      *              Also proves the phase mapping: an "In Client Approval" item lands in
      *              the Approval bucket (getStagePhaseMap contract the bucket reports rely on).
+     *              NOTE: the bucket-sum invariant proven here holds for stages that ARE in
+     *              the board CMT. Live stages absent from the CMT (e.g. "Ready for Final
+     *              Approval") map to null and under-sum — the documented Approval-bucket
+     *              gap whose fix is the separate CMT-vs-picklist remediation, not this PR.
      */
     @IsTest
     static void testPhaseBucketsExcludeDeployedAndSumToActiveWithApprovalMapping() {

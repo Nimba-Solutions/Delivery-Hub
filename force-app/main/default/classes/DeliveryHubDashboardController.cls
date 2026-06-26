@@ -327,13 +327,22 @@ global with sharing class DeliveryHubDashboardController {
 
         // The What's-In-Flight tile is meant to show items that are CURRENTLY being
         // worked on. Computed over the SAME canonical active universe as activeRequests
-        // (activated + non-template + non-archived + non-EFFORT-terminal) so the
-        // per-phase counts SUM EXACTLY to the headline Active number. The effort-terminal
-        // set excludes Deployed to Prod, so the Deployment bucket reflects only pre-deploy
-        // work (Ready for Deployment / Deploying) — shipped items live in Close Outs, not
-        // in-flight. Pre-fix the SOQL only excluded the plain terminal stages and included
-        // unactivated/backlog, template, archived, AND Deployed-to-Prod items, which made
-        // the per-phase counts diverge from every other "active items" metric.
+        // (activated + non-template + non-archived + non-EFFORT-terminal). The effort-
+        // terminal set excludes Deployed to Prod, so the Deployment bucket reflects only
+        // pre-deploy work (Ready for Deployment / Deploying) — shipped items live in
+        // Close Outs, not in-flight. Pre-fix the SOQL only excluded the plain terminal
+        // stages and included unactivated/backlog, template, archived, AND Deployed-to-
+        // Prod items, which made the per-phase counts diverge from every other metric.
+        //
+        // CAVEAT (known gap, same root cause as the Approval bucket): these buckets sum
+        // to the active headline ONLY for stages that getStagePhaseMap maps to a phase
+        // (i.e. present in the Software_Delivery board CMT). Live StageNamePk values that
+        // are NOT in the CMT — notably "Ready for Final Approval" / "Final Approving",
+        // the real approval-queue stages the approval service writes — map to null and
+        // are dropped here while still counting in activeRequests, so the client phase
+        // card under-sums by the count of items in those unmapped stages. Closing this
+        // requires the CMT-vs-picklist remediation flagged in WorkItems_Approval, not a
+        // change here. (The Exec Items-by-Stage card groups by raw stage and always sums.)
         for (AggregateResult ar : [
             SELECT StageNamePk__c stage, Count(Id) cnt
             FROM WorkItem__c
