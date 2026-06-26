@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__HomePage</target>
+        <target>lightning__AppPage</target>
+        <target>lightning__Tab</target>
+    </targets>
+    <masterLabel>Delivery Intake Queue</masterLabel>
+    <description>Intake queue: WorkItems that arrived but were never activated onto the timeline, with an inline developer picker to route them to development (assign + advance + activate) or dismiss them to a terminal stage.</description>
+</LightningComponentBundle>

@@ -21,6 +21,15 @@
             <c-delivery-guide></c-delivery-guide>
         </lightning-tab>
 
+        <!-- Front of the pipeline: inbound work that arrived but was never activated
+             onto the timeline (ActivatedDateTime = null → invisible on the board/Gantt).
+             The triager routes each item to a dev (assign + advance + activate) or
+             resolves it. Ungated like Approvals — the Apex scopes the data, so a
+             non-triager just sees an empty queue. -->
+        <lightning-tab label="Intake" value="intake" icon-name="standard:work_queue">
+            <c-delivery-intake-queue></c-delivery-intake-queue>
+        </lightning-tab>
+
         <!-- Buyer-facing surfaces, hosted here (the package-owned "Delivery" tab) so they
              survive subscriber Home-page overrides — a subscriber-activated custom Home
              hides the package Home FlexiPage on upgrade, but cannot touch these inner tabs.
@@ -30,6 +39,13 @@
         <lightning-tab label="Approvals" value="approvals" icon-name="standard:approval">
             <c-delivery-approval-summary-card></c-delivery-approval-summary-card>
             <c-delivery-approval-queue></c-delivery-approval-queue>
+        </lightning-tab>
+
+        <!-- Back of the pipeline: items in 'Deployed to Prod' awaiting the triager's
+             close-out verification. Makes the Deployed-to-Prod awaiting-verification
+             report actionable from inside the workspace. Ungated like Approvals. -->
+        <lightning-tab label="Close Outs" value="closeouts" icon-name="standard:task2">
+            <c-delivery-close-out-queue></c-delivery-close-out-queue>
         </lightning-tab>
 
         <!-- Buyer forecast = the "you set the pace" capacity slider (the controllable
