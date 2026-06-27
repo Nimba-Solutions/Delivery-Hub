@@ -24,7 +24,7 @@
     <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageEnteredDateTime__c</field>
     </columns>
-    <description>Active work items in the Approval phase: Ready for Tech Review, Tech Reviewing, Ready for Final Approval, Final Approving — the live StageNamePk values the approval service writes. NOTE: this report does NOT yet tie to the Approval phase TILE, because the Software_Delivery board CMT maps phase=Approval to stale stage names (Ready for Client Approval / In Client Approval) that no longer match these live picklist values. That CMT-vs-picklist drift is the root cause of the Approval bucket reading near-empty while items are pending, and is a separate workflow-config remediation (touches persona views, escalation rules, transitions). This report reflects the real pending-approval population.</description>
+    <description>Active work items in the Approval phase: Ready for Tech Review, Tech Reviewing, Ready for Final Approval, Final Approving. Reflects the real pending-approval population (the live stages the approval service writes).</description>
     <filter>
         <booleanFilter>1 AND 2 AND 3 AND 4</booleanFilter>
         <criteriaItems>

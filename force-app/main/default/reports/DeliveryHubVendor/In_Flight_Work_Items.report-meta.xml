@@ -27,7 +27,7 @@
     <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%CalculatedETADate__c</field>
     </columns>
-    <description>Active work items: activated, not archived, not a template, and in a non-effort-terminal stage (excludes Done, Cancelled, and Deployed to Prod). Matches the Active Work Items count tile exactly — the canonical "active work item" definition. No date bound: the tile counts all active items, so the report must too.</description>
+    <description>Active work items: activated, not archived, not a template, non-effort-terminal (excludes Done, Cancelled, Deployed to Prod). Matches the Active Work Items tile exactly; no date bound so the tile and report agree.</description>
     <filter>
         <booleanFilter>1 AND 2 AND 3 AND 4 AND 5 AND 6</booleanFilter>
         <criteriaItems>
