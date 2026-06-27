@@ -12,7 +12,52 @@
     <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityLookup__c</field>
     </columns>
-    <description>Count of work items at each stage of the delivery pipeline. Use to monitor flow and identify bottlenecks.</description>
+    <description>Count of ACTIVE work items per pipeline stage (activated, not archived, not a template, non-effort-terminal; excludes Done, Cancelled, Deployed to Prod). Per-stage counts sum to the Active Work Items tile and back the Items by Stage card.</description>
+    <filter>
+        <booleanFilter>1 AND 2 AND 3 AND 4 AND 5 AND 6</booleanFilter>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>notEqual</operator>
+            <value>Done</value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>notEqual</operator>
+            <value>Cancelled</value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>notEqual</operator>
+            <value>Deployed to Prod</value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ActivatedDateTime__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>notEqual</operator>
+            <value></value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ArchivedDateTime__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>equals</operator>
+            <value></value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%TemplateMarkedDateTime__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>equals</operator>
+            <value></value>
+        </criteriaItems>
+    </filter>
     <format>Summary</format>
     <groupingsDown>
         <dateGranularity>Day</dateGranularity>
