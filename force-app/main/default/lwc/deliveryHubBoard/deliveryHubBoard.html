@@ -633,10 +633,9 @@
                             <lightning-input-field field-name="%%%NAMESPACE_DOT%%%BriefDescriptionTxt__c" required onchange={handleFieldChange} value={createWorkItemTitle}></lightning-input-field>
                             <lightning-input-field field-name="%%%NAMESPACE_DOT%%%DetailsTxt__c" onchange={handleFieldChange} value={createWorkItemDescription}></lightning-input-field>
                             <lightning-input-field field-name="%%%NAMESPACE_DOT%%%PriorityPk__c" value={createDefaults.PriorityPk__c}></lightning-input-field>
-                            
-                            <div class="slds-hide">
-                                <lightning-input-field field-name="%%%NAMESPACE_DOT%%%ActivatedDateTime__c" value={createDefaults.ActivatedDateTime__c}></lightning-input-field>
-                            </div>
+                            <!-- ActivatedDateTime__c is NOT rendered here: it's set in handleCreateSubmit
+                                 at submit. A hidden ISO-datetime input + default-field-value broke the
+                                 managed-object create-defaults wire on prod (F17). -->
 
                             <lightning-file-upload label="Attach files" record-id={currentUserId} onuploadfinished={handleFileUpload} multiple></lightning-file-upload>
                             

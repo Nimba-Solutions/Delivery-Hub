@@ -850,6 +850,11 @@ export default class DeliveryProFormaTimeline extends NavigationMixin(LightningE
             // itself — it just wraps the text; the browser handles the link.
             recordUrlTemplate: `/lightning/r/${this._vfPrefix()}WorkItem__c/{id}/view`,
             chromeVisibleDefault: !this.chromeHiddenDefault,
+            // NG 0.210.0 — pin the "Review & commit" pill to the VIEWPORT (not the
+            // bottom of a tall board) so it's always reachable without scrolling.
+            // Glen hit this directly: on the embedded Timeline tab the pill sat
+            // below the fold and was hard to get to. fixed:true keeps it on-screen.
+            pendingPill: { fixed: true },
             features: {
                 hoursColumn: true,
                 budgetUsedColumn: true,
