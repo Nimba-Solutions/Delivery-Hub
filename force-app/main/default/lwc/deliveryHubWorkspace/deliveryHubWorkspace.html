@@ -6,34 +6,49 @@
              Placed FIRST so the triager lands on the urgent intake queue. The triager
              routes each item to a dev (assign + advance + activate) or resolves it.
              Ungated like Approvals — the Apex scopes the data, so a non-triager just
-             sees an empty queue. -->
-        <lightning-tab label="Intake" value="intake" icon-name="standard:work_queue">
-            <c-delivery-intake-queue></c-delivery-intake-queue>
-        </lightning-tab>
+             sees an empty queue. Each tab is org-hideable via Settings → Delivery
+             Visibility (default shown). -->
+        <template lwc:if={showIntake}>
+            <lightning-tab label="Intake" value="intake" icon-name="standard:work_queue">
+                <c-delivery-intake-queue></c-delivery-intake-queue>
+            </lightning-tab>
+        </template>
 
-        <lightning-tab label="Board" value="board" icon-name="standard:kanban">
-            <c-delivery-hub-board></c-delivery-hub-board>
-        </lightning-tab>
+        <template lwc:if={showBoard}>
+            <lightning-tab label="Board" value="board" icon-name="standard:kanban">
+                <c-delivery-hub-board></c-delivery-hub-board>
+            </lightning-tab>
+        </template>
 
-        <lightning-tab label="New Request" value="newRequest" icon-name="standard:work_order_item">
-            <c-delivery-quick-request embedded={requestEmbedded}></c-delivery-quick-request>
-        </lightning-tab>
+        <template lwc:if={showNewRequest}>
+            <lightning-tab label="New Request" value="newRequest" icon-name="standard:work_order_item">
+                <c-delivery-quick-request embedded={requestEmbedded}></c-delivery-quick-request>
+            </lightning-tab>
+        </template>
 
-        <lightning-tab label="Timeline" value="timeline" icon-name="standard:date_input">
-            <c-delivery-pro-forma-timeline></c-delivery-pro-forma-timeline>
-        </lightning-tab>
+        <template lwc:if={showTimeline}>
+            <lightning-tab label="Timeline" value="timeline" icon-name="standard:date_input">
+                <c-delivery-pro-forma-timeline></c-delivery-pro-forma-timeline>
+            </lightning-tab>
+        </template>
 
-        <lightning-tab label="Activity" value="activity" icon-name="standard:feed">
-            <c-delivery-activity-feed></c-delivery-activity-feed>
-        </lightning-tab>
+        <template lwc:if={showActivity}>
+            <lightning-tab label="Activity" value="activity" icon-name="standard:feed">
+                <c-delivery-activity-feed></c-delivery-activity-feed>
+            </lightning-tab>
+        </template>
 
-        <lightning-tab label="Documents" value="documents" icon-name="standard:document">
-            <c-delivery-document-viewer></c-delivery-document-viewer>
-        </lightning-tab>
+        <template lwc:if={showDocuments}>
+            <lightning-tab label="Documents" value="documents" icon-name="standard:document">
+                <c-delivery-document-viewer></c-delivery-document-viewer>
+            </lightning-tab>
+        </template>
 
-        <lightning-tab label="Guide" value="guide" icon-name="standard:knowledge">
-            <c-delivery-guide></c-delivery-guide>
-        </lightning-tab>
+        <template lwc:if={showGuide}>
+            <lightning-tab label="Guide" value="guide" icon-name="standard:knowledge">
+                <c-delivery-guide></c-delivery-guide>
+            </lightning-tab>
+        </template>
 
         <!-- Buyer-facing surfaces, hosted here (the package-owned "Delivery" tab) so they
              survive subscriber Home-page overrides — a subscriber-activated custom Home
@@ -41,24 +56,30 @@
              Ungated: the Apex layer (getPendingForApprover / getApprovalSummary) already
              scopes data to the running approver, so a non-approver simply sees an empty
              queue rather than being blocked. -->
-        <lightning-tab label="Approvals" value="approvals" icon-name="standard:approval">
-            <c-delivery-approval-summary-card></c-delivery-approval-summary-card>
-            <c-delivery-approval-queue></c-delivery-approval-queue>
-        </lightning-tab>
+        <template lwc:if={showApprovals}>
+            <lightning-tab label="Approvals" value="approvals" icon-name="standard:approval">
+                <c-delivery-approval-summary-card></c-delivery-approval-summary-card>
+                <c-delivery-approval-queue></c-delivery-approval-queue>
+            </lightning-tab>
+        </template>
 
         <!-- Back of the pipeline: items in 'Deployed to Prod' awaiting the triager's
              close-out verification. Makes the Deployed-to-Prod awaiting-verification
              report actionable from inside the workspace. Ungated like Approvals. -->
-        <lightning-tab label="Close Outs" value="closeouts" icon-name="standard:task2">
-            <c-delivery-close-out-queue></c-delivery-close-out-queue>
-        </lightning-tab>
+        <template lwc:if={showCloseouts}>
+            <lightning-tab label="Close Outs" value="closeouts" icon-name="standard:task2">
+                <c-delivery-close-out-queue></c-delivery-close-out-queue>
+            </lightning-tab>
+        </template>
 
         <!-- Buyer forecast = the "you set the pace" capacity slider (the controllable
              forward projection). The retrospective pacing card is now admin-only (moved
              to the Velocity tab) so buyers have ONE forecast surface, not two stacked. -->
-        <lightning-tab label="Forecast" value="forecast" icon-name="standard:forecasts">
-            <c-delivery-capacity-forecast></c-delivery-capacity-forecast>
-        </lightning-tab>
+        <template lwc:if={showForecast}>
+            <lightning-tab label="Forecast" value="forecast" icon-name="standard:forecasts">
+                <c-delivery-capacity-forecast></c-delivery-capacity-forecast>
+            </lightning-tab>
+        </template>
 
         <template lwc:if={isAdmin}>
             <lightning-tab label="Templates" value="templates" icon-name="standard:template">

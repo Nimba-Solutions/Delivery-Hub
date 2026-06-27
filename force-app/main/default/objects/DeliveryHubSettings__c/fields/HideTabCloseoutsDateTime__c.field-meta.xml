@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>HideTabCloseoutsDateTime__c</fullName>
+    <description>When non-null, hide the Close Outs sub-tab from the Delivery Hub workspace ("Delivery") tab. Null = SHOWN (default; safe). Inverted-name field (Hide, not Show) so the safe posture is the default null state, mirroring the LWC1503 inverted-prop convention. Fully reversible — clear the field to show the tab again.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set to a date/time to hide the Close Outs tab in the Delivery workspace. Leave blank to show it (default).</inlineHelpText>
+    <label>Hide Tab Close Outs</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
