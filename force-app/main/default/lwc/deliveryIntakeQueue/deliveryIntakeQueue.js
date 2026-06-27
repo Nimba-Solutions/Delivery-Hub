@@ -22,6 +22,7 @@
 import { LightningElement, wire } from "lwc";
 import { NavigationMixin } from "lightning/navigation";
 import { refreshApex } from "@salesforce/apex";
+import { subscribe, unsubscribe, onError } from "lightning/empApi";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 import WORK_ITEM_OBJECT from "@salesforce/schema/WorkItem__c";
 import getIntakeItems from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTriageController.getIntakeItems";
@@ -29,6 +30,9 @@ import routeToDevApex from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTriageCo
 import dismissIntakeApex from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTriageController.dismissIntake";
 
 const MS_PER_DAY = 86400000;
+// Real-time channel: the ghost recorder publishes here when a new inbound
+// request is created, so the queue refreshes live (no manual page reload).
+const PE_CHANNEL = "/event/%%%NAMESPACE_DOT%%%DeliveryWorkItemChange__e";
 
 export default class DeliveryIntakeQueue extends NavigationMixin(LightningElement) {
     itemsRaw = [];
@@ -55,6 +59,33 @@ export default class DeliveryIntakeQueue extends NavigationMixin(LightningElemen
             this.errorMessage = this._errorText(result.error, "Unable to load the intake queue.");
             this.itemsRaw = [];
             this.isLoading = false;
+        }
+    }
+
+    // ── Live refresh: pop new inbound requests in without a reload ──
+
+    _subscription = null;
+
+    connectedCallback() {
+        onError((err) => {
+            // Best-effort: the wired data still loads on its own if the
+            // streaming channel hiccups — just log and carry on.
+            // eslint-disable-next-line no-console
+            console.warn("[DeliveryIntakeQueue] empApi error:", JSON.stringify(err));
+        });
+        subscribe(PE_CHANNEL, -1, () => {
+            // A new or changed work item may belong in (or leave) the intake
+            // queue — re-pull the wired list so it updates in place.
+            refreshApex(this.wiredResult);
+        }).then((response) => {
+            this._subscription = response;
+        });
+    }
+
+    disconnectedCallback() {
+        if (this._subscription) {
+            unsubscribe(this._subscription, () => {});
+            this._subscription = null;
         }
     }
 

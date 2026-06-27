@@ -1626,6 +1626,19 @@ public with sharing class DeliveryGanttController {
                 : null;
             String beforeTaskId = rp.get('beforeTaskId') == null ? null : String.valueOf(rp.get('beforeTaskId'));
             String afterTaskId = rp.get('afterTaskId') == null ? null : String.valueOf(rp.get('afterTaskId'));
+            // NG omits priorityGroup on a WITHIN-lane drag (the bucket didn't
+            // change), so a positional reorder can legitimately arrive without
+            // one. Derive the destination bucket from the task's own current
+            // effective group — the SAME computation loadBucketItems uses
+            // (explicit PriorityGroupPk__c, else derived from priority+stage) so
+            // we renumber exactly the bucket the row builder rendered. A
+            // cross-lane drag carries priorityGroup explicitly, so this
+            // derivation only fires for within-lane reorders.
+            if (String.isBlank(priorityGroup)) {
+                priorityGroup = resolveEffectiveGroup(taskId);
+            }
+            // Still blank means we genuinely can't determine the bucket — fail
+            // loud rather than renumber the wrong lane.
             if (String.isBlank(priorityGroup)) {
                 throw new IllegalArgumentException('reorder patch with position needs priorityGroup at index ' + patch.get('_index'));
             }
@@ -1638,6 +1651,35 @@ public with sharing class DeliveryGanttController {
             item.SortOrderNumber__c = (Decimal) rp.get('sortOrder');
             update item; //NOPMD - with sharing class handles CRUD
         }
+    }
+
+    /**
+     * @description Resolves a WorkItem's current effective priority bucket using
+     *              the SAME rule as loadBucketItems / the row builder: explicit
+     *              PriorityGroupPk__c when set, else derived from priority+stage.
+     *              Used by applyReorderPatch when a within-lane positional reorder
+     *              arrives without an explicit destination group.
+     * @param taskId The WorkItem record Id.
+     * @return The effective bucket name, or null when the record can't be read.
+     */
+    private static String resolveEffectiveGroup(String taskId) {
+        if (String.isBlank(taskId)) {
+            return null;
+        }
+        List<WorkItem__c> rows = [
+            SELECT PriorityPk__c, StageNamePk__c, PriorityGroupPk__c
+            FROM WorkItem__c
+            WHERE Id = :taskId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (rows.isEmpty()) {
+            return null;
+        }
+        WorkItem__c w = rows[0];
+        return String.isNotBlank(w.PriorityGroupPk__c)
+            ? w.PriorityGroupPk__c
+            : derivePriorityGroup(w.PriorityPk__c, w.StageNamePk__c);
     }
 
     /**

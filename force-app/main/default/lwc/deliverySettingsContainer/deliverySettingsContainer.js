@@ -17,7 +17,8 @@ export default class DeliverySettingsContainer extends LightningElement {
         return [
             { label: 'General', value: 'general' },
             { label: 'AI Features', value: 'ai' },
-            { label: 'OpenAI', value: 'openai' }
+            { label: 'OpenAI', value: 'openai' },
+            { label: 'Home Visibility', value: 'homeVisibility' }
         ];
     }
 
@@ -31,6 +32,10 @@ export default class DeliverySettingsContainer extends LightningElement {
 
     get isOpenaiActive() {
         return this.activeTab === 'openai';
+    }
+
+    get isHomeVisibilityActive() {
+        return this.activeTab === 'homeVisibility';
     }
 
     handleTabChange(event) {
