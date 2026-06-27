@@ -1,4 +1,4 @@
-var NimbusGanttApp = (function(exports) {
+var NimbusGanttApp = function(exports) {
   "use strict";
   const GROUP_BAR = {
     "top-priority": "#f87171",
@@ -1888,6 +1888,433 @@ var NimbusGanttApp = (function(exports) {
     return function cleanup() {
     };
   }
+  const CLS_TITLEBAR = "nga-titlebar bg-white border-b border-slate-200 px-3 py-1.5 flex flex-col gap-1.5 min-w-0 overflow-x-hidden";
+  const CLS_TITLEBAR_ROW = "flex items-center gap-2 flex-wrap min-w-0";
+  const CLS_TITLE_BRAND = "text-sm font-bold text-slate-900";
+  const CLS_VERSION_PILL = "text-[9px] font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded-full px-2 py-0.5";
+  const CLS_SEP = "text-slate-200";
+  const CLS_TB_FILL = "flex-1";
+  const CLS_TB_SUMMARY = "text-[10px] text-slate-500 font-mono";
+  const CLS_PILL_BTN_BASE = "text-[10px] font-semibold px-2 py-1 rounded-full border transition-colors cursor-pointer";
+  const CLS_PILL_BTN_ACTIVE_VIOLET = "bg-violet-600 text-white border-violet-600";
+  const CLS_PILL_BTN_IDLE_VIOLET = "bg-white text-slate-500 border-slate-200 hover:border-violet-300";
+  const CLS_PILL_BTN_ACTIVE_BLUE = "bg-blue-600 text-white border-blue-600";
+  const CLS_PILL_BTN_IDLE_BLUE = "bg-white text-slate-600 border-slate-200 hover:border-blue-300";
+  const CLS_PILL_BTN_ACTIVE_SLATE = "bg-slate-800 text-white border-slate-800";
+  const CLS_PILL_BTN_IDLE_SLATE = "bg-white text-slate-500 border-slate-200 hover:border-slate-400";
+  const CLS_FILTERBAR = "nga-filterbar bg-white border-b border-slate-100 px-3 py-1.5 min-w-0 overflow-x-hidden";
+  const CLS_FILTERBAR_INNER = "flex items-center gap-2 flex-wrap min-w-0";
+  const CLS_FILTERBAR_LABEL = "text-[10px] font-bold text-slate-500 uppercase tracking-wide";
+  const CLS_FILTER_BTN_BASE = "text-[10px] font-semibold px-2.5 py-1 rounded-full border transition-colors";
+  const CLS_SEARCH_WRAP = "relative inline-flex items-center";
+  const CLS_SEARCH_ICON = "absolute left-2 text-[10px] text-slate-400 pointer-events-none";
+  const CLS_SEARCH_INPUT = "text-[10px] pl-6 pr-6 py-1 rounded-full border border-slate-200 bg-white text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none w-48";
+  const CLS_SEARCH_CLEAR = "absolute right-2 text-[12px] text-slate-400 hover:text-slate-700";
+  const CLS_LEGEND_CHIP = "inline-flex items-center gap-1";
+  const CLS_LEGEND_SWATCH = "w-3 h-3 rounded";
+  const CLS_LEGEND_TEXT = "text-[9px] text-slate-600";
+  const CLS_TEAM_PILL = "inline-flex items-center gap-1 text-[9px] font-semibold text-indigo-600 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 rounded px-2 py-0.5 transition-colors";
+  const CLS_CAPACITY_TEXT = "text-[9px] text-slate-400 font-mono";
+  const CLS_AUTO_SCHED_BTN = "text-[9px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-2.5 py-1 rounded-full transition-colors";
+  const CLS_COUNT_LABEL = "text-[10px] text-slate-400";
+  const CLS_RESET_LINK = "text-[9px] text-rose-500 hover:text-rose-700 underline";
+  const CLS_ZOOMBAR = "nga-zoombar flex items-center gap-2";
+  const CLS_STATS_PANEL = "nga-stats bg-white border-b border-slate-100 px-3 py-3";
+  const CLS_STATS_GRID = "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2";
+  const CLS_KPI_CARD_BASE = "bg-white rounded-xl border-2 px-3 py-2 shadow-sm";
+  const CLS_KPI_LABEL = "text-[10px] font-bold uppercase tracking-wide opacity-70";
+  const CLS_KPI_VALUE = "text-xl font-bold font-mono mt-0.5";
+  const CLS_KPI_HINT = "text-[9px] text-slate-400 mt-0.5";
+  const CLS_SIDEBAR = "nga-sidebar h-full flex flex-col bg-white border-r border-slate-200 select-none";
+  const CLS_SIDEBAR_HEADER = "px-3 py-2 border-b border-slate-200 flex-shrink-0";
+  const CLS_SIDEBAR_LABEL_BIG = "text-[10px] font-bold text-slate-500 uppercase tracking-wide";
+  const CLS_SIDEBAR_LABEL_SM = "text-[9px] text-slate-400 mt-0.5";
+  const CLS_SIDEBAR_RESET = "text-[9px] font-bold text-rose-500 hover:text-rose-700 uppercase px-2 py-1 rounded hover:bg-rose-50 transition-colors";
+  const CLS_CAPACITY_INPUT = "w-14 text-[10px] font-mono bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-center";
+  const CLS_SIDEBAR_AUTO_BTN = "w-full text-[10px] font-bold uppercase px-2 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-colors";
+  const CLS_SIDEBAR_SCROLL = "flex-1 overflow-y-auto";
+  const CLS_BUCKET_HEADER = "px-3 py-1.5 flex items-center justify-between";
+  const CLS_BUCKET_LABEL = "text-[9px] font-bold uppercase tracking-wider";
+  const CLS_BUCKET_COUNT = "text-[9px] text-slate-400 font-mono";
+  const CLS_ITEM_ROW = "px-3 py-1.5 flex items-center gap-2 border-b border-slate-50 hover:bg-slate-50 transition-colors";
+  const CLS_DRAG_HANDLE = "text-[11px] text-slate-300 flex-shrink-0 leading-none cursor-grab active:cursor-grabbing hover:text-slate-500 transition-colors px-0.5 py-1";
+  const CLS_CAT_DOT = "w-2 h-2 rounded-full flex-shrink-0";
+  const CLS_ITEM_TITLE = "text-[10px] text-slate-700 truncate flex-1 min-w-0";
+  const CLS_ITEM_HOURS = "text-[9px] text-slate-400 font-mono flex-shrink-0";
+  const CLS_SIDEBAR_HEADER_ROW = "flex items-center justify-between";
+  const CLS_SIDEBAR_CTRLS = "mt-2 space-y-1.5";
+  const CLS_SIDEBAR_CAP_ROW = "flex items-center gap-2";
+  const CLS_SIDEBAR_CAP_LBL = "text-[9px] text-slate-500";
+  const CLS_SIDEBAR_CAP_SUF = "text-[9px] text-slate-400";
+  const CLS_BUCKET_SECTION_BASE = "border-b transition-colors";
+  const CLS_BUCKET_EMPTY_TEXT = "px-3 py-3 text-[10px] text-slate-400 italic";
+  const CLS_BUCKET_EMPTY_INDICATOR_BASE = "mx-2 my-1 h-0.5 rounded transition-all";
+  const CLS_BUCKET_EMPTY_INDICATOR_ON = "bg-blue-400 opacity-100";
+  const CLS_BUCKET_EMPTY_INDICATOR_OFF = "bg-transparent opacity-0";
+  const CLS_BUCKET_INDICATOR = "mx-2 h-0.5 bg-blue-500 rounded pointer-events-none";
+  const CLS_CONTENT_OUTER = "nga-content-outer flex-1 flex overflow-hidden min-w-0 min-h-0";
+  const CLS_SIDEBAR_WRAP = "flex-shrink-0 border-r border-slate-200 bg-white overflow-y-auto overflow-x-hidden";
+  const CLS_RESIZER = "w-1 flex-shrink-0 bg-slate-200 hover:bg-blue-400 cursor-col-resize transition-colors";
+  const CLS_CONTENT = "nga-content flex-1 relative min-w-0 min-h-0";
+  const CLS_DETAIL = "nga-detail fixed z-[9999] shadow-2xl rounded-xl border-2 overflow-hidden bg-white";
+  const CLS_DETAIL_HEADER = "flex items-center justify-between px-3 py-2 cursor-grab active:cursor-grabbing select-none";
+  const CLS_DETAIL_BODY = "px-3 py-3 space-y-2 max-h-[400px] overflow-y-auto text-xs";
+  const CLS_CATEGORY_PILL = "text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full flex-shrink-0";
+  const CLS_AUDIT = "nga-audit bg-fuchsia-50/60 border-b border-fuchsia-200 px-3 py-2";
+  const CLS_AUDIT_LABEL = "text-[10px] font-bold text-fuchsia-700 uppercase tracking-wide shrink-0";
+  const CLS_AUDIT_STATUS_DIRTY = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800";
+  const CLS_AUDIT_STATUS_CLEAN = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800";
+  const CLS_AUDIT_INPUT = "flex-1 min-w-[200px] text-[11px] px-2 py-1 border border-slate-300 rounded focus:outline-none focus:border-fuchsia-500";
+  const CLS_AUDIT_SUBMIT = "text-[11px] font-bold px-3 py-1 rounded bg-fuchsia-600 text-white hover:bg-fuchsia-700 disabled:opacity-50 disabled:cursor-not-allowed";
+  const CLS_AUDIT_RESET = "text-[11px] font-bold px-3 py-1 rounded bg-white text-slate-700 border border-slate-300 hover:border-rose-400 hover:text-rose-600";
+  const CLS_HRSWK = "nga-hrswkstrip bg-slate-50 border-b border-slate-200 px-3 py-1.5 flex items-end gap-1 overflow-x-auto flex-shrink-0";
+  const CLS_HRSWK_LABEL = "text-[9px] font-bold text-slate-400 uppercase tracking-wide mr-1 shrink-0 self-center";
+  const CLS_HRSWK_COL = "flex flex-col items-center gap-0.5 shrink-0 w-12";
+  const BUCKET_META = {
+    "top-priority": { label: "Now", text: "text-red-700", bg: "bg-red-50", border: "border-red-200", activeBg: "bg-red-100" },
+    "active": { label: "Next", text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", activeBg: "bg-amber-100" },
+    "follow-on": { label: "Planned", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", activeBg: "bg-emerald-100" },
+    "proposed": { label: "Proposed", text: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", activeBg: "bg-blue-100" },
+    "deferred": { label: "Hold", text: "text-slate-400", bg: "bg-slate-50", border: "border-slate-200", activeBg: "bg-slate-100" }
+  };
+  const CATEGORY_DOT = {
+    "in-flight": "#10b981",
+    "next-up": "#3b82f6",
+    "paused": "#94a3b8",
+    "backlog": "#f59e0b",
+    "expansion": "#a78bfa",
+    "done": "#cbd5e1"
+  };
+  const STATS_TONE = {
+    slate: { border: "border-slate-200", label: "text-slate-500", value: "text-slate-800" },
+    emerald: { border: "border-emerald-200", label: "text-emerald-700", value: "text-emerald-800" },
+    blue: { border: "border-blue-200", label: "text-blue-700", value: "text-blue-800" },
+    purple: { border: "border-purple-200", label: "text-purple-700", value: "text-purple-800" },
+    amber: { border: "border-amber-200", label: "text-amber-700", value: "text-amber-800" },
+    indigo: { border: "border-indigo-200", label: "text-indigo-700", value: "text-indigo-800" }
+  };
+  function AuditPanelVanilla(initial) {
+    const root = el$2("div", CLS_AUDIT);
+    root.setAttribute("data-slot", "AuditPanel");
+    root.setAttribute("data-testid", "audit-panel");
+    let note = "";
+    let submitting = false;
+    let lastResult = null;
+    let inputEl = null;
+    let latestProps = initial;
+    function render(p) {
+      latestProps = p;
+      clear(root);
+      inputEl = null;
+      root.style.display = p.state.auditPanelOpen ? "" : "none";
+      if (!p.state.auditPanelOpen) return;
+      const dirty = (p.config.isDirty ?? false) || p.state.pendingPatchCount > 0;
+      const inner = el$2("div", "flex flex-wrap items-center gap-2");
+      const lbl = el$2("span", CLS_AUDIT_LABEL);
+      lbl.textContent = "📤 Audit pass";
+      inner.appendChild(lbl);
+      const stat = el$2("span", dirty ? CLS_AUDIT_STATUS_DIRTY : CLS_AUDIT_STATUS_CLEAN);
+      stat.textContent = dirty ? "unsaved changes" : "clean";
+      inner.appendChild(stat);
+      const input = el$2("input", CLS_AUDIT_INPUT);
+      input.type = "text";
+      input.placeholder = "commit note (optional - auto-summarized if empty)";
+      input.value = note;
+      input.setAttribute("data-testid", "audit-note-input");
+      input.disabled = submitting;
+      input.addEventListener("input", (e) => {
+        note = e.target.value;
+      });
+      inputEl = input;
+      inner.appendChild(input);
+      const sb = el$2("button", CLS_AUDIT_SUBMIT);
+      sb.type = "button";
+      sb.textContent = submitting ? "Committing..." : "📤 Submit + commit";
+      sb.setAttribute("data-testid", "audit-submit-btn");
+      sb.disabled = !dirty || submitting;
+      sb.addEventListener("click", onSubmitClick);
+      inner.appendChild(sb);
+      const rst = el$2("button", CLS_AUDIT_RESET);
+      rst.type = "button";
+      rst.textContent = "↺ Reset";
+      rst.setAttribute("data-testid", "audit-reset-btn");
+      rst.disabled = submitting;
+      rst.addEventListener("click", () => {
+        if (dirty && !confirm("Reset all unsaved overrides? This discards every drag/edit you made this session.")) return;
+        note = "";
+        if (inputEl) inputEl.value = "";
+        lastResult = null;
+        p.dispatch({ type: "RESET_PATCHES" });
+      });
+      inner.appendChild(rst);
+      root.appendChild(inner);
+      if (lastResult) {
+        const r = el$2("div", `mt-1.5 text-[11px] ${lastResult.ok ? "text-emerald-700" : "text-rose-700"}`);
+        r.setAttribute("data-testid", "audit-result");
+        r.textContent = (lastResult.ok ? "✓ " : "✗ ") + lastResult.msg;
+        if (lastResult.sha) {
+          const sha = el$2("code", "ml-2 font-mono bg-slate-100 px-1 rounded");
+          sha.textContent = lastResult.sha;
+          r.appendChild(sha);
+        }
+        root.appendChild(r);
+      }
+    }
+    async function onSubmitClick() {
+      const p = latestProps;
+      const pending = p.config.pendingChanges ?? [];
+      if (pending.length === 0) {
+        await runSubmit();
+        return;
+      }
+      openPreviewModal(
+        pending,
+        async () => {
+          await runSubmit();
+        },
+        // 0.190 — per-row ✗ rejector. When the host wires
+        // config.onRejectPendingChange, surface it; modal calls back into
+        // the audit-pass module to refresh its row list against the
+        // freshly-shrunk buffer (latestProps.config.pendingChanges is
+        // updated by the IIFEApp's syncPendingChanges → renderSlots cycle).
+        p.config.onRejectPendingChange ? (taskId) => {
+          var _a, _b;
+          (_b = (_a = p.config).onRejectPendingChange) == null ? void 0 : _b.call(_a, taskId);
+          return latestProps.config.pendingChanges ?? [];
+        } : void 0,
+        // 0.203.0 — subset commit: per-row skip checkboxes. The modal passes
+        // the UNCHECKED taskIds here before Confirm so the IIFE's commitEdits
+        // leaves them staged.
+        p.config.onSkipPendingChanges
+      );
+    }
+    async function runSubmit() {
+      const p = latestProps;
+      lastResult = null;
+      if (p.config.onAuditSubmit) {
+        submitting = true;
+        render(p);
+        try {
+          const res = await p.config.onAuditSubmit(note);
+          lastResult = res;
+          if (res.ok) {
+            note = "";
+            p.dispatch({ type: "RESET_PATCHES" });
+          }
+        } catch (e) {
+          lastResult = { ok: false, msg: e instanceof Error ? e.message : String(e) };
+        } finally {
+          submitting = false;
+          render(latestProps);
+        }
+      } else {
+        note = "";
+        p.dispatch({ type: "RESET_PATCHES" });
+        render(latestProps);
+      }
+    }
+    render(initial);
+    return {
+      el: root,
+      update: render,
+      destroy() {
+        clear(root);
+        if (root.parentNode) root.parentNode.removeChild(root);
+      }
+    };
+  }
+  function openPreviewModal(items, onConfirm, onReject, onSkip) {
+    const existing = document.getElementById("ng-audit-preview-modal");
+    if (existing) existing.remove();
+    let currentItems = items.slice();
+    const skipped = /* @__PURE__ */ new Set();
+    const backdrop = document.createElement("div");
+    backdrop.id = "ng-audit-preview-modal";
+    backdrop.setAttribute("role", "dialog");
+    backdrop.setAttribute("aria-modal", "true");
+    backdrop.setAttribute("aria-label", "Audit preview");
+    backdrop.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,0.55);display:flex;align-items:center;justify-content:center;z-index:2147483646;backdrop-filter:blur(2px)";
+    const panel = document.createElement("div");
+    panel.style.cssText = "background:#fff;border-radius:10px;box-shadow:0 20px 40px rgba(15,23,42,0.25);width:min(720px,92vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden;font-family:ui-sans-serif,system-ui,sans-serif";
+    const header = document.createElement("div");
+    header.style.cssText = "padding:14px 18px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between";
+    const title = document.createElement("div");
+    title.style.cssText = "font-size:14px;font-weight:600;color:#0f172a";
+    const close = document.createElement("button");
+    close.type = "button";
+    close.textContent = "✕";
+    close.setAttribute("aria-label", "Close preview");
+    close.style.cssText = "background:transparent;border:0;font-size:18px;cursor:pointer;color:#64748b;padding:4px 8px;line-height:1";
+    close.addEventListener("click", cleanup);
+    header.appendChild(title);
+    header.appendChild(close);
+    panel.appendChild(header);
+    const body = document.createElement("div");
+    body.style.cssText = "padding:8px 18px 12px;overflow-y:auto;flex:1";
+    const list = document.createElement("ul");
+    list.style.cssText = "margin:0;padding:0;list-style:none;font-size:12.5px;color:#334155";
+    body.appendChild(list);
+    panel.appendChild(body);
+    function renderRows() {
+      title.textContent = "Review " + currentItems.length + " change" + (currentItems.length === 1 ? "" : "s") + " - " + summarizeKinds(currentItems);
+      while (list.firstChild) list.removeChild(list.firstChild);
+      for (const it of currentItems) {
+        const li = document.createElement("li");
+        li.style.cssText = "padding:8px 0;border-bottom:1px solid #f1f5f9;display:flex;gap:8px;align-items:flex-start";
+        if (onSkip) {
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.checked = !skipped.has(it.id);
+          cb.setAttribute("data-testid", "audit-preview-include");
+          cb.setAttribute("data-task-id", it.id);
+          cb.setAttribute("aria-label", "Include " + (it.title || it.id) + " in this commit");
+          cb.title = "Unchecked rows stay staged for a later commit (not sent this round)";
+          cb.style.cssText = "flex:0 0 auto;margin-top:3px;cursor:pointer;accent-color:#a21caf";
+          cb.addEventListener("change", () => {
+            if (cb.checked) skipped.delete(it.id);
+            else skipped.add(it.id);
+            li.style.opacity = cb.checked ? "" : "0.45";
+            updateConfirmLabel();
+          });
+          li.appendChild(cb);
+          if (skipped.has(it.id)) li.style.opacity = "0.45";
+        }
+        const main = document.createElement("div");
+        main.style.cssText = "flex:1;min-width:0";
+        const head = document.createElement("div");
+        head.style.cssText = "display:flex;align-items:baseline;gap:8px;flex-wrap:wrap";
+        const idEl = document.createElement("code");
+        idEl.style.cssText = "font-family:ui-monospace,monospace;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-size:11.5px;color:#0f172a";
+        idEl.textContent = it.id;
+        head.appendChild(idEl);
+        if (it.title && it.title !== it.id) {
+          const titleEl = document.createElement("span");
+          titleEl.style.cssText = "color:#0f172a;font-weight:500";
+          titleEl.textContent = it.title;
+          head.appendChild(titleEl);
+        }
+        main.appendChild(head);
+        const descs = it.descs && it.descs.length ? it.descs : it.fields.map((f) => f + " edited");
+        const descList = document.createElement("div");
+        descList.style.cssText = "margin-top:3px;color:#475569;font-size:12px;line-height:1.45";
+        descList.textContent = descs.join(" · ");
+        main.appendChild(descList);
+        if (it.error) {
+          const errLine = document.createElement("div");
+          errLine.setAttribute("data-testid", "audit-preview-error");
+          errLine.style.cssText = "margin-top:3px;color:#dc2626;font-size:11.5px;line-height:1.4;font-weight:500";
+          errLine.textContent = "✗ last commit failed: " + it.error;
+          main.appendChild(errLine);
+        }
+        li.appendChild(main);
+        if (onReject) {
+          const rejectBtn = document.createElement("button");
+          rejectBtn.type = "button";
+          rejectBtn.textContent = "✗";
+          rejectBtn.setAttribute("data-testid", "audit-preview-reject");
+          rejectBtn.setAttribute("data-task-id", it.id);
+          rejectBtn.setAttribute("aria-label", "Reject changes for " + (it.title || it.id));
+          rejectBtn.title = "Reject this change (revert this row, keep the rest)";
+          rejectBtn.style.cssText = "flex:0 0 auto;background:transparent;border:1px solid #cbd5e1;border-radius:6px;padding:2px 8px;font-size:12px;color:#64748b;cursor:pointer;line-height:1.2";
+          rejectBtn.addEventListener("click", () => {
+            const next = onReject(it.id);
+            currentItems = next;
+            skipped.delete(it.id);
+            if (currentItems.length === 0) {
+              cleanup();
+              return;
+            }
+            renderRows();
+            if (onSkip) updateConfirmLabel();
+          });
+          li.appendChild(rejectBtn);
+        }
+        list.appendChild(li);
+      }
+    }
+    renderRows();
+    const footer = document.createElement("div");
+    footer.style.cssText = "padding:12px 18px;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:flex-end;gap:8px";
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.textContent = "Cancel";
+    cancel.style.cssText = "padding:6px 14px;font-size:13px;border-radius:6px;border:1px solid #cbd5e1;background:#fff;color:#334155;cursor:pointer";
+    cancel.addEventListener("click", cleanup);
+    const confirmBtn = document.createElement("button");
+    confirmBtn.type = "button";
+    confirmBtn.setAttribute("data-testid", "audit-preview-confirm");
+    confirmBtn.style.cssText = "padding:6px 14px;font-size:13px;border-radius:6px;border:1px solid #a21caf;background:#a21caf;color:#fff;cursor:pointer;font-weight:500";
+    function selectedCount() {
+      return currentItems.filter((it) => !skipped.has(it.id)).length;
+    }
+    function updateConfirmLabel() {
+      const sel = selectedCount();
+      confirmBtn.textContent = onSkip && sel < currentItems.length ? "📤 Confirm + commit " + sel + " of " + currentItems.length : "📤 Confirm + commit";
+      confirmBtn.disabled = sel === 0;
+      confirmBtn.style.opacity = sel === 0 ? "0.5" : "";
+    }
+    updateConfirmLabel();
+    confirmBtn.addEventListener("click", async () => {
+      confirmBtn.disabled = true;
+      cancel.disabled = true;
+      confirmBtn.textContent = "Committing...";
+      if (onSkip) {
+        const live = new Set(currentItems.map((it) => it.id));
+        onSkip(Array.from(skipped).filter((id) => live.has(id)));
+      }
+      try {
+        await onConfirm();
+      } finally {
+        cleanup();
+      }
+    });
+    footer.appendChild(cancel);
+    footer.appendChild(confirmBtn);
+    panel.appendChild(footer);
+    backdrop.appendChild(panel);
+    document.body.appendChild(backdrop);
+    backdrop.addEventListener("click", (e) => {
+      if (e.target === backdrop) cleanup();
+    });
+    backdrop.tabIndex = -1;
+    backdrop.style.outline = "none";
+    const onKey = (e) => {
+      if (e.key === "Escape") cleanup();
+    };
+    backdrop.addEventListener("keydown", onKey);
+    try {
+      setTimeout(() => {
+        try {
+          backdrop.focus();
+        } catch (_e) {
+        }
+      }, 0);
+    } catch (_e) {
+    }
+    function cleanup() {
+      if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+    }
+  }
+  const KIND_ALIAS = { startDate: "start", endDate: "end", priorityGroup: "group" };
+  function summarizeKinds(items) {
+    const counts = { dates: 0, group: 0, reorder: 0, parent: 0, other: 0 };
+    const covered = /* @__PURE__ */ new Set(["start", "end", "group", "sortOrder", "parentId"]);
+    for (const it of items) {
+      const f = new Set(it.fields.map((k) => KIND_ALIAS[k] || k));
+      if (f.has("start") || f.has("end")) counts.dates++;
+      if (f.has("group")) counts.group++;
+      if (f.has("sortOrder") && !f.has("start") && !f.has("end") && !f.has("group")) counts.reorder++;
+      if (f.has("parentId")) counts.parent++;
+      if ([...f].some((k) => !covered.has(k))) counts.other++;
+    }
+    const parts = [];
+    if (counts.dates) parts.push(counts.dates + " date");
+    if (counts.group) parts.push(counts.group + " group");
+    if (counts.reorder) parts.push(counts.reorder + " reorder");
+    if (counts.parent) parts.push(counts.parent + " parent");
+    if (counts.other) parts.push(counts.other + " field");
+    return parts.length ? parts.join(", ") : "changes";
+  }
   function squarify(items, rect) {
     items = items.filter((i) => i.area > 0);
     if (items.length === 0) return [];
@@ -3654,15 +4081,8 @@ var NimbusGanttApp = (function(exports) {
   };
   function reduceAppState(state, event) {
     switch (event.type) {
-      // 0.199.0 â€” a manual view-mode switch diverges from any applied saved view,
-      // so clear activeViewId (the Views menu falls back to its "Views" label).
       case "SET_VIEW":
         return { ...state, viewMode: event.mode, activeViewId: null };
-      // 0.205.0 - same-value short-circuit: SET_FILTER/SET_SEARCH with an
-      // unchanged value return the SAME state object, so the IIFE's
-      // stateChanged check skips the full renderSlots + gantt rebuild. The
-      // FilterBar blur-flush made redundant SET_SEARCH dispatches common
-      // (type a char, delete it, blur) - each cost a complete gantt teardown.
       case "SET_FILTER":
         return event.id === state.filter ? state : { ...state, filter: event.id };
       case "SET_SEARCH":
@@ -3912,111 +4332,6 @@ var NimbusGanttApp = (function(exports) {
     ganttRowHoverBg: "rgba(59,130,246,0.04)",
     ganttSelectionRing: "#3b82f6",
     ganttDependencyLine: "#3b82f6"
-  };
-  const CLS_TITLEBAR = "nga-titlebar bg-white border-b border-slate-200 px-3 py-1.5 flex flex-col gap-1.5 min-w-0 overflow-x-hidden";
-  const CLS_TITLEBAR_ROW = "flex items-center gap-2 flex-wrap min-w-0";
-  const CLS_TITLE_BRAND = "text-sm font-bold text-slate-900";
-  const CLS_VERSION_PILL = "text-[9px] font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded-full px-2 py-0.5";
-  const CLS_SEP = "text-slate-200";
-  const CLS_TB_FILL = "flex-1";
-  const CLS_TB_SUMMARY = "text-[10px] text-slate-500 font-mono";
-  const CLS_PILL_BTN_BASE = "text-[10px] font-semibold px-2 py-1 rounded-full border transition-colors cursor-pointer";
-  const CLS_PILL_BTN_ACTIVE_VIOLET = "bg-violet-600 text-white border-violet-600";
-  const CLS_PILL_BTN_IDLE_VIOLET = "bg-white text-slate-500 border-slate-200 hover:border-violet-300";
-  const CLS_PILL_BTN_ACTIVE_BLUE = "bg-blue-600 text-white border-blue-600";
-  const CLS_PILL_BTN_IDLE_BLUE = "bg-white text-slate-600 border-slate-200 hover:border-blue-300";
-  const CLS_PILL_BTN_ACTIVE_SLATE = "bg-slate-800 text-white border-slate-800";
-  const CLS_PILL_BTN_IDLE_SLATE = "bg-white text-slate-500 border-slate-200 hover:border-slate-400";
-  const CLS_FILTERBAR = "nga-filterbar bg-white border-b border-slate-100 px-3 py-1.5 min-w-0 overflow-x-hidden";
-  const CLS_FILTERBAR_INNER = "flex items-center gap-2 flex-wrap min-w-0";
-  const CLS_FILTERBAR_LABEL = "text-[10px] font-bold text-slate-500 uppercase tracking-wide";
-  const CLS_FILTER_BTN_BASE = "text-[10px] font-semibold px-2.5 py-1 rounded-full border transition-colors";
-  const CLS_SEARCH_WRAP = "relative inline-flex items-center";
-  const CLS_SEARCH_ICON = "absolute left-2 text-[10px] text-slate-400 pointer-events-none";
-  const CLS_SEARCH_INPUT = "text-[10px] pl-6 pr-6 py-1 rounded-full border border-slate-200 bg-white text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none w-48";
-  const CLS_SEARCH_CLEAR = "absolute right-2 text-[12px] text-slate-400 hover:text-slate-700";
-  const CLS_LEGEND_CHIP = "inline-flex items-center gap-1";
-  const CLS_LEGEND_SWATCH = "w-3 h-3 rounded";
-  const CLS_LEGEND_TEXT = "text-[9px] text-slate-600";
-  const CLS_TEAM_PILL = "inline-flex items-center gap-1 text-[9px] font-semibold text-indigo-600 border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 rounded px-2 py-0.5 transition-colors";
-  const CLS_CAPACITY_TEXT = "text-[9px] text-slate-400 font-mono";
-  const CLS_AUTO_SCHED_BTN = "text-[9px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-2.5 py-1 rounded-full transition-colors";
-  const CLS_COUNT_LABEL = "text-[10px] text-slate-400";
-  const CLS_RESET_LINK = "text-[9px] text-rose-500 hover:text-rose-700 underline";
-  const CLS_ZOOMBAR = "nga-zoombar flex items-center gap-2";
-  const CLS_STATS_PANEL = "nga-stats bg-white border-b border-slate-100 px-3 py-3";
-  const CLS_STATS_GRID = "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2";
-  const CLS_KPI_CARD_BASE = "bg-white rounded-xl border-2 px-3 py-2 shadow-sm";
-  const CLS_KPI_LABEL = "text-[10px] font-bold uppercase tracking-wide opacity-70";
-  const CLS_KPI_VALUE = "text-xl font-bold font-mono mt-0.5";
-  const CLS_KPI_HINT = "text-[9px] text-slate-400 mt-0.5";
-  const CLS_SIDEBAR = "nga-sidebar h-full flex flex-col bg-white border-r border-slate-200 select-none";
-  const CLS_SIDEBAR_HEADER = "px-3 py-2 border-b border-slate-200 flex-shrink-0";
-  const CLS_SIDEBAR_LABEL_BIG = "text-[10px] font-bold text-slate-500 uppercase tracking-wide";
-  const CLS_SIDEBAR_LABEL_SM = "text-[9px] text-slate-400 mt-0.5";
-  const CLS_SIDEBAR_RESET = "text-[9px] font-bold text-rose-500 hover:text-rose-700 uppercase px-2 py-1 rounded hover:bg-rose-50 transition-colors";
-  const CLS_CAPACITY_INPUT = "w-14 text-[10px] font-mono bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-center";
-  const CLS_SIDEBAR_AUTO_BTN = "w-full text-[10px] font-bold uppercase px-2 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-colors";
-  const CLS_SIDEBAR_SCROLL = "flex-1 overflow-y-auto";
-  const CLS_BUCKET_HEADER = "px-3 py-1.5 flex items-center justify-between";
-  const CLS_BUCKET_LABEL = "text-[9px] font-bold uppercase tracking-wider";
-  const CLS_BUCKET_COUNT = "text-[9px] text-slate-400 font-mono";
-  const CLS_ITEM_ROW = "px-3 py-1.5 flex items-center gap-2 border-b border-slate-50 hover:bg-slate-50 transition-colors";
-  const CLS_DRAG_HANDLE = "text-[11px] text-slate-300 flex-shrink-0 leading-none cursor-grab active:cursor-grabbing hover:text-slate-500 transition-colors px-0.5 py-1";
-  const CLS_CAT_DOT = "w-2 h-2 rounded-full flex-shrink-0";
-  const CLS_ITEM_TITLE = "text-[10px] text-slate-700 truncate flex-1 min-w-0";
-  const CLS_ITEM_HOURS = "text-[9px] text-slate-400 font-mono flex-shrink-0";
-  const CLS_SIDEBAR_HEADER_ROW = "flex items-center justify-between";
-  const CLS_SIDEBAR_CTRLS = "mt-2 space-y-1.5";
-  const CLS_SIDEBAR_CAP_ROW = "flex items-center gap-2";
-  const CLS_SIDEBAR_CAP_LBL = "text-[9px] text-slate-500";
-  const CLS_SIDEBAR_CAP_SUF = "text-[9px] text-slate-400";
-  const CLS_BUCKET_SECTION_BASE = "border-b transition-colors";
-  const CLS_BUCKET_EMPTY_TEXT = "px-3 py-3 text-[10px] text-slate-400 italic";
-  const CLS_BUCKET_EMPTY_INDICATOR_BASE = "mx-2 my-1 h-0.5 rounded transition-all";
-  const CLS_BUCKET_EMPTY_INDICATOR_ON = "bg-blue-400 opacity-100";
-  const CLS_BUCKET_EMPTY_INDICATOR_OFF = "bg-transparent opacity-0";
-  const CLS_BUCKET_INDICATOR = "mx-2 h-0.5 bg-blue-500 rounded pointer-events-none";
-  const CLS_CONTENT_OUTER = "nga-content-outer flex-1 flex overflow-hidden min-w-0 min-h-0";
-  const CLS_SIDEBAR_WRAP = "flex-shrink-0 border-r border-slate-200 bg-white overflow-y-auto overflow-x-hidden";
-  const CLS_RESIZER = "w-1 flex-shrink-0 bg-slate-200 hover:bg-blue-400 cursor-col-resize transition-colors";
-  const CLS_CONTENT = "nga-content flex-1 relative min-w-0 min-h-0";
-  const CLS_DETAIL = "nga-detail fixed z-[9999] shadow-2xl rounded-xl border-2 overflow-hidden bg-white";
-  const CLS_DETAIL_HEADER = "flex items-center justify-between px-3 py-2 cursor-grab active:cursor-grabbing select-none";
-  const CLS_DETAIL_BODY = "px-3 py-3 space-y-2 max-h-[400px] overflow-y-auto text-xs";
-  const CLS_CATEGORY_PILL = "text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full flex-shrink-0";
-  const CLS_AUDIT = "nga-audit bg-fuchsia-50/60 border-b border-fuchsia-200 px-3 py-2";
-  const CLS_AUDIT_LABEL = "text-[10px] font-bold text-fuchsia-700 uppercase tracking-wide shrink-0";
-  const CLS_AUDIT_STATUS_DIRTY = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800";
-  const CLS_AUDIT_STATUS_CLEAN = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800";
-  const CLS_AUDIT_INPUT = "flex-1 min-w-[200px] text-[11px] px-2 py-1 border border-slate-300 rounded focus:outline-none focus:border-fuchsia-500";
-  const CLS_AUDIT_SUBMIT = "text-[11px] font-bold px-3 py-1 rounded bg-fuchsia-600 text-white hover:bg-fuchsia-700 disabled:opacity-50 disabled:cursor-not-allowed";
-  const CLS_AUDIT_RESET = "text-[11px] font-bold px-3 py-1 rounded bg-white text-slate-700 border border-slate-300 hover:border-rose-400 hover:text-rose-600";
-  const CLS_HRSWK = "nga-hrswkstrip bg-slate-50 border-b border-slate-200 px-3 py-1.5 flex items-end gap-1 overflow-x-auto flex-shrink-0";
-  const CLS_HRSWK_LABEL = "text-[9px] font-bold text-slate-400 uppercase tracking-wide mr-1 shrink-0 self-center";
-  const CLS_HRSWK_COL = "flex flex-col items-center gap-0.5 shrink-0 w-12";
-  const BUCKET_META = {
-    "top-priority": { label: "Now", text: "text-red-700", bg: "bg-red-50", border: "border-red-200", activeBg: "bg-red-100" },
-    "active": { label: "Next", text: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", activeBg: "bg-amber-100" },
-    "follow-on": { label: "Planned", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", activeBg: "bg-emerald-100" },
-    "proposed": { label: "Proposed", text: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", activeBg: "bg-blue-100" },
-    "deferred": { label: "Hold", text: "text-slate-400", bg: "bg-slate-50", border: "border-slate-200", activeBg: "bg-slate-100" }
-  };
-  const CATEGORY_DOT = {
-    "in-flight": "#10b981",
-    "next-up": "#3b82f6",
-    "paused": "#94a3b8",
-    "backlog": "#f59e0b",
-    "expansion": "#a78bfa",
-    "done": "#cbd5e1"
-  };
-  const STATS_TONE = {
-    slate: { border: "border-slate-200", label: "text-slate-500", value: "text-slate-800" },
-    emerald: { border: "border-emerald-200", label: "text-emerald-700", value: "text-emerald-800" },
-    blue: { border: "border-blue-200", label: "text-blue-700", value: "text-blue-800" },
-    purple: { border: "border-purple-200", label: "text-purple-700", value: "text-purple-800" },
-    amber: { border: "border-amber-200", label: "text-amber-700", value: "text-amber-800" },
-    indigo: { border: "border-indigo-200", label: "text-indigo-700", value: "text-indigo-800" }
   };
   const ZOOMS$2 = ["day", "week", "month", "quarter"];
   const GROUPS = ["priority", "epic"];
@@ -5449,328 +5764,6 @@ var NimbusGanttApp = (function(exports) {
       }
     };
   }
-  function AuditPanelVanilla(initial) {
-    const root = el$2("div", CLS_AUDIT);
-    root.setAttribute("data-slot", "AuditPanel");
-    root.setAttribute("data-testid", "audit-panel");
-    let note = "";
-    let submitting = false;
-    let lastResult = null;
-    let inputEl = null;
-    let latestProps = initial;
-    function render(p) {
-      latestProps = p;
-      clear(root);
-      inputEl = null;
-      root.style.display = p.state.auditPanelOpen ? "" : "none";
-      if (!p.state.auditPanelOpen) return;
-      const dirty = (p.config.isDirty ?? false) || p.state.pendingPatchCount > 0;
-      const inner = el$2("div", "flex flex-wrap items-center gap-2");
-      const lbl = el$2("span", CLS_AUDIT_LABEL);
-      lbl.textContent = "📤 Audit pass";
-      inner.appendChild(lbl);
-      const stat = el$2("span", dirty ? CLS_AUDIT_STATUS_DIRTY : CLS_AUDIT_STATUS_CLEAN);
-      stat.textContent = dirty ? "unsaved changes" : "clean";
-      inner.appendChild(stat);
-      const input = el$2("input", CLS_AUDIT_INPUT);
-      input.type = "text";
-      input.placeholder = "commit note (optional - auto-summarized if empty)";
-      input.value = note;
-      input.setAttribute("data-testid", "audit-note-input");
-      input.disabled = submitting;
-      input.addEventListener("input", (e) => {
-        note = e.target.value;
-      });
-      inputEl = input;
-      inner.appendChild(input);
-      const sb = el$2("button", CLS_AUDIT_SUBMIT);
-      sb.type = "button";
-      sb.textContent = submitting ? "Committing..." : "📤 Submit + commit";
-      sb.setAttribute("data-testid", "audit-submit-btn");
-      sb.disabled = !dirty || submitting;
-      sb.addEventListener("click", onSubmitClick);
-      inner.appendChild(sb);
-      const rst = el$2("button", CLS_AUDIT_RESET);
-      rst.type = "button";
-      rst.textContent = "↺ Reset";
-      rst.setAttribute("data-testid", "audit-reset-btn");
-      rst.disabled = submitting;
-      rst.addEventListener("click", () => {
-        if (dirty && !confirm("Reset all unsaved overrides? This discards every drag/edit you made this session.")) return;
-        note = "";
-        if (inputEl) inputEl.value = "";
-        lastResult = null;
-        p.dispatch({ type: "RESET_PATCHES" });
-      });
-      inner.appendChild(rst);
-      root.appendChild(inner);
-      if (lastResult) {
-        const r = el$2("div", `mt-1.5 text-[11px] ${lastResult.ok ? "text-emerald-700" : "text-rose-700"}`);
-        r.setAttribute("data-testid", "audit-result");
-        r.textContent = (lastResult.ok ? "✓ " : "✗ ") + lastResult.msg;
-        if (lastResult.sha) {
-          const sha = el$2("code", "ml-2 font-mono bg-slate-100 px-1 rounded");
-          sha.textContent = lastResult.sha;
-          r.appendChild(sha);
-        }
-        root.appendChild(r);
-      }
-    }
-    async function onSubmitClick() {
-      const p = latestProps;
-      const pending = p.config.pendingChanges ?? [];
-      if (pending.length === 0) {
-        await runSubmit();
-        return;
-      }
-      openPreviewModal(
-        pending,
-        async () => {
-          await runSubmit();
-        },
-        // 0.190 — per-row ✗ rejector. When the host wires
-        // config.onRejectPendingChange, surface it; modal calls back into
-        // the audit-pass module to refresh its row list against the
-        // freshly-shrunk buffer (latestProps.config.pendingChanges is
-        // updated by the IIFEApp's syncPendingChanges → renderSlots cycle).
-        p.config.onRejectPendingChange ? (taskId) => {
-          var _a, _b;
-          (_b = (_a = p.config).onRejectPendingChange) == null ? void 0 : _b.call(_a, taskId);
-          return latestProps.config.pendingChanges ?? [];
-        } : void 0,
-        // 0.203.0 — subset commit: per-row skip checkboxes. The modal passes
-        // the UNCHECKED taskIds here before Confirm so the IIFE's commitEdits
-        // leaves them staged.
-        p.config.onSkipPendingChanges
-      );
-    }
-    async function runSubmit() {
-      const p = latestProps;
-      lastResult = null;
-      if (p.config.onAuditSubmit) {
-        submitting = true;
-        render(p);
-        try {
-          const res = await p.config.onAuditSubmit(note);
-          lastResult = res;
-          if (res.ok) {
-            note = "";
-            p.dispatch({ type: "RESET_PATCHES" });
-          }
-        } catch (e) {
-          lastResult = { ok: false, msg: e instanceof Error ? e.message : String(e) };
-        } finally {
-          submitting = false;
-          render(latestProps);
-        }
-      } else {
-        note = "";
-        p.dispatch({ type: "RESET_PATCHES" });
-        render(latestProps);
-      }
-    }
-    render(initial);
-    return {
-      el: root,
-      update: render,
-      destroy() {
-        clear(root);
-        if (root.parentNode) root.parentNode.removeChild(root);
-      }
-    };
-  }
-  function openPreviewModal(items, onConfirm, onReject, onSkip) {
-    const existing = document.getElementById("ng-audit-preview-modal");
-    if (existing) existing.remove();
-    let currentItems = items.slice();
-    const skipped = /* @__PURE__ */ new Set();
-    const backdrop = document.createElement("div");
-    backdrop.id = "ng-audit-preview-modal";
-    backdrop.setAttribute("role", "dialog");
-    backdrop.setAttribute("aria-modal", "true");
-    backdrop.setAttribute("aria-label", "Audit preview");
-    backdrop.style.cssText = "position:fixed;inset:0;background:rgba(15,23,42,0.55);display:flex;align-items:center;justify-content:center;z-index:2147483646;backdrop-filter:blur(2px)";
-    const panel = document.createElement("div");
-    panel.style.cssText = "background:#fff;border-radius:10px;box-shadow:0 20px 40px rgba(15,23,42,0.25);width:min(720px,92vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden;font-family:ui-sans-serif,system-ui,sans-serif";
-    const header = document.createElement("div");
-    header.style.cssText = "padding:14px 18px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between";
-    const title = document.createElement("div");
-    title.style.cssText = "font-size:14px;font-weight:600;color:#0f172a";
-    const close = document.createElement("button");
-    close.type = "button";
-    close.textContent = "✕";
-    close.setAttribute("aria-label", "Close preview");
-    close.style.cssText = "background:transparent;border:0;font-size:18px;cursor:pointer;color:#64748b;padding:4px 8px;line-height:1";
-    close.addEventListener("click", cleanup);
-    header.appendChild(title);
-    header.appendChild(close);
-    panel.appendChild(header);
-    const body = document.createElement("div");
-    body.style.cssText = "padding:8px 18px 12px;overflow-y:auto;flex:1";
-    const list = document.createElement("ul");
-    list.style.cssText = "margin:0;padding:0;list-style:none;font-size:12.5px;color:#334155";
-    body.appendChild(list);
-    panel.appendChild(body);
-    function renderRows() {
-      title.textContent = "Review " + currentItems.length + " change" + (currentItems.length === 1 ? "" : "s") + " - " + summarizeKinds(currentItems);
-      while (list.firstChild) list.removeChild(list.firstChild);
-      for (const it of currentItems) {
-        const li = document.createElement("li");
-        li.style.cssText = "padding:8px 0;border-bottom:1px solid #f1f5f9;display:flex;gap:8px;align-items:flex-start";
-        if (onSkip) {
-          const cb = document.createElement("input");
-          cb.type = "checkbox";
-          cb.checked = !skipped.has(it.id);
-          cb.setAttribute("data-testid", "audit-preview-include");
-          cb.setAttribute("data-task-id", it.id);
-          cb.setAttribute("aria-label", "Include " + (it.title || it.id) + " in this commit");
-          cb.title = "Unchecked rows stay staged for a later commit (not sent this round)";
-          cb.style.cssText = "flex:0 0 auto;margin-top:3px;cursor:pointer;accent-color:#a21caf";
-          cb.addEventListener("change", () => {
-            if (cb.checked) skipped.delete(it.id);
-            else skipped.add(it.id);
-            li.style.opacity = cb.checked ? "" : "0.45";
-            updateConfirmLabel();
-          });
-          li.appendChild(cb);
-          if (skipped.has(it.id)) li.style.opacity = "0.45";
-        }
-        const main = document.createElement("div");
-        main.style.cssText = "flex:1;min-width:0";
-        const head = document.createElement("div");
-        head.style.cssText = "display:flex;align-items:baseline;gap:8px;flex-wrap:wrap";
-        const idEl = document.createElement("code");
-        idEl.style.cssText = "font-family:ui-monospace,monospace;background:#f1f5f9;padding:1px 6px;border-radius:4px;font-size:11.5px;color:#0f172a";
-        idEl.textContent = it.id;
-        head.appendChild(idEl);
-        if (it.title && it.title !== it.id) {
-          const titleEl = document.createElement("span");
-          titleEl.style.cssText = "color:#0f172a;font-weight:500";
-          titleEl.textContent = it.title;
-          head.appendChild(titleEl);
-        }
-        main.appendChild(head);
-        const descs = it.descs && it.descs.length ? it.descs : it.fields.map((f) => f + " edited");
-        const descList = document.createElement("div");
-        descList.style.cssText = "margin-top:3px;color:#475569;font-size:12px;line-height:1.45";
-        descList.textContent = descs.join(" · ");
-        main.appendChild(descList);
-        if (it.error) {
-          const errLine = document.createElement("div");
-          errLine.setAttribute("data-testid", "audit-preview-error");
-          errLine.style.cssText = "margin-top:3px;color:#dc2626;font-size:11.5px;line-height:1.4;font-weight:500";
-          errLine.textContent = "✗ last commit failed: " + it.error;
-          main.appendChild(errLine);
-        }
-        li.appendChild(main);
-        if (onReject) {
-          const rejectBtn = document.createElement("button");
-          rejectBtn.type = "button";
-          rejectBtn.textContent = "✗";
-          rejectBtn.setAttribute("data-testid", "audit-preview-reject");
-          rejectBtn.setAttribute("data-task-id", it.id);
-          rejectBtn.setAttribute("aria-label", "Reject changes for " + (it.title || it.id));
-          rejectBtn.title = "Reject this change (revert this row, keep the rest)";
-          rejectBtn.style.cssText = "flex:0 0 auto;background:transparent;border:1px solid #cbd5e1;border-radius:6px;padding:2px 8px;font-size:12px;color:#64748b;cursor:pointer;line-height:1.2";
-          rejectBtn.addEventListener("click", () => {
-            const next = onReject(it.id);
-            currentItems = next;
-            skipped.delete(it.id);
-            if (currentItems.length === 0) {
-              cleanup();
-              return;
-            }
-            renderRows();
-            if (onSkip) updateConfirmLabel();
-          });
-          li.appendChild(rejectBtn);
-        }
-        list.appendChild(li);
-      }
-    }
-    renderRows();
-    const footer = document.createElement("div");
-    footer.style.cssText = "padding:12px 18px;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:flex-end;gap:8px";
-    const cancel = document.createElement("button");
-    cancel.type = "button";
-    cancel.textContent = "Cancel";
-    cancel.style.cssText = "padding:6px 14px;font-size:13px;border-radius:6px;border:1px solid #cbd5e1;background:#fff;color:#334155;cursor:pointer";
-    cancel.addEventListener("click", cleanup);
-    const confirmBtn = document.createElement("button");
-    confirmBtn.type = "button";
-    confirmBtn.setAttribute("data-testid", "audit-preview-confirm");
-    confirmBtn.style.cssText = "padding:6px 14px;font-size:13px;border-radius:6px;border:1px solid #a21caf;background:#a21caf;color:#fff;cursor:pointer;font-weight:500";
-    function selectedCount() {
-      return currentItems.filter((it) => !skipped.has(it.id)).length;
-    }
-    function updateConfirmLabel() {
-      const sel = selectedCount();
-      confirmBtn.textContent = onSkip && sel < currentItems.length ? "📤 Confirm + commit " + sel + " of " + currentItems.length : "📤 Confirm + commit";
-      confirmBtn.disabled = sel === 0;
-      confirmBtn.style.opacity = sel === 0 ? "0.5" : "";
-    }
-    updateConfirmLabel();
-    confirmBtn.addEventListener("click", async () => {
-      confirmBtn.disabled = true;
-      cancel.disabled = true;
-      confirmBtn.textContent = "Committing...";
-      if (onSkip) {
-        const live = new Set(currentItems.map((it) => it.id));
-        onSkip(Array.from(skipped).filter((id) => live.has(id)));
-      }
-      try {
-        await onConfirm();
-      } finally {
-        cleanup();
-      }
-    });
-    footer.appendChild(cancel);
-    footer.appendChild(confirmBtn);
-    panel.appendChild(footer);
-    backdrop.appendChild(panel);
-    document.body.appendChild(backdrop);
-    backdrop.addEventListener("click", (e) => {
-      if (e.target === backdrop) cleanup();
-    });
-    backdrop.tabIndex = -1;
-    backdrop.style.outline = "none";
-    const onKey = (e) => {
-      if (e.key === "Escape") cleanup();
-    };
-    backdrop.addEventListener("keydown", onKey);
-    try {
-      setTimeout(() => {
-        try {
-          backdrop.focus();
-        } catch (_e) {
-        }
-      }, 0);
-    } catch (_e) {
-    }
-    function cleanup() {
-      if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
-    }
-  }
-  const KIND_ALIAS = { startDate: "start", endDate: "end", priorityGroup: "group" };
-  function summarizeKinds(items) {
-    const counts = { dates: 0, group: 0, reorder: 0, parent: 0, other: 0 };
-    const covered = /* @__PURE__ */ new Set(["start", "end", "group", "sortOrder", "parentId"]);
-    for (const it of items) {
-      const f = new Set(it.fields.map((k) => KIND_ALIAS[k] || k));
-      if (f.has("start") || f.has("end")) counts.dates++;
-      if (f.has("group")) counts.group++;
-      if (f.has("sortOrder") && !f.has("start") && !f.has("end") && !f.has("group")) counts.reorder++;
-      if (f.has("parentId")) counts.parent++;
-      if ([...f].some((k) => !covered.has(k))) counts.other++;
-    }
-    const parts = [];
-    if (counts.dates) parts.push(counts.dates + " date");
-    if (counts.group) parts.push(counts.group + " group");
-    if (counts.reorder) parts.push(counts.reorder + " reorder");
-    if (counts.parent) parts.push(counts.parent + " parent");
-    if (counts.other) parts.push(counts.other + " field");
-    return parts.length ? parts.join(", ") : "changes";
-  }
   const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const DAY_MS = 24 * 3600 * 1e3;
   const WEEK_MS = 7 * DAY_MS;
@@ -6547,7 +6540,22 @@ var NimbusGanttApp = (function(exports) {
       if (options.cssUrl) tplConfig.stylesheet = { ...tplConfig.stylesheet, url: options.cssUrl };
       if (options.engine) tplConfig.engine = options.engine;
       if (options.recordUrlTemplate) tplConfig.recordUrlTemplate = options.recordUrlTemplate;
-      if (options.onAuditSubmit) tplConfig.onAuditSubmit = options.onAuditSubmit;
+      if (options.onAuditSubmit) {
+        const hostAuditSubmit = options.onAuditSubmit;
+        tplConfig.onAuditSubmit = async (note) => {
+          const res = await hostAuditSubmit(note);
+          if (res == null ? void 0 : res.ok) {
+            if (options.batchMode) {
+              pendingBuffer.clear();
+              dirtyTaskIds.clear();
+              skippedCommitTaskIds = /* @__PURE__ */ new Set();
+            }
+            dispatch({ type: "RESET_PATCHES" });
+            syncPendingChanges();
+          }
+          return res;
+        };
+      }
       if (options.fieldSchema) tplConfig.fieldSchema = options.fieldSchema;
       if (options.titleBarButtons) tplConfig.titleBarButtons = options.titleBarButtons;
       tplConfig.features.enableDragReparent = options.enableDragReparent === true;
@@ -8064,12 +8072,24 @@ var NimbusGanttApp = (function(exports) {
         renderAdvisorPanel(container, state, dispatch);
         if (options.batchMode) {
           renderDirtyPill(container, pendingEditCount(), () => {
-            var _a2;
-            try {
-              (_a2 = tplConfig.toggleChrome) == null ? void 0 : _a2.call(tplConfig, true);
-            } catch (_e2) {
-            }
-            if (!state.auditPanelOpen) dispatch({ type: "TOGGLE_AUDIT_PANEL" });
+            const items = tplConfig.pendingChanges ?? [];
+            if (!items.length) return;
+            openPreviewModal(
+              items,
+              async () => {
+                if (tplConfig.onAuditSubmit) {
+                  await tplConfig.onAuditSubmit("");
+                } else {
+                  dispatch({ type: "RESET_PATCHES" });
+                }
+              },
+              tplConfig.onRejectPendingChange ? (taskId) => {
+                var _a2;
+                (_a2 = tplConfig.onRejectPendingChange) == null ? void 0 : _a2.call(tplConfig, taskId);
+                return tplConfig.pendingChanges ?? [];
+              } : void 0,
+              tplConfig.onSkipPendingChanges
+            );
           });
         } else {
           const stale = container.querySelector("#nga-dirty-pill");
@@ -8759,6 +8779,16 @@ var NimbusGanttApp = (function(exports) {
         get gantt() {
           return ganttInst;
         },
+        /** 0.208.0 — public store dispatch. Hosts push app actions (notably
+         *  `{type:'PATCH', patch:{id,...}}`) that route through the SAME path as
+         *  a drag — so in batchMode they STAGE into the audit buffer rather than
+         *  committing immediately. DH's autoScheduleDispatcher already calls
+         *  `handle.dispatch` first and only falls back to a buffer-BYPASSING
+         *  setData when it's absent; exposing it keeps auto-schedule (and any
+         *  host-driven edit) inside the review-&-commit gate. */
+        dispatch(action) {
+          dispatch(action);
+        },
         // 0.199.0 — Saved Views programmatic API. Hosts can read/seed/drive the
         // saved-view list and default without touching the UI (e.g. provision a
         // "Client forecast" view per org, or set which view opens on load).
@@ -9081,5 +9111,5 @@ var NimbusGanttApp = (function(exports) {
   exports.NimbusGanttApp = NimbusGanttApp2;
   Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
   return exports;
-})({});
+}({});
 typeof window !== "undefined" && (window.NimbusGanttApp = NimbusGanttApp.NimbusGanttApp || NimbusGanttApp);
