@@ -23,12 +23,34 @@
     </columns>
     <description>Work items in the UAT phase: Client UAT through Sign-off.</description>
     <filter>
+        <booleanFilter>1 AND 2 AND 3 AND 4</booleanFilter>
         <criteriaItems>
             <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>equals</operator>
             <value>Ready for Client UAT,In Client UAT,Ready for UAT Sign-off,Processing Sign-off</value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ActivatedDateTime__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>notEqual</operator>
+            <value></value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ArchivedDateTime__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>equals</operator>
+            <value></value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%TemplateMarkedDateTime__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>equals</operator>
+            <value></value>
         </criteriaItems>
     </filter>
     <format>Tabular</format>

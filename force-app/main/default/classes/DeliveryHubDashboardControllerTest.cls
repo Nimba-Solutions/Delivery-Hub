@@ -299,6 +299,114 @@ private class DeliveryHubDashboardControllerTest {
         }
     }
 
+    /**
+     * @description Canonical-definition guard for System Pulse: activeRequests must use
+     *              the EFFORT-terminal set, so a Deployed-to-Prod item (shipped, awaiting
+     *              verification) does NOT count as active — making this number identical
+     *              to the Exec Dashboard's activeWorkItems tile and the In_Flight report.
+     */
+    @IsTest
+    static void testActiveRequestsExcludesDeployedToProd() {
+        System.runAs(testUser) {
+            TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'In Development' });
+            TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'In Development' });
+            // Deployed to Prod — effort-terminal, must NOT count as active.
+            TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'Deployed to Prod' });
+            // Done — terminal, must NOT count.
+            TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'Done' });
+
+            Test.startTest();
+            Map<String, Object> metrics = DeliveryHubDashboardController.getBudgetMetrics();
+            Test.stopTest();
+
+            System.assertEquals(2, (Decimal) metrics.get('activeRequests'),
+                'activeRequests must exclude Deployed-to-Prod and Done — only the 2 In Development items are active');
+        }
+    }
+
+    /**
+     * @description The What's-In-Flight phase buckets must (a) exclude Deployed-to-Prod
+     *              from the Deployment bucket and (b) sum EXACTLY to the active headline.
+     *              Also proves the phase mapping: an "In Client Approval" item lands in
+     *              the Approval bucket (getStagePhaseMap contract the bucket reports rely on).
+     *              NOTE: the bucket-sum invariant proven here holds for stages that ARE in
+     *              the board CMT. Live stages absent from the CMT (e.g. "Ready for Final
+     *              Approval") map to null and under-sum — the documented Approval-bucket
+     *              gap whose fix is the separate CMT-vs-picklist remediation, not this PR.
+     */
+    @IsTest
+    static void testPhaseBucketsExcludeDeployedAndSumToActiveWithApprovalMapping() {
+        System.runAs(testUser) {
+            TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'In Development' });
+            TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'Ready for Merge' }); // Deployment phase
+            TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'In Client Approval' }); // Approval phase
+            // Deployed to Prod — effort-terminal: must NOT appear in the Deployment bucket.
+            TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'Deployed to Prod' });
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard('thisWeek', 'Software_Delivery');
+            Map<String, Object> metrics = DeliveryHubDashboardController.getBudgetMetrics();
+            Test.stopTest();
+
+            List<DeliveryHubDashboardController.PhaseItem> phases =
+                (List<DeliveryHubDashboardController.PhaseItem>) result.get('phases');
+            Integer total = 0;
+            Integer approvalCount = 0;
+            Integer deploymentCount = 0;
+            for (DeliveryHubDashboardController.PhaseItem p : phases) {
+                Integer c = (p.count != null ? p.count : 0);
+                total += c;
+                if (p.label == 'Approval') { approvalCount = c; }
+                if (p.label == 'Deployment') { deploymentCount = c; }
+            }
+
+            System.assertEquals(3, total,
+                'Phase buckets must sum to the 3 active items (Deployed-to-Prod excluded)');
+            System.assertEquals(3, (Decimal) metrics.get('activeRequests'),
+                'activeRequests headline must equal the phase-bucket sum');
+            System.assertEquals(1, approvalCount,
+                'In Client Approval must bucket into the Approval phase (getStagePhaseMap contract)');
+            System.assertEquals(1, deploymentCount,
+                'Deployment bucket = the 1 Ready for Merge item; Deployed-to-Prod must be excluded');
+        }
+    }
+
+    /**
+     * @description Definition-bug fix: the client-dashboard "Blocked" tile must use the
+     *              SAME stage-based definition as the Blocked_Work_Items report it links to
+     *              (StageNamePk contains 'Blocked' + canonical guards) — NOT the dependency
+     *              graph it used before. A dependency-blocked item in a non-Blocked stage
+     *              must no longer count; a Blocked-stage item must.
+     */
+    @IsTest
+    static void testClientBlockedTileUsesStageDefinitionNotDependencyGraph() {
+        System.runAs(testUser) {
+            WorkItem__c blockedStage = TestDataFactory.createWorkItem(
+                new Map<String, Object>{ 'StageNamePk__c' => 'Dev Blocked' });
+            WorkItem__c blocker = TestDataFactory.createWorkItem(
+                new Map<String, Object>{ 'StageNamePk__c' => 'In Development' });
+            WorkItem__c depBlocked = TestDataFactory.createWorkItem(
+                new Map<String, Object>{ 'StageNamePk__c' => 'In Development' });
+            // depBlocked is graph-blocked by an active blocker but its STAGE is not Blocked.
+            // Under the old dependency-graph definition it counted; under the report-aligned
+            // stage definition it must NOT.
+            insert new WorkItemDependency__c(
+                BlockingWorkItemLookup__c = blocker.Id,
+                BlockedWorkItemLookup__c = depBlocked.Id,
+                TypePk__c = 'Blocks'
+            );
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard('thisWeek', 'Software_Delivery');
+            Test.stopTest();
+
+            Map<String, Object> thisWeek = (Map<String, Object>) result.get('thisWeek');
+            System.assertEquals(1, (Integer) thisWeek.get('blocked'),
+                'blocked must count only the Dev Blocked stage item (matching Blocked_Work_Items report), '
+                + 'not the dependency-graph-blocked item in a non-Blocked stage');
+        }
+    }
+
     @IsTest
     static void testGetClientDashboard() {
         System.runAs(testUser) {
