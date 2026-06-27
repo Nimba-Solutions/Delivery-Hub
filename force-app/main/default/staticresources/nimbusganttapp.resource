@@ -6365,7 +6365,7 @@ var NimbusGanttApp = function(exports) {
     body.innerHTML = '<p style="margin:0 0 8px 0"><strong>Coming in a later cut.</strong></p><p style="margin:0 0 8px 0">Advisor mode turns the visible task list + date range into a Claude-generated narrative walkthrough of what the timeline actually says.</p><p style="margin:0;color:#64748b">Restoration pending API infrastructure decisions (auth, CSP under LWS, streaming UX, error handling).</p>';
     panel.appendChild(body);
   }
-  function renderDirtyPill(container, count, onReview) {
+  function renderDirtyPill(container, count, onReview, pos) {
     const id = "nga-dirty-pill";
     let pill = container.querySelector(`#${id}`);
     if (count <= 0) {
@@ -6379,9 +6379,6 @@ var NimbusGanttApp = function(exports) {
       pill.setAttribute("role", "status");
       pill.setAttribute("aria-live", "polite");
       pill.style.cssText = [
-        "position:absolute",
-        "bottom:18px",
-        "right:18px",
         "display:flex",
         "align-items:center",
         "gap:10px",
@@ -6398,6 +6395,13 @@ var NimbusGanttApp = function(exports) {
       ].join(";");
       container.appendChild(pill);
     }
+    pill.style.position = pos.fixed ? "fixed" : "absolute";
+    const vert = pos.corner.startsWith("top") ? "top" : "bottom";
+    const horiz = pos.corner.endsWith("left") ? "left" : "right";
+    pill.style.top = vert === "top" ? pos.offsetY + "px" : "";
+    pill.style.bottom = vert === "bottom" ? pos.offsetY + "px" : "";
+    pill.style.left = horiz === "left" ? pos.offsetX + "px" : "";
+    pill.style.right = horiz === "right" ? pos.offsetX + "px" : "";
     pill.innerHTML = "";
     const label = document.createElement("span");
     label.setAttribute("data-testid", "dirty-pill-label");
@@ -6499,7 +6503,7 @@ var NimbusGanttApp = function(exports) {
   }
   class IIFEApp {
     static mount(container, options) {
-      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q;
       const mountStartedAt = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
       IIFEApp.unmount(container);
       const templateName = options.template || "cloudnimbus";
@@ -8090,7 +8094,7 @@ var NimbusGanttApp = function(exports) {
               } : void 0,
               tplConfig.onSkipPendingChanges
             );
-          });
+          }, pillPos);
         } else {
           const stale = container.querySelector("#nga-dirty-pill");
           if (stale) stale.remove();
@@ -8103,6 +8107,12 @@ var NimbusGanttApp = function(exports) {
       }
       let lastPendingCount = -1;
       let beforeUnloadHandler = null;
+      const pillPos = {
+        corner: ((_n = options.pendingPill) == null ? void 0 : _n.corner) ?? "bottom-right",
+        offsetX: ((_o = options.pendingPill) == null ? void 0 : _o.offsetX) ?? 18,
+        offsetY: ((_p = options.pendingPill) == null ? void 0 : _p.offsetY) ?? 18,
+        fixed: ((_q = options.pendingPill) == null ? void 0 : _q.fixed) ?? false
+      };
       function notifyPendingChange() {
         var _a2;
         const count = pendingEditCount();
@@ -8788,6 +8798,18 @@ var NimbusGanttApp = function(exports) {
          *  host-driven edit) inside the review-&-commit gate. */
         dispatch(action) {
           dispatch(action);
+        },
+        /** 0.210.0 — move the "unsaved changes" pill at runtime (no re-deploy).
+         *  Partial — only the fields you pass change. e.g.
+         *  `handle.setPendingPillPosition({ corner:'top-right', offsetY:100, fixed:true })`.
+         *  Returns the resolved position. Handy for dialing in placement live. */
+        setPendingPillPosition(p) {
+          if (p.corner !== void 0) pillPos.corner = p.corner;
+          if (p.offsetX !== void 0) pillPos.offsetX = p.offsetX;
+          if (p.offsetY !== void 0) pillPos.offsetY = p.offsetY;
+          if (p.fixed !== void 0) pillPos.fixed = p.fixed;
+          renderSlots();
+          return { ...pillPos };
         },
         // 0.199.0 — Saved Views programmatic API. Hosts can read/seed/drive the
         // saved-view list and default without touching the UI (e.g. provision a
