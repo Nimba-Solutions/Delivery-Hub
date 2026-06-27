@@ -456,16 +456,16 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     }
 
     get createDefaults() {
+        // Only simple, always-valid defaults here. ActivatedDateTime__c (a
+        // DateTime) and StatusPk__c are deliberately NOT defaulted at render
+        // time: an ISO datetime in default-field-values makes the managed-object
+        // create-defaults wire fail (generic "You don't have access to this
+        // record", input-fields never render — F17, prod-only / namespaced).
+        // Both are set authoritatively in handleCreateSubmit at submit time.
         return {
             [FIELDS.STAGE]:     'Backlog',
             [FIELDS.SORT_ORDER]: this.nextSortOrder,
             [FIELDS.PRIORITY]:  'Medium',
-            // ActivatedDateTime__c is a DateTime "activated at" stamp (DH's
-            // DateTime-as-toggle pattern), NOT a Boolean. Stamp "now" to activate
-            // the new item — a Boolean here is rejected as an invalid date and
-            // silently broke the entire create flow (F16).
-            [FIELDS.IS_ACTIVE]: new Date().toISOString(),
-            [FIELDS.STATUS_PK]: 'New',
         };
     }
 
