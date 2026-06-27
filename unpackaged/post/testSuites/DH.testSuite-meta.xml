@@ -138,4 +138,5 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryApproverServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryRateServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryTabVisibilityControllerTest</testClassName>
 </ApexTestSuite>
