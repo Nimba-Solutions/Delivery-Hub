@@ -8,11 +8,20 @@
 @SuppressWarnings('PMD.ApexDoc, PMD.AvoidGlobalModifier')
 global with sharing class DeliveryDashboardCardController {
 
-    /** @description Terminal stages excluded from active-scope card counts (CMT-driven cross-type union). */
+    /**
+     * @description Stages excluded from the canonical "active work item" scope used by
+     * every count tile on this controller. This is the EFFORT-terminal set —
+     * getAllTerminalStageValues() (Done, Cancelled, cross-type union) PLUS
+     * 'Deployed to Prod' — because a Deployed-to-Prod item carries no remaining
+     * delivery effort and belongs to the Close Outs tab, not the in-flight counts.
+     * Using the effort-terminal set here is the one decision that keeps the Exec
+     * activeWorkItems tile, System Pulse activeRequests, the What's-In-Flight phase
+     * buckets, and the In_Flight_Work_Items report all agreeing on one number.
+     */
     private static Set<String> terminalStages {
         get {
             if (terminalStages == null) {
-                terminalStages = DeliveryWorkflowConfigService.getAllTerminalStageValues();
+                terminalStages = DeliveryWorkflowConfigService.getAllEffortTerminalStageValues();
             }
             return terminalStages;
         }
@@ -50,12 +59,12 @@ global with sharing class DeliveryDashboardCardController {
             when 'activeWorkItems' {
                 // Canonical "active" definition, shared with System Pulse
                 // (DeliveryHubDashboardController.getBudgetMetrics.activeRequests):
-                // activated + non-archived + non-template + NON-TERMINAL stage.
-                // Pre-fix this count was missing the terminal-stage exclusion, so
-                // Done/Cancelled items still counted as "Active" and the Exec
-                // Dashboard disagreed with System Pulse (155 vs 110 on live data).
-                Set<String> terminalStages =
-                    DeliveryWorkflowConfigService.getTerminalStageValues('Software_Delivery');
+                // activated + non-archived + non-template + NON-EFFORT-TERMINAL stage.
+                // Uses the class-level effort-terminal set (Done, Cancelled, AND
+                // Deployed to Prod) — so a shipped-but-unverified item no longer counts
+                // as in-flight. Pre-fix this used the plain Software_Delivery terminal
+                // set, which excluded only Done/Cancelled, so Deployed-to-Prod inflated
+                // the "Active" headline and disagreed with the In_Flight report.
                 return [
                     SELECT COUNT() FROM WorkItem__c
                     WHERE ActivatedDateTime__c != NULL
@@ -138,6 +147,13 @@ global with sharing class DeliveryDashboardCardController {
                 return data;
             }
             when 'workItemsByPhase' {
+                // What's-In-Flight stage breakdown. Computed over the SAME canonical
+                // active universe as activeWorkItems (activated + non-archived +
+                // non-template + non-effort-terminal) so the per-stage buckets SUM
+                // EXACTLY to the headline Active count. Because the effort-terminal set
+                // excludes Deployed to Prod, no Deployment bucket of shipped items
+                // appears here. No LIMIT — stage values are bounded by the workflow CMT,
+                // and a LIMIT would silently drop stages and break the sum invariant.
                 List<Map<String, Object>> data = new List<Map<String, Object>>();
                 for (AggregateResult ar : [
                     SELECT StageNamePk__c label, COUNT(Id) cnt
@@ -145,10 +161,10 @@ global with sharing class DeliveryDashboardCardController {
                     WHERE ActivatedDateTime__c != NULL
                     AND ArchivedDateTime__c = NULL
                     AND TemplateMarkedDateTime__c = NULL
+                    AND StageNamePk__c NOT IN :terminalStages
                     WITH SYSTEM_MODE
                     GROUP BY StageNamePk__c
                     ORDER BY COUNT(Id) DESC
-                    LIMIT 10
                 ]) {
                     data.add(new Map<String, Object>{
                         'label' => ar.get('label'),

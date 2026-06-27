@@ -24,14 +24,36 @@
     <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageEnteredDateTime__c</field>
     </columns>
-    <description>Work items in the Approval phase: Tech Review through Final Approval.</description>
+    <description>Active work items in the Approval phase: Ready for Tech Review, Tech Reviewing, Ready for Final Approval, Final Approving. Reflects the real pending-approval population (the live stages the approval service writes).</description>
     <filter>
+        <booleanFilter>1 AND 2 AND 3 AND 4</booleanFilter>
         <criteriaItems>
             <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>equals</operator>
             <value>Ready for Tech Review,Tech Reviewing,Ready for Final Approval,Final Approving</value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ActivatedDateTime__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>notEqual</operator>
+            <value></value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ArchivedDateTime__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>equals</operator>
+            <value></value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%TemplateMarkedDateTime__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>equals</operator>
+            <value></value>
         </criteriaItems>
     </filter>
     <format>Tabular</format>

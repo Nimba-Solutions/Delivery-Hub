@@ -206,6 +206,57 @@ private class DeliveryDashboardCardControllerTest {
     }
 
     /**
+     * @description The discriminating test for the effort-terminal switch: an active
+     *              Deployed-to-Prod item must NOT count as active (it is shipped,
+     *              awaiting verification — Close Outs, not in-flight) and must NOT
+     *              appear in any What's-In-Flight stage bucket. Also proves the
+     *              invariant the whole fix exists to guarantee: the per-stage buckets
+     *              SUM EXACTLY to the headline activeWorkItems count.
+     */
+    @IsTest
+    static void testActiveExcludesDeployedAndPhaseBucketsSum() {
+        // Counted as ACTIVE: activated, non-archived, non-template, non-effort-terminal.
+        TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'In Development' });
+        TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'In Development' });
+        TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'Ready for Tech Review' });
+        // Excluded — Deployed to Prod is EFFORT-terminal (shipped, awaiting verification).
+        TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'Deployed to Prod' });
+        // Excluded — Done is terminal.
+        TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'Done' });
+        // Excluded — archived.
+        TestDataFactory.createWorkItem(new Map<String, Object>{
+            'StageNamePk__c' => 'In Development', 'ArchivedDateTime__c' => Datetime.now() });
+        // Excluded — template.
+        TestDataFactory.createWorkItem(new Map<String, Object>{
+            'StageNamePk__c' => 'In Development', 'TemplateMarkedDateTime__c' => Datetime.now() });
+        // Excluded — unactivated (createWorkItem bypasses the auto-stamp trigger).
+        TestDataFactory.createWorkItem(new Map<String, Object>{
+            'StageNamePk__c' => 'Backlog', 'ActivatedDateTime__c' => null });
+
+        Test.startTest();
+        Integer active = (Integer) DeliveryDashboardCardController.getCardData('activeWorkItems', null);
+        List<Object> phases = (List<Object>) DeliveryDashboardCardController.getCardData('workItemsByPhase', null);
+        Test.stopTest();
+
+        System.assertEquals(3, active,
+            'Active = 2 In Development + 1 Ready for Tech Review; excludes Deployed-to-Prod, Done, '
+            + 'archived, template, and unactivated rows');
+
+        Integer bucketSum = 0;
+        for (Object o : phases) {
+            Map<String, Object> bucket = (Map<String, Object>) o;
+            String label = (String) bucket.get('label');
+            System.assertNotEquals('Deployed to Prod', label,
+                'Deployed to Prod must not surface as an in-flight stage bucket');
+            System.assertNotEquals('Done', label,
+                'Done must not surface as an in-flight stage bucket');
+            bucketSum += (Integer) bucket.get('value');
+        }
+        System.assertEquals(active, bucketSum,
+            'Per-stage What\'s-In-Flight buckets must sum EXACTLY to the active headline count');
+    }
+
+    /**
      * @description Regression guard for the hoursThisMonth work-date fix: the card
      *              must sum by WorkDateDate__c (when the work happened) with a
      *              CreatedDate fallback only for rows where the work date is null —
