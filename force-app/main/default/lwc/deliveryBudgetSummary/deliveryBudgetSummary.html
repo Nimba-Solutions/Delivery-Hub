@@ -1,4 +1,5 @@
 <template>
+    <template lwc:if={isNotHiddenOnHome}>
     <lightning-card title="System Pulse" icon-name="standard:service_report">
         
         <div slot="actions" class="slds-grid slds-grid_vertical-align-center" style="gap: 0.25rem;">
@@ -99,4 +100,5 @@
             </div>
         </div>
     </lightning-card>
+    </template>
 </template>

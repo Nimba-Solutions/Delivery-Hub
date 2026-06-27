@@ -10,12 +10,17 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, wire, track } from 'lwc';
+import { CurrentPageReference } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getInbox from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureApprovalService.getInbox';
 import grantApex from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureApprovalService.grant';
 import rejectApex from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureApprovalService.reject';
 import getApprovalChain from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureApprovalService.getApprovalChain';
+import getHiddenHomeComponents from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents';
+
+// This component's key in the Home-visibility map (matches its LWC folder name).
+const HOME_COMPONENT_KEY = 'deliveryFeatureApprovalInbox';
 
 const REASON_TRUNCATE_AT = 160,
     ELLIPSIS = '…',
@@ -40,6 +45,38 @@ export default class DeliveryFeatureApprovalInbox extends LightningElement {
     @track chainRequestLabel = '';
 
     wiredResult;
+
+    // ── Home-page visibility (admin-toggleable, default = shown) ──
+    // Hides ONLY on the Delivery Hub app Home page when an admin toggles it
+    // off in Settings. Everywhere else this component always renders.
+    @wire(CurrentPageReference) _homePageRef;
+    @wire(getHiddenHomeComponents) _hiddenHomeComponents;
+
+    get isOnHomePage() {
+        const ref = this._homePageRef;
+        if (!ref) {
+            return false;
+        }
+        const attrs = ref.attributes || {};
+        if (ref.type === 'standard__namedPage' && attrs.pageName === 'home') {
+            return true;
+        }
+        const url = attrs.url
+            || (typeof window !== 'undefined' && window.location ? window.location.pathname : '');
+        return typeof url === 'string' && url.indexOf('/lightning/page/home') !== -1;
+    }
+
+    get isHiddenOnHome() {
+        if (!this.isOnHomePage) {
+            return false;
+        }
+        const map = this._hiddenHomeComponents && this._hiddenHomeComponents.data;
+        return !!(map && map[HOME_COMPONENT_KEY] === true);
+    }
+
+    get isNotHiddenOnHome() {
+        return !this.isHiddenOnHome;
+    }
 
     @wire(getInbox)
     wiredInbox(result) {

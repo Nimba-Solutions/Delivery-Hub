@@ -1254,6 +1254,37 @@ private class DeliveryGanttControllerTest {
     }
 
     @IsTest
+    static void testCommitReorderWithoutPriorityGroupDerivesBucket() {
+        System.runAs(testUser) {
+            List<Id> ids = seedBucketItems();
+            // Within-lane drag: NG omits priorityGroup because the bucket didn't
+            // change. The committer must derive the destination bucket from the
+            // task's own effective group (resolveEffectiveGroup) instead of
+            // throwing 'reorder patch with position needs priorityGroup'.
+            String patchesJson = JSON.serialize(new List<Object>{
+                new Map<String, Object>{
+                    'taskId' => ids[3],
+                    'kind' => 'reorder',
+                    'reorderPayload' => new Map<String, Object>{
+                        'position' => 'above-all'
+                    }
+                }
+            });
+            Test.startTest();
+            Map<String, Object> result = DeliveryGanttController.commitGanttPatches(patchesJson, null);
+            Test.stopTest();
+
+            System.assertEquals(true, result.get('ok'), 'Within-lane reorder commits via the derived bucket');
+            System.assertEquals(1, result.get('committed'), 'One reorder patch committed');
+            Map<Id, WorkItem__c> updated = new Map<Id, WorkItem__c>(
+                [SELECT Id, SortOrderNumber__c FROM WorkItem__c WHERE Id IN :ids]
+            );
+            System.assertEquals(1, updated.get(ids[3]).SortOrderNumber__c,
+                'Moved item lands at position 1 in its derived (active) bucket');
+        }
+    }
+
+    @IsTest
     static void testReorderDenseBelowAllRenumbersBucketTo1N() {
         System.runAs(testUser) {
             List<Id> ids = seedBucketItems();

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableAutoActivateDateTime__c</fullName>
+    <description>When non-null, inbound requests (e.g. the Report Issue ghost recorder) are auto-activated on creation and appear straight on the Board/Timeline, as legacy behavior did. Null = intake-first (default, safe): inbound requests land un-activated in the Intake queue for a triager to review and activate. The org-default null gives MF the triage-first flow; the quickstart connection stamps this so a fresh install's board populates immediately. Inverted from the usual Enable pattern only in default meaning: here null is the intended product default (intake-first), matching the inverted-default convention used by BypassAuditPassDateTime__c.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set to a date/time to auto-activate new inbound requests onto the Board immediately. Leave blank for intake-first (inbound requests wait in the Intake queue until a triager activates them).</inlineHelpText>
+    <label>Enable Auto-Activate Inbound</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
