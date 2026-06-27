@@ -1,4 +1,5 @@
 <template>
+    <template lwc:if={isNotHiddenOnHome}>
     <template lwc:if={isVisible}>
 
         <!-- ── Mothership: this org is the Cloud Nimbus host ── -->
@@ -149,4 +150,5 @@
     <div class="hs-powered-by">
         Powered by <a href="https://cloudnimbusllc.com" target="_blank" rel="noopener noreferrer">Cloud Nimbus LLC</a>
     </div>
+    </template>
 </template>

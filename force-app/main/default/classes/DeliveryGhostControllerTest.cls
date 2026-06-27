@@ -48,8 +48,36 @@ private class DeliveryGhostControllerTest {
             System.assertEquals('[Bug] Test Issue - Something is broken', t.BriefDescriptionTxt__c, 'Work Item Name should include [Bug] prefix and description');
             System.assertEquals('High', t.PriorityPk__c, 'Priority should match');
             System.assert(t.DetailsTxt__c.contains('Auto-Captured Context'), 'Details should contain context header');
-            System.assertNotEquals(null, t.ActivatedDateTime__c, 'Ghost Reporter workItem should be active');
+            // Intake-first is the default (EnableAutoActivateDateTime__c null in
+            // the test context): an inbound ghost request is NOT auto-activated —
+            // it stays un-activated so it lands in the Intake queue for triage.
+            System.assertEquals(null, t.ActivatedDateTime__c, 'Ghost Reporter workItem should be intake-first (un-activated) by default');
             System.assertEquals('New', t.StatusPk__c, 'Ghost Reporter workItem should have New status');
+        }
+    }
+
+    /**
+     * @description When EnableAutoActivateDateTime__c is set on the org, an
+     *              inbound ghost request IS auto-activated on creation (legacy /
+     *              post-quickstart behavior) and appears straight on the board
+     *              rather than waiting in Intake.
+     */
+    @IsTest
+    static void testCreateQuickRequestAutoActivateWhenEnabled() {
+        System.runAs(testUser) {
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            settings.EnableAutoActivateDateTime__c = Datetime.now();
+            upsert settings;
+
+            Test.startTest();
+            Id workItemId = DeliveryGhostController.createQuickRequest(
+                'Auto activate', 'desc', 'Medium', null, 'Bug'
+            );
+            Test.stopTest();
+
+            WorkItem__c t = [SELECT ActivatedDateTime__c FROM WorkItem__c WHERE Id = :workItemId LIMIT 1];
+            System.assertNotEquals(null, t.ActivatedDateTime__c,
+                'With auto-activate enabled, the inbound request should be activated onto the board');
         }
     }
 

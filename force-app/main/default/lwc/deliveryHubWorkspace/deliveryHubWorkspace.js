@@ -12,7 +12,11 @@ import { LightningElement, track, wire } from 'lwc';
 import isAdminUser from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.isAdminUser';
 
 export default class DeliveryHubWorkspace extends LightningElement {
-    @track activeTab = 'board';
+    // Intake is the default landing tab: it's the front-of-pipe queue where the
+    // urgent, just-arrived work sits, so the triager opens straight onto it.
+    // Buyers (non-admins) are redirected to Approvals below — Intake reads empty
+    // for them since the Apex scopes it to triagers.
+    @track activeTab = 'intake';
     @track isAdmin = false;
     _userPicked = false;
     // Tells the embedded Quick Request component to reset-in-place on submit

@@ -528,10 +528,15 @@ public without sharing class DeliveryWorkItemTriggerHandler {
      */
     public static void handleBeforeInsert(List<WorkItem__c> newWorkItems) {
         Datetime now = Datetime.now();
-        // When the inbound-sync ingestor is performing the insert, the source
-        // org owns ActivatedDateTime__c — skip receiver-side auto-population so
-        // the source's value (often null for non-active items) is preserved.
-        Boolean skipAutoActivate = DeliveryTriggerControl.inboundSyncContext;
+        // Skip the receiver-side auto-activate when either (a) the inbound-sync
+        // ingestor is performing the insert — the source org owns
+        // ActivatedDateTime__c, so its value (often null for non-active items)
+        // is preserved; or (b) an inbound-request path (the Report Issue ghost
+        // recorder) has opted this insert into intake-first, so the new request
+        // stays un-activated and lands in the Intake queue for triage instead of
+        // appearing straight on the Board.
+        Boolean skipAutoActivate = DeliveryTriggerControl.inboundSyncContext
+            || DeliveryTriggerControl.suppressAutoActivate;
         for (WorkItem__c workItem : newWorkItems) {
             if (!skipAutoActivate && workItem.ActivatedDateTime__c == null) {
                 workItem.ActivatedDateTime__c = now;

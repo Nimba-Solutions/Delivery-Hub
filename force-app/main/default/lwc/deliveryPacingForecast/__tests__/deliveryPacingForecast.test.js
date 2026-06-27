@@ -8,8 +8,12 @@
  * @author       Cloud Nimbus LLC
  */
 import { createElement } from "lwc";
+import { CurrentPageReference } from "lightning/navigation";
 import DeliveryPacingForecast from "c/deliveryPacingForecast";
 import getPortfolioPacing from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHoursAnalyticsController.getPortfolioPacing";
+import getHiddenHomeComponents from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents";
+
+const HOME_PAGE_REF = { type: "standard__namedPage", attributes: { pageName: "home" } };
 
 function samplePacing(overrides = {}) {
     return {
@@ -168,5 +172,26 @@ describe("c-delivery-pacing-forecast", () => {
 
         const err = element.shadowRoot.querySelector(".pacing-error");
         expect(err).not.toBeNull();
+    });
+
+    // ── Home-page visibility ─────────────────────────────────────
+    it("renders the card on Home when not hidden in Settings", async () => {
+        const element = createComponent();
+        CurrentPageReference.emit(HOME_PAGE_REF);
+        getHiddenHomeComponents.emit({ deliveryPacingForecast: false });
+        getPortfolioPacing.emit(samplePacing());
+        await flushPromises();
+
+        expect(element.shadowRoot.querySelector(".pacing-card")).not.toBeNull();
+    });
+
+    it("renders nothing on Home when hidden in Settings", async () => {
+        const element = createComponent();
+        CurrentPageReference.emit(HOME_PAGE_REF);
+        getHiddenHomeComponents.emit({ deliveryPacingForecast: true });
+        getPortfolioPacing.emit(samplePacing());
+        await flushPromises();
+
+        expect(element.shadowRoot.querySelector(".pacing-card")).toBeNull();
     });
 });

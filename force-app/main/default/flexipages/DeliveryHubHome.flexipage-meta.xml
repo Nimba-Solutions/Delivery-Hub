@@ -3,6 +3,12 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryIntakeQueue</componentName>
+                <identifier>c_deliveryIntakeQueue_home</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryGettingStarted</componentName>
                 <identifier>c_deliveryGettingStarted</identifier>
             </componentInstance>

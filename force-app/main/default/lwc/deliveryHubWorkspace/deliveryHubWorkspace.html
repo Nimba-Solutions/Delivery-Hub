@@ -1,6 +1,16 @@
 <template>
     <lightning-tabset variant="scoped" active-tab-value={activeTab} onactive={handleTabChange}>
 
+        <!-- Front of the pipeline: inbound work that arrived but was never activated
+             onto the timeline (ActivatedDateTime = null → invisible on the board/Gantt).
+             Placed FIRST so the triager lands on the urgent intake queue. The triager
+             routes each item to a dev (assign + advance + activate) or resolves it.
+             Ungated like Approvals — the Apex scopes the data, so a non-triager just
+             sees an empty queue. -->
+        <lightning-tab label="Intake" value="intake" icon-name="standard:work_queue">
+            <c-delivery-intake-queue></c-delivery-intake-queue>
+        </lightning-tab>
+
         <lightning-tab label="Board" value="board" icon-name="standard:kanban">
             <c-delivery-hub-board></c-delivery-hub-board>
         </lightning-tab>
@@ -23,15 +33,6 @@
 
         <lightning-tab label="Guide" value="guide" icon-name="standard:knowledge">
             <c-delivery-guide></c-delivery-guide>
-        </lightning-tab>
-
-        <!-- Front of the pipeline: inbound work that arrived but was never activated
-             onto the timeline (ActivatedDateTime = null → invisible on the board/Gantt).
-             The triager routes each item to a dev (assign + advance + activate) or
-             resolves it. Ungated like Approvals — the Apex scopes the data, so a
-             non-triager just sees an empty queue. -->
-        <lightning-tab label="Intake" value="intake" icon-name="standard:work_queue">
-            <c-delivery-intake-queue></c-delivery-intake-queue>
         </lightning-tab>
 
         <!-- Buyer-facing surfaces, hosted here (the package-owned "Delivery" tab) so they

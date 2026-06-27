@@ -1,0 +1,51 @@
+<template>
+    <div class="settings-card">
+        <div class="card-header">
+            <div class="header-content">
+                <div class="header-icon">
+                    <lightning-icon icon-name="utility:preview" alternative-text="Home Page Visibility" size="small"></lightning-icon>
+                </div>
+                <div class="header-text">
+                    <h2 class="card-title">Home Page Visibility (Delivery Hub app)</h2>
+                    <p class="card-subtitle">Choose which cards appear on the Delivery Hub app Home page. Turn a card off to hide it; turn it back on to show it again. Default is shown.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body">
+
+            <div class="section-heading">
+                <lightning-icon icon-name="utility:layout" alternative-text="Home" size="xx-small"></lightning-icon>
+                <span class="section-heading-text">Show on Home Page</span>
+            </div>
+
+            <template for:each={toggles} for:item="toggle">
+                <div key={toggle.key} class="form-section">
+                    <div class="toggle-group">
+                        <div class="toggle-content">
+                            <div class="toggle-label-wrapper">
+                                <label class="toggle-label">{toggle.label}</label>
+                            </div>
+                            <div class="toggle-help">
+                                {toggle.help}
+                            </div>
+                        </div>
+                        <div class="toggle-control">
+                            <div class="custom-toggle">
+                                <lightning-input
+                                    type="toggle"
+                                    label="Show on Home"
+                                    variant="label-hidden"
+                                    data-key={toggle.key}
+                                    checked={toggle.shown}
+                                    onchange={handleToggle}>
+                                </lightning-input>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+        </div>
+    </div>
+</template>
