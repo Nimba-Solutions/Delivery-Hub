@@ -172,7 +172,7 @@ private class DeliveryTriageControllerTest {
             SELECT StageNamePk__c, DeveloperLookup__c, ActivatedDateTime__c
             FROM WorkItem__c WHERE Id = :wi.Id
         ];
-        System.assertEquals('Ready for Development', after.StageNamePk__c, 'advanced to dev');
+        System.assertEquals('Ready for Sizing', after.StageNamePk__c, 'handed off to the start of the workflow');
         System.assertEquals(dev, after.DeveloperLookup__c, 'developer assigned');
         System.assertNotEquals(null, after.ActivatedDateTime__c,
             'activated so it becomes visible on the timeline');

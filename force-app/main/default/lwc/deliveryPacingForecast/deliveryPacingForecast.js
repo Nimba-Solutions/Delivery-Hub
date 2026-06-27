@@ -13,7 +13,12 @@
  * @author       Cloud Nimbus LLC
  */
 import { LightningElement, track, wire } from "lwc";
+import { CurrentPageReference } from "lightning/navigation";
 import getPortfolioPacing from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHoursAnalyticsController.getPortfolioPacing";
+import getHiddenHomeComponents from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents";
+
+// This component's key in the Home-visibility map (matches its LWC folder name).
+const HOME_COMPONENT_KEY = "deliveryPacingForecast";
 
 const SVG_WIDTH = 760;
 const SVG_HEIGHT = 320;
@@ -34,6 +39,10 @@ export default class DeliveryPacingForecast extends LightningElement {
     granularity = "Month";
     horizon = "3";
 
+    // ── Home-page visibility (admin-toggleable, default = shown) ──
+    @wire(CurrentPageReference) _homePageRef;
+    @wire(getHiddenHomeComponents) _hiddenHomeComponents;
+
     @wire(getPortfolioPacing, {
         granularity: "$granularity",
         periodsBack: "$_periodsBack",
@@ -48,6 +57,36 @@ export default class DeliveryPacingForecast extends LightningElement {
             this.errorMessage = error.body ? error.body.message : error.message;
             this.pacing = null;
         }
+    }
+
+    // ── Home-page visibility getters ─────────────────────────────
+    // The card hides ONLY on the app Home page when an admin has toggled it
+    // off in Settings. Everywhere else it always renders.
+
+    get isOnHomePage() {
+        const ref = this._homePageRef;
+        if (!ref) {
+            return false;
+        }
+        const attrs = ref.attributes || {};
+        if (ref.type === "standard__namedPage" && attrs.pageName === "home") {
+            return true;
+        }
+        const url = attrs.url
+            || (typeof window !== "undefined" && window.location ? window.location.pathname : "");
+        return typeof url === "string" && url.indexOf("/lightning/page/home") !== -1;
+    }
+
+    get isHiddenOnHome() {
+        if (!this.isOnHomePage) {
+            return false;
+        }
+        const map = this._hiddenHomeComponents && this._hiddenHomeComponents.data;
+        return !!(map && map[HOME_COMPONENT_KEY] === true);
+    }
+
+    get isNotHiddenOnHome() {
+        return !this.isHiddenOnHome;
     }
 
     // ── Wire inputs ──────────────────────────────────────────────

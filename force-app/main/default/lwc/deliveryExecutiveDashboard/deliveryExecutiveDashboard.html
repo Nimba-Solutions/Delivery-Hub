@@ -1,4 +1,5 @@
 <template>
+    <template lwc:if={isNotHiddenOnHome}>
     <lightning-card title="Executive Dashboard" icon-name="utility:metrics">
         <div slot="actions" class="slds-grid slds-grid_vertical-align-center" style="gap: 0.25rem;">
             <c-delivery-info-popover component-name="deliveryExecutiveDashboard"></c-delivery-info-popover>
@@ -116,4 +117,5 @@
             </template>
         </template>
     </lightning-card>
+    </template>
 </template>

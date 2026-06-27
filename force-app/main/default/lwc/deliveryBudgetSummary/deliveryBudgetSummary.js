@@ -11,19 +11,55 @@
  * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, track, wire } from 'lwc';
-import { NavigationMixin } from 'lightning/navigation';
+import { NavigationMixin, CurrentPageReference } from 'lightning/navigation';
 import SYNC_ITEM_OBJECT from '@salesforce/schema/SyncItem__c';
 import WORK_ITEM_OBJECT from '@salesforce/schema/WorkItem__c';
 import WORK_LOG_OBJECT from '@salesforce/schema/WorkLog__c';
 import getBudgetMetrics from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getBudgetMetrics';
 import getReportIds from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getReportIds';
+import getHiddenHomeComponents from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents';
 import { refreshApex } from '@salesforce/apex';
+
+// This component's key in the Home-visibility map (matches its LWC folder name).
+const HOME_COMPONENT_KEY = 'deliveryBudgetSummary';
 
 export default class DeliveryBudgetSummary extends NavigationMixin(LightningElement) {
     @api hideConnectionHealth = false;
 
     get shouldShowConnectionHealth() {
         return !this.hideConnectionHealth;
+    }
+
+    // ── Home-page visibility (admin-toggleable, default = shown) ──
+    // Hides ONLY on the Delivery Hub app Home page when an admin toggles it
+    // off in Settings. Everywhere else this component always renders.
+    @wire(CurrentPageReference) _homePageRef;
+    @wire(getHiddenHomeComponents) _hiddenHomeComponents;
+
+    get isOnHomePage() {
+        const ref = this._homePageRef;
+        if (!ref) {
+            return false;
+        }
+        const attrs = ref.attributes || {};
+        if (ref.type === 'standard__namedPage' && attrs.pageName === 'home') {
+            return true;
+        }
+        const url = attrs.url
+            || (typeof window !== 'undefined' && window.location ? window.location.pathname : '');
+        return typeof url === 'string' && url.indexOf('/lightning/page/home') !== -1;
+    }
+
+    get isHiddenOnHome() {
+        if (!this.isOnHomePage) {
+            return false;
+        }
+        const map = this._hiddenHomeComponents && this._hiddenHomeComponents.data;
+        return !!(map && map[HOME_COMPONENT_KEY] === true);
+    }
+
+    get isNotHiddenOnHome() {
+        return !this.isHiddenOnHome;
     }
 
     @track metrics = {
