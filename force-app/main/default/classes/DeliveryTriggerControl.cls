@@ -17,6 +17,15 @@ public with sharing class DeliveryTriggerControl {
     // regardless of source state, which corrupts the Delivery Timeline view.
     public static Boolean inboundSyncContext = false;
 
+    // Inbound-request paths (e.g. the Report Issue ghost recorder) set this true
+    // around their insert when the org runs intake-first (auto-activate off) so
+    // the before-insert handler does NOT stamp ActivatedDateTime__c. That leaves
+    // the new request un-activated → it lands in the Intake queue for triage
+    // instead of appearing straight on the Board. Scoped per-insert: only the
+    // path that sets it is affected; the board, cart, and every other creation
+    // path keep their existing auto-activate behavior.
+    public static Boolean suppressAutoActivate = false;
+
     /**
      * @description Disables the after-trigger logic that enqueues jobs.
      */

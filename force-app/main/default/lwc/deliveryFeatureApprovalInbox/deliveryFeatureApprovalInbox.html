@@ -1,4 +1,5 @@
 <template>
+    <template lwc:if={isNotHiddenOnHome}>
     <lightning-card title="Pending Approvals" icon-name="standard:approval">
         <div slot="actions" class="slds-grid slds-grid_vertical-align-center" style="gap: 0.25rem;">
             <c-delivery-info-popover component-name="deliveryFeatureApprovalInbox"></c-delivery-info-popover>
@@ -159,5 +160,6 @@
             </div>
         </section>
         <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
     </template>
 </template>

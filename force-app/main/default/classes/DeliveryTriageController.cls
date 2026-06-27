@@ -38,8 +38,11 @@ public with sharing class DeliveryTriageController {
     private static final String STAGE_DEPLOYED_TO_PROD =
         DeliveryWorkflowConfigService.STAGE_DEPLOYED_TO_PROD;
 
-    /** Stage routeToDev moves an intake item into (and activates it). */
-    private static final String STAGE_READY_FOR_DEVELOPMENT = 'Ready for Development';
+    /** Stage routeToDev hands an intake item into (and activates it). A raw
+     *  inbound request isn't sized/estimated/approved yet, so hand-off lands it
+     *  at the START of the real workflow — Ready for Sizing — not at
+     *  Ready for Development (which would falsely signal it's ready to code). */
+    private static final String STAGE_READY_FOR_SIZING = 'Ready for Sizing';
 
     /** Terminal value markDone / dismissIntake fall back to. */
     private static final String STAGE_DONE = 'Done';
@@ -248,17 +251,19 @@ public with sharing class DeliveryTriageController {
     }
 
     /**
-     * @description Route the selected intake items to a developer: assign the
-     *              developer lookup, move to 'Ready for Development', and stamp
-     *              ActivatedDateTime__c = now() so each becomes visible on the
-     *              timeline. Bulk, partial-failure-safe.
-     * @param workItemIds   Items to route.
+     * @description Hand the selected intake items off into the delivery
+     *              workflow: assign the developer lookup, move to
+     *              'Ready for Sizing' (the start of the real workflow — the item
+     *              still needs sizing/estimation/approval before it's ready to
+     *              code), and stamp ActivatedDateTime__c = now() so each becomes
+     *              visible on the board/timeline. Bulk, partial-failure-safe.
+     * @param workItemIds   Items to hand off.
      * @param developerUserId The User to assign (may be null to route unassigned).
      * @return BulkResultDTO with succeeded ids and per-row failures.
      */
     @AuraEnabled
     public static BulkResultDTO routeToDev(List<Id> workItemIds, Id developerUserId) {
-        return applyStageUpdate(workItemIds, STAGE_READY_FOR_DEVELOPMENT, developerUserId, true);
+        return applyStageUpdate(workItemIds, STAGE_READY_FOR_SIZING, developerUserId, true);
     }
 
     /**

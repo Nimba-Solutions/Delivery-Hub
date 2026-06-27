@@ -87,14 +87,19 @@ global with sharing class DeliveryGhostController {
             t.DetailsTxt__c = fullDescription;
             t.PriorityPk__c = priority;
             t.StageNamePk__c = 'Backlog';
-            t.ActivatedDateTime__c = Datetime.now();
+            // Inbound requests are NOT activated on creation. Leaving
+            // ActivatedDateTime__c null routes the request into the Intake
+            // queue (front of pipe) for a triager to review and activate onto
+            // the Board — activation = stamping ActivatedDateTime__c, which is
+            // what makes the item appear on the Board/Gantt. Auto-activating
+            // here would skip Intake entirely (the item would land straight on
+            // the Board), which defeats the triage step.
             t.StatusPk__c = 'New';
 
-            if (Schema.sObjectType.WorkItem__c.isCreateable()) {
-                insert t;
-            } else {
-                throw new AuraHandledException('Insufficient permissions to create Work Item.');
-            }
+            // Insert honoring the intake-first org setting, then ping live
+            // subscribers so the new request pops into Intake — see
+            // persistInboundRequest.
+            persistInboundRequest(t);
 
             return t.Id;
 
@@ -107,6 +112,37 @@ global with sharing class DeliveryGhostController {
     }
 
     // ── Private Helpers ──────────────────────────────────────────────────
+
+    /**
+     * @description Inserts an inbound quick-request WorkItem honoring the
+     *              intake-first org setting, then pings live subscribers. When
+     *              EnableAutoActivateDateTime__c is null (default), the
+     *              before-insert trigger's auto-activate is suppressed for this
+     *              insert so the request lands un-activated in the Intake queue;
+     *              when set (e.g. post-quickstart) it auto-activates onto the
+     *              board as before. The suppress flag is reset in finally so it
+     *              never leaks to other DML in the request. The published
+     *              DeliveryWorkItemChange__e lets the Intake queue refresh live.
+     * @param t The WorkItem to insert (assigned its new Id in place).
+     */
+    private static void persistInboundRequest(WorkItem__c t) {
+        if (!Schema.sObjectType.WorkItem__c.isCreateable()) {
+            throw new AuraHandledException('Insufficient permissions to create Work Item.');
+        }
+        Boolean autoActivate = DeliveryHubSettings__c.getInstance().EnableAutoActivateDateTime__c != null;
+        if (!autoActivate) {
+            DeliveryTriggerControl.suppressAutoActivate = true;
+        }
+        try {
+            insert t; //NOPMD - with sharing class handles CRUD; isCreateable checked above
+        } finally {
+            DeliveryTriggerControl.suppressAutoActivate = false;
+        }
+        EventBus.publish(new DeliveryWorkItemChange__e(
+            WorkItemIdTxt__c = t.Id,
+            ChangeTypeTxt__c = 'intake_new'
+        ));
+    }
 
     private static void populateFromContext(ActivityLog__c log, String contextData) {
         try {

@@ -10,6 +10,8 @@
  * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, track, wire } from 'lwc';
+import { CurrentPageReference } from 'lightning/navigation';
+import getHiddenHomeComponents from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents';
 import getSetupStatus from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSetupController.getSetupStatus';
 import prepareLocalEntity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSetupController.prepareLocalEntity';
 import performHandshake from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSetupController.performHandshake';
@@ -19,6 +21,9 @@ import approveConnection from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSe
 import rejectConnection from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubSetupController.rejectConnection';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
+
+// This component's key in the Home-visibility map (matches its LWC folder name).
+const HOME_COMPONENT_KEY = 'deliveryHubSetup';
 
 export default class DeliveryHubSetup extends LightningElement {
     /** When true, shows a persistent connected-state card after setup completes.
@@ -37,6 +42,38 @@ export default class DeliveryHubSetup extends LightningElement {
     _wiredStatusResult;
     _wiredPendingCountResult;
     _wiredPendingApprovalsResult;
+
+    // ── Home-page visibility (admin-toggleable, default = shown) ──
+    // Hides ONLY on the Delivery Hub app Home page when an admin toggles it
+    // off in Settings. Everywhere else this component always renders.
+    @wire(CurrentPageReference) _homePageRef;
+    @wire(getHiddenHomeComponents) _hiddenHomeComponents;
+
+    get isOnHomePage() {
+        const ref = this._homePageRef;
+        if (!ref) {
+            return false;
+        }
+        const attrs = ref.attributes || {};
+        if (ref.type === 'standard__namedPage' && attrs.pageName === 'home') {
+            return true;
+        }
+        const url = attrs.url
+            || (typeof window !== 'undefined' && window.location ? window.location.pathname : '');
+        return typeof url === 'string' && url.indexOf('/lightning/page/home') !== -1;
+    }
+
+    get isHiddenOnHome() {
+        if (!this.isOnHomePage) {
+            return false;
+        }
+        const map = this._hiddenHomeComponents && this._hiddenHomeComponents.data;
+        return !!(map && map[HOME_COMPONENT_KEY] === true);
+    }
+
+    get isNotHiddenOnHome() {
+        return !this.isHiddenOnHome;
+    }
 
     @wire(getSetupStatus)
     wiredStatus(result) {
