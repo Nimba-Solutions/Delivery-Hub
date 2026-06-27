@@ -18,7 +18,8 @@ export default class DeliverySettingsContainer extends LightningElement {
             { label: 'General', value: 'general' },
             { label: 'AI Features', value: 'ai' },
             { label: 'OpenAI', value: 'openai' },
-            { label: 'Home Visibility', value: 'homeVisibility' }
+            { label: 'Home Visibility', value: 'homeVisibility' },
+            { label: 'Delivery Visibility', value: 'deliveryVisibility' }
         ];
     }
 
@@ -36,6 +37,10 @@ export default class DeliverySettingsContainer extends LightningElement {
 
     get isHomeVisibilityActive() {
         return this.activeTab === 'homeVisibility';
+    }
+
+    get isDeliveryVisibilityActive() {
+        return this.activeTab === 'deliveryVisibility';
     }
 
     handleTabChange(event) {
