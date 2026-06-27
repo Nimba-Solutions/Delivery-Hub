@@ -24,7 +24,7 @@
     <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%HoursVarianceNumber__c</field>
     </columns>
-    <description>Work items completed (Done), modified THIS MONTH. Broader than the Completed (This Week) tile, which counts only the current week, so this total is expected to exceed the week tile.</description>
+    <description>Work items completed (Done), modified THIS WEEK. Matches the Completed (This Week) tile exactly.</description>
     <filter>
         <booleanFilter>1 AND 2 AND 3</booleanFilter>
         <criteriaItems>
@@ -39,7 +39,7 @@
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>equals</operator>
-            <value>THIS_MONTH</value>
+            <value>THIS_WEEK</value>
         </criteriaItems>
         <criteriaItems>
             <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%TemplateMarkedDateTime__c</column>
