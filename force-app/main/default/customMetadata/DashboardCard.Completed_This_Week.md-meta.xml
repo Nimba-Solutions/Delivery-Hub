@@ -16,5 +16,5 @@
     <values><field>ThresholdWarningNumber__c</field><value xsi:nil="true"/></values>
     <values><field>ThresholdCriticalNumber__c</field><value xsi:nil="true"/></values>
     <values><field>ClickThroughUrlTxt__c</field><value xsi:type="xsd:string">report:Recently_Completed</value></values>
-    <values><field>InfoPopoverTxt__c</field><value xsi:type="xsd:string">Counts non-template WorkItems whose stage is Done and that were last modified this week. Click the card to open the Recently Completed report (note: the report uses a this-MONTH window, so it can show more rows than this week's count).</value></values>
+    <values><field>InfoPopoverTxt__c</field><value xsi:type="xsd:string">Counts non-template WorkItems whose stage is Done and that were last modified this week. Click the card to open the Recently Completed report, which uses the same this-week window so its total matches this tile.</value></values>
 </CustomMetadata>
