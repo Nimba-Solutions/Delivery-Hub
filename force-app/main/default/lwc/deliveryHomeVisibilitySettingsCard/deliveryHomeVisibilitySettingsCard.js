@@ -14,7 +14,7 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getHiddenHomeComponents from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents';
 import setHiddenHomeComponents from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.setHiddenHomeComponents';
 
-// The 6 hideable home-page components, in display order. Keys MUST match both the
+// The hideable home-page components, in display order. Keys MUST match both the
 // LWC component names and the keys DeliveryHomeVisibilityController emits.
 const COMPONENTS = [
     {
@@ -46,6 +46,31 @@ const COMPONENTS = [
         key: 'deliveryPacingForecast',
         label: 'Portfolio Pacing & Forecast',
         help: 'Logged hours, amortized target, and run-rate forecast.'
+    },
+    {
+        key: 'deliveryIntakeQueue',
+        label: 'Intake Queue',
+        help: 'New inbound work to triage onto the timeline or resolve.'
+    },
+    {
+        key: 'deliveryApprovalQueue',
+        label: 'Pending Work Approvals',
+        help: 'Offer-Sent work requests awaiting a decision.'
+    },
+    {
+        key: 'deliveryApprovalSummaryCard',
+        label: 'Approval Agenda',
+        help: 'Hours approved, pending, and approved-in-flight tiles.'
+    },
+    {
+        key: 'deliveryFeatureCockpit',
+        label: 'Feature Cockpit',
+        help: 'The feature catalog with admin enable/disable toggles.'
+    },
+    {
+        key: 'deliveryClientDashboard',
+        label: 'Client Dashboard',
+        help: 'The client-facing greeting, attention, in-flight, and recent sections.'
     }
 ];
 

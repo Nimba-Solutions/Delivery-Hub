@@ -1,4 +1,5 @@
 <template>
+    <template lwc:if={isNotHiddenOnHome}>
     <lightning-card title="Feature Cockpit" icon-name="standard:apps">
 
         <div slot="actions" class="slds-grid slds-grid_vertical-align-center" style="gap: 0.25rem;">
@@ -181,5 +182,6 @@
             </div>
         </section>
         <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
     </template>
 </template>
