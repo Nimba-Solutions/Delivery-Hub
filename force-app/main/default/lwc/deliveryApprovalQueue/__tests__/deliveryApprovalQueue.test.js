@@ -10,11 +10,15 @@
  * @author       Cloud Nimbus LLC
  */
 import { createElement } from "lwc";
+import { CurrentPageReference } from "lightning/navigation";
 import DeliveryApprovalQueue from "c/deliveryApprovalQueue";
 import getPendingForApprover from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.getPendingForApprover";
 import approve from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.approve";
 import approveMany from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.approveMany";
 import decline from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.decline";
+import getHiddenHomeComponents from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents";
+
+const HOME_PAGE_REF = { type: "standard__namedPage", attributes: { pageName: "home" } };
 
 const REQUEST_ONE = "a0G000000000001AAA";
 const REQUEST_TWO = "a0G000000000002AAA";
@@ -383,5 +387,28 @@ describe("c-delivery-approval-queue", () => {
             workRequestIds: ["a0G000000000010AAA", "a0G000000000011AAA"],
             note: null
         });
+    });
+});
+
+describe("c-delivery-approval-queue home visibility", () => {
+    afterEach(() => {
+        while (document.body.firstChild) {
+            document.body.removeChild(document.body.firstChild);
+        }
+        jest.clearAllMocks();
+    });
+
+    it("renders by default when not hidden", async () => {
+        const element = createComponent();
+        await flushPromises();
+        expect(element.shadowRoot.querySelector(".queue-card")).not.toBeNull();
+    });
+
+    it("renders nothing on Home when hidden in Settings", async () => {
+        const element = createComponent();
+        CurrentPageReference.emit(HOME_PAGE_REF);
+        getHiddenHomeComponents.emit({ deliveryApprovalQueue: true });
+        await flushPromises();
+        expect(element.shadowRoot.querySelector(".queue-card")).toBeNull();
     });
 });

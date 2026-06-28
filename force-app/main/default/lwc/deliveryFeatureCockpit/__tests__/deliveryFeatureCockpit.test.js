@@ -1,9 +1,12 @@
 import { createElement } from 'lwc';
-import { NavigationMixin } from 'lightning/navigation';
+import { NavigationMixin, CurrentPageReference } from 'lightning/navigation';
 import DeliveryFeatureCockpit from 'c/deliveryFeatureCockpit';
 import getCatalog from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureCatalogController.getCatalog';
 import isAdminApex from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureCatalogController.isAdmin';
 import toggleFeature from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryFeatureCatalogController.toggleFeature';
+import getHiddenHomeComponents from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents';
+
+const HOME_PAGE_REF = { type: 'standard__namedPage', attributes: { pageName: 'home' } };
 
 // Apex methods auto-mocked via force-app/test/jest-mocks/apex/.
 
@@ -254,5 +257,28 @@ describe('c-delivery-feature-cockpit', () => {
             // No messageData on the fallback toast — pure-text message
             expect(detail.messageData).toBeUndefined();
         });
+    });
+});
+
+describe('c-delivery-feature-cockpit home visibility', () => {
+    afterEach(() => {
+        while (document.body.firstChild) {
+            document.body.removeChild(document.body.firstChild);
+        }
+        jest.clearAllMocks();
+    });
+
+    it('renders by default when not hidden', async () => {
+        const element = createComponent();
+        await flushPromises();
+        expect(element.shadowRoot.querySelector('lightning-card')).not.toBeNull();
+    });
+
+    it('renders nothing on Home when hidden in Settings', async () => {
+        const element = createComponent();
+        CurrentPageReference.emit(HOME_PAGE_REF);
+        getHiddenHomeComponents.emit({ deliveryFeatureCockpit: true });
+        await flushPromises();
+        expect(element.shadowRoot.querySelector('lightning-card')).toBeNull();
     });
 });

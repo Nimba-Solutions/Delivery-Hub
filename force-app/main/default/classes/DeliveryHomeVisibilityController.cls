@@ -20,7 +20,12 @@ public with sharing class DeliveryHomeVisibilityController {
         'deliveryFeatureApprovalInbox' => 'HideHomeFeatureApprovalInboxDateTime__c',
         'deliveryGettingStarted'       => 'HideHomeGettingStartedDateTime__c',
         'deliveryHubSetup'             => 'HideHomeHubSetupDateTime__c',
-        'deliveryPacingForecast'       => 'HideHomePacingForecastDateTime__c'
+        'deliveryPacingForecast'       => 'HideHomePacingForecastDateTime__c',
+        'deliveryIntakeQueue'          => 'HideHomeIntakeQueueDateTime__c',
+        'deliveryApprovalQueue'        => 'HideHomeApprovalQueueDateTime__c',
+        'deliveryApprovalSummaryCard'  => 'HideHomeApprovalSummaryCardDateTime__c',
+        'deliveryFeatureCockpit'       => 'HideHomeFeatureCockpitDateTime__c',
+        'deliveryClientDashboard'      => 'HideHomeClientDashboardDateTime__c'
     };
 
     /**

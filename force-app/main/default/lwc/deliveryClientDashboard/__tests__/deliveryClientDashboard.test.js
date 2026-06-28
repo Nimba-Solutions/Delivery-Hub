@@ -1,8 +1,12 @@
 import { createElement } from 'lwc';
+import { CurrentPageReference } from 'lightning/navigation';
 import DeliveryClientDashboard from 'c/deliveryClientDashboard';
 import getClientDashboard from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getClientDashboard';
 import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowConfig';
+import getHiddenHomeComponents from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents';
 import { getRecord } from 'lightning/uiRecordApi';
+
+const HOME_PAGE_REF = { type: 'standard__namedPage', attributes: { pageName: 'home' } };
 
 // ── Test Data ──────────────────────────────────────────────────────
 
@@ -284,5 +288,29 @@ describe('c-delivery-client-dashboard', () => {
             const spinner = element.shadowRoot.querySelector('lightning-spinner');
             expect(spinner).toBeNull();
         });
+    });
+});
+
+describe('c-delivery-client-dashboard home visibility', () => {
+    afterEach(() => {
+        while (document.body.firstChild) {
+            document.body.removeChild(document.body.firstChild);
+        }
+        jest.clearAllMocks();
+    });
+
+    it('renders by default when not hidden', async () => {
+        const element = createComponent();
+        await flushPromises();
+        // The "What's In Flight" card renders regardless of wire data.
+        expect(element.shadowRoot.querySelector('lightning-card')).not.toBeNull();
+    });
+
+    it('renders nothing on Home when hidden in Settings', async () => {
+        const element = createComponent();
+        CurrentPageReference.emit(HOME_PAGE_REF);
+        getHiddenHomeComponents.emit({ deliveryClientDashboard: true });
+        await flushPromises();
+        expect(element.shadowRoot.querySelector('lightning-card')).toBeNull();
     });
 });
