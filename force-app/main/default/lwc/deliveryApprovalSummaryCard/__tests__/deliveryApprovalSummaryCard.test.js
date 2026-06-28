@@ -11,8 +11,12 @@
  * @author       Cloud Nimbus LLC
  */
 import { createElement } from "lwc";
+import { CurrentPageReference } from "lightning/navigation";
 import DeliveryApprovalSummaryCard from "c/deliveryApprovalSummaryCard";
 import getApprovalSummary from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryApprovalSummaryController.getApprovalSummary";
+import getHiddenHomeComponents from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents";
+
+const HOME_PAGE_REF = { type: "standard__namedPage", attributes: { pageName: "home" } };
 
 const REPORT_ID_APPROVED = "00O000000000001AAA";
 const REPORT_ID_PENDING = "00O000000000002AAA";
@@ -135,5 +139,28 @@ describe("c-delivery-approval-summary-card", () => {
 
         expect(element.shadowRoot.querySelector(".agenda-error")).not.toBeNull();
         expect(element.shadowRoot.querySelector(".agenda-tile")).toBeNull();
+    });
+});
+
+describe("c-delivery-approval-summary-card home visibility", () => {
+    afterEach(() => {
+        while (document.body.firstChild) {
+            document.body.removeChild(document.body.firstChild);
+        }
+        jest.clearAllMocks();
+    });
+
+    it("renders by default when not hidden", async () => {
+        const element = createComponent();
+        await flushPromises();
+        expect(element.shadowRoot.querySelector(".agenda-card")).not.toBeNull();
+    });
+
+    it("renders nothing on Home when hidden in Settings", async () => {
+        const element = createComponent();
+        CurrentPageReference.emit(HOME_PAGE_REF);
+        getHiddenHomeComponents.emit({ deliveryApprovalSummaryCard: true });
+        await flushPromises();
+        expect(element.shadowRoot.querySelector(".agenda-card")).toBeNull();
     });
 });

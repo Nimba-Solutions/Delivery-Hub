@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>HideHomeApprovalSummaryCardDateTime__c</fullName>
+    <description>When non-null, hide the deliveryApprovalSummaryCard (Approval Agenda) card from the Delivery Hub app Home page. Null = SHOWN (default; safe). Inverted-name field (Hide, not Show) so the safe posture is the default null state, mirroring the LWC1503 inverted-prop convention. Fully reversible — clear the field to show the card again.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set to a date/time to hide the Approval Agenda card on the Home page. Leave blank to show it (default).</inlineHelpText>
+    <label>Hide Home Approval Summary Card</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
