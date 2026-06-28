@@ -10,10 +10,14 @@
  * @author       Cloud Nimbus LLC
  */
 import { createElement } from "lwc";
+import { CurrentPageReference } from "lightning/navigation";
 import DeliveryIntakeQueue from "c/deliveryIntakeQueue";
 import getIntakeItems from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTriageController.getIntakeItems";
 import routeToDev from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTriageController.routeToDev";
 import dismissIntake from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTriageController.dismissIntake";
+import getHiddenHomeComponents from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents";
+
+const HOME_PAGE_REF = { type: "standard__namedPage", attributes: { pageName: "home" } };
 
 const ITEM_ONE = "a42000000000001AAA";
 const ITEM_TWO = "a42000000000002AAA";
@@ -193,5 +197,28 @@ describe("c-delivery-intake-queue", () => {
         await flushPromises();
 
         expect(element.shadowRoot.querySelector(".queue-error")).not.toBeNull();
+    });
+});
+
+describe("c-delivery-intake-queue home visibility", () => {
+    afterEach(() => {
+        while (document.body.firstChild) {
+            document.body.removeChild(document.body.firstChild);
+        }
+        jest.clearAllMocks();
+    });
+
+    it("renders by default when not hidden", async () => {
+        const element = createComponent();
+        await flushPromises();
+        expect(element.shadowRoot.querySelector(".queue-card")).not.toBeNull();
+    });
+
+    it("renders nothing on Home when hidden in Settings", async () => {
+        const element = createComponent();
+        CurrentPageReference.emit(HOME_PAGE_REF);
+        getHiddenHomeComponents.emit({ deliveryIntakeQueue: true });
+        await flushPromises();
+        expect(element.shadowRoot.querySelector(".queue-card")).toBeNull();
     });
 });

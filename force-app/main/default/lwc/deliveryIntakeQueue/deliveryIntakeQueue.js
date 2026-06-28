@@ -20,7 +20,7 @@
  * @author       Cloud Nimbus LLC
  */
 import { LightningElement, wire } from "lwc";
-import { NavigationMixin } from "lightning/navigation";
+import { NavigationMixin, CurrentPageReference } from "lightning/navigation";
 import { refreshApex } from "@salesforce/apex";
 import { subscribe, unsubscribe, onError } from "lightning/empApi";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
@@ -28,13 +28,48 @@ import WORK_ITEM_OBJECT from "@salesforce/schema/WorkItem__c";
 import getIntakeItems from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTriageController.getIntakeItems";
 import routeToDevApex from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTriageController.routeToDev";
 import dismissIntakeApex from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTriageController.dismissIntake";
+import getHiddenHomeComponents from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents";
 
 const MS_PER_DAY = 86400000;
+// This component's key in the Home-visibility map (matches its LWC folder name).
+const HOME_COMPONENT_KEY = "deliveryIntakeQueue";
 // Real-time channel: the ghost recorder publishes here when a new inbound
 // request is created, so the queue refreshes live (no manual page reload).
 const PE_CHANNEL = "/event/%%%NAMESPACE_DOT%%%DeliveryWorkItemChange__e";
 
 export default class DeliveryIntakeQueue extends NavigationMixin(LightningElement) {
+    // ── Home-page visibility (admin-toggleable, default = shown) ──
+    // Hides ONLY on the Delivery Hub app Home page when an admin toggles it
+    // off in Settings. Everywhere else this component always renders.
+    @wire(CurrentPageReference) _homePageRef;
+    @wire(getHiddenHomeComponents) _hiddenHomeComponents;
+
+    get isOnHomePage() {
+        const ref = this._homePageRef;
+        if (!ref) {
+            return false;
+        }
+        const attrs = ref.attributes || {};
+        if (ref.type === "standard__namedPage" && attrs.pageName === "home") {
+            return true;
+        }
+        const url = attrs.url
+            || (typeof window !== "undefined" && window.location ? window.location.pathname : "");
+        return typeof url === "string" && url.indexOf("/lightning/page/home") !== -1;
+    }
+
+    get isHiddenOnHome() {
+        if (!this.isOnHomePage) {
+            return false;
+        }
+        const map = this._hiddenHomeComponents && this._hiddenHomeComponents.data;
+        return !!(map && map[HOME_COMPONENT_KEY] === true);
+    }
+
+    get isNotHiddenOnHome() {
+        return !this.isHiddenOnHome;
+    }
+
     itemsRaw = [];
     errorMessage = "";
     isLoading = true;
