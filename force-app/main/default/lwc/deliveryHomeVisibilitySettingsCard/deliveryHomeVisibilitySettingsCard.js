@@ -71,6 +71,11 @@ const COMPONENTS = [
         key: 'deliveryClientDashboard',
         label: 'Client Dashboard',
         help: 'The client-facing greeting, attention, in-flight, and recent sections.'
+    },
+    {
+        key: 'deliveryCloseOutQueue',
+        label: 'Close Outs',
+        help: 'Deployed-to-Prod items awaiting close-out verification (back of the pipeline).'
     }
 ];
 

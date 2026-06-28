@@ -21,15 +21,17 @@
  * @author       Cloud Nimbus LLC
  */
 import { LightningElement, wire } from "lwc";
-import { NavigationMixin } from "lightning/navigation";
+import { NavigationMixin, CurrentPageReference } from "lightning/navigation";
 import { refreshApex } from "@salesforce/apex";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 import WORK_ITEM_OBJECT from "@salesforce/schema/WorkItem__c";
 import getCloseOutItems from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTriageController.getCloseOutItems";
 import getCloseOutReportId from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTriageController.getCloseOutReportId";
 import markDoneApex from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTriageController.markDone";
+import getHiddenHomeComponents from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents";
 
 const MS_PER_DAY = 86400000;
+const HOME_COMPONENT_KEY = "deliveryCloseOutQueue";
 
 export default class DeliveryCloseOutQueue extends NavigationMixin(LightningElement) {
     itemsRaw = [];
@@ -42,6 +44,38 @@ export default class DeliveryCloseOutQueue extends NavigationMixin(LightningElem
     selectedIds = [];
 
     wiredResult;
+
+    // Home-page visibility: this card also lives on the Home FlexiPage (under
+    // Intake). When its HideHome setting is set, self-hide on Home only — it
+    // stays visible on the workspace "Close Outs" tab regardless.
+    @wire(CurrentPageReference) _homePageRef;
+    @wire(getHiddenHomeComponents) _hiddenHomeComponents;
+
+    get isOnHomePage() {
+        const ref = this._homePageRef;
+        if (!ref) {
+            return false;
+        }
+        const attrs = ref.attributes || {};
+        if (ref.type === "standard__namedPage" && attrs.pageName === "home") {
+            return true;
+        }
+        const url = attrs.url
+            || (typeof window !== "undefined" && window.location ? window.location.pathname : "");
+        return typeof url === "string" && url.indexOf("/lightning/page/home") !== -1;
+    }
+
+    get isHiddenOnHome() {
+        if (!this.isOnHomePage) {
+            return false;
+        }
+        const map = this._hiddenHomeComponents && this._hiddenHomeComponents.data;
+        return !!(map && map[HOME_COMPONENT_KEY] === true);
+    }
+
+    get isNotHiddenOnHome() {
+        return !this.isHiddenOnHome;
+    }
 
     @wire(getCloseOutItems)
     wiredItems(result) {
