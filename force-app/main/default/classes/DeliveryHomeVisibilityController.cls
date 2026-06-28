@@ -25,7 +25,8 @@ public with sharing class DeliveryHomeVisibilityController {
         'deliveryApprovalQueue'        => 'HideHomeApprovalQueueDateTime__c',
         'deliveryApprovalSummaryCard'  => 'HideHomeApprovalSummaryCardDateTime__c',
         'deliveryFeatureCockpit'       => 'HideHomeFeatureCockpitDateTime__c',
-        'deliveryClientDashboard'      => 'HideHomeClientDashboardDateTime__c'
+        'deliveryClientDashboard'      => 'HideHomeClientDashboardDateTime__c',
+        'deliveryCloseOutQueue'        => 'HideHomeCloseOutQueueDateTime__c'
     };
 
     /**
