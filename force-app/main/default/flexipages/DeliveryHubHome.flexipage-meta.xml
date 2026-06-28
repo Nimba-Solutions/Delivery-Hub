@@ -9,6 +9,12 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryCloseOutQueue</componentName>
+                <identifier>c_deliveryCloseOutQueue_home</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryGettingStarted</componentName>
                 <identifier>c_deliveryGettingStarted</identifier>
             </componentInstance>
