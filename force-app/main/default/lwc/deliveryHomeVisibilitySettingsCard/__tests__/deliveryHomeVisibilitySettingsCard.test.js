@@ -1,9 +1,9 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @description  Jest coverage for deliveryHomeVisibilitySettingsCard: renders six
- *               "Show on Home" toggles (all on by default), and persists a hide when a
- *               toggle is switched off.
+ * @description  Jest coverage for deliveryHomeVisibilitySettingsCard: renders one
+ *               "Show on Home" toggle per hideable component (all on by default), and
+ *               persists a hide when a toggle is switched off.
  * @author       Cloud Nimbus LLC
  */
 import { createElement } from 'lwc';
@@ -30,13 +30,25 @@ describe('c-delivery-home-visibility-settings-card', () => {
         jest.clearAllMocks();
     });
 
-    it('renders six Show-on-Home toggles, all on by default', async () => {
+    it('renders all eleven Show-on-Home toggles, all on by default', async () => {
         const element = createComponent();
         await flushPromises();
 
         const toggles = element.shadowRoot.querySelectorAll('lightning-input');
-        expect(toggles.length).toBe(6);
+        expect(toggles.length).toBe(11);
         toggles.forEach((t) => expect(t.checked).toBe(true));
+    });
+
+    it('exposes the second-wave components as toggles keyed by LWC name', async () => {
+        const element = createComponent();
+        await flushPromises();
+
+        ['deliveryIntakeQueue', 'deliveryApprovalQueue', 'deliveryApprovalSummaryCard',
+            'deliveryFeatureCockpit', 'deliveryClientDashboard'].forEach((key) => {
+            const toggle = element.shadowRoot.querySelector(`lightning-input[data-key="${key}"]`);
+            expect(toggle).not.toBeNull();
+            expect(toggle.checked).toBe(true);
+        });
     });
 
     it('persists a hide when a toggle is switched off', async () => {

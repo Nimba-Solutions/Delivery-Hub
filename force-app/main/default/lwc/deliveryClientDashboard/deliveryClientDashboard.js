@@ -9,7 +9,7 @@
  * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, wire, track } from 'lwc';
-import { NavigationMixin } from 'lightning/navigation';
+import { NavigationMixin, CurrentPageReference } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { getRecord, getFieldValue } from 'lightning/uiRecordApi';
 import WORK_ITEM_OBJECT from '@salesforce/schema/WorkItem__c';
@@ -17,6 +17,7 @@ import WORK_LOG_OBJECT from '@salesforce/schema/WorkLog__c';
 import getClientDashboard from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getClientDashboard';
 import getReportIds from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getReportIds';
 import getWorkflowConfig from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkflowConfigService.getWorkflowConfig';
+import getHiddenHomeComponents from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents';
 import USER_ID from '@salesforce/user/Id';
 import FIRST_NAME_FIELD from '@salesforce/schema/User.FirstName';
 
@@ -47,7 +48,43 @@ const FALLBACK_PHASE_ORDER = ['Planning', 'Approval', 'Development', 'Testing', 
         UAT: 'uat'
     };
 
+// This component's key in the Home-visibility map (matches its LWC folder name).
+const HOME_COMPONENT_KEY = 'deliveryClientDashboard';
+
 export default class DeliveryClientDashboard extends NavigationMixin(LightningElement) { // eslint-disable-line new-cap
+    // ── Home-page visibility (admin-toggleable, default = shown) ──
+    // Hides the WHOLE dashboard ONLY on the Delivery Hub app Home page when an
+    // admin toggles it off in Settings. This is independent of the per-section
+    // @api hide* props below — it gates the entire component on Home.
+    @wire(CurrentPageReference) _homePageRef;
+    @wire(getHiddenHomeComponents) _hiddenHomeComponents;
+
+    get isOnHomePage() {
+        const ref = this._homePageRef;
+        if (!ref) {
+            return false;
+        }
+        const attrs = ref.attributes || {};
+        if (ref.type === 'standard__namedPage' && attrs.pageName === 'home') {
+            return true;
+        }
+        const url = attrs.url
+            || (typeof window !== 'undefined' && window.location ? window.location.pathname : '');
+        return typeof url === 'string' && url.indexOf('/lightning/page/home') !== -1;
+    }
+
+    get isHiddenOnHome() {
+        if (!this.isOnHomePage) {
+            return false;
+        }
+        const map = this._hiddenHomeComponents && this._hiddenHomeComponents.data;
+        return !!(map && map[HOME_COMPONENT_KEY] === true);
+    }
+
+    get isNotHiddenOnHome() {
+        return !this.isHiddenOnHome;
+    }
+
     @api hideAttentionSection = false;
     @api hideInFlightSection = false;
     @api hideRecentSection = false;

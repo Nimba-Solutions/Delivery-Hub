@@ -20,7 +20,7 @@
  * @author       Cloud Nimbus LLC
  */
 import { LightningElement, wire } from "lwc";
-import { NavigationMixin } from "lightning/navigation";
+import { NavigationMixin, CurrentPageReference } from "lightning/navigation";
 import { refreshApex } from "@salesforce/apex";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 import WORK_ITEM_OBJECT from "@salesforce/schema/WorkItem__c";
@@ -28,12 +28,47 @@ import getPendingForApprover from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryW
 import approveApex from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.approve";
 import approveManyApex from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.approveMany";
 import declineApex from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.decline";
+import getHiddenHomeComponents from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents";
 
 const MS_PER_DAY = 86400000;
 const MODE_CHANGE = "change";
 const MODE_DECLINE = "decline";
+// This component's key in the Home-visibility map (matches its LWC folder name).
+const HOME_COMPONENT_KEY = "deliveryApprovalQueue";
 
 export default class DeliveryApprovalQueue extends NavigationMixin(LightningElement) {
+    // ── Home-page visibility (admin-toggleable, default = shown) ──
+    // Hides ONLY on the Delivery Hub app Home page when an admin toggles it
+    // off in Settings. Everywhere else this component always renders.
+    @wire(CurrentPageReference) _homePageRef;
+    @wire(getHiddenHomeComponents) _hiddenHomeComponents;
+
+    get isOnHomePage() {
+        const ref = this._homePageRef;
+        if (!ref) {
+            return false;
+        }
+        const attrs = ref.attributes || {};
+        if (ref.type === "standard__namedPage" && attrs.pageName === "home") {
+            return true;
+        }
+        const url = attrs.url
+            || (typeof window !== "undefined" && window.location ? window.location.pathname : "");
+        return typeof url === "string" && url.indexOf("/lightning/page/home") !== -1;
+    }
+
+    get isHiddenOnHome() {
+        if (!this.isOnHomePage) {
+            return false;
+        }
+        const map = this._hiddenHomeComponents && this._hiddenHomeComponents.data;
+        return !!(map && map[HOME_COMPONENT_KEY] === true);
+    }
+
+    get isNotHiddenOnHome() {
+        return !this.isHiddenOnHome;
+    }
+
     pendingRaw = [];
     errorMessage = "";
     isLoading = true;

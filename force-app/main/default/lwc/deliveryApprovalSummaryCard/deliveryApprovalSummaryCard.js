@@ -16,14 +16,49 @@
  * @author       Cloud Nimbus LLC
  */
 import { LightningElement, wire } from "lwc";
-import { NavigationMixin } from "lightning/navigation";
+import { NavigationMixin, CurrentPageReference } from "lightning/navigation";
 import getApprovalSummary from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryApprovalSummaryController.getApprovalSummary";
+import getHiddenHomeComponents from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents";
 
 const REPORT_HOURS_APPROVED = "Hours_Approved_This_Period";
 const REPORT_PENDING = "Pending_Approval";
 const REPORT_IN_PROGRESS = "Approved_In_Progress";
+// This component's key in the Home-visibility map (matches its LWC folder name).
+const HOME_COMPONENT_KEY = "deliveryApprovalSummaryCard";
 
 export default class DeliveryApprovalSummaryCard extends NavigationMixin(LightningElement) {
+    // ── Home-page visibility (admin-toggleable, default = shown) ──
+    // Hides ONLY on the Delivery Hub app Home page when an admin toggles it
+    // off in Settings. Everywhere else this component always renders.
+    @wire(CurrentPageReference) _homePageRef;
+    @wire(getHiddenHomeComponents) _hiddenHomeComponents;
+
+    get isOnHomePage() {
+        const ref = this._homePageRef;
+        if (!ref) {
+            return false;
+        }
+        const attrs = ref.attributes || {};
+        if (ref.type === "standard__namedPage" && attrs.pageName === "home") {
+            return true;
+        }
+        const url = attrs.url
+            || (typeof window !== "undefined" && window.location ? window.location.pathname : "");
+        return typeof url === "string" && url.indexOf("/lightning/page/home") !== -1;
+    }
+
+    get isHiddenOnHome() {
+        if (!this.isOnHomePage) {
+            return false;
+        }
+        const map = this._hiddenHomeComponents && this._hiddenHomeComponents.data;
+        return !!(map && map[HOME_COMPONENT_KEY] === true);
+    }
+
+    get isNotHiddenOnHome() {
+        return !this.isHiddenOnHome;
+    }
+
     summary;
     errorMessage = "";
     isLoading = true;
