@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>HideHomeCloseOutQueueDateTime__c</fullName>
+    <description>When non-null, the Close Outs queue card is hidden from the Delivery Hub app Home page (it still shows on the workspace "Close Outs" tab). Null = shown (default). Inverted-name field (Hide, not Show) so the safe posture is the default null state, mirroring the home-visibility convention.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set to a date/time to hide the Close Outs card on the Home page. Leave blank to show it.</inlineHelpText>
+    <label>Hide Home Close Out Queue</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
