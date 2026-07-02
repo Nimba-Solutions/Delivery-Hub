@@ -21,6 +21,14 @@ global without sharing class DeliveryHubSyncService {
     private static final Integer ECHO_SUPPRESSION_WINDOW_SECONDS = 300;
 
     /**
+     * @description Minimum minutes between LastInboundSyncDateTime__c writes per
+     * sender entity. Keeps the stamp fresh for health displays while avoiding a
+     * NetworkEntity row-lock on every pushed item during sync bursts.
+     */
+    @TestVisible
+    private static final Integer INBOUND_STAMP_THROTTLE_MINUTES = 5;
+
+    /**
      * @description Handles incoming HTTP POST requests containing sync payloads (The Push Flow).
      * Identifies the object type from the URL path and delegates processing to the ingestor.
      * Supports opt-in API key validation: if the sender has an ApiKeyTxt__c configured,
@@ -149,6 +157,13 @@ global without sharing class DeliveryHubSyncService {
 
             // 3. Hand off to Ingestor
             Id processedId = DeliverySyncItemIngestor.processInboundItem(objectType, payload);
+
+            // 3b. Stamp the sender's inbound timestamp. Historically only the
+            // pull-path poller (DeliveryHubPoller) wrote LastInboundSyncDateTime__c,
+            // so push-fed orgs displayed a months-stale "last inbound" while pushes
+            // were landing fine (the 2026-04-08 MF-Prod freeze). Best-effort — must
+            // never break the ingest that just succeeded.
+            stampSenderInboundTimestamp((String) payload.get('SenderOrgId'), req.headers.get('X-Api-Key'));
 
             // 4. Respond
             res.statusCode = 200;
@@ -325,6 +340,59 @@ global without sharing class DeliveryHubSyncService {
         health.put('syncItems', syncItemCounts);
 
         return health;
+    }
+
+    // -------------------------------------------------------------------------
+    // Inbound Timestamp Stamping
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Stamps LastInboundSyncDateTime__c on the sender's NetworkEntity
+     * after a successful push ingest. Matched by SenderOrgId (same 15-char-base LIKE
+     * matching as the approval gate), falling back to the X-Api-Key. Throttled to one
+     * write per INBOUND_STAMP_THROTTLE_MINUTES per entity to avoid row-lock contention
+     * under bursts; all failures are swallowed — timestamp bookkeeping must never
+     * break ingest.
+     * @param senderOrgId The SenderOrgId from the inbound payload (may be blank)
+     * @param apiKey The X-Api-Key header value (may be blank)
+     */
+    @TestVisible
+    private static void stampSenderInboundTimestamp(String senderOrgId, String apiKey) {
+        try {
+            List<NetworkEntity__c> senders = new List<NetworkEntity__c>();
+            if (String.isNotBlank(senderOrgId)) {
+                String baseOrgId = senderOrgId.length() >= 15 ? senderOrgId.substring(0, 15) + '%' : senderOrgId;
+                senders = [
+                    SELECT Id, LastInboundSyncDateTime__c
+                    FROM NetworkEntity__c
+                    WHERE OrgIdTxt__c LIKE :baseOrgId
+                    WITH SYSTEM_MODE
+                    LIMIT 1
+                ];
+            }
+            if (senders.isEmpty() && String.isNotBlank(apiKey)) {
+                senders = [
+                    SELECT Id, LastInboundSyncDateTime__c
+                    FROM NetworkEntity__c
+                    WHERE ApiKeyTxt__c = :apiKey
+                    WITH SYSTEM_MODE
+                    LIMIT 1
+                ];
+            }
+            if (senders.isEmpty()) {
+                return;
+            }
+            NetworkEntity__c sender = senders[0];
+            DateTime throttleCutoff = DateTime.now().addMinutes(-INBOUND_STAMP_THROTTLE_MINUTES);
+            if (sender.LastInboundSyncDateTime__c != null && sender.LastInboundSyncDateTime__c > throttleCutoff) {
+                return; // Stamp is fresh — skip the write to avoid needless row locks.
+            }
+            sender.LastInboundSyncDateTime__c = DateTime.now();
+            Database.update(sender, AccessLevel.SYSTEM_MODE);
+        } catch (Exception e) {
+            // Best-effort only: a failed stamp must never fail the ingest.
+            System.debug(LoggingLevel.WARN, 'Inbound timestamp stamp skipped: ' + e.getMessage());
+        }
     }
 
     // -------------------------------------------------------------------------
