@@ -8,8 +8,29 @@
 import { LightningElement, track, wire } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { NavigationMixin } from 'lightning/navigation';
+import WORK_ITEM_OBJECT from '@salesforce/schema/WorkItem__c';
 import importWorkItems from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryCsvImportController.importWorkItems';
 import getWorkItemFields from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryCsvImportController.getWorkItemFields';
+
+/*
+ * Runtime package-namespace prefix (e.g. `delivery__` on a managed install,
+ * '' in unmanaged dev). Derived from a schema import's objectApiName: on a
+ * managed org `WORK_ITEM_OBJECT.objectApiName` is `delivery__WorkItem__c`, so
+ * everything up to and including the LAST `__` before the local name is the
+ * namespace prefix. Used to prefix CustomTab api names that have no schema
+ * import of their own. Mirrors the NS_PREFIX helper in deliveryGuide.
+ */
+const NS_PREFIX = (() => {
+    const apiName = WORK_ITEM_OBJECT.objectApiName || '';
+    const idx = apiName.indexOf('__');
+    // `delivery__WorkItem__c` -> idx at the namespace separator (not the
+    // trailing `__c`). If the first `__` is the object-suffix (unmanaged dev:
+    // `WorkItem__c`), there is no namespace prefix.
+    if (idx > -1 && apiName.slice(idx) !== '__c') {
+        return apiName.slice(0, idx + 2);
+    }
+    return '';
+})();
 
 // ── Jira column-to-field mapping ─────────────────────────────────
 const JIRA_COLUMN_MAP = {
@@ -531,10 +552,14 @@ export default class DeliveryCsvImport extends NavigationMixin(LightningElement)
 
     // ── Post-import actions ──────────────────────────────────────────
     handleViewOnBoard() {
+        // CustomTab — no @salesforce/schema import exists for a tab, so
+        // prepend the runtime-resolved package namespace prefix to the
+        // bare tab api name (`delivery__Delivery_Board` on a managed org,
+        // `Delivery_Board` in unmanaged dev).
         this[NavigationMixin.Navigate]({
             type: 'standard__navItemPage',
             attributes: {
-                apiName: 'Delivery_Hub'
+                apiName: `${NS_PREFIX}Delivery_Board`
             }
         });
     }

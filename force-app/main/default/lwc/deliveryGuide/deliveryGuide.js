@@ -81,7 +81,7 @@ const PERSONAS = [
  * navType values:
  *   'tab'        - NavigationMixin to a named CustomTab (navTarget = bare tab
  *                  api name; namespace prefix applied at runtime via NS_PREFIX)
- *   'objectList' - NavigationMixin to an object's list view (Recent); navTarget
+ *   'objectList' - NavigationMixin to an object's list view (All); navTarget
  *                  = a key into OBJECT_TARGETS, resolved to the namespaced
  *                  objectApiName via its `@salesforce/schema` import at run time
  *   null         - no deep-link (informational sections)
@@ -404,7 +404,7 @@ export default class DeliveryGuide extends NavigationMixin(LightningElement) {
                     actionName: 'list',
                     objectApiName: objectSchema.objectApiName
                 },
-                state: { filterName: 'Recent' },
+                state: { filterName: 'All' },
                 type: 'standard__objectPage'
             });
         }
