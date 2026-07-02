@@ -204,7 +204,7 @@ export default class DeliveryActivityDashboard extends NavigationMixin(Lightning
                 objectApiName: ACTIVITY_LOG_OBJECT.objectApiName
             },
             state: {
-                filterName: 'Recent'
+                filterName: 'All'
             },
             type: 'standard__objectPage'
         });

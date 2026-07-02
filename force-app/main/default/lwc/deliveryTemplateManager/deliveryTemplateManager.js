@@ -10,6 +10,7 @@ import { LightningElement, wire, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
+import WORK_ITEM_OBJECT from '@salesforce/schema/WorkItem__c';
 
 import activateTemplate from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTemplateManagerController.activateTemplate';
 import createFromTemplate from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTemplateManagerController.createFromTemplate';
@@ -126,7 +127,11 @@ export default class DeliveryTemplateManager extends NavigationMixin(LightningEl
         this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
             attributes: {
                 actionName: 'new',
-                objectApiName: '%%%NAMESPACE%%%WorkItem__c'
+                // Schema-import keeps the object api name namespace-correct in
+                // both managed (`delivery__WorkItem__c`) and unmanaged
+                // contexts — namespace build tokens do NOT expand inside
+                // arbitrary JS string literals (PRs #850/#851/#855).
+                objectApiName: WORK_ITEM_OBJECT.objectApiName
             },
             state: {
                 defaultFieldValues: 'TemplateMarkedDateTime__c=' + new Date().toISOString()
@@ -228,7 +233,7 @@ export default class DeliveryTemplateManager extends NavigationMixin(LightningEl
             this[NavigationMixin.Navigate]({ // eslint-disable-line new-cap
                 attributes: {
                     actionName: 'view',
-                    objectApiName: '%%%NAMESPACE%%%WorkItem__c',
+                    objectApiName: WORK_ITEM_OBJECT.objectApiName,
                     recordId: newId
                 },
                 type: 'standard__recordPage'
