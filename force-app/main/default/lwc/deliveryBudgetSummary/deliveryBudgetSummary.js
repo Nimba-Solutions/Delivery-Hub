@@ -145,7 +145,7 @@ export default class DeliveryBudgetSummary extends NavigationMixin(LightningElem
             this[NavigationMixin.Navigate]({ type: 'standard__webPage', attributes: { url: `/lightning/r/Report/${reportId}/view` } });
             return;
         }
-        this[NavigationMixin.Navigate]({ type: 'standard__objectPage', attributes: { objectApiName: SYNC_ITEM_OBJECT.objectApiName, actionName: 'list' }, state: { filterName: 'Recent' } });
+        this[NavigationMixin.Navigate]({ type: 'standard__objectPage', attributes: { objectApiName: SYNC_ITEM_OBJECT.objectApiName, actionName: 'list' }, state: { filterName: 'All' } });
     }
 
     handleFailedClick() {
@@ -154,7 +154,7 @@ export default class DeliveryBudgetSummary extends NavigationMixin(LightningElem
             this[NavigationMixin.Navigate]({ type: 'standard__webPage', attributes: { url: `/lightning/r/Report/${reportId}/view` } });
             return;
         }
-        this[NavigationMixin.Navigate]({ type: 'standard__objectPage', attributes: { objectApiName: SYNC_ITEM_OBJECT.objectApiName, actionName: 'list' }, state: { filterName: 'Recent' } });
+        this[NavigationMixin.Navigate]({ type: 'standard__objectPage', attributes: { objectApiName: SYNC_ITEM_OBJECT.objectApiName, actionName: 'list' }, state: { filterName: 'All' } });
     }
 
     handleRefresh() {
