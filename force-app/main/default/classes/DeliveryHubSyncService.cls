@@ -389,9 +389,8 @@ global without sharing class DeliveryHubSyncService {
             }
             sender.LastInboundSyncDateTime__c = DateTime.now();
             Database.update(sender, AccessLevel.SYSTEM_MODE);
-        } catch (Exception e) {
+        } catch (Exception ignored) {
             // Best-effort only: a failed stamp must never fail the ingest.
-            System.debug(LoggingLevel.WARN, 'Inbound timestamp stamp skipped: ' + e.getMessage());
         }
     }
 
