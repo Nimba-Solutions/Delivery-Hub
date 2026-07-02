@@ -92,7 +92,7 @@ private class DeliveryHubSyncServiceTest {
         // it, so push-fed orgs showed a months-stale "last inbound" (2026-04-08
         // MF-Prod freeze) while pushes were landing fine.
         NetworkEntity__c vendor = [SELECT Id FROM NetworkEntity__c WHERE EntityTypePk__c = 'Vendor' LIMIT 1];
-        vendor.OrgIdTxt__c = '00Dxx0000001234';
+        vendor.OrgIdTxt__c = UserInfo.getOrganizationId();
         update vendor;
 
         System.runAs(testUser) {
@@ -103,7 +103,7 @@ private class DeliveryHubSyncServiceTest {
             req.httpMethod = 'POST';
             req.requestBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
                 'SourceId' => 'REMOTE-WORKITEM-123',
-                'SenderOrgId' => '00Dxx0000001234AAA',
+                'SenderOrgId' => String.valueOf(UserInfo.getOrganizationId()),
                 'BriefDescriptionTxt__c' => 'Stamp regression test'
             }));
 
@@ -126,12 +126,12 @@ private class DeliveryHubSyncServiceTest {
         // A stamp fresher than the throttle window must NOT be rewritten (row-lock guard).
         NetworkEntity__c vendor = [SELECT Id FROM NetworkEntity__c WHERE EntityTypePk__c = 'Vendor' LIMIT 1];
         DateTime freshStamp = DateTime.now().addMinutes(-1);
-        vendor.OrgIdTxt__c = '00Dxx0000001234';
+        vendor.OrgIdTxt__c = UserInfo.getOrganizationId();
         vendor.LastInboundSyncDateTime__c = freshStamp;
         update vendor;
 
         Test.startTest();
-        DeliveryHubSyncService.stampSenderInboundTimestamp('00Dxx0000001234AAA', null);
+        DeliveryHubSyncService.stampSenderInboundTimestamp(String.valueOf(UserInfo.getOrganizationId()), null);
         Test.stopTest();
 
         NetworkEntity__c after = [SELECT LastInboundSyncDateTime__c FROM NetworkEntity__c WHERE Id = :vendor.Id];
