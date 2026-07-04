@@ -8,5 +8,5 @@
         <target>lightning__Tab</target>
     </targets>
     <masterLabel>Delivery Approval Queue</masterLabel>
-    <description>Pending work-approval queue: every Offer-Sent work request awaiting the approver, with inline Approve / Approve-with-change / Decline actions and click-through to the WorkItem.</description>
+    <description>Quotes-awaiting-acceptance queue: every Offer-Sent work request (quote) awaiting the approver, with inline Approve / Approve-with-change / Decline actions and click-through to the WorkItem. Relabeled from "Pending Work Approvals" per DECISION-G2.</description>
 </LightningComponentBundle>

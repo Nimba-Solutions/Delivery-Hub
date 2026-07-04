@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-    <label>SD - Tech Reviewing</label>
+    <label>SD - Ready for Final Approval</label>
     <protected>false</protected>
     <values>
         <field>WorkflowTypeMdt__c</field>
@@ -8,11 +8,11 @@
     </values>
     <values>
         <field>ApiValueTxt__c</field>
-        <value xsi:type="xsd:string">Tech Reviewing</value>
+        <value xsi:type="xsd:string">Ready for Final Approval</value>
     </values>
     <values>
         <field>SortOrderNumber__c</field>
-        <value xsi:type="xsd:double">12</value>
+        <value xsi:type="xsd:double">14.2</value>
     </values>
     <values>
         <field>CardColorTxt__c</field>
@@ -35,19 +35,15 @@
         <value xsi:type="xsd:string">Approval</value>
     </values>
     <values>
-        <field>VisibleByDefaultDateTime__c</field>
-        <value xsi:type="xsd:dateTime">2020-01-01T00:00:00.000Z</value>
-    </values>
-    <values>
         <field>AllowedForwardTransitionsTxt__c</field>
-        <value xsi:type="xsd:string">Ready for Client Approval,Ready for Final Approval,Ready for Development</value>
+        <value xsi:type="xsd:string">Final Approving,Ready for Development</value>
     </values>
     <values>
         <field>AllowedBacktrackTransitionsTxt__c</field>
-        <value xsi:type="xsd:string">Ready for Tech Review,Cancelled</value>
+        <value xsi:type="xsd:string">Tech Reviewing,Cancelled</value>
     </values>
     <values>
         <field>EtaWeightNumber__c</field>
-        <value xsi:type="xsd:double">12.0</value>
+        <value xsi:type="xsd:double">14.2</value>
     </values>
 </CustomMetadata>

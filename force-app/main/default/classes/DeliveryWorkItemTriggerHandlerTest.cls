@@ -61,6 +61,83 @@ public class DeliveryWorkItemTriggerHandlerTest {
         }
     }
 
+    /**
+     * @description W3.6 trigger-gap fix: moving a WorkItem's stage to 'Done' must
+     *              align the coarse StatusPk__c to 'Done' in the same DML. Pre-fix
+     *              nothing kept the pair in step, so items accumulated as
+     *              Stage=Done + Status=Active/In Progress (6 live in MF-Prod at
+     *              audit time) and status-keyed surfaces disagreed with stage-keyed ones.
+     */
+    @IsTest
+    static void testStatusAlignedWhenStageMovesToDone() {
+        System.runAs(testUser) {
+            WorkItem__c wi = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Align on update',
+                StageNamePk__c = 'In Development',
+                StatusPk__c = 'In Progress'
+            );
+            insert wi;
+
+            Test.startTest();
+            wi.StageNamePk__c = 'Done';
+            update wi;
+            Test.stopTest();
+
+            WorkItem__c after = [SELECT StatusPk__c FROM WorkItem__c WHERE Id = :wi.Id];
+            System.assertEquals('Done', after.StatusPk__c,
+                'StatusPk__c must be aligned to Done when the stage reaches Done (W3.6 invariant)');
+        }
+    }
+
+    /**
+     * @description W3.6 invariant on INSERT: a WorkItem created directly in the Done
+     *              stage (e.g. inbound sync of an already-finished item) must land
+     *              with StatusPk__c = 'Done', not the picklist default.
+     */
+    @IsTest
+    static void testStatusAlignedWhenInsertedAtDone() {
+        System.runAs(testUser) {
+            Test.startTest();
+            WorkItem__c wi = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Align on insert',
+                StageNamePk__c = 'Done',
+                StatusPk__c = 'Active'
+            );
+            insert wi;
+            Test.stopTest();
+
+            WorkItem__c after = [SELECT StatusPk__c FROM WorkItem__c WHERE Id = :wi.Id];
+            System.assertEquals('Done', after.StatusPk__c,
+                'A WorkItem inserted at Stage=Done must carry Status=Done (W3.6 invariant)');
+        }
+    }
+
+    /**
+     * @description The W3.6 alignment must be scoped to the Done stage only —
+     *              non-Done stages (including effort-terminal Deployed to Prod and
+     *              Cancelled) keep whatever status they carry.
+     */
+    @IsTest
+    static void testStatusUntouchedWhenStageNotDone() {
+        System.runAs(testUser) {
+            WorkItem__c wi = new WorkItem__c(
+                BriefDescriptionTxt__c = 'No alignment outside Done',
+                StageNamePk__c = 'In Development',
+                StatusPk__c = 'In Progress'
+            );
+            insert wi;
+
+            Test.startTest();
+            wi.StageNamePk__c = 'Deployed to Prod';
+            update wi;
+            Test.stopTest();
+
+            WorkItem__c after = [SELECT StatusPk__c FROM WorkItem__c WHERE Id = :wi.Id];
+            System.assertEquals('In Progress', after.StatusPk__c,
+                'Deployed to Prod is not Done — the status alignment must not fire');
+        }
+    }
+
     @IsTest
     static void testStageChangePlatformEvent() {
         System.runAs(testUser) {

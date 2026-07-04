@@ -329,10 +329,11 @@ private class DeliveryHubDashboardControllerTest {
      *              from the Deployment bucket and (b) sum EXACTLY to the active headline.
      *              Also proves the phase mapping: an "In Client Approval" item lands in
      *              the Approval bucket (getStagePhaseMap contract the bucket reports rely on).
-     *              NOTE: the bucket-sum invariant proven here holds for stages that ARE in
-     *              the board CMT. Live stages absent from the CMT (e.g. "Ready for Final
-     *              Approval") map to null and under-sum — the documented Approval-bucket
-     *              gap whose fix is the separate CMT-vs-picklist remediation, not this PR.
+     *              DECISION-G2 addition: the live approval-service stages "Ready for
+     *              Final Approval" / "Final Approving" now have WorkflowStage__mdt
+     *              records (Phase = Approval), so they bucket into Approval instead of
+     *              silently dropping out — the former under-sum gap. The Approval tile
+     *              therefore counts the same population as its WorkItems_Approval report.
      */
     @IsTest
     static void testPhaseBucketsExcludeDeployedAndSumToActiveWithApprovalMapping() {
@@ -340,6 +341,10 @@ private class DeliveryHubDashboardControllerTest {
             TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'In Development' });
             TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'Ready for Merge' }); // Deployment phase
             TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'In Client Approval' }); // Approval phase
+            // The stages the approval service actually writes — pre-G2 these were
+            // absent from the board CMT, mapped to null, and vanished from the tile.
+            TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'Ready for Final Approval' });
+            TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'Final Approving' });
             // Deployed to Prod — effort-terminal: must NOT appear in the Deployment bucket.
             TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'Deployed to Prod' });
 
@@ -360,14 +365,67 @@ private class DeliveryHubDashboardControllerTest {
                 if (p.label == 'Deployment') { deploymentCount = c; }
             }
 
-            System.assertEquals(3, total,
-                'Phase buckets must sum to the 3 active items (Deployed-to-Prod excluded)');
-            System.assertEquals(3, (Decimal) metrics.get('activeRequests'),
+            System.assertEquals(5, total,
+                'Phase buckets must sum to the 5 active items (Deployed-to-Prod excluded)');
+            System.assertEquals(5, (Decimal) metrics.get('activeRequests'),
                 'activeRequests headline must equal the phase-bucket sum');
-            System.assertEquals(1, approvalCount,
-                'In Client Approval must bucket into the Approval phase (getStagePhaseMap contract)');
+            System.assertEquals(3, approvalCount,
+                'Approval bucket must count In Client Approval AND the live approval-service '
+                + 'stages Ready for Final Approval / Final Approving (DECISION-G2 tile widening)');
             System.assertEquals(1, deploymentCount,
                 'Deployment bucket = the 1 Ready for Merge item; Deployed-to-Prod must be excluded');
+        }
+    }
+
+    /**
+     * @description DECISION-G1 guard for the "Recently Updated" list: it must use the
+     *              EFFORT-terminal set, so a Deployed-to-Prod item touched moments ago
+     *              does not surface as recent ACTIVE work.
+     */
+    @IsTest
+    static void testRecentWorkItemsExcludeDeployedToProd() {
+        System.runAs(testUser) {
+            TestDataFactory.createWorkItem(new Map<String, Object>{
+                'StageNamePk__c' => 'In Development',
+                'BriefDescriptionTxt__c' => 'Recent active item'
+            });
+            TestDataFactory.createWorkItem(new Map<String, Object>{
+                'StageNamePk__c' => 'Deployed to Prod',
+                'BriefDescriptionTxt__c' => 'Recently shipped item'
+            });
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard('thisWeek', 'Software_Delivery');
+            Test.stopTest();
+
+            List<DeliveryHubDashboardController.WorkItemSummary> recent =
+                (List<DeliveryHubDashboardController.WorkItemSummary>) result.get('recentWorkItems');
+            System.assertEquals(1, recent.size(),
+                'Only the In-Development item is recent ACTIVE work — Deployed-to-Prod is effort-terminal');
+            System.assertEquals('In Development', recent[0].stage,
+                'The Deployed-to-Prod item must not appear in the Recently Updated list (DECISION-G1)');
+        }
+    }
+
+    /**
+     * @description W3.3 residual guard: the This-Week "Completed" tile must not count
+     *              Cancelled items — its Recently_Completed drill-through report counts
+     *              Stage = Done only, and a cancelled item was never completed.
+     */
+    @IsTest
+    static void testThisWeekCompletedExcludesCancelled() {
+        System.runAs(testUser) {
+            TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'Done' });
+            TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'Cancelled' });
+
+            Test.startTest();
+            Map<String, Object> result = DeliveryHubDashboardController.getClientDashboard('thisWeek', 'Software_Delivery');
+            Test.stopTest();
+
+            Map<String, Object> thisWeek = (Map<String, Object>) result.get('thisWeek');
+            System.assertEquals(1, (Integer) thisWeek.get('completed'),
+                'completed must count only the Done item — Cancelled is not completed, '
+                + 'matching the Recently_Completed report definition');
         }
     }
 

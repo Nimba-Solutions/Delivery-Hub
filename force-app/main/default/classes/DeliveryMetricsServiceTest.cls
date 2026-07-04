@@ -174,6 +174,52 @@ private class DeliveryMetricsServiceTest {
         }
     }
 
+    /**
+     * @description DECISION-G1 guard: 'Deployed to Prod' is effort-terminal. It must
+     *              NOT count as WIP / appear in the stage distribution (no remaining
+     *              delivery effort), and it DOES count as completed for velocity and
+     *              completion rate — the same "not active" definition System Pulse,
+     *              the Exec dashboard, and the In-Flight report use. Pre-fix this
+     *              service used the plain terminal set and counted Deployed-to-Prod
+     *              items as active work.
+     */
+    @IsTest
+    static void testDeployedToProdIsEffortTerminal() {
+        System.runAs(testUser) {
+            insert new List<WorkItem__c>{
+                new WorkItem__c(
+                    BriefDescriptionTxt__c = 'Still being built',
+                    StageNamePk__c = 'In Development',
+                    PriorityPk__c = 'High'
+                ),
+                new WorkItem__c(
+                    BriefDescriptionTxt__c = 'Shipped, awaiting verification',
+                    StageNamePk__c = 'Deployed to Prod'
+                )
+            };
+
+            Test.startTest();
+            DeliveryMetricsService.BoardMetrics metrics = DeliveryMetricsService.getBoardMetrics();
+            Test.stopTest();
+
+            System.assertEquals(1, metrics.wipCount,
+                'Deployed-to-Prod must not count as WIP (effort-terminal per DECISION-G1)');
+            for (DeliveryMetricsService.StageCount sc : metrics.stageDistribution) {
+                System.assertNotEquals('Deployed to Prod', sc.stage,
+                    'Deployed-to-Prod must not appear in the active stage distribution');
+            }
+            for (DeliveryMetricsService.PriorityCount pc : metrics.priorityBreakdown) {
+                System.assertNotEquals('Unset', pc.priority,
+                    'The unset-priority Deployed-to-Prod item must not appear in the active priority breakdown');
+            }
+            // Delivery effort on the deployed item is finished — it counts as completed.
+            System.assertEquals(1, metrics.velocity[3].count,
+                'Current-week velocity should count the Deployed-to-Prod item as completed effort');
+            System.assertEquals(1, metrics.completedLast30,
+                'Completion rate numerator should count the Deployed-to-Prod item');
+        }
+    }
+
     @IsTest
     static void testPriorityUnsetHandled() {
         System.runAs(testUser) {
