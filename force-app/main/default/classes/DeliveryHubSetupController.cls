@@ -152,6 +152,9 @@ global without sharing class DeliveryHubSetupController {
         }
 
         CloudNimbusGlobalSettings__mdt config = CloudNimbusGlobalSettings__mdt.getInstance('Default');
+        if (config == null || String.isBlank(config.EndpointUrlTxt__c)) {
+            throw new AuraHandledException('Setup Error: Mothership endpoint is not configured. Set CloudNimbusGlobalSettings.Default (EndpointUrlTxt__c) before connecting.');
+        }
         String intakeEndpoint = config.EndpointUrlTxt__c.removeEnd('/') + '/sync/NetworkEntity__c';
 
         // Generate a shared API key for bidirectional authentication
