@@ -45,6 +45,22 @@ The one piece you genuinely can't do alone is what you named: **standing up orgs
 - Cross-org sync (hub↔client) not driven end-to-end this session — it's the two-org MF↔vendor topology, optional for a single-org customer.
 - The buyer-permset SIZE check above — do this before selling.
 
+## The roadmap — what to build, in order (two independent agent audits, converged)
+
+Two agents attacked "what's the next feature set" from opposite ends (finish-what's-started vs. build-net-new). They landed on the **same sequence**:
+
+**Step 1 — Cut the minimum-paid-loop SKU and land customer #1.** Not a build. Both agents and this memo agree: the gap is a sale, not code. Everything below waits until a paying customer *pulls* it.
+
+**Step 2 — The next feature to FINISH: Work-Approval / Spend-Controls (~90% built, S effort, no bugs).**
+It's the strongest "closest-to-done AND most monetizable" pick because it's welded directly to the money loop (log hours → cap → invoice) and reads as CFO-grade value: *"don't let a vendor over-bill me."* Verified trigger-enforced, not a settings shell: `DeliveryWorkCapEnforcementService` is wired into `DeliveryWorkLogTriggerHandler` (both enforce-mode `addError` and flag-mode Budget-Hold), `DeliveryWorkApprovalService` has the full lifecycle, the approval-queue LWC is surfaced on both home pages, real tests exist. **The only gap is an admin config card** — the marquee knobs (`EnforceApprovalCapDateTime__c`, approver identity, discretionary thresholds) are schema-present but missing from `DeliveryHubSettingsController`; add a settings-card section following the `deliveryGeneralSettingsCard` pattern. Plus register `DeliveryWorkApprovalServiceTest` + `DeliveryWorkCapEnforcementServiceTest` in the `DH` test suite (they're missing → skip CI → can break `beta_create`). Bug-free S-effort finish. *(Verify the specific gap against current code before building — agent-reported.)*
+
+**Step 3 — The net-new differentiator to build later: Verifiable Delivery Receipts ("Proof Pack").**
+The one capability a generic PM tool *structurally cannot copy*: a portable, independently-verifiable proof bundle for delivered work/invoices — signed JSON + PDF + a standalone verifier that recomputes DH's SHA-256 hash chain **without trusting the vendor's org**, plus external anchoring (RFC 3161 timestamp authority). ~90% of the foundation exists (`DeliveryCryptoService`, `DeliveryAuditChainService`, document snapshot hashes, e-sign forensics, the depth-charge jurisdiction attestation); the net-new delta is only the external anchor + portable verifier (~20-35h). It also closes a real integrity gap the audit found: today the chain can be silently re-hashed after a deletion, so it's only tamper-evident to someone *without* org access — external anchoring fixes that. Sell it as a compliance **upsell** to a consultancy already sitting on a regulated client, not as the wedge for sale #1.
+
+**Explicitly do NOT:** build the "Org Health / backup" standalone product (≈0% repo foundation — a greenfield pivot with no leverage), and don't chase self-serve paid checkout yet (the cart exists but checkout→contract→work conversion is spec-only and white-label branding is unbuilt).
+
+*Real bugs the audits surfaced in the flag-gated features (backlog, not blockers): AI stores its OpenAI key in a plaintext field (no Named Credential) and `EnableAIEstimation` is a decorative flag; the external e-sign path's `hashChainVerified` can never return true and the public portal silently drops drawn signatures. Fix these before lighting up AI or external e-sign.*
+
 ## Bottom line
 
 You have not been building "more incomplete features." You built a working delivery platform whose *installer and permissions* were quietly broken, which made the whole thing feel fake. That's now diagnosed and largely fixed, with a repeatable install and a clear minimum-sellable cut. **The future of Delivery Hub is not a question of whether it works — it does — but of getting it in front of one paying customer.** That's a sales problem, which is a better problem to have than the one you thought you had this morning.
