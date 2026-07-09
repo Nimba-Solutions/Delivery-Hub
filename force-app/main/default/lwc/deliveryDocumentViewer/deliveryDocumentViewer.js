@@ -25,6 +25,7 @@ import updateDocumentStatus from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDo
 import signActionAdmin from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocActionController.signActionAdmin';
 import getActionsForDocument from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocActionController.getActionsForDocument';
 import getCertificateOfCompletion from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocActionController.getCertificateOfCompletion';
+import DOC_OBJECT from '@salesforce/schema/DeliveryDocument__c';
 
 const CURRENCY_FMT = new Intl.NumberFormat('en-US', { currency: 'USD', style: 'currency' });
 
