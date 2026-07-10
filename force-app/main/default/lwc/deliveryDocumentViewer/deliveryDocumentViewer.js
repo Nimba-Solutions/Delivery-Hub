@@ -6,7 +6,7 @@
  * @author Cloud Nimbus LLC
  */
 import { LightningElement, api, wire, track } from 'lwc';
-import { CurrentPageReference } from 'lightning/navigation';
+import { CurrentPageReference, NavigationMixin } from 'lightning/navigation';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import generateDocument from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.generateDocument';
@@ -23,6 +23,7 @@ import scheduleDocumentSend from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDo
 import getPendingInvoices from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.getPendingInvoices';
 import updateDocumentStatus from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocumentController.updateDocumentStatus';
 import signActionAdmin from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocActionController.signActionAdmin';
+import isAdminSigningEnabled from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocActionController.isAdminSigningEnabled';
 import getActionsForDocument from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocActionController.getActionsForDocument';
 import getCertificateOfCompletion from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryDocActionController.getCertificateOfCompletion';
 import DOC_OBJECT from '@salesforce/schema/DeliveryDocument__c';
@@ -48,8 +49,16 @@ const DEFAULT_TEMPLATE_OPTIONS = [
     { label: 'Invoice', value: 'Invoice' },
     { label: 'Status Report', value: 'Status_Report' }
 ];
+const NS_PREFIX = (() => {
+    const apiName = DOC_OBJECT.objectApiName || '';
+    const idx = apiName.indexOf('__');
+    if (idx > -1 && apiName.slice(idx) !== '__c') {
+        return apiName.slice(0, idx + 2);
+    }
+    return '';
+})();
 
-export default class DeliveryDocumentViewer extends LightningElement {
+export default class DeliveryDocumentViewer extends NavigationMixin(LightningElement) { // eslint-disable-line new-cap
     @api networkEntityId;
     @api documentId;
 
@@ -105,6 +114,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
     @track actions = [];
     @track requiresSigning = false;
     @track consentText = '';
+    @track adminSigningEnabled = true;
 
     // Phase 4: certificate of completion (audit trail) for the previewed doc
     @track certificate = null;
@@ -232,6 +242,14 @@ export default class DeliveryDocumentViewer extends LightningElement {
             this.documents = [];
         }
         this.isLoading = false;
+    }
+    @wire(isAdminSigningEnabled)
+    wiredAdminSigningEnabled({ data, error }) {
+        if (data !== undefined) {
+            this.adminSigningEnabled = data === true;
+        } else if (error) {
+            this.adminSigningEnabled = true;
+        }
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -449,6 +467,10 @@ export default class DeliveryDocumentViewer extends LightningElement {
     // @api booleans can't default to true (LWC1503).
     get adminContextTrue() {
         return true;
+    }
+
+    get isAdminSigningDisabled() {
+        return this.adminSigningEnabled !== true;
     }
 
     get hasTransactions() {
@@ -807,16 +829,9 @@ export default class DeliveryDocumentViewer extends LightningElement {
         }
     }
 
-    // VF page prefix: 'delivery__' for managed package, '' for unmanaged
     get vfPrefix() {
-        // Detect namespace from the component's module name
-        const moduleName = this.template.host?.localName || '';
-        if (moduleName.startsWith('delivery-')) {
-            return 'delivery__';
-        }
-        return '';
+        return NS_PREFIX;
     }
-
     handlePreviewPdf() {
         const docId = this.emailPreview?.documentId || this.previewDoc?.id;
         if (!docId) { return; }
@@ -863,6 +878,13 @@ export default class DeliveryDocumentViewer extends LightningElement {
             ? `Signer link for "${actionLabel}" copied to clipboard.`
             : 'Signer link copied to clipboard.';
         this.copyTextWithFallback(signerUrl, message);
+    }
+    handleOpenSettings(event) {
+        event.stopPropagation();
+        this[NavigationMixin.Navigate]({
+            attributes: { apiName: `${NS_PREFIX}DeliveryHubSettings` },
+            type: 'standard__navItemPage'
+        });
     }
 
     /**
@@ -962,7 +984,7 @@ export default class DeliveryDocumentViewer extends LightningElement {
      */
     async handleSignSubmit(event) {
         const { actionId, signerName, signerEmail, consentGiven, signatureType, drawnSignature } = event.detail;
-        const childLwc = this.template.querySelector('c-delivery-document-signature-block');
+        const childLwc = this.template.querySelector('[data-signature-block]');
         try {
             const result = await signActionAdmin({
                 actionId,
