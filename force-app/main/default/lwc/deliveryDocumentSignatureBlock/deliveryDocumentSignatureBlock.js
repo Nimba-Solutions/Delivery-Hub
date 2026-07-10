@@ -50,6 +50,14 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
     get consentDisclosure() {
         return this.consentText || DEFAULT_CONSENT;
     }
+    get showAdminSigningNotice() {
+        return (
+            this.adminContext &&
+            this.signingDisabled &&
+            Array.isArray(this.actions) &&
+            this.actions.some((a) => !a.isCompleted)
+        );
+    }
 
     get sortedActions() {
         const list = Array.isArray(this.actions) ? [...this.actions] : [];
@@ -186,6 +194,9 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
             })
         );
     }
+    handleOpenSettingsClick() {
+        this.dispatchEvent(new CustomEvent('settingsrequest'));
+    }
 
     handleNameChange(event) {
         this.formName = event.target.value;
@@ -209,7 +220,7 @@ export default class DeliveryDocumentSignatureBlock extends LightningElement {
         let signatureType = 'Text';
         let drawnSignature = null;
         if (this.useDrawnSignature) {
-            const pad = this.template.querySelector('c-delivery-signature-pad');
+            const pad = this.template.querySelector('[data-signature-pad]');
             if (pad) {
                 drawnSignature = pad.getSignatureData();
             }

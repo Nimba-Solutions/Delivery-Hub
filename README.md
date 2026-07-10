@@ -27,6 +27,18 @@ It is open source under the [BSL 1.1 license](LICENSE.md) and ships as an unlock
 
 ---
 
+## Start here: the confirmed happy path
+
+**The product is one loop:** take a piece of client work from *first request* to a *paid invoice*. Everything else in this README — the 8-layer cockpit, Watcher digest, forecasting, AI drafting, the feature-toggle framework — is **optional and off by default**. You do not need any of it to run a client engagement.
+
+That loop is **proven on a fresh, zero-seed install** (verified 2026-07-09, ending in a correct $2,100 invoice). The step-by-step, do-it-yourself runbook — exact app, screen, button, and the Apex method behind each step, plus the two preconditions that matter — is here:
+
+➡️ **[docs/flow/confirmed-happy-path.md](docs/flow/confirmed-happy-path.md)** — the confirmed happy path (request → sign → send → size → approve → deliver → confirm → invoice).
+
+> Read the "what verified means" note in that doc before quoting it: the backend logic is proven on a fresh install in admin context; the browser click-through (and buyer-permset FLS) is what you confirm by driving it yourself.
+
+---
+
 ## Install
 
 **Current release**: [`release/0.281.0.1`](https://github.com/Nimba-Solutions/Delivery-Hub/releases) (production-promoted 2026-06-13). Builds on the work-approval queue arc (estimate → approve rails, pending-approval queue on Home, approval reports + agenda card, Deployed-to-Prod ship loop, WorkLog cap enforcement via `EnforceApprovalCapDateTime__c`, pace-divergence alerts). 0.277 → 0.281 add: **Home active-count truth fixes** (Exec/active counts exclude terminal + archived + non-activated items), the **worklog-relay sync fix** (relays now mint under the guest REST path), **terminal-stage unification** (one cross-workflow-type terminal set drives all active counts/forecast/watchers), and the **epic-sectioned approval queue** (requests group by parent epic with per-epic "Approve all"). See [GitHub Releases](https://github.com/Nimba-Solutions/Delivery-Hub/releases) for the full version history.
@@ -150,6 +162,7 @@ A short cross-reference. The deep narrative is in [docs/ARCHITECTURE.md](docs/AR
 
 | Document | Description |
 |----------|-------------|
+| **[Confirmed Happy Path](docs/flow/confirmed-happy-path.md)** | **Start here.** Do-it-yourself runbook for the request→paid-invoice loop, verified on a fresh install |
 | [Getting Started](docs/GETTING_STARTED.md) | Installation, permset assignment, first work item, optional cross-org sync, document signing, AI |
 | [Setup Guide](docs/SETUP.md) | Pre-install checklist, install/upgrade commands, smoke test, common gotchas |
 | [Architecture](docs/ARCHITECTURE.md) | Object model, sync engine, API layer, LWC catalogue, enterprise services, permission model |

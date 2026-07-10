@@ -535,9 +535,12 @@
                             requires-signing={requiresSigning}
                             consent-text={consentText}
                             admin-context={adminContextTrue}
+                            signing-disabled={isAdminSigningDisabled}
                             certificate={certificate}
                             onsignsubmit={handleSignSubmit}
                             oncopylinkrequest={handleCopySignerLink}
+                            onsettingsrequest={handleOpenSettings}
+                            data-signature-block
                         ></c-delivery-document-signature-block>
 
                         <!-- Document info footer -->

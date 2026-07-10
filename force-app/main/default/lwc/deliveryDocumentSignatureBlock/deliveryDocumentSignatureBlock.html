@@ -2,6 +2,20 @@
     <template lwc:if={hasActions}>
         <div class="signature-block">
             <h3 class="signature-block-title">{title}</h3>
+            <template lwc:if={showAdminSigningNotice}>
+                <div class="admin-signing-notice" role="status">
+                    <lightning-icon icon-name="utility:info" alternative-text="Admin signing disabled" size="x-small" class="slds-m-right_x-small"></lightning-icon>
+                    <div class="admin-signing-notice-body">
+                        <p>Signing on behalf of the client isn't turned on for this org. Ask your Salesforce admin to enable Admin Signing in Delivery Hub Settings, or send the client their signing link so they can sign it themselves.</p>
+                        <lightning-button
+                            label="Open Delivery Hub Settings"
+                            variant="base"
+                            onclick={handleOpenSettingsClick}
+                            class="slds-m-top_x-small"
+                        ></lightning-button>
+                    </div>
+                </div>
+            </template>
             <div class="signature-block-grid">
                 <template for:each={sortedActions} for:item="action">
                     <div key={action.id} class={action.slotClass}>
@@ -138,6 +152,7 @@
                             <c-delivery-signature-pad
                                 label="Sign in the box below"
                                 onsignaturechange={handleSignaturePadChange}
+                                data-signature-pad
                             ></c-delivery-signature-pad>
                         </div>
                     </template>
