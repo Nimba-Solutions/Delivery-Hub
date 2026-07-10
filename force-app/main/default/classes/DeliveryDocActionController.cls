@@ -26,7 +26,16 @@ public with sharing class DeliveryDocActionController {
         }
         return result;
     }
-
+    /**
+     * @description Returns whether admin-on-behalf signing is enabled for this org.
+     *              Used by the embedded viewer to explain the setting before a user
+     *              opens the signing modal.
+     * @return True when admin signing is enabled.
+     */
+    @AuraEnabled(cacheable=true)
+    public static Boolean isAdminSigningEnabled() {
+        return DeliveryDocActionService.isAdminSigningEnabled();
+    }
     /**
      * @description Admin-side sign action used inside the org. Stamps the slot with
      *              "<signerName> (digitally signed Apr 6, 2026)" or — when the
@@ -53,7 +62,7 @@ public with sharing class DeliveryDocActionController {
     public static Map<String, Object> signActionAdmin(Id actionId, Map<String, Object> payload) {
         if (!DeliveryDocActionService.isAdminSigningEnabled()) {
             throw new AuraHandledException(
-                'Admin signing is disabled. Set EnableAdminSigningDateTime__c on Delivery Hub Settings to enable.'
+                'Signing on behalf of the client isn\'t turned on for this org. Ask your Salesforce admin to enable Admin Signing in Delivery Hub Settings, or send the client their signing link so they can sign it themselves.'
             );
         }
         DeliveryDocActionService.SignContext ctx = new DeliveryDocActionService.SignContext();
