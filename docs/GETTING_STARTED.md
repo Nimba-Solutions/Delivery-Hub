@@ -673,4 +673,4 @@ These settings are stored on `DeliveryHubSettings__c` and read at runtime by the
 - **Enable email commenting**: Set up the inbound email handler so team members can reply to notifications and create comments without opening Salesforce (see Section 17).
 - **Use the Timeline**: Open the Delivery Timeline tab to see a Gantt-style view of all active work items with zoom and scroll controls (see Section 14).
 - **Save board filters**: Save your preferred board filter settings so they auto-apply on every visit (see Section 15).
-- **Spin up a demo org**: Run `cci flow run demo_org --org dev` to get a fully configured scratch org with sample data for evaluation or demos.
+- **Spin up a clean org**: Run `cci flow run dev_org --org dev` to get a fresh scratch org with the package deployed and permsets assigned — no seed data. Configure the cross-org connection yourself via Quick Setup (this is the honest cold-start path a new customer hits).

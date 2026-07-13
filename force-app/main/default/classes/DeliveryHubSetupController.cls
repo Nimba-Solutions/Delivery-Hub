@@ -160,16 +160,19 @@ global without sharing class DeliveryHubSetupController {
         // Generate a shared API key for bidirectional authentication
         String sharedApiKey = EncodingUtil.convertToHex(Crypto.generateAesKey(256));
 
+        // Mode A (default, push/pull): do NOT advertise this spoke's push endpoint. With no
+        // endpoint on the hub's record of us, the hub STAGES our inbound items and we PULL them
+        // via the poller — no public Site required on the spoke, and the return path can't be
+        // starved by an unreachable push target. (Mode B "instant push to spoke" would re-add
+        // IntegrationEndpointUrlTxt__c here, gated on the spoke exposing a public Site.)
         Map<String, Object> packet = new Map<String, Object>{
             'SourceId' => localEntityId,
             'RemoteExternalIdTxt__c' => localEntityId,
             'Name' => buildOrgDisplayName(),
             'OrgIdTxt__c' => UserInfo.getOrganizationId(),
-            'IntegrationEndpointUrlTxt__c' => Url.getOrgDomainUrl().toExternalForm() + '/services/apexrest/delivery/deliveryhub/v1/sync',
             'EntityTypePk__c' => 'Client',
             'StatusPk__c' => 'Active',
-            'ApiKeyTxt__c' => sharedApiKey,
-            'ConnectionStatusPk__c' => 'Connected'
+            'ApiKeyTxt__c' => sharedApiKey
         };
 
         HttpRequest req = new HttpRequest();
@@ -248,6 +251,7 @@ global without sharing class DeliveryHubSetupController {
                 EnableActivityLoggingDateTime__c = now,
                 EnableFieldTrackingDateTime__c = now,
                 EnableBoardMetricsDateTime__c = now,
+                EnableAutoApproveConnectionsDateTime__c = now,
                 StagesToAutoShareWithDevTeamTxt__c = 'All'
             );
             insert settings;
