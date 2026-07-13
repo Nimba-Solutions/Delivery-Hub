@@ -1,0 +1,19 @@
+<template>
+    <lightning-card title="Cross-Org Sync" icon-name="utility:sync">
+        <lightning-button
+            slot="actions"
+            label={buttonLabel}
+            onclick={handleClick}
+            disabled={isSyncing}
+            variant="brand"
+        ></lightning-button>
+        <div class="slds-p-horizontal_medium slds-p-bottom_small">
+            <template lwc:if={isSyncing}>
+                <lightning-spinner alternative-text="Syncing" size="small"></lightning-spinner>
+            </template>
+            <template lwc:if={hasResult}>
+                <p class="slds-text-body_small slds-text-color_weak">{lastResult}</p>
+            </template>
+        </div>
+    </lightning-card>
+</template>

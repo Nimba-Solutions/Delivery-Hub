@@ -3,6 +3,12 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
+                <componentName>deliverySyncNow</componentName>
+                <identifier>c_deliverySyncNow_adminhome</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentInstanceProperties>
                     <name>showConnectedState</name>
                     <value>true</value>

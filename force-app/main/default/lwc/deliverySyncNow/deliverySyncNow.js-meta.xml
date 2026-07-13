@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <masterLabel>Delivery Cross-Org Sync</masterLabel>
+    <description>One-click "Sync Now" plus auto-refresh — pulls inbound cross-org updates (work items, comments, worklogs, files) from connected orgs so changes appear without waiting for the 15-minute scheduled poll.</description>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__HomePage</target>
+        <target>lightning__AppPage</target>
+        <target>lightning__RecordPage</target>
+        <target>lightning__UtilityBar</target>
+    </targets>
+</LightningComponentBundle>
