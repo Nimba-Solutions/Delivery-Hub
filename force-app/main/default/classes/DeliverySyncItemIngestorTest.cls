@@ -1351,4 +1351,58 @@ private class DeliverySyncItemIngestorTest {
             DeliverySyncItemIngestor.findSObjectType(''),
             'Blank input must return null');
     }
+
+    @IsTest
+    static void testInboundConnectionAutoApproved() {
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            s.EnableAutoApproveConnectionsDateTime__c = Datetime.now();
+            upsert s;
+
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-CONN-AUTO-1',
+                'Name' => 'Auto Peer Org',
+                'EntityTypePk__c' => 'Client',
+                'OrgIdTxt__c' => '00DAUTO000000001AAA'
+            };
+
+            Test.startTest();
+            Id createdId = DeliverySyncItemIngestor.processInboundItem('NetworkEntity__c', payload);
+            Test.stopTest();
+
+            NetworkEntity__c ne = [SELECT ConnectionStatusPk__c FROM NetworkEntity__c WHERE Id = :createdId];
+            System.assertEquals('Connected', ne.ConnectionStatusPk__c,
+                'Auto-approve ON must land a new inbound connection as Connected');
+        }
+    }
+
+    @IsTest
+    static void testInboundConnectionRequiresApproval() {
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            s.EnableAutoApproveConnectionsDateTime__c = null;
+            upsert s;
+
+            Map<String, Object> payload = new Map<String, Object>{
+                'SourceId' => 'REMOTE-CONN-PEND-1',
+                'Name' => 'Pending Peer Org',
+                'EntityTypePk__c' => 'Client',
+                'OrgIdTxt__c' => '00DPEND000000001AAA'
+            };
+
+            Test.startTest();
+            Id createdId = DeliverySyncItemIngestor.processInboundItem('NetworkEntity__c', payload);
+            Test.stopTest();
+
+            NetworkEntity__c ne = [SELECT ConnectionStatusPk__c FROM NetworkEntity__c WHERE Id = :createdId];
+            System.assertEquals('Pending Approval', ne.ConnectionStatusPk__c,
+                'Auto-approve OFF must hold a new inbound connection at Pending Approval');
+
+            List<WorkItem__c> review = [
+                SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c LIKE 'Review new connection:%'
+            ];
+            System.assert(!review.isEmpty(),
+                'A Review work item must be raised when approval is required');
+        }
+    }
 }
