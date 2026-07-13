@@ -466,9 +466,13 @@ public without sharing class DeliverySyncItemIngestor {
             }
         }
 
-        // Connection Approval: New inbound NetworkEntity records require admin approval
+        // Connection Approval: the RECEIVER decides the status of a NEW inbound connection.
+        // Auto-approve ON  -> Connected, sync flows immediately (frictionless default, seeded
+        //                     on fresh installs). Auto-approve OFF -> Pending Approval, held
+        //                     until an admin reviews (a Review work item is raised post-commit).
+        Boolean autoApproveConnection = settings != null && settings.EnableAutoApproveConnectionsDateTime__c != null;
         if (objectType.endsWithIgnoreCase('NetworkEntity__c') && recordToUpsert.Id == null) {
-            putSafe(recordToUpsert, 'ConnectionStatusPk__c', 'Pending Approval');
+            putSafe(recordToUpsert, 'ConnectionStatusPk__c', autoApproveConnection ? 'Connected' : 'Pending Approval');
         }
 
         // v0.200 defense-in-depth: reject blank WorkItem creates. Background —
@@ -573,8 +577,14 @@ public without sharing class DeliverySyncItemIngestor {
             // reachable on a fresh NetworkEntity insert (recordToUpsert was just
             // created in the else-branch, so it carries a new Id and the
             // Pending-Approval status stamped earlier).
-            if (wasInsert && objectType.endsWithIgnoreCase('NetworkEntity__c') && recordToUpsert.Id != null) {
+            if (wasInsert && objectType.endsWithIgnoreCase('NetworkEntity__c') && recordToUpsert.Id != null
+                    && !autoApproveConnection) {
+                // Only when the connection actually needs review (auto-approve OFF). Under
+                // auto-approve the connection is already Connected — nothing to notify or review.
+                // Order matters: the Slack notification is a callout, so it must run before the
+                // review-task DML (a callout after uncommitted DML would throw).
                 notifyPendingConnection(recordToUpsert);
+                createConnectionReviewTask(recordToUpsert);
             }
         } finally {
             DeliveryTriggerControl.inboundSyncContext = priorInboundFlag;
@@ -1125,6 +1135,30 @@ public without sharing class DeliverySyncItemIngestor {
             }
         }
         return false;
+    }
+
+    /**
+     * @description Raises a "Review new connection" work item when a fresh inbound
+     * connection lands in the manual-approval posture (auto-approve OFF). Deliberately does
+     * NOT set ClientNetworkEntityLookup__c, so the review task itself never routes/syncs back
+     * to the pending peer. Best-effort: a failure here must never fail the sync ingest.
+     * @param entity The newly inserted, Pending-Approval NetworkEntity__c SObject
+     */
+    private static void createConnectionReviewTask(SObject entity) {
+        try {
+            String entName = String.valueOf(entity.get('Name'));
+            WorkItem__c task = new WorkItem__c(
+                BriefDescriptionTxt__c = 'Review new connection: ' + entName,
+                DetailsTxt__c = 'The org "' + entName + '" requested a cross-org sync connection and is '
+                    + 'Pending Approval. To approve, open its Network Entity record and set Connection '
+                    + 'Status to Connected. To reject, set it to Disabled. (Enable "Auto Approve '
+                    + 'Connections" in Delivery Hub Settings to skip this review step.)',
+                StageNamePk__c = 'Backlog'
+            );
+            Database.insert(task, AccessLevel.SYSTEM_MODE);
+        } catch (Exception ignored) {
+            // Non-fatal: the connection still lands Pending Approval and the Slack ping fires.
+        }
     }
 
     /**
