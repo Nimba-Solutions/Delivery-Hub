@@ -165,7 +165,7 @@ global without sharing class DeliveryHubSetupController {
             'RemoteExternalIdTxt__c' => localEntityId,
             'Name' => buildOrgDisplayName(),
             'OrgIdTxt__c' => UserInfo.getOrganizationId(),
-            'IntegrationEndpointUrlTxt__c' => Url.getOrgDomainUrl().toExternalForm() + '/services/apexrest/delivery/sync',
+            'IntegrationEndpointUrlTxt__c' => Url.getOrgDomainUrl().toExternalForm() + '/services/apexrest/delivery/deliveryhub/v1/sync',
             'EntityTypePk__c' => 'Client',
             'StatusPk__c' => 'Active',
             'ApiKeyTxt__c' => sharedApiKey,
