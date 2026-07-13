@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableAutoApproveConnectionsDateTime__c</fullName>
+    <description>When non-null, new inbound cross-org connections are auto-approved (created Connected) and sync flows immediately. Null = require manual approval: new connections land Pending Approval, sync is held, and a Review work item is created. Seeded ON for fresh installs (frictionless default); existing orgs stay off until an admin opts in. Supports user/profile/org hierarchy.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set to a date/time to auto-approve incoming connections (frictionless). Leave blank to require manual approval of each new connection.</inlineHelpText>
+    <label>Enable Auto Approve Connections</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
