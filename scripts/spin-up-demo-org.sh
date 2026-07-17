@@ -17,7 +17,7 @@
 set -euo pipefail
 
 ALIAS="${1:-dh-demo}"
-DEVHUB="MF"
+DEVHUB="${DEVHUB:-MF}"
 SCRATCH_DEF="orgs/dev.json"
 DAYS=7
 PERMSET="DeliveryHubAdmin_App"
