@@ -67,6 +67,14 @@ public without sharing class DeliverySyncEngine {
         if (newRecords == null || newRecords.isEmpty()) {
             return;
         }
+        // Org-level kill switch: sends/polls are gated by NetworkEntity
+        // ConnectionStatus, but creation is routed off structural edges
+        // (client lookup / WorkRequest routes) that billing also depends on
+        // and therefore can't be cleared. With sync dormant, un-sendable rows
+        // would otherwise accumulate on every significant edit.
+        if (DeliveryHubSettings__c.getOrgDefaults().DisableSyncCaptureDateTime__c != null) {
+            return;
+        }
         // Refined relay gate (replaces legacy full-suppress early-return):
         //   isSyncContext + inboundSenderOrgId set → proceed with per-route
         //     filter (skip routes targeting the source org). Enables the

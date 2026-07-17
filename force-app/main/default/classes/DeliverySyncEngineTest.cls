@@ -338,6 +338,58 @@ private class DeliverySyncEngineTest {
     }
 
     @IsTest
+    static void testKillSwitchBlocksCaptureThroughRealDml() {
+        System.runAs(testUser) {
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            settings.DisableSyncCaptureDateTime__c = System.now();
+            upsert settings;
+
+            WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
+            delete [SELECT Id FROM SyncItem__c]; // Clear setup trigger noise
+
+            Test.startTest();
+            t.BriefDescriptionTxt__c = 'Kill Switch Blocked';
+            update t; // Real trigger path — should be suppressed by the org-level switch
+            Test.stopTest();
+
+            List<SyncItem__c> allItems = [SELECT Id, PayloadTxt__c FROM SyncItem__c];
+            List<SyncItem__c> filtered = new List<SyncItem__c>();
+            for (SyncItem__c si : allItems) {
+                if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('Kill Switch Blocked')) {
+                    filtered.add(si);
+                }
+            }
+            System.assertEquals(0, filtered.size(), 'No sync items should be created when DisableSyncCaptureDateTime__c is set');
+        }
+    }
+
+    @IsTest
+    static void testKillSwitchClearedRestoresCapture() {
+        System.runAs(testUser) {
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            settings.DisableSyncCaptureDateTime__c = null;
+            upsert settings;
+
+            WorkItem__c t = [SELECT Id, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
+            delete [SELECT Id FROM SyncItem__c];
+
+            Test.startTest();
+            t.BriefDescriptionTxt__c = 'Kill Switch Cleared';
+            update t;
+            Test.stopTest();
+
+            List<SyncItem__c> allItems = [SELECT Id, PayloadTxt__c FROM SyncItem__c];
+            List<SyncItem__c> filtered = new List<SyncItem__c>();
+            for (SyncItem__c si : allItems) {
+                if (si.PayloadTxt__c != null && si.PayloadTxt__c.contains('Kill Switch Cleared')) {
+                    filtered.add(si);
+                }
+            }
+            System.assertEquals(2, filtered.size(), 'Normal bidirectional capture should resume when the switch is null');
+        }
+    }
+
+    @IsTest
     static void testIgnoreOriginBlankIsIgnored() {
         System.runAs(testUser) {
             // Calling ignoreOrigin with blank should not add to blockedOrigins

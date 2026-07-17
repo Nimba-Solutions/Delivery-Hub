@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>DisableSyncCaptureDateTime__c</fullName>
+    <description>Org-level sync-capture kill switch (v1.0 standalone freeze, 2026-07-17). When non-null, DeliverySyncEngine.captureChanges returns early and no outbound SyncItem__c rows are created anywhere in this org, regardless of NetworkEntity routing edges. Null = normal capture (default; zero behavior change). Sends and polls are separately gated by NetworkEntity ConnectionStatusPk__c = 'Connected'; this switch closes the creation path so a dormant sync lane cannot silently accumulate rows (storage/noise risk — see docs/plans/sync-freeze-checklist-0717.md).</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set to a date/time to stop all outbound sync-item creation in this org (sync freeze). Leave blank for normal sync capture.</inlineHelpText>
+    <label>Disable Sync Capture</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>
