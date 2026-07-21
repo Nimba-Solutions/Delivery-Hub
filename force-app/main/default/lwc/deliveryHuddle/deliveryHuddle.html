@@ -1,0 +1,111 @@
+<template>
+    <lightning-card title="Huddle" icon-name="standard:live_chat">
+        <div class="slds-var-p-horizontal_medium slds-var-p-bottom_medium">
+
+            <!-- Quick-add: five-second capture during a meeting. Lands as a
+                 standard intake item (Status 'New'), same pipe as Report Issue. -->
+            <div class="slds-grid slds-gutters_x-small slds-grid_vertical-align-end slds-var-m-bottom_small huddle-quickadd">
+                <div class="slds-col slds-size_5-of-12">
+                    <lightning-input
+                        label="Capture a work item"
+                        placeholder="What came up?"
+                        value={draftTitle}
+                        onchange={handleTitleChange}>
+                    </lightning-input>
+                </div>
+                <div class="slds-col slds-size_3-of-12">
+                    <lightning-input
+                        type="date"
+                        label="Due"
+                        value={draftDue}
+                        onchange={handleDueChange}>
+                    </lightning-input>
+                </div>
+                <div class="slds-col slds-size_3-of-12">
+                    <lightning-input
+                        label="Epic / group"
+                        placeholder="e.g. Risk Framework"
+                        value={draftEpic}
+                        onchange={handleEpicChange}>
+                    </lightning-input>
+                </div>
+                <div class="slds-col slds-size_1-of-12">
+                    <lightning-button
+                        variant="brand"
+                        label="Add"
+                        disabled={addDisabled}
+                        onclick={handleQuickAdd}>
+                    </lightning-button>
+                </div>
+            </div>
+
+            <!-- Filter chips: same list sliced four ways -->
+            <div class="slds-var-m-bottom_medium">
+                <template for:each={filterChips} for:item="chip">
+                    <lightning-button
+                        key={chip.key}
+                        class="slds-var-m-right_x-small"
+                        variant={chip.variant}
+                        label={chip.labelWithCount}
+                        data-filter={chip.key}
+                        onclick={handleFilterClick}>
+                    </lightning-button>
+                </template>
+            </div>
+
+            <template lwc:if={error}>
+                <div class="slds-text-color_error slds-var-p-around_medium">{error}</div>
+            </template>
+
+            <template lwc:if={showEmpty}>
+                <div class="slds-text-color_weak slds-var-p-around_medium">
+                    Nothing here — no open work items match this filter.
+                </div>
+            </template>
+
+            <!-- Grouped by epic; Ungrouped last -->
+            <template for:each={groups} for:item="group">
+                <div key={group.name} class="slds-var-m-bottom_medium">
+                    <div class="slds-text-heading_small slds-var-m-bottom_x-small">
+                        {group.name}
+                        <span class="slds-text-color_weak slds-text-body_small slds-var-m-left_x-small">{group.countText}</span>
+                    </div>
+                    <ul class="slds-has-dividers_bottom-space">
+                        <template for:each={group.items} for:item="item">
+                            <li key={item.workItemId} class="slds-item huddle-row">
+                                <div class="slds-grid slds-grid_vertical-align-center slds-gutters_x-small">
+                                    <div class="slds-col slds-size_7-of-12">
+                                        <a data-id={item.workItemId} onclick={handleOpenRecord} class="huddle-title">
+                                            <span class="slds-text-color_weak slds-var-m-right_x-small">{item.name}</span>{item.title}
+                                        </a>
+                                        <div class="slds-text-body_small slds-text-color_weak">
+                                            {item.metaText} · {item.touchedText}
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-size_3-of-12 slds-text-align_right">
+                                        <template lwc:if={item.hasDue}>
+                                            <span class={item.dueClass}>{item.dueText}</span>
+                                        </template>
+                                        <template lwc:if={item.showStaleBadge}>
+                                            <span class="slds-badge slds-var-m-left_x-small">Stale</span>
+                                        </template>
+                                    </div>
+                                    <div class="slds-col slds-size_2-of-12 slds-text-align_right">
+                                        <template lwc:if={item.hasUrl}>
+                                            <a href={item.externalPageUrl} target="_blank" rel="noopener noreferrer"
+                                               class="slds-text-body_small">Open page ↗</a>
+                                        </template>
+                                    </div>
+                                </div>
+                                <div class="slds-text-body_small huddle-comment slds-truncate" title={item.commentText}>
+                                    {item.commentText}
+                                </div>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </template>
+
+        </div>
+    </lightning-card>
+</template>

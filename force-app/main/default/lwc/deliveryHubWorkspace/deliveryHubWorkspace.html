@@ -20,6 +20,15 @@
             </lightning-tab>
         </template>
 
+        <!-- Meeting-prep surface: open items grouped by epic with latest comment,
+             due/stale filters and quick capture — standups open here instead of
+             on memory. Ungated; the data is the same WorkItems the Board shows. -->
+        <template lwc:if={showHuddle}>
+            <lightning-tab label="Huddle" value="huddle" icon-name="standard:live_chat">
+                <c-delivery-huddle></c-delivery-huddle>
+            </lightning-tab>
+        </template>
+
         <template lwc:if={showNewRequest}>
             <lightning-tab label="New Request" value="newRequest" icon-name="standard:work_order_item">
                 <c-delivery-quick-request embedded={requestEmbedded}></c-delivery-quick-request>
