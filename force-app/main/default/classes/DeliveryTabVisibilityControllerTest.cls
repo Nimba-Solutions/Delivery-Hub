@@ -19,7 +19,7 @@ private class DeliveryTabVisibilityControllerTest {
         Map<String, Boolean> hidden = DeliveryTabVisibilityController.getHiddenWorkspaceTabs();
         Test.stopTest();
 
-        System.assertEquals(10, hidden.size(), 'Expected all ten non-admin tabs in the map');
+        System.assertEquals(11, hidden.size(), 'Expected all eleven non-admin tabs in the map');
         for (String key : hidden.keySet()) {
             System.assertEquals(false, hidden.get(key), 'No setting present → tab should be shown (not hidden): ' + key);
         }
@@ -76,7 +76,7 @@ private class DeliveryTabVisibilityControllerTest {
         Map<String, Boolean> result = DeliveryTabVisibilityController.setHiddenWorkspaceTabs(null);
         Test.stopTest();
 
-        System.assertEquals(10, result.size(), 'A null request is a no-op that still returns the full map');
+        System.assertEquals(11, result.size(), 'A null request is a no-op that still returns the full map');
         for (String key : result.keySet()) {
             System.assertEquals(false, result.get(key), 'Nothing hidden for a null request: ' + key);
         }

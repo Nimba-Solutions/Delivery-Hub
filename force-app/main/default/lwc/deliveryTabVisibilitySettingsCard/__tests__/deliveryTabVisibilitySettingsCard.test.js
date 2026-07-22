@@ -1,7 +1,7 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @description  Jest coverage for deliveryTabVisibilitySettingsCard: renders ten
+ * @description  Jest coverage for deliveryTabVisibilitySettingsCard: renders eleven
  *               "Show in Delivery tab" toggles (all on by default), and persists a hide
  *               when a toggle is switched off.
  * @author       Cloud Nimbus LLC
@@ -30,12 +30,12 @@ describe('c-delivery-tab-visibility-settings-card', () => {
         jest.clearAllMocks();
     });
 
-    it('renders ten Show-in-Delivery-tab toggles, all on by default', async () => {
+    it('renders eleven Show-in-Delivery-tab toggles, all on by default', async () => {
         const element = createComponent();
         await flushPromises();
 
         const toggles = element.shadowRoot.querySelectorAll('lightning-input');
-        expect(toggles.length).toBe(10);
+        expect(toggles.length).toBe(11);
         toggles.forEach((t) => expect(t.checked).toBe(true));
     });
 

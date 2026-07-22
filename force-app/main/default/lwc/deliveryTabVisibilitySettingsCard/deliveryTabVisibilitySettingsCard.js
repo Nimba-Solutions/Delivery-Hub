@@ -17,7 +17,7 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getHiddenWorkspaceTabs from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTabVisibilityController.getHiddenWorkspaceTabs';
 import setHiddenWorkspaceTabs from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryTabVisibilityController.setHiddenWorkspaceTabs';
 
-// The 10 hideable workspace sub-tabs, in display order. Keys MUST match both the
+// The 11 hideable workspace sub-tabs, in display order. Keys MUST match both the
 // tab values in deliveryHubWorkspace and the keys DeliveryTabVisibilityController emits.
 const TABS = [
     {
@@ -29,6 +29,11 @@ const TABS = [
         key: 'board',
         label: 'Board',
         help: 'The Kanban work board.'
+    },
+    {
+        key: 'huddle',
+        label: 'Huddle',
+        help: 'Meeting-prep view: open items grouped by epic with latest comments and due/stale filters.'
     },
     {
         key: 'newRequest',
