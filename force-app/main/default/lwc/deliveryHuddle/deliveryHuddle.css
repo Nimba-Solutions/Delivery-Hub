@@ -1,0 +1,19 @@
+.huddle-title {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.huddle-row {
+    padding: 0.5rem 0;
+}
+
+.huddle-comment {
+    color: var(--slds-g-color-neutral-base-30, #514f4d);
+    margin-top: 0.25rem;
+}
+
+.huddle-quickadd {
+    background: var(--slds-g-color-neutral-base-95, #f3f3f3);
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+}

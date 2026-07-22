@@ -19,6 +19,7 @@ import getHiddenWorkspaceTabs from '@salesforce/apex/%%%NAMESPACE_DOT%%%Delivery
 const TAB_ORDER = [
     'intake',
     'board',
+    'huddle',
     'newRequest',
     'timeline',
     'activity',
@@ -69,6 +70,9 @@ export default class DeliveryHubWorkspace extends LightningElement {
     }
     get showBoard() {
         return !this.isHidden('board');
+    }
+    get showHuddle() {
+        return !this.isHidden('huddle');
     }
     get showNewRequest() {
         return !this.isHidden('newRequest');

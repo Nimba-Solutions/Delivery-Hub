@@ -19,6 +19,7 @@ public with sharing class DeliveryTabVisibilityController {
     private static final Map<String, String> TAB_TO_FIELD = new Map<String, String>{
         'intake'     => 'HideTabIntakeDateTime__c',
         'board'      => 'HideTabBoardDateTime__c',
+        'huddle'     => 'HideTabHuddleDateTime__c',
         'newRequest' => 'HideTabNewRequestDateTime__c',
         'timeline'   => 'HideTabTimelineDateTime__c',
         'activity'   => 'HideTabActivityDateTime__c',
