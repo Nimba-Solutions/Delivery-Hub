@@ -20,6 +20,7 @@ import { createElement } from 'lwc';
 // require('lwc') call inside the inline factory is permitted.
 jest.mock('c/deliveryIntakeQueue', () => ({ __esModule: true, default: class extends require('lwc').LightningElement {} }));
 jest.mock('c/deliveryHubBoard', () => ({ __esModule: true, default: class extends require('lwc').LightningElement {} }));
+jest.mock('c/deliveryHuddle', () => ({ __esModule: true, default: class extends require('lwc').LightningElement {} }));
 jest.mock('c/deliveryQuickRequest', () => ({ __esModule: true, default: class extends require('lwc').LightningElement {} }));
 jest.mock('c/deliveryProFormaTimeline', () => ({ __esModule: true, default: class extends require('lwc').LightningElement {} }));
 jest.mock('c/deliveryActivityFeed', () => ({ __esModule: true, default: class extends require('lwc').LightningElement {} }));
@@ -68,7 +69,7 @@ describe('c-delivery-hub-workspace', () => {
         jest.clearAllMocks();
     });
 
-    it('shows all ten non-admin tabs by default', async () => {
+    it('shows all eleven non-admin tabs by default', async () => {
         const element = createComponent();
         isAdminUser.emit(false);
         getHiddenWorkspaceTabs.emit({});
@@ -78,7 +79,7 @@ describe('c-delivery-hub-workspace', () => {
         expect(values).toContain('intake');
         expect(values).toContain('board');
         expect(values).toContain('forecast');
-        expect(values.length).toBe(10); // buyer → no admin tabs
+        expect(values.length).toBe(11); // buyer → no admin tabs
     });
 
     it('hides a tab when its visibility setting is set', async () => {

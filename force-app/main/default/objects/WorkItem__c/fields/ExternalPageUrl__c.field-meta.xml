@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>ExternalPageUrl__c</fullName>
+    <description>Link-out to the external page (e.g. client-portal review page) that gives this WI its meeting context. Surfaced by the Huddle tab. Per FIELD_NAMING.md URL fields drop the Txt suffix.</description>
+    <externalId>false</externalId>
+    <label>External Page URL</label>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <type>Url</type>
+</CustomField>
