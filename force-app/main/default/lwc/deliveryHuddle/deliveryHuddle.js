@@ -64,7 +64,14 @@ export default class DeliveryHuddle extends NavigationMixin(LightningElement) {
         const now = Date.now();
         // dueDate arrives as 'YYYY-MM-DD'; anchor at local midnight for day math.
         const due = row.dueDate ? new Date(row.dueDate + 'T00:00:00') : null;
-        const touched = row.lastModified ? new Date(row.lastModified).getTime() : now;
+        // LastModifiedDate is polluted by scheduled jobs (the hourly ETA service
+        // re-stamps ~a third of open items), so staleness/recency key off human
+        // signals only: latest comment, stage transition, or creation.
+        const touched = Math.max(
+            row.lastCommentDate ? new Date(row.lastCommentDate).getTime() : 0,
+            row.stageEntered ? new Date(row.stageEntered).getTime() : 0,
+            row.createdDate ? new Date(row.createdDate).getTime() : 0
+        ) || now;
         const daysUntilDue = due === null ? null : Math.floor((due.getTime() - now) / MS_PER_DAY) + 1;
         const daysSinceTouch = Math.floor((now - touched) / MS_PER_DAY);
 
@@ -99,8 +106,9 @@ export default class DeliveryHuddle extends NavigationMixin(LightningElement) {
         return {
             ...row,
             epicKey: row.epic || UNGROUPED,
+            humanTouch: touched,
             metaText: this.metaText(row),
-            touchedText: `touched ${this.ageText(row.lastModified)}`,
+            touchedText: `activity ${this.ageText(touched)}`,
             hasDue: dueText !== '',
             dueText,
             dueClass,
@@ -168,9 +176,12 @@ export default class DeliveryHuddle extends NavigationMixin(LightningElement) {
         });
     }
 
-    /** Items passing the active filter, grouped by epic (Ungrouped last). */
+    /** Items passing the active filter, grouped by epic (Ungrouped last),
+     *  freshest human activity first within each group. */
     get groups() {
-        const visible = this.items.filter((i) => this.matchesFilter(i, this.activeFilter));
+        const visible = this.items
+            .filter((i) => this.matchesFilter(i, this.activeFilter))
+            .sort((a, b) => b.humanTouch - a.humanTouch);
         const byEpic = new Map();
         visible.forEach((item) => {
             if (!byEpic.has(item.epicKey)) {

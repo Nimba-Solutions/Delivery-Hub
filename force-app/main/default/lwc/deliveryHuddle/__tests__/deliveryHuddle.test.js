@@ -35,6 +35,8 @@ function sampleItems() {
             dueDate: dateOnlyDaysFromNow(-2),
             externalPageUrl: "https://example.com/mf/standup",
             lastModified: isoDaysFromNow(-1),
+            stageEntered: isoDaysFromNow(-3),
+            createdDate: isoDaysFromNow(-5),
             lastCommentBody: "Jose thinks it is his",
             lastCommentAuthor: "Glen",
             lastCommentDate: isoDaysFromNow(-1)
@@ -49,7 +51,11 @@ function sampleItems() {
             ownerName: null,
             dueDate: null,
             externalPageUrl: null,
-            lastModified: isoDaysFromNow(-30),
+            // lastModified is recent (simulates the hourly ETA-service re-stamp)
+            // but human signals are a month old — the item must still read stale.
+            lastModified: isoDaysFromNow(0),
+            stageEntered: isoDaysFromNow(-30),
+            createdDate: isoDaysFromNow(-40),
             lastCommentBody: null,
             lastCommentAuthor: null,
             lastCommentDate: null
@@ -105,9 +111,11 @@ describe("c-delivery-huddle", () => {
         expect(headings[0]).toContain("MF Check-in");
         expect(headings[1]).toContain("Ungrouped");
 
-        // Overdue badge on item one, Stale badge on item two.
+        // Overdue badge on item one; Stale badge on item two even though its
+        // lastModified is fresh (system-job touches must not mask staleness).
         expect(text).toContain("Overdue 2d");
         expect(text).toContain("Stale");
+        expect(text).toContain("activity 30d ago");
     });
 
     it("filter chips slice the list", async () => {
