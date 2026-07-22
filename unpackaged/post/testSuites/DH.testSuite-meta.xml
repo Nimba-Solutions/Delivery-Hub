@@ -9,6 +9,7 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryFileBytesFetcherTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryGhostControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubBoardControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHuddleControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubCommentControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubDashboardControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHubFilesControllerTest</testClassName>

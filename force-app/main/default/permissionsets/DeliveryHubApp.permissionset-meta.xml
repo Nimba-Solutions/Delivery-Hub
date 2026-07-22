@@ -129,6 +129,10 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
+        <apexClass>DeliveryHuddleController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>DeliveryHubBoardController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
@@ -1079,6 +1083,11 @@
     <fieldPermissions>
         <editable>true</editable>
         <field>WorkItem__c.EventReceivedOnDateTime__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>WorkItem__c.ExternalPageUrl__c</field>
         <readable>true</readable>
     </fieldPermissions>
     <fieldPermissions>
