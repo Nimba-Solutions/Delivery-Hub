@@ -1147,12 +1147,6 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliverySyncPollerButton</componentName>
-                <identifier>c_deliverySyncPollerButton</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
                 <componentName>deliveryWorkItemRefiner</componentName>
                 <identifier>c_deliveryWorkItemRefiner</identifier>
             </componentInstance>
