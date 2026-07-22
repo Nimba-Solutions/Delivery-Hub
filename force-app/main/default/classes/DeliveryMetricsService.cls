@@ -70,7 +70,16 @@ global with sharing class DeliveryMetricsService {
     global static BoardMetrics getBoardMetrics() {
         BoardMetrics result = new BoardMetrics();
 
-        Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues('Software_Delivery');
+        // DECISION-G1 (2026-07-03): board metrics use the canonical EFFORT-terminal
+        // set (Done, Cancelled, AND Deployed to Prod), the same "not active" definition
+        // as System Pulse activeRequests, the Exec dashboard, and the In-Flight report.
+        // Deployed-to-Prod items carry zero remaining delivery effort — they no longer
+        // count as WIP/aging/stage-distribution, and they DO count as completed for
+        // velocity/throughput (delivery effort finished; the ship-verification tail is
+        // tracked in its own Deployed_To_Prod_Awaiting_Verification close-out bucket).
+        // Pre-fix this used the plain Software_Delivery terminal set, which made the
+        // WIP/velocity/aging numbers here disagree with every flagship "active" count.
+        Set<String> terminalStages = DeliveryWorkflowConfigService.getAllEffortTerminalStageValues();
         Map<String, String> stageToPhase = DeliveryWorkflowConfigService.getStagePhaseMap('Software_Delivery');
 
         result.velocity            = calcVelocity(terminalStages);

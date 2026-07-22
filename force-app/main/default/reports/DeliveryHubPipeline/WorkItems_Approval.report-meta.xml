@@ -24,7 +24,7 @@
     <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageEnteredDateTime__c</field>
     </columns>
-    <description>Active work items in the Approval phase: Ready for Tech Review, Tech Reviewing, Ready for Final Approval, Final Approving. Reflects the real pending-approval population (the live stages the approval service writes).</description>
+    <description>Active work items in the Approval phase - all six stages, including Ready for Final Approval / Final Approving. Pending approval = work items in approval stages (DECISION-G2); matches the home Approval tile and the WorkItems_Approval list view exactly.</description>
     <filter>
         <booleanFilter>1 AND 2 AND 3 AND 4</booleanFilter>
         <criteriaItems>
@@ -32,7 +32,7 @@
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>equals</operator>
-            <value>Ready for Tech Review,Tech Reviewing,Ready for Final Approval,Final Approving</value>
+            <value>Ready for Tech Review,Tech Reviewing,Ready for Client Approval,In Client Approval,Ready for Final Approval,Final Approving</value>
         </criteriaItems>
         <criteriaItems>
             <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ActivatedDateTime__c</column>

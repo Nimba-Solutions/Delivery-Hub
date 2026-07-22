@@ -54,13 +54,13 @@ const COMPONENTS = [
     },
     {
         key: 'deliveryApprovalQueue',
-        label: 'Pending Work Approvals',
-        help: 'Offer-Sent work requests awaiting a decision.'
+        label: 'Quotes Awaiting Acceptance',
+        help: 'Offer-Sent quotes awaiting a decision.'
     },
     {
         key: 'deliveryApprovalSummaryCard',
         label: 'Approval Agenda',
-        help: 'Hours approved, pending, and approved-in-flight tiles.'
+        help: 'Hours approved, quotes awaiting acceptance, and approved-in-flight tiles.'
     },
     {
         key: 'deliveryFeatureCockpit',
