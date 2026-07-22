@@ -109,12 +109,6 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>deliverySyncRetryPanel</componentName>
-                <identifier>c_deliverySyncRetryPanel</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
                 <componentName>deliveryHubHealthDashboard</componentName>
                 <identifier>c_deliveryHubHealthDashboard</identifier>
             </componentInstance>
