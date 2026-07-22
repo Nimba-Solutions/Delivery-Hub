@@ -56,6 +56,8 @@ private class DeliveryHuddleControllerTest {
         System.assertEquals(Date.today().addDays(3), openDto.dueDate, 'Due date should round-trip');
         System.assertEquals('https://example.com/mf/standup', openDto.externalPageUrl,
             'External page URL should round-trip');
+        System.assertNotEquals(null, openDto.createdDate,
+            'CreatedDate must be populated — the client stale math falls back to it');
         // Two comments inserted in one transaction share a CreatedDate, so the
         // subquery may legally return either; assert a comment surfaced at all.
         System.assertNotEquals(null, openDto.lastCommentBody,
