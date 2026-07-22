@@ -71,6 +71,8 @@ public with sharing class DeliveryHuddleController {
         @AuraEnabled public Date dueDate;
         @AuraEnabled public String externalPageUrl;
         @AuraEnabled public Datetime lastModified;
+        @AuraEnabled public Datetime stageEntered;
+        @AuraEnabled public Datetime createdDate;
         @AuraEnabled public String lastCommentBody;
         @AuraEnabled public String lastCommentAuthor;
         @AuraEnabled public Datetime lastCommentDate;
@@ -92,7 +94,8 @@ public with sharing class DeliveryHuddleController {
         List<WorkItem__c> rows = [
             SELECT Id, Name, BriefDescriptionTxt__c, StatusPk__c, StageNamePk__c,
                    EpicTxt__c, TagsTxt__c, Owner.Name, SLATargetDate__c,
-                   ExternalPageUrl__c, LastModifiedDate,
+                   ExternalPageUrl__c, LastModifiedDate, StageEnteredDateTime__c,
+                   CreatedDate,
                    (SELECT BodyTxt__c, AuthorTxt__c, CreatedDate
                       FROM WorkItemComments__r
                      ORDER BY CreatedDate DESC
@@ -118,6 +121,8 @@ public with sharing class DeliveryHuddleController {
             dto.dueDate = row.SLATargetDate__c;
             dto.externalPageUrl = row.ExternalPageUrl__c;
             dto.lastModified = row.LastModifiedDate;
+            dto.stageEntered = row.StageEnteredDateTime__c;
+            dto.createdDate = row.CreatedDate;
             if (!row.WorkItemComments__r.isEmpty()) {
                 WorkItemComment__c c = row.WorkItemComments__r[0];
                 dto.lastCommentBody = c.BodyTxt__c;
