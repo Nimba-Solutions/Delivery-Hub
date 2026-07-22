@@ -35,6 +35,7 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
         runReconciliation();
         recalcWorkItemETAsIfTopOfHour();
         enqueueActivityLogCleanupIfDue();
+        enqueueSyncItemCleanupIfDue();
         runAutoDiagnoseIfEnabled();
     }
 
@@ -434,14 +435,48 @@ global without sharing class DeliveryHubScheduler implements Schedulable {
                 return;
             }
             // Both the telemetry aggregate AND the batch purge run behind the single
-            // opt-in flag. Aggregate first (writes the JSON summary + queues the
-            // outbound analytics SyncItem), then kick off the batch purge of expired
-            // ActivityLog__c rows in chunks of 2000.
-            DeliveryActivityLogCleanup.aggregateUsageAnalytics();
-            Database.executeBatch(new DeliveryActivityLogCleanup(), 2000);
+            // opt-in flag. runMaintenance() enqueues the stateful aggregation batch
+            // (writes the JSON summary + queues the outbound analytics SyncItem),
+            // whose finish() chains the batch purge of expired ActivityLog__c rows.
+            // Both stages are QueryLocator batches — the old synchronous aggregate
+            // here blew the 50K query-row governor on high-volume subscribers
+            // (MF-Prod, ~67K rows/30d) and blocked the purge from ever enqueuing.
+            DeliveryActivityLogCleanup.runMaintenance();
         } catch (Exception ex) {
             System.debug(LoggingLevel.ERROR,
                 '[DeliveryHubScheduler] enqueueActivityLogCleanupIfDue failed: ' + ex.getMessage());
+        }
+    }
+
+    /**
+     * @description Runs the SyncItem ledger auto-purge once per day at 3 AM UTC
+     *              (one hour after the activity-log job so the two daily purges
+     *              don't stack) when the subscriber has explicitly opted in via
+     *              EnableSyncItemCleanupDateTime__c. Batch-deletes ONLY
+     *              StatusPk__c='Synced' rows older than
+     *              SyncItemRetentionDaysNumber__c (default 30 days) — Staged/
+     *              Queued/Pending/Failed rows are never touched. Because it
+     *              deletes subscriber data, it is OFF by default per the package
+     *              DateTime-toggle convention. Empirical motivator: dh-prod
+     *              (5 MB Dev Edition) filled its data storage with old Synced
+     *              ledger rows and broke sync on 2026-07-02. Mirrors
+     *              enqueueActivityLogCleanupIfDue.
+     */
+    @TestVisible
+    private static void enqueueSyncItemCleanupIfDue() {
+        try {
+            Integer currentHour = DateTime.now().hourGmt();
+            if (currentHour != 3) {
+                return;
+            }
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            if (settings == null || settings.EnableSyncItemCleanupDateTime__c == null) {
+                return;
+            }
+            Database.executeBatch(new DeliverySyncItemCleanup(), 2000);
+        } catch (Exception ex) {
+            System.debug(LoggingLevel.ERROR,
+                '[DeliveryHubScheduler] enqueueSyncItemCleanupIfDue failed: ' + ex.getMessage());
         }
     }
 

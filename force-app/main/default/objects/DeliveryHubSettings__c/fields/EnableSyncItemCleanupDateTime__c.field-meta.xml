@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableSyncItemCleanupDateTime__c</fullName>
+    <description>When non-null, the daily SyncItem auto-purge is active (runs at 3 AM UTC via the Delivery Hub Sync scheduler). Batch-deletes ONLY StatusPk__c='Synced' ledger rows older than SyncItemRetentionDaysNumber__c (default 30 days, aged on LastModifiedDate) — Staged/Queued/Pending/Failed rows are never touched. Because it deletes subscriber data, it is OFF by default per the package DateTime-toggle convention — null disables the feature entirely; nothing runs until an admin opts in per org.</description>
+    <externalId>false</externalId>
+    <label>Enable Sync Item Cleanup</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

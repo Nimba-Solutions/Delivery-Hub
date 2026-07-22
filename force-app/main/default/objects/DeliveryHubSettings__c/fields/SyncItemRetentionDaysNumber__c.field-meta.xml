@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>SyncItemRetentionDaysNumber__c</fullName>
+    <description>Number of days to retain successfully synced (StatusPk__c='Synced') SyncItem ledger rows before auto-purge. Defaults to 30 when blank. Only applies when EnableSyncItemCleanupDateTime__c is set — the purge never touches Staged/Queued/Pending/Failed rows.</description>
+    <inlineHelpText>How many days to keep successfully synced ledger rows before automatic cleanup (default 30). Only Synced rows are ever purged.</inlineHelpText>
+    <label>Sync Item Retention Days</label>
+    <precision>3</precision>
+    <scale>0</scale>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+    <required>false</required>
+</CustomField>
