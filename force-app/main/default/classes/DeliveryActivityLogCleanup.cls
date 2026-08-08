@@ -3,12 +3,21 @@
  * @license      BSL 1.1 — See LICENSE.md
  * @description Scheduled job that maintains the ActivityLog__c table.
  *
- * Two responsibilities run in sequence:
- * 1. **Aggregate** — Summarizes the last 30 days of activity per Network Entity into a
- *    JSON blob on NetworkEntity__c.UsageAnalyticsJsonTxt__c and queues an outbound
+ * Two responsibilities run in sequence, both fully batched:
+ * 1. **Aggregate** — DeliveryUsageAnalyticsBatch summarizes the last 30 days of
+ *    activity per Network Entity into a JSON blob on
+ *    NetworkEntity__c.UsageAnalyticsJsonTxt__c and queues an outbound
  *    SyncItem__c so the vendor org receives the analytics.
- * 2. **Purge** — Batch-deletes activity log records older than the retention window
+ * 2. **Purge** — this class (as the batch chained from the aggregation batch's
+ *    finish()) deletes activity log records older than the retention window
  *    (default 90 days) to prevent storage bloat.
+ *
+ * HISTORY / WHY BATCHED: aggregation used to run synchronously inside the
+ * Schedulable execute() with a LIMIT 50000 row-loop. Subscribers generating
+ * >50K log rows per 30 days (MF-Prod: ~67K) blew the query-row governor
+ * ("Too many query rows: 50001") BEFORE Database.executeBatch was reached, so
+ * the purge never enqueued and retention was unbounded. Both stages are now
+ * QueryLocator-driven batches, safe at any row volume.
  *
  * Schedule example (daily at 2 AM):
  *   System.schedule('Delivery Activity Log Cleanup', '0 0 2 * * ?', new DeliveryActivityLogCleanup());
@@ -20,19 +29,43 @@ global without sharing class DeliveryActivityLogCleanup implements Schedulable, 
 
     @TestVisible
     private static Integer retentionDays = 90;
-    private static final Integer AGGREGATION_DAYS = 30;
+    private static final Integer ANALYTICS_BATCH_SIZE = 2000;
 
     // -----------------------------------------------------------------------
     // Schedulable entry point
     // -----------------------------------------------------------------------
 
     /**
-     * @description Runs usage aggregation then kicks off the batch purge of old activity logs.
+     * @description Launches the batched usage aggregation, which chains the batch
+     *              purge of old activity logs from its finish() — preserving the
+     *              historical "aggregate first, then purge" ordering without any
+     *              unbounded synchronous query.
      * @param sc The SchedulableContext provided by the platform.
      */
     global void execute(SchedulableContext sc) {
-        aggregateUsageAnalytics();
-        Database.executeBatch(new DeliveryActivityLogCleanup(), 2000);
+        runMaintenance();
+    }
+
+    /**
+     * @description Single entry point for the daily maintenance pass. Enqueues
+     *              DeliveryUsageAnalyticsBatch (stateful, chunked aggregation);
+     *              its finish() chains this class as the purge batch. Called by
+     *              DeliveryHubScheduler.enqueueActivityLogCleanupIfDue() and the
+     *              standalone-cron Schedulable path above.
+     */
+    public static void runMaintenance() {
+        Database.executeBatch(new DeliveryUsageAnalyticsBatch(true), ANALYTICS_BATCH_SIZE);
+    }
+
+    /**
+     * @description Launches the usage-analytics aggregation WITHOUT chaining the
+     *              purge batch. Retained for callers that only want the telemetry
+     *              roll-up. The old synchronous implementation lives in
+     *              DeliveryUsageAnalyticsBatch now — see that class for why this
+     *              must be a batch (MF-Prod 50001 crash).
+     */
+    public static void aggregateUsageAnalytics() {
+        Database.executeBatch(new DeliveryUsageAnalyticsBatch(false), ANALYTICS_BATCH_SIZE);
     }
 
     // -----------------------------------------------------------------------
@@ -78,12 +111,16 @@ global without sharing class DeliveryActivityLogCleanup implements Schedulable, 
     }
 
     /**
-     * @description Deletes a batch of expired activity log records.
+     * @description Deletes a batch of expired activity log records. Partial-success
+     *              delete so a single blocked row (e.g. one that gained a legal
+     *              hold between start() and this chunk — the delete trigger's
+     *              blockLegalHoldDeletion addError) cannot fail the whole chunk
+     *              and stall the purge.
      * @param bc The BatchableContext provided by the platform.
      * @param scope The list of records to delete in this batch.
      */
     public void execute(Database.BatchableContext bc, List<SObject> scope) {
-        delete scope;
+        Database.delete(scope, false);
     }
 
     /**
@@ -93,156 +130,5 @@ global without sharing class DeliveryActivityLogCleanup implements Schedulable, 
     @SuppressWarnings('PMD.EmptyStatementBlock')
     public void finish(Database.BatchableContext bc) {
         // No post-processing needed
-    }
-
-    // -----------------------------------------------------------------------
-    // Aggregation — builds JSON summary per Network Entity and queues sync
-    // -----------------------------------------------------------------------
-
-    /** @description Accumulates per-entity metrics during log processing. */
-    @TestVisible
-    private class MetricsAccumulator {
-        /** @description Action type counts per entity. */
-        Map<Id, Map<String, Integer>> actionCounts = new Map<Id, Map<String, Integer>>();
-        /** @description Component counts per entity. */
-        Map<Id, Map<String, Integer>> componentCounts = new Map<Id, Map<String, Integer>>();
-        /** @description Unique user IDs per entity. */
-        Map<Id, Set<String>> uniqueUsers = new Map<Id, Set<String>>();
-        /** @description Total action count per entity. */
-        Map<Id, Integer> totals = new Map<Id, Integer>();
-    }
-
-    /**
-     * @description Summarizes the last 30 days of ActivityLog__c activity per Network
-     *              Entity into a JSON blob on NetworkEntity__c.UsageAnalyticsJsonTxt__c
-     *              and queues an outbound SyncItem__c so the vendor org receives the
-     *              analytics. Public so DeliveryHubScheduler can invoke it from the
-     *              gated daily sub-job (EnableActivityLogCleanupDateTime__c) — the
-     *              Schedulable execute() also calls it for the standalone-cron path.
-     */
-    public static void aggregateUsageAnalytics() {
-        DateTime since = DateTime.now().addDays(-AGGREGATION_DAYS);
-        MetricsAccumulator acc = new MetricsAccumulator();
-
-        collectLogMetrics(since, acc);
-
-        if (acc.totals.isEmpty()) {
-            return;
-        }
-
-        buildSummariesAndSync(acc);
-    }
-
-    // -----------------------------------------------------------------------
-    // Private helpers
-    // -----------------------------------------------------------------------
-
-    private static void collectLogMetrics(DateTime since, MetricsAccumulator acc) {
-        for (ActivityLog__c log : [
-            SELECT NetworkEntityLookup__c, ActionTypePk__c, ComponentNameTxt__c, UserIdTxt__c
-            FROM ActivityLog__c
-            WHERE CreatedDate >= :since
-            AND NetworkEntityLookup__c != null
-            WITH SYSTEM_MODE
-            ORDER BY NetworkEntityLookup__c
-            LIMIT 50000
-        ]) {
-            Id entId = log.NetworkEntityLookup__c;
-
-            acc.totals.put(entId, (acc.totals.containsKey(entId) ? acc.totals.get(entId) : 0) + 1);
-
-            incrementBucket(acc.actionCounts, entId,
-                String.isNotBlank(log.ActionTypePk__c) ? log.ActionTypePk__c : 'Unknown');
-
-            incrementBucket(acc.componentCounts, entId,
-                String.isNotBlank(log.ComponentNameTxt__c) ? log.ComponentNameTxt__c : 'Unknown');
-
-            if (!acc.uniqueUsers.containsKey(entId)) {
-                acc.uniqueUsers.put(entId, new Set<String>());
-            }
-            if (String.isNotBlank(log.UserIdTxt__c)) {
-                acc.uniqueUsers.get(entId).add(log.UserIdTxt__c);
-            }
-        }
-    }
-
-    private static void incrementBucket(Map<Id, Map<String, Integer>> buckets, Id entId, String key) {
-        if (!buckets.containsKey(entId)) {
-            buckets.put(entId, new Map<String, Integer>());
-        }
-        Map<String, Integer> bucket = buckets.get(entId);
-        bucket.put(key, (bucket.containsKey(key) ? bucket.get(key) : 0) + 1);
-    }
-
-    private static void buildSummariesAndSync(MetricsAccumulator acc) {
-        List<NetworkEntity__c> toUpdate = new List<NetworkEntity__c>();
-        List<SyncItem__c> syncItems = new List<SyncItem__c>();
-
-        for (Id entId : acc.totals.keySet()) {
-            Map<String, Object> summary = new Map<String, Object>();
-            summary.put('lastUpdated', DateTime.now().formatGmt('yyyy-MM-dd\'T\'HH:mm:ss\'Z\''));
-            summary.put('periodDays', AGGREGATION_DAYS);
-            summary.put('totalActions', acc.totals.get(entId));
-            summary.put('uniqueUsers', acc.uniqueUsers.containsKey(entId)
-                ? acc.uniqueUsers.get(entId).size() : 0);
-            summary.put('topActions', sortedEntries(acc.actionCounts.get(entId)));
-            summary.put('topComponents', sortedEntries(acc.componentCounts.get(entId)));
-
-            String jsonBlob = JSON.serialize(summary);
-
-            toUpdate.add(new NetworkEntity__c(
-                Id = entId,
-                UsageAnalyticsJsonTxt__c = jsonBlob
-            ));
-
-            syncItems.add(new SyncItem__c(
-                ObjectTypePk__c = 'UsageAnalytics',
-                DirectionPk__c = 'Outbound',
-                StatusPk__c = 'Queued',
-                LocalRecordIdTxt__c = entId,
-                PayloadTxt__c = jsonBlob
-            ));
-        }
-
-        if (!toUpdate.isEmpty()) {
-            update toUpdate;
-        }
-        if (!syncItems.isEmpty()) {
-            insert syncItems;
-        }
-    }
-
-    private static List<Map<String, Object>> sortedEntries(Map<String, Integer> counts) {
-        if (counts == null || counts.isEmpty()) {
-            return new List<Map<String, Object>>();
-        }
-
-        List<Map<String, Object>> entries = new List<Map<String, Object>>();
-        for (String key : counts.keySet()) {
-            entries.add(new Map<String, Object>{
-                'name' => key,
-                'count' => counts.get(key)
-            });
-        }
-
-        // Insertion sort descending by count (small N)
-        for (Integer i = 1; i < entries.size(); i++) {
-            Map<String, Object> current = entries[i];
-            Integer currentCount = (Integer) current.get('count');
-            Integer j = i - 1;
-            while (j >= 0 && (Integer) entries[j].get('count') < currentCount) {
-                entries[j + 1] = entries[j];
-                j--;
-            }
-            entries[j + 1] = current;
-        }
-
-        // Return top 10
-        Integer limit10 = Math.min(entries.size(), 10);
-        List<Map<String, Object>> result = new List<Map<String, Object>>();
-        for (Integer i = 0; i < limit10; i++) {
-            result.add(entries[i]);
-        }
-        return result;
     }
 }

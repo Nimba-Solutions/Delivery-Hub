@@ -367,10 +367,10 @@ private class DeliveryHubSchedulerTest {
 
             List<AsyncApexJob> batchJobs = [
                 SELECT Id FROM AsyncApexJob
-                WHERE ApexClass.Name = 'DeliveryActivityLogCleanup'
+                WHERE ApexClass.Name IN ('DeliveryActivityLogCleanup', 'DeliveryUsageAnalyticsBatch')
             ];
             System.assertEquals(0, batchJobs.size(),
-                'No DeliveryActivityLogCleanup batch should run when the opt-in flag is null');
+                'Neither the aggregation nor the purge batch should run when the opt-in flag is null');
 
             Integer telemetryItems = [
                 SELECT COUNT()
@@ -426,6 +426,69 @@ private class DeliveryHubSchedulerTest {
             ];
             System.assert(telemetryItems >= 0,
                 'Cleanup path should be reachable without error when opted in');
+        }
+    }
+
+    /**
+     * @description SyncItem cleanup gate: when the opt-in flag
+     *              EnableSyncItemCleanupDateTime__c is null (default), the purge
+     *              must NOT run — no DeliverySyncItemCleanup batch should appear
+     *              in the job monitor. Off-by-default is the point: the job
+     *              deletes subscriber ledger rows, so an unopted org must stay
+     *              completely inert. Invoked via the @TestVisible helper so the
+     *              assertion is deterministic regardless of the current GMT hour
+     *              (outside the 3 AM window the hour gate also skips — either
+     *              exit is inert, which is what we assert).
+     */
+    @IsTest
+    static void testSyncItemCleanupSkipsWhenFlagOff() {
+        System.runAs(testUser) {
+            // @TestSetup leaves EnableSyncItemCleanupDateTime__c null.
+            TestDataFactory.createSyncItem(new Map<String, Object>{ 'StatusPk__c' => 'Synced' });
+
+            Test.startTest();
+            DeliveryHubScheduler.enqueueSyncItemCleanupIfDue();
+            Test.stopTest();
+
+            List<AsyncApexJob> batchJobs = [
+                SELECT Id FROM AsyncApexJob
+                WHERE ApexClass.Name = 'DeliverySyncItemCleanup'
+            ];
+            System.assertEquals(0, batchJobs.size(),
+                'No DeliverySyncItemCleanup batch should run when the opt-in flag is null');
+        }
+    }
+
+    /**
+     * @description SyncItem cleanup gate: when the opt-in flag is set, the
+     *              cleanup path is reachable. The helper hardcodes a 3 AM UTC
+     *              window, so we verify the wiring is exception-free; whether or
+     *              not the current run falls in the window, a freshly modified
+     *              Synced row sits inside the default 30-day retention window
+     *              and must survive — a deterministic assertion in both branches.
+     *              Mirrors testActivityLogCleanupReachableWhenOptedIn.
+     */
+    @IsTest
+    static void testSyncItemCleanupReachableWhenOptedIn() {
+        System.runAs(testUser) {
+            DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+            settings.EnableSyncItemCleanupDateTime__c = Datetime.now();
+            update settings;
+
+            SyncItem__c recentSynced = TestDataFactory.createSyncItem(
+                new Map<String, Object>{ 'StatusPk__c' => 'Synced' });
+
+            Test.startTest();
+            // Exercises the gate + (when 3 AM GMT) the batch enqueue.
+            DeliveryHubScheduler.enqueueSyncItemCleanupIfDue();
+            Test.stopTest();
+
+            Integer survivors = [
+                SELECT COUNT() FROM SyncItem__c
+                WHERE Id = :recentSynced.Id
+            ];
+            System.assertEquals(1, survivors,
+                'A recent Synced row inside the retention window must survive whether or not the batch ran');
         }
     }
 
