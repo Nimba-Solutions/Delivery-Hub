@@ -1628,7 +1628,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     }
 
     get detailTitle() { return this.detailWorkItem?.BriefDescriptionTxt__c || this.detailWorkItem?.delivery__BriefDescriptionTxt__c || ''; }
-    get detailDescription() { return this.detailWorkItem?.DetailsTxt__c || this.detailWorkItem?.delivery__DetailsTxt__c || 'No description provided.'; }
+    get detailDescription() { return toRichText(this.detailWorkItem?.DetailsTxt__c || this.detailWorkItem?.delivery__DetailsTxt__c) || 'No description provided.'; }
     get detailStage() { return this.detailWorkItem?.StageNamePk__c || this.detailWorkItem?.delivery__StageNamePk__c || ''; }
     get detailPriority() { return this.detailWorkItem?.PriorityPk__c || this.detailWorkItem?.delivery__PriorityPk__c || ''; }
     get detailOwner() { return this.detailWorkItem?.Owner?.Name || ''; }

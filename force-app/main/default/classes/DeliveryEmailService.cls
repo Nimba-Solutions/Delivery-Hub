@@ -101,8 +101,7 @@ public with sharing class DeliveryEmailService {
         // template is escaped. Flatten to text, then escape, then re-introduce breaks —
         // same treatment as DeliveryWorkApprovalService.
         String body = String.isNotBlank(comment.BodyTxt__c)
-            ? comment.BodyTxt__c.stripHtmlTags().unescapeHtml4().escapeHtml4().replace('
-', '<br />')
+            ? comment.BodyTxt__c.stripHtmlTags().unescapeHtml4().escapeHtml4().replace('\n', '<br />')
             : '(no content)';
         String wiName = String.valueOf(workItem.Name).escapeHtml4();
         String title = String.isNotBlank(workItem.BriefDescriptionTxt__c) ? String.valueOf(workItem.BriefDescriptionTxt__c).escapeHtml4() : 'Work Item';

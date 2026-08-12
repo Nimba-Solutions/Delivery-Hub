@@ -110,8 +110,7 @@ private class DeliveryEmailServiceTest {
             WorkItem__c realWi = [SELECT Id, Name, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
             WorkItemComment__c comment = [SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate FROM WorkItemComment__c LIMIT 1];
 
-            comment.BodyTxt__c = 'first line
-second line';
+            comment.BodyTxt__c = 'first line\nsecond line';
             update comment;
             WorkItemComment__c reloaded = [SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate FROM WorkItemComment__c WHERE Id = :comment.Id];
 
