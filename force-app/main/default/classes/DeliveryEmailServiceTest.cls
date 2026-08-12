@@ -105,19 +105,39 @@ private class DeliveryEmailServiceTest {
     }
 
     @IsTest
-    static void testBuildCommentHtmlKeepsLineBreaks() {
-        System.runAs(testUser) {
-            WorkItem__c realWi = [SELECT Id, Name, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
-            WorkItemComment__c comment = [SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate FROM WorkItemComment__c LIMIT 1];
+    static void testFlattenCommentBodyPreservesBreaks() {
+        // Exercised directly rather than through a DML round-trip: BodyTxt__c is a
+        // Rich Text Area, and the platform is free to normalise or drop a bare newline
+        // on save. Asserting on that would be testing Salesforce's storage layer, not
+        // this method. These are the shapes the field actually holds in MF-Prod.
+        System.assertEquals(
+            'first line<br />second line',
+            DeliveryEmailService.flattenCommentBody('first line<br>second line'),
+            'A <br> is the usual line break in a rich-text body'
+        );
+        System.assertEquals(
+            'one<br />two',
+            DeliveryEmailService.flattenCommentBody('<p>one</p><p>two</p>'),
+            'Block closes must survive as breaks, not weld the lines together'
+        );
+        System.assertEquals(
+            'alpha<br />beta',
+            DeliveryEmailService.flattenCommentBody('alpha\nbeta'),
+            'A literal newline must also promote to a break'
+        );
+    }
 
-            comment.BodyTxt__c = 'first line\nsecond line';
-            update comment;
-            WorkItemComment__c reloaded = [SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate FROM WorkItemComment__c WHERE Id = :comment.Id];
-
-            String html = DeliveryEmailService.buildCommentHtml(realWi, reloaded, 'https://test.salesforce.com/record');
-
-            System.assert(html.contains('first line<br />second line'), 'Newlines must render as breaks, not collapse');
-        }
+    @IsTest
+    static void testFlattenCommentBodyEscapesAndDecodes() {
+        System.assertEquals(
+            'Jose\'s call',
+            DeliveryEmailService.flattenCommentBody('Jose&#39;s call'),
+            'Encoded apostrophes decode for the email; escapeHtml4 leaves quotes alone'
+        );
+        System.assert(
+            !DeliveryEmailService.flattenCommentBody('<script>alert(1)</script>hi').contains('<script>'),
+            'Script tags must not survive'
+        );
     }
 
     @IsTest

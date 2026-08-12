@@ -156,6 +156,7 @@ public with sharing class DeliveryEmailService {
             .stripHtmlTags()
             .unescapeHtml4()
             .escapeHtml4()
+            .trim()
             .replaceAll('(\\r?\\n)+', '<br />');
     }
 }
