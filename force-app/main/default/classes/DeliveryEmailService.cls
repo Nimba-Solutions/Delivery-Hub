@@ -101,7 +101,7 @@ public with sharing class DeliveryEmailService {
         // template is escaped. Flatten to text, then escape, then re-introduce breaks —
         // same treatment as DeliveryWorkApprovalService.
         String body = String.isNotBlank(comment.BodyTxt__c)
-            ? comment.BodyTxt__c.stripHtmlTags().unescapeHtml4().escapeHtml4().replace('\n', '<br />')
+            ? flattenCommentBody(comment.BodyTxt__c)
             : '(no content)';
         String wiName = String.valueOf(workItem.Name).escapeHtml4();
         String title = String.isNotBlank(workItem.BriefDescriptionTxt__c) ? String.valueOf(workItem.BriefDescriptionTxt__c).escapeHtml4() : 'Work Item';
@@ -133,5 +133,29 @@ public with sharing class DeliveryEmailService {
     private static String getEmailServiceDomain() {
         if (String.isNotBlank(emailServiceDomain)) { return emailServiceDomain; }
         return null;
+    }
+
+    /**
+     * @description Renders a rich-text comment body as safe html for an email.
+     *
+     *              BodyTxt__c is a Rich Text Area, so its line breaks are <br> and
+     *              block tags, NOT newline characters. stripHtmlTags() alone would
+     *              therefore silently weld every line together — which is what the
+     *              first cut of this did, and what testBuildCommentHtmlKeepsLineBreaks
+     *              caught. Demote the breaks to newlines first, then flatten, then
+     *              escape (comments can arrive from outside the org via the Slack and
+     *              inbound-email handlers), then promote the newlines back to <br />.
+     * @param rawBody Raw BodyTxt__c value; assumed non-blank.
+     * @return Escaped html safe to interpolate into the email template.
+     */
+    @TestVisible
+    private static String flattenCommentBody(String rawBody) {
+        return rawBody
+            .replaceAll('(?i)<br\\s*/?>', '\n')
+            .replaceAll('(?i)</(p|div|li|h[1-6])\\s*>', '\n')
+            .stripHtmlTags()
+            .unescapeHtml4()
+            .escapeHtml4()
+            .replaceAll('(\\r?\\n)+', '<br />');
     }
 }
