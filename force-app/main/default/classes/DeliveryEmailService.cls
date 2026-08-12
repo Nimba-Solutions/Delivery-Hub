@@ -12,6 +12,9 @@
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryEmailService {
 
+    /** @description Sentinel standing in for a line break while html is stripped. Alphanumeric so escapeHtml4 leaves it alone. */
+    private static final String BREAK_TOKEN = 'ZZDHBRZZ';
+
     @TestVisible
     private static final String EMAIL_ADDRESS_PREFIX = 'workitem-';
 
@@ -150,13 +153,21 @@ public with sharing class DeliveryEmailService {
      */
     @TestVisible
     private static String flattenCommentBody(String rawBody) {
-        return rawBody
-            .replaceAll('(?i)<br\\s*/?>', '\n')
-            .replaceAll('(?i)</(p|div|li|h[1-6])\\s*>', '\n')
+        // stripHtmlTags() normalises whitespace — a newline comes out the other side
+        // as a space — so line breaks cannot be carried through it as characters.
+        // Carry them as a sentinel that survives both tag-stripping and escaping.
+        String marked = rawBody
+            .replaceAll('(?i)<br\\s*/?>', BREAK_TOKEN)
+            .replaceAll('(?i)</(p|div|li|h[1-6])\\s*>', BREAK_TOKEN)
+            .replaceAll('\\r?\\n', BREAK_TOKEN);
+
+        return marked
             .stripHtmlTags()
             .unescapeHtml4()
             .escapeHtml4()
+            .replaceAll('\\s*(' + BREAK_TOKEN + '\\s*)+', BREAK_TOKEN)
+            .replaceAll('^' + BREAK_TOKEN + '|' + BREAK_TOKEN + '$', '')
             .trim()
-            .replaceAll('(\\r?\\n)+', '<br />');
+            .replace(BREAK_TOKEN, '<br />');
     }
 }

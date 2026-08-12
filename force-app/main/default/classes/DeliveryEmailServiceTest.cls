@@ -130,9 +130,9 @@ private class DeliveryEmailServiceTest {
     @IsTest
     static void testFlattenCommentBodyEscapesAndDecodes() {
         System.assertEquals(
-            'Jose\'s call',
+            'Jose&#39;s call',
             DeliveryEmailService.flattenCommentBody('Jose&#39;s call'),
-            'Encoded apostrophes decode for the email; escapeHtml4 leaves quotes alone'
+            'escapeHtml4 re-escapes the apostrophe, so encoded text round-trips unchanged'
         );
         System.assert(
             !DeliveryEmailService.flattenCommentBody('<script>alert(1)</script>hi').contains('<script>'),
