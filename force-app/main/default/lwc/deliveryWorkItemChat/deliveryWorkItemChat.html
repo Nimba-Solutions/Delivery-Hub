@@ -6,7 +6,7 @@
                     <div class="slds-chat-message">
                         <div class="slds-chat-message__body">
                             <div class={msg.bubbleClass}>
-                                <lightning-formatted-text value={msg.body}></lightning-formatted-text>
+                                <lightning-formatted-rich-text value={msg.body}></lightning-formatted-rich-text>
                             </div>
                             <template lwc:if={msg.files}>
                                 <template for:each={msg.files} for:item="fileName">
