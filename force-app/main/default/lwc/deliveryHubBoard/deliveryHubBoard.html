@@ -921,7 +921,7 @@
                                             <span class="detail-comment-author">{comment.author}</span>
                                             <span class="detail-comment-date">{comment.date}</span>
                                         </div>
-                                        <p class="detail-comment-body">{comment.body}</p>
+                                        <lightning-formatted-rich-text class="detail-comment-body" value={comment.body}></lightning-formatted-rich-text>
                                     </div>
                                 </template>
                             </div>

@@ -95,7 +95,15 @@ public with sharing class DeliveryEmailService {
     @TestVisible
     private static String buildCommentHtml(WorkItem__c workItem, WorkItemComment__c comment, String recordUrl) {
         String author = String.isNotBlank(comment.AuthorTxt__c) ? String.valueOf(comment.AuthorTxt__c).escapeHtml4() : 'Someone';
-        String body = String.isNotBlank(comment.BodyTxt__c) ? comment.BodyTxt__c : '(no content)';
+        // BodyTxt__c is a rich-text field, and comments can originate outside the org
+        // (DeliverySlackInboundHandler / DeliveryInboundEmailHandler). Interpolating it
+        // raw into this html email was an injection path; every other field on this
+        // template is escaped. Flatten to text, then escape, then re-introduce breaks —
+        // same treatment as DeliveryWorkApprovalService.
+        String body = String.isNotBlank(comment.BodyTxt__c)
+            ? comment.BodyTxt__c.stripHtmlTags().unescapeHtml4().escapeHtml4().replace('
+', '<br />')
+            : '(no content)';
         String wiName = String.valueOf(workItem.Name).escapeHtml4();
         String title = String.isNotBlank(workItem.BriefDescriptionTxt__c) ? String.valueOf(workItem.BriefDescriptionTxt__c).escapeHtml4() : 'Work Item';
         return '<div style="font-family: Arial, sans-serif; max-width: 600px;">'

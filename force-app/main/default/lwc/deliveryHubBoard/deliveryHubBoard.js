@@ -16,6 +16,7 @@ import { NavigationMixin } from "lightning/navigation";
 // Update this line to include createRecord, getRecord, and getFieldValue
 import { updateRecord, createRecord, getRecord, getFieldValue } from "lightning/uiRecordApi";
 import FORM_FACTOR from "@salesforce/client/formFactor";
+import { toRichText } from "c/deliveryCommentFormat";
 
 // Add these new imports for the current user
 import USER_ID from "@salesforce/user/Id";
@@ -1718,7 +1719,7 @@ export default class DeliveryHubBoard extends NavigationMixin(LightningElement) 
     get detailFormattedComments() {
         return (this.detailComments || []).map(c => ({
             id: c.Id,
-            body: c.BodyTxt__c || c.delivery__BodyTxt__c || '',
+            body: toRichText(c.BodyTxt__c || c.delivery__BodyTxt__c || ''),
             author: c.AuthorTxt__c || c.delivery__AuthorTxt__c || 'Unknown',
             source: c.SourcePk__c || c.delivery__SourcePk__c || '',
             date: c.CreatedDate ? new Date(c.CreatedDate).toLocaleString() : ''

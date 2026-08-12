@@ -86,6 +86,42 @@ private class DeliveryEmailServiceTest {
     }
 
     @IsTest
+    static void testBuildCommentHtmlNeutralisesMarkup() {
+        System.runAs(testUser) {
+            WorkItem__c realWi = [SELECT Id, Name, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
+            WorkItemComment__c comment = [SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate FROM WorkItemComment__c LIMIT 1];
+
+            // BodyTxt__c is rich text and can arrive from outside the org via the
+            // Slack / inbound-email handlers, so it must not reach the email body raw.
+            comment.BodyTxt__c = '<script>alert(1)</script>Ship it';
+            update comment;
+            WorkItemComment__c reloaded = [SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate FROM WorkItemComment__c WHERE Id = :comment.Id];
+
+            String html = DeliveryEmailService.buildCommentHtml(realWi, reloaded, 'https://test.salesforce.com/record');
+
+            System.assert(!html.contains('<script>'), 'Script tag must not survive into the email body');
+            System.assert(html.contains('Ship it'), 'Readable text must survive');
+        }
+    }
+
+    @IsTest
+    static void testBuildCommentHtmlKeepsLineBreaks() {
+        System.runAs(testUser) {
+            WorkItem__c realWi = [SELECT Id, Name, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
+            WorkItemComment__c comment = [SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate FROM WorkItemComment__c LIMIT 1];
+
+            comment.BodyTxt__c = 'first line
+second line';
+            update comment;
+            WorkItemComment__c reloaded = [SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate FROM WorkItemComment__c WHERE Id = :comment.Id];
+
+            String html = DeliveryEmailService.buildCommentHtml(realWi, reloaded, 'https://test.salesforce.com/record');
+
+            System.assert(html.contains('first line<br />second line'), 'Newlines must render as breaks, not collapse');
+        }
+    }
+
+    @IsTest
     static void testNotifyWithDifferentAuthor() {
         System.runAs(testUser) {
             WorkItem__c wi = [SELECT Id FROM WorkItem__c LIMIT 1];
