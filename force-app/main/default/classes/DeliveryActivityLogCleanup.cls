@@ -22,6 +22,18 @@ global without sharing class DeliveryActivityLogCleanup implements Schedulable, 
     private static Integer retentionDays = 90;
     private static final Integer AGGREGATION_DAYS = 30;
 
+    /**
+     * Query rows held back from the aggregation query for the trigger chains this
+     * job's own DML fires afterward (NetworkEntity__c update → field tracking SOQL,
+     * SyncItem__c insert). Consuming the full 50k transaction budget up front makes
+     * the first downstream trigger query throw System.LimitException.
+     */
+    private static final Integer QUERY_ROW_RESERVE = 5000;
+
+    /** @description Test hook to force a specific row budget (governor state can't be simulated). */
+    @TestVisible
+    private static Integer rowBudgetOverrideForTest;
+
     // -----------------------------------------------------------------------
     // Schedulable entry point
     // -----------------------------------------------------------------------
@@ -138,6 +150,13 @@ global without sharing class DeliveryActivityLogCleanup implements Schedulable, 
     // -----------------------------------------------------------------------
 
     private static void collectLogMetrics(DateTime since, MetricsAccumulator acc) {
+        Integer rowBudget = rowBudgetOverrideForTest != null
+            ? rowBudgetOverrideForTest
+            : computeRowBudget(Limits.getLimitQueryRows(), Limits.getQueryRows());
+        if (rowBudget <= 0) {
+            return;
+        }
+
         for (ActivityLog__c log : [
             SELECT NetworkEntityLookup__c, ActionTypePk__c, ComponentNameTxt__c, UserIdTxt__c
             FROM ActivityLog__c
@@ -145,7 +164,7 @@ global without sharing class DeliveryActivityLogCleanup implements Schedulable, 
             AND NetworkEntityLookup__c != null
             WITH SYSTEM_MODE
             ORDER BY NetworkEntityLookup__c
-            LIMIT 50000
+            LIMIT :rowBudget
         ]) {
             Id entId = log.NetworkEntityLookup__c;
 
@@ -164,6 +183,20 @@ global without sharing class DeliveryActivityLogCleanup implements Schedulable, 
                 acc.uniqueUsers.get(entId).add(log.UserIdTxt__c);
             }
         }
+    }
+
+    /**
+     * @description Rows the aggregation query may safely consume: the remaining
+     *              transaction budget minus the reserve for downstream trigger SOQL.
+     *              Floors at zero so a nearly-exhausted transaction skips aggregation
+     *              instead of throwing.
+     * @param limitRows Transaction query-row limit (Limits.getLimitQueryRows()).
+     * @param usedRows  Query rows already consumed (Limits.getQueryRows()).
+     * @return Number of rows the aggregation query may retrieve.
+     */
+    @TestVisible
+    private static Integer computeRowBudget(Integer limitRows, Integer usedRows) {
+        return Math.max(0, limitRows - usedRows - QUERY_ROW_RESERVE);
     }
 
     private static void incrementBucket(Map<Id, Map<String, Integer>> buckets, Id entId, String key) {
