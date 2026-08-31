@@ -902,7 +902,7 @@
                     <!-- Description -->
                     <div class="detail-section">
                         <h3 class="detail-section-heading">Description</h3>
-                        <p class="detail-description">{detailDescription}</p>
+                        <lightning-formatted-rich-text class="detail-description" value={detailDescription}></lightning-formatted-rich-text>
                     </div>
 
                     <!-- Comments -->
@@ -921,7 +921,7 @@
                                             <span class="detail-comment-author">{comment.author}</span>
                                             <span class="detail-comment-date">{comment.date}</span>
                                         </div>
-                                        <p class="detail-comment-body">{comment.body}</p>
+                                        <lightning-formatted-rich-text class="detail-comment-body" value={comment.body}></lightning-formatted-rich-text>
                                     </div>
                                 </template>
                             </div>

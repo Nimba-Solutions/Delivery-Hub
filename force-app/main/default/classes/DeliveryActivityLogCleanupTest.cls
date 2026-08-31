@@ -162,6 +162,45 @@ private class DeliveryActivityLogCleanupTest {
     }
 
     @IsTest
+    static void testRowBudgetLeavesReserveForTriggerQueries() {
+        // Fresh transaction: full 50k limit minus the 5k reserve for downstream trigger SOQL
+        System.assertEquals(45000, DeliveryActivityLogCleanup.computeRowBudget(50000, 0),
+            'Fresh transaction should budget limit minus reserve');
+        // Partially consumed transaction (e.g. DeliveryHubScheduler sub-job path)
+        System.assertEquals(2000, DeliveryActivityLogCleanup.computeRowBudget(50000, 43000),
+            'Budget should shrink by rows already consumed');
+        // Nearly exhausted transaction must not go negative
+        System.assertEquals(0, DeliveryActivityLogCleanup.computeRowBudget(50000, 48000),
+            'Budget must floor at zero when reserve cannot be honored');
+        System.assertEquals(0, DeliveryActivityLogCleanup.computeRowBudget(50000, 50000),
+            'Budget must floor at zero when limit is fully consumed');
+    }
+
+    @IsTest
+    static void testAggregateSkipsWhenNoRowBudget() {
+        System.runAs(testUser) {
+            NetworkEntity__c entity = [SELECT Id FROM NetworkEntity__c LIMIT 1];
+            insert new ActivityLog__c(
+                ActionTypePk__c = 'Navigation',
+                ComponentNameTxt__c = 'deliveryHubBoard',
+                UserIdTxt__c = UserInfo.getUserId(),
+                NetworkEntityLookup__c = entity.Id
+            );
+
+            Test.startTest();
+            DeliveryActivityLogCleanup.rowBudgetOverrideForTest = 0;
+            DeliveryActivityLogCleanup.aggregateUsageAnalytics();
+            Test.stopTest();
+
+            NetworkEntity__c updated = [
+                SELECT UsageAnalyticsJsonTxt__c FROM NetworkEntity__c WHERE Id = :entity.Id
+            ];
+            System.assertEquals(null, updated.UsageAnalyticsJsonTxt__c,
+                'Aggregation should skip silently when no query-row budget remains');
+        }
+    }
+
+    @IsTest
     static void testAggregateWithNoData() {
         System.runAs(testUser) {
             // Should complete without error even with no activity logs
