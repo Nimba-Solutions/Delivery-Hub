@@ -361,6 +361,7 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     public static void handleBeforeUpdate(List<WorkItem__c> newWorkItems, Map<Id, WorkItem__c> oldMap) {
         protectGanttCriticalFieldsFromNull(newWorkItems, oldMap);
         stampStageEnteredOnUpdate(newWorkItems, oldMap);
+        alignStatusWithDoneStage(newWorkItems);
         assignDeployVerifier(newWorkItems, oldMap);
 
         // Auto-generate bounty token when BountyEnabledDateTime__c flips to true on update
@@ -547,6 +548,36 @@ public without sharing class DeliveryWorkItemTriggerHandler {
             // Auto-generate bounty token when published as a bounty
             if (workItem.BountyEnabledDateTime__c != null && String.isBlank(workItem.BountyTokenTxt__c)) {
                 workItem.BountyTokenTxt__c = DeliveryBountyService.generateBountyToken();
+            }
+        }
+        alignStatusWithDoneStage(newWorkItems);
+    }
+
+    /** WorkItem__c stage/status value pair kept aligned by alignStatusWithDoneStage. */
+    @TestVisible
+    private static final String STAGE_DONE = 'Done';
+    @TestVisible
+    private static final String STATUS_DONE = 'Done';
+
+    /**
+     * @description BEFORE-SAVE invariant (tracker W3.6 / audit H4): a work item
+     *              whose StageNamePk__c is 'Done' must carry StatusPk__c = 'Done'.
+     *              Nothing previously kept the coarse StatusPk__c in step when the
+     *              board/services moved the detailed stage to Done, so items
+     *              accumulated as Stage=Done + Status=Active/In Progress (6 live in
+     *              MF-Prod at audit time) and status-keyed surfaces disagreed with
+     *              stage-keyed ones. Runs in the same DML (no extra update) and in
+     *              EVERY context — including inbound sync — because this is a data
+     *              invariant, not a defaulting rule: re-ingesting a divergent peer
+     *              row must not reintroduce the divergence. Idempotent; touches
+     *              nothing when the stage is not Done, so Deployed-to-Prod and
+     *              Cancelled semantics are unchanged.
+     * @param newWorkItems WorkItem__c rows being inserted/updated (mutable).
+     */
+    private static void alignStatusWithDoneStage(List<WorkItem__c> newWorkItems) {
+        for (WorkItem__c workItem : newWorkItems) {
+            if (workItem.StageNamePk__c == STAGE_DONE && workItem.StatusPk__c != STATUS_DONE) {
+                workItem.StatusPk__c = STATUS_DONE;
             }
         }
     }

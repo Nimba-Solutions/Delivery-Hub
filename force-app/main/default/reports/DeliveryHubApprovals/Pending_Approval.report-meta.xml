@@ -19,7 +19,7 @@
     <columns>
         <field>%%%NAMESPACE%%%WorkRequest__c$CreatedDate</field>
     </columns>
-    <description>Offer-Sent work requests awaiting a decision: the approval queue on paper. Sum of quoted hours = total spend awaiting sign-off.</description>
+    <description>Offer-Sent work requests (quotes) awaiting acceptance; quoted-hours sum = spend awaiting a decision. Relabeled from Pending Approval per DECISION-G2 - that name now means WorkItems in approval stages. DeveloperName kept for tile click-throughs.</description>
     <filter>
         <criteriaItems>
             <column>%%%NAMESPACE%%%WorkRequest__c$%%%NAMESPACE%%%StatusPk__c</column>
@@ -30,7 +30,7 @@
         </criteriaItems>
     </filter>
     <format>Tabular</format>
-    <name>Pending Approval</name>
+    <name>Quotes Awaiting Acceptance</name>
     <reportType>%%%NAMESPACE%%%Work_Requests__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>

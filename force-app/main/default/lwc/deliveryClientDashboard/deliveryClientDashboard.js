@@ -112,7 +112,7 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
 
     connectedCallback() {
         getReportIds({ developerNames: [
-            'Recently_Completed', 'In_Flight_Work_Items', 'Blocked_Work_Items',
+            'Recently_Completed', 'In_Progress_Work_Items', 'Blocked_Work_Items',
             'Monthly_Hours', 'Attention_Items',
             'WorkItems_Planning', 'WorkItems_Approval', 'WorkItems_Development',
             'WorkItems_Testing', 'WorkItems_UAT', 'WorkItems_Deployment'
@@ -515,7 +515,10 @@ export default class DeliveryClientDashboard extends NavigationMixin(LightningEl
     }
 
     handleInProgressClick() {
-        this.navigateToReport('In_Flight_Work_Items', 'In_Flight');
+        // W3.2: the This-Week "In Progress" tile gets its own report scoped to
+        // THIS_WEEK — it previously shared the unbounded In_Flight_Work_Items
+        // report, so the tile count and the report row count never matched.
+        this.navigateToReport('In_Progress_Work_Items', 'In_Flight');
     }
 
     handleHoursClick() {

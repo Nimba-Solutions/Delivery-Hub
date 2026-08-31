@@ -10,7 +10,13 @@
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</field>
     </columns>
     <columns>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%PriorityPk__c</field>
+    </columns>
+    <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ClientNetworkEntityLookup__c</field>
+    </columns>
+    <columns>
+        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%DeveloperLookup__c</field>
     </columns>
     <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%EstimatedHoursNumber__c</field>
@@ -19,14 +25,11 @@
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%TotalLoggedHoursSum__c</field>
     </columns>
     <columns>
-        <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%HoursVarianceNumber__c</field>
-    </columns>
-    <columns>
         <field>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%CalculatedETADate__c</field>
     </columns>
-    <description>Work items currently in active delivery stages with progress, hours, and ETA. Active = the effort-terminal definition (DECISION-G1): excludes Done, Cancelled, AND Deployed to Prod - shipped items awaiting verification live in their own close-out report.</description>
+    <description>Active work items modified THIS WEEK: activated, not archived, not a template, non-effort-terminal (excludes Done, Cancelled, Deployed to Prod). Backs the This-Week In Progress tile (W3.2), which previously shared the unbounded In-Flight report.</description>
     <filter>
-        <booleanFilter>1 AND 2 AND 3 AND 4</booleanFilter>
+        <booleanFilter>1 AND 2 AND 3 AND 4 AND 5 AND 6 AND 7</booleanFilter>
         <criteriaItems>
             <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
             <columnToColumn>false</columnToColumn>
@@ -46,20 +49,43 @@
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>notEqual</operator>
-            <value>Backlog</value>
+            <value>Deployed to Prod</value>
         </criteriaItems>
         <criteriaItems>
-            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%StageNamePk__c</column>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ActivatedDateTime__c</column>
             <columnToColumn>false</columnToColumn>
             <isUnlocked>true</isUnlocked>
             <operator>notEqual</operator>
-            <value>Deployed to Prod</value>
+            <value></value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%ArchivedDateTime__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>equals</operator>
+            <value></value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%TemplateMarkedDateTime__c</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>equals</operator>
+            <value></value>
+        </criteriaItems>
+        <criteriaItems>
+            <column>CUST_LAST_UPDATE</column>
+            <columnToColumn>false</columnToColumn>
+            <isUnlocked>true</isUnlocked>
+            <operator>equals</operator>
+            <value>THIS_WEEK</value>
         </criteriaItems>
     </filter>
     <format>Tabular</format>
-    <name>Active Deliveries</name>
+    <name>In-Progress Work Items (This Week)</name>
     <reportType>CustomEntity$%%%NAMESPACE%%%WorkItem__c</reportType>
     <scope>organization</scope>
     <showDetails>true</showDetails>
     <showGrandTotal>true</showGrandTotal>
+    <sortColumn>%%%NAMESPACE%%%WorkItem__c.%%%NAMESPACE%%%PriorityPk__c</sortColumn>
+    <sortOrder>Asc</sortOrder>
 </Report>

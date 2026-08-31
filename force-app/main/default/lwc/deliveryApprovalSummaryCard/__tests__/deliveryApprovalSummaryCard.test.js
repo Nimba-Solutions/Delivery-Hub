@@ -70,7 +70,11 @@ describe("c-delivery-approval-summary-card", () => {
         const text = element.shadowRoot.textContent;
         expect(text).toContain("42.0h"); // hours approved this month
         expect(text).toContain("3"); // pending count
-        expect(text).toContain("16.0h quoted awaiting decision");
+        // DECISION-G2 relabel: the Offer-Sent tile is "Quotes awaiting acceptance",
+        // not "Pending approval" — that name now belongs to the WorkItem stage surfaces.
+        expect(text).toContain("Quotes awaiting acceptance");
+        expect(text).toContain("16.0h quoted awaiting acceptance");
+        expect(text).not.toContain("Pending approval");
         expect(text).toContain("5"); // in-progress count
         expect(text).toContain("120h approved in flight");
     });

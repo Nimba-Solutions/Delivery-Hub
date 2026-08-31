@@ -165,6 +165,15 @@ private class DeliveryWorkflowConfigServiceTest {
             System.assertEquals('UAT', phaseMap.get('In Client UAT'), 'In Client UAT must map to UAT');
             System.assertEquals('Deployment', phaseMap.get('Deploying'), 'Deploying must map to Deployment');
 
+            // DECISION-G2: the live approval-service stages must map to Approval so the
+            // home Approval tile counts the same population as the WorkItems_Approval
+            // report. These two were absent from the board CMT pre-G2 (the tile showed
+            // 2 while the report showed 20).
+            System.assertEquals('Approval', phaseMap.get('Ready for Final Approval'),
+                'Ready for Final Approval must map to Approval (DECISION-G2 tile widening)');
+            System.assertEquals('Approval', phaseMap.get('Final Approving'),
+                'Final Approving must map to Approval (DECISION-G2 tile widening)');
+
             // Terminal stages should NOT be in the phase map (IsTerminal=true excluded)
             System.assertEquals(null, phaseMap.get('Done'), 'Done (terminal) must not be in phase map');
             System.assertEquals(null, phaseMap.get('Cancelled'), 'Cancelled (terminal) must not be in phase map');

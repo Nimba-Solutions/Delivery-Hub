@@ -3,7 +3,10 @@
  * @license      BSL 1.1 — See LICENSE.md
  * @description  Approval agenda summary card (PR3 of the work-approval
  *               queue): three click-through tiles — Hours Approved (this
- *               month), Pending Approval, and Approved & In Progress — fed by
+ *               month), Quotes Awaiting Acceptance (Offer-Sent WorkRequests;
+ *               relabeled from "Pending Approval" per DECISION-G2 so it stops
+ *               sharing a name with the WorkItem approval-stage surfaces),
+ *               and Approved & In Progress — fed by
  *               DeliveryApprovalSummaryController.getApprovalSummary, plus
  *               the approved-vs-total pitch strip ("Nh of Mh approved (P%)")
  *               over the active portfolio — THE approval-queue pitch stat.
@@ -120,10 +123,13 @@ export default class DeliveryApprovalSummaryCard extends NavigationMixin(Lightni
                 hasNoReport: !reportIds[REPORT_HOURS_APPROVED]
             },
             {
+                // DECISION-G2 (2026-07-03): "pending approval" now means WorkItems in
+                // approval stages. This tile counts WorkRequests at Offer Sent —
+                // quotes sitting with the client — so it carries the honest name.
                 key: "pending",
-                label: "Pending approval",
+                label: "Quotes awaiting acceptance",
                 value: `${this.summary.pendingCount || 0}`,
-                detail: `${this._formatHours(this.summary.pendingQuotedHours)}h quoted awaiting decision`,
+                detail: `${this._formatHours(this.summary.pendingQuotedHours)}h quoted awaiting acceptance`,
                 reportId: reportIds[REPORT_PENDING] || "",
                 hasReport: Boolean(reportIds[REPORT_PENDING]),
                 hasNoReport: !reportIds[REPORT_PENDING]

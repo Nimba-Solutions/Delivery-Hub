@@ -30,12 +30,14 @@ describe('c-delivery-home-visibility-settings-card', () => {
         jest.clearAllMocks();
     });
 
-    it('renders all eleven Show-on-Home toggles, all on by default', async () => {
+    // Pre-existing stale count fixed in the Wave-3 PR: the card ships 12 toggles
+    // (a 12th HOME_COMPONENT row landed without this expectation being bumped).
+    it('renders all twelve Show-on-Home toggles, all on by default', async () => {
         const element = createComponent();
         await flushPromises();
 
         const toggles = element.shadowRoot.querySelectorAll('lightning-input');
-        expect(toggles.length).toBe(11);
+        expect(toggles.length).toBe(12);
         toggles.forEach((t) => expect(t.checked).toBe(true));
     });
 

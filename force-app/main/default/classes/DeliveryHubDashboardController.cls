@@ -334,15 +334,14 @@ global with sharing class DeliveryHubDashboardController {
         // stages and included unactivated/backlog, template, archived, AND Deployed-to-
         // Prod items, which made the per-phase counts diverge from every other metric.
         //
-        // CAVEAT (known gap, same root cause as the Approval bucket): these buckets sum
-        // to the active headline ONLY for stages that getStagePhaseMap maps to a phase
-        // (i.e. present in the Software_Delivery board CMT). Live StageNamePk values that
-        // are NOT in the CMT — notably "Ready for Final Approval" / "Final Approving",
-        // the real approval-queue stages the approval service writes — map to null and
-        // are dropped here while still counting in activeRequests, so the client phase
-        // card under-sums by the count of items in those unmapped stages. Closing this
-        // requires the CMT-vs-picklist remediation flagged in WorkItems_Approval, not a
-        // change here. (The Exec Items-by-Stage card groups by raw stage and always sums.)
+        // DECISION-G2 (2026-07-03): the former under-sum gap is closed. "Ready for
+        // Final Approval" and "Final Approving" — the live stages the approval service
+        // writes — now have WorkflowStage__mdt records (Phase = Approval), so
+        // getStagePhaseMap buckets them and the Approval tile counts the same
+        // population as its WorkItems_Approval drill-through report. Any FUTURE stage
+        // added to the StageNamePk picklist must also get a CMT record with a phase,
+        // or it re-opens this gap (items count in activeRequests but drop out of the
+        // phase buckets). (The Exec Items-by-Stage card groups by raw stage and always sums.)
         for (AggregateResult ar : [
             SELECT StageNamePk__c stage, Count(Id) cnt
             FROM WorkItem__c
@@ -369,7 +368,12 @@ global with sharing class DeliveryHubDashboardController {
     }
 
     private static List<WorkItemSummary> fetchRecentWorkItems() {
-        Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues('Software_Delivery');
+        // DECISION-G1 (2026-07-03): "Recently Updated" lists ACTIVE work only, using
+        // the canonical EFFORT-terminal set (Done, Cancelled, Deployed to Prod) — the
+        // same "not active" definition as activeRequests and the phase buckets above.
+        // Pre-fix this used the plain terminal set, so a Deployed-to-Prod item touched
+        // yesterday surfaced here as if it were still being worked.
+        Set<String> terminalStages = DeliveryWorkflowConfigService.getAllEffortTerminalStageValues();
         List<WorkItem__c> recs = [
             SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c, LastModifiedDate
             FROM WorkItem__c
@@ -498,12 +502,17 @@ global with sharing class DeliveryHubDashboardController {
         Set<String> effortTerminalStages = DeliveryWorkflowConfigService.getAllEffortTerminalStageValues();
 
         // Items completed in range — exclude templates so the count reflects real work.
+        // W3.3 residual (2026-07-03): also exclude 'Cancelled' — a cancelled item was
+        // never completed. This makes the tile's definition identical to its
+        // Recently_Completed drill-through report (Stage = Done, modified THIS_WEEK,
+        // non-template; PR #945 already scoped the report's date window to match).
         Integer completed;
         if (endDt != null) {
             completed = [
                 SELECT COUNT()
                 FROM WorkItem__c
                 WHERE StageNamePk__c IN :terminalStages
+                AND StageNamePk__c != 'Cancelled'
                 AND LastModifiedDate >= :startDt
                 AND LastModifiedDate < :endDt
                 AND TemplateMarkedDateTime__c = null
@@ -513,6 +522,7 @@ global with sharing class DeliveryHubDashboardController {
                 SELECT COUNT()
                 FROM WorkItem__c
                 WHERE StageNamePk__c IN :terminalStages
+                AND StageNamePk__c != 'Cancelled'
                 AND LastModifiedDate >= :startDt
                 AND TemplateMarkedDateTime__c = null
             ];
