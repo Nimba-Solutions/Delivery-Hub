@@ -12,6 +12,7 @@ import { LightningElement, wire, api, track } from 'lwc';
 import getLiveComments from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubCommentController.getLiveComments';
 import postLiveComment from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubCommentController.postLiveComment';
 import getCommentFiles from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubCommentController.getCommentFiles';
+import { toRichText } from 'c/deliveryCommentFormat';
 import { refreshApex } from '@salesforce/apex';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { subscribe, unsubscribe, onError } from 'lightning/empApi';
@@ -164,7 +165,7 @@ export default class DeliveryWorkItemChat extends LightningElement {
 
                 return {
                     Id: record.Id,
-                    body: body,
+                    body: toRichText(body),
                     author: author,
                     createdDate: createdDate,
                     

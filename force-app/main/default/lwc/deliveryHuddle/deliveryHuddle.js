@@ -18,6 +18,7 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from '@salesforce/apex';
 import getHuddleItems from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHuddleController.getHuddleItems';
 import quickAddItem from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHuddleController.quickAddItem';
+import { toPlainText } from 'c/deliveryCommentFormat';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const DUE_SOON_DAYS = 7;
@@ -93,7 +94,7 @@ export default class DeliveryHuddle extends NavigationMixin(LightningElement) {
         if (row.lastCommentBody) {
             const age = this.ageText(row.lastCommentDate);
             const author = row.lastCommentAuthor ? `${row.lastCommentAuthor} · ` : '';
-            commentText = `${author}${age}: ${row.lastCommentBody}`;
+            commentText = `${author}${age}: ${toPlainText(row.lastCommentBody)}`;
         }
 
         let dueClass = 'slds-badge';
