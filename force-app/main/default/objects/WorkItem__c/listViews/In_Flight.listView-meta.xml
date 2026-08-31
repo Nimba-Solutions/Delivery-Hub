@@ -21,5 +21,10 @@
         <operation>notEqual</operation>
         <value>Done</value>
     </filters>
+    <filters>
+        <field>StageNamePk__c</field>
+        <operation>notEqual</operation>
+        <value>Deployed to Prod</value>
+    </filters>
     <label>In Flight</label>
 </ListView>

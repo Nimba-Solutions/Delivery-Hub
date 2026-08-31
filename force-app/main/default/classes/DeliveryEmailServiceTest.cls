@@ -86,6 +86,61 @@ private class DeliveryEmailServiceTest {
     }
 
     @IsTest
+    static void testBuildCommentHtmlNeutralisesMarkup() {
+        System.runAs(testUser) {
+            WorkItem__c realWi = [SELECT Id, Name, BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
+            WorkItemComment__c comment = [SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate FROM WorkItemComment__c LIMIT 1];
+
+            // BodyTxt__c is rich text and can arrive from outside the org via the
+            // Slack / inbound-email handlers, so it must not reach the email body raw.
+            comment.BodyTxt__c = '<script>alert(1)</script>Ship it';
+            update comment;
+            WorkItemComment__c reloaded = [SELECT Id, BodyTxt__c, AuthorTxt__c, CreatedDate FROM WorkItemComment__c WHERE Id = :comment.Id];
+
+            String html = DeliveryEmailService.buildCommentHtml(realWi, reloaded, 'https://test.salesforce.com/record');
+
+            System.assert(!html.contains('<script>'), 'Script tag must not survive into the email body');
+            System.assert(html.contains('Ship it'), 'Readable text must survive');
+        }
+    }
+
+    @IsTest
+    static void testFlattenCommentBodyPreservesBreaks() {
+        // Exercised directly rather than through a DML round-trip: BodyTxt__c is a
+        // Rich Text Area, and the platform is free to normalise or drop a bare newline
+        // on save. Asserting on that would be testing Salesforce's storage layer, not
+        // this method. These are the shapes the field actually holds in MF-Prod.
+        System.assertEquals(
+            'first line<br />second line',
+            DeliveryEmailService.flattenCommentBody('first line<br>second line'),
+            'A <br> is the usual line break in a rich-text body'
+        );
+        System.assertEquals(
+            'one<br />two',
+            DeliveryEmailService.flattenCommentBody('<p>one</p><p>two</p>'),
+            'Block closes must survive as breaks, not weld the lines together'
+        );
+        System.assertEquals(
+            'alpha<br />beta',
+            DeliveryEmailService.flattenCommentBody('alpha\nbeta'),
+            'A literal newline must also promote to a break'
+        );
+    }
+
+    @IsTest
+    static void testFlattenCommentBodyEscapesAndDecodes() {
+        System.assertEquals(
+            'Jose&#39;s call',
+            DeliveryEmailService.flattenCommentBody('Jose&#39;s call'),
+            'escapeHtml4 re-escapes the apostrophe, so encoded text round-trips unchanged'
+        );
+        System.assert(
+            !DeliveryEmailService.flattenCommentBody('<script>alert(1)</script>hi').contains('<script>'),
+            'Script tags must not survive'
+        );
+    }
+
+    @IsTest
     static void testNotifyWithDifferentAuthor() {
         System.runAs(testUser) {
             WorkItem__c wi = [SELECT Id FROM WorkItem__c LIMIT 1];

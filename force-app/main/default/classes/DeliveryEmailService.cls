@@ -12,6 +12,9 @@
 @SuppressWarnings('PMD.ApexCRUDViolation')
 public with sharing class DeliveryEmailService {
 
+    /** @description Sentinel standing in for a line break while html is stripped. Alphanumeric so escapeHtml4 leaves it alone. */
+    private static final String BREAK_TOKEN = 'ZZDHBRZZ';
+
     @TestVisible
     private static final String EMAIL_ADDRESS_PREFIX = 'workitem-';
 
@@ -95,7 +98,14 @@ public with sharing class DeliveryEmailService {
     @TestVisible
     private static String buildCommentHtml(WorkItem__c workItem, WorkItemComment__c comment, String recordUrl) {
         String author = String.isNotBlank(comment.AuthorTxt__c) ? String.valueOf(comment.AuthorTxt__c).escapeHtml4() : 'Someone';
-        String body = String.isNotBlank(comment.BodyTxt__c) ? comment.BodyTxt__c : '(no content)';
+        // BodyTxt__c is a rich-text field, and comments can originate outside the org
+        // (DeliverySlackInboundHandler / DeliveryInboundEmailHandler). Interpolating it
+        // raw into this html email was an injection path; every other field on this
+        // template is escaped. Flatten to text, then escape, then re-introduce breaks —
+        // same treatment as DeliveryWorkApprovalService.
+        String body = String.isNotBlank(comment.BodyTxt__c)
+            ? flattenCommentBody(comment.BodyTxt__c)
+            : '(no content)';
         String wiName = String.valueOf(workItem.Name).escapeHtml4();
         String title = String.isNotBlank(workItem.BriefDescriptionTxt__c) ? String.valueOf(workItem.BriefDescriptionTxt__c).escapeHtml4() : 'Work Item';
         return '<div style="font-family: Arial, sans-serif; max-width: 600px;">'
@@ -126,5 +136,38 @@ public with sharing class DeliveryEmailService {
     private static String getEmailServiceDomain() {
         if (String.isNotBlank(emailServiceDomain)) { return emailServiceDomain; }
         return null;
+    }
+
+    /**
+     * @description Renders a rich-text comment body as safe html for an email.
+     *
+     *              BodyTxt__c is a Rich Text Area, so its line breaks are <br> and
+     *              block tags, NOT newline characters. stripHtmlTags() alone would
+     *              therefore silently weld every line together — which is what the
+     *              first cut of this did, and what testBuildCommentHtmlKeepsLineBreaks
+     *              caught. Demote the breaks to newlines first, then flatten, then
+     *              escape (comments can arrive from outside the org via the Slack and
+     *              inbound-email handlers), then promote the newlines back to <br />.
+     * @param rawBody Raw BodyTxt__c value; assumed non-blank.
+     * @return Escaped html safe to interpolate into the email template.
+     */
+    @TestVisible
+    private static String flattenCommentBody(String rawBody) {
+        // stripHtmlTags() normalises whitespace — a newline comes out the other side
+        // as a space — so line breaks cannot be carried through it as characters.
+        // Carry them as a sentinel that survives both tag-stripping and escaping.
+        String marked = rawBody
+            .replaceAll('(?i)<br\\s*/?>', BREAK_TOKEN)
+            .replaceAll('(?i)</(p|div|li|h[1-6])\\s*>', BREAK_TOKEN)
+            .replaceAll('\\r?\\n', BREAK_TOKEN);
+
+        return marked
+            .stripHtmlTags()
+            .unescapeHtml4()
+            .escapeHtml4()
+            .replaceAll('\\s*(' + BREAK_TOKEN + '\\s*)+', BREAK_TOKEN)
+            .replaceAll('^' + BREAK_TOKEN + '|' + BREAK_TOKEN + '$', '')
+            .trim()
+            .replace(BREAK_TOKEN, '<br />');
     }
 }

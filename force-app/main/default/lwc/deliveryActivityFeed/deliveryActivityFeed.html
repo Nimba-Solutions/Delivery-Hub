@@ -172,7 +172,7 @@
                                                 <span class="af-comment-source">({comment.source})</span>
                                                 <span class="af-comment-time">{comment.relativeTime}</span>
                                             </div>
-                                            <div class="af-comment-body">{comment.body}</div>
+                                            <lightning-formatted-rich-text class="af-comment-body" value={comment.body}></lightning-formatted-rich-text>
                                         </div>
                                     </template>
 
