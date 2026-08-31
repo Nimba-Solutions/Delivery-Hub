@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <isExposed>false</isExposed>
+    <masterLabel>Delivery Comment Format</masterLabel>
+    <description>Shared helper that normalises the rich-text WorkItemComment body for display — html for rendered surfaces, flattened plain text for one-line previews.</description>
+</LightningComponentBundle>

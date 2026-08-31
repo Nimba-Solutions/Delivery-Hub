@@ -11,6 +11,7 @@ import { NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { refreshApex } from 'lightning/uiRecordApi';
 import { subscribe, unsubscribe, onError } from 'lightning/empApi';
+import { toRichText } from 'c/deliveryCommentFormat';
 import getActivityFeed from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryActivityFeedController.getActivityFeed';
 import getConversations from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryActivityFeedController.getConversations';
 import getPendingApprovals from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryActivityFeedController.getPendingApprovals';
@@ -155,6 +156,7 @@ export default class DeliveryActivityFeed extends NavigationMixin(LightningEleme
                 isExpanded: false,
                 comments: (thread.comments || []).map(c => ({
                     ...c,
+                    body: toRichText(c.body),
                     relativeTime: this.getRelativeTime(new Date(c.timestamp))
                 }))
             }));
