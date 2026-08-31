@@ -196,6 +196,12 @@
     fill: #ef4444;
 }
 
+.bar--segment {
+    /* fill comes from the per-tier `fill` attribute (Apex segmentDefs palette) */
+    stroke: #ffffff;
+    stroke-width: 0.5;
+}
+
 .bar--forecast {
     fill: #c4b5fd;
     stroke: #8b5cf6;
