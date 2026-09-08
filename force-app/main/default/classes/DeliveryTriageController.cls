@@ -1,8 +1,8 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @description  Triage controller backing the two workspace queue tabs Jose
- *               runs to drive both ends of the work-item pipeline:
+ * @description  Triage controller backing the queue cards Jose runs on a
+ *               standup, front, middle and back of the work-item pipeline:
  *
  *               getCloseOutItems()  — back of pipe. WorkItems sitting in
  *                 'Deployed to Prod' awaiting the triager's verification /
@@ -13,6 +13,8 @@
  *                 (ActivatedDateTime__c = NULL → invisible on the board/Gantt,
  *                 which filter ActivatedDateTime != null). This tab is the
  *                 only surface that shows them.
+ *               getInFlightItems()  — middle of pipe. WorkItems in the dev →
+ *                 deploying band (read-only; the Home "In Flight" card).
  *
  *               Mutations are all bulk + partial-failure-safe, mirroring
  *               DeliveryWorkApprovalService.approveMany: every id is processed,
@@ -51,6 +53,9 @@ public with sharing class DeliveryTriageController {
     /** Report DeveloperName backing the close-out tab's "open full report" link. */
     private static final String REPORT_CLOSE_OUT =
         'Deployed_To_Prod_Awaiting_Verification';
+
+    /** Report DeveloperName backing the in-flight card's "open full report" link. */
+    private static final String REPORT_IN_FLIGHT = 'In_Flight_Work_Items';
 
     /**
      * @description WorkItem__c stages excluded from the intake scope — a
@@ -96,6 +101,24 @@ public with sharing class DeliveryTriageController {
         @AuraEnabled public Datetime createdDate;
         @AuraEnabled public String requestedByName;
         @AuraEnabled public String currentStage;
+    }
+
+    /**
+     * @description One row on the Home "In Flight" card: a WorkItem inside the
+     *              dev → deploying band (DeliveryWorkflowConfigService.IN_FLIGHT_STAGES).
+     *              stageRank is the stage's position in that band so the LWC can
+     *              keep pipeline order without knowing the stage list.
+     */
+    public class InFlightItemDTO {
+        @AuraEnabled public Id workItemId;
+        @AuraEnabled public String name;
+        @AuraEnabled public String briefDescription;
+        @AuraEnabled public String stage;
+        @AuraEnabled public Integer stageRank;
+        @AuraEnabled public Datetime stageEnteredAt;
+        @AuraEnabled public String developerName;
+        @AuraEnabled public Id developerId;
+        @AuraEnabled public Decimal approvedHours;
     }
 
     /**
@@ -213,6 +236,73 @@ public with sharing class DeliveryTriageController {
             throw new AuraHandledException('Unable to load the intake queue.');
         }
         return rows;
+    }
+
+    /**
+     * @description Everything currently in flight: WorkItems whose stage is in
+     *              the dev → deploying band, oldest-in-stage first within each
+     *              stage, stages in pipeline order. Read-only feed for the Home
+     *              "In Flight" card (middle of the pipe, between Pending Work
+     *              Approvals and Close Outs). Archived and template items are
+     *              excluded the same way the other two queues exclude them.
+     * @return In-flight rows in pipeline order (empty when nothing is in flight).
+     */
+    @AuraEnabled(cacheable=true)
+    public static List<InFlightItemDTO> getInFlightItems() {
+        List<String> orderedStages = DeliveryWorkflowConfigService.IN_FLIGHT_STAGES;
+        Set<String> inFlight = DeliveryWorkflowConfigService.getInFlightStageValues();
+        // Pre-seed one bucket per stage so the flatten below needs no branching.
+        Map<String, List<InFlightItemDTO>> byStage = new Map<String, List<InFlightItemDTO>>();
+        for (String stage : orderedStages) {
+            byStage.put(stage, new List<InFlightItemDTO>());
+        }
+        for (WorkItem__c wi : [
+            SELECT Id, Name, BriefDescriptionTxt__c, StageNamePk__c,
+                   StageEnteredDateTime__c, ClientPreApprovedHoursNumber__c,
+                   DeveloperLookup__c, DeveloperLookup__r.Name
+            FROM WorkItem__c
+            WHERE StageNamePk__c IN :inFlight
+              AND ArchivedDateTime__c = NULL
+              AND TemplateMarkedDateTime__c = NULL
+            WITH SYSTEM_MODE
+            ORDER BY StageEnteredDateTime__c ASC NULLS FIRST
+        ]) {
+            InFlightItemDTO dto = new InFlightItemDTO();
+            dto.workItemId = wi.Id;
+            dto.name = wi.Name;
+            dto.briefDescription = wi.BriefDescriptionTxt__c;
+            dto.stage = wi.StageNamePk__c;
+            dto.stageRank = orderedStages.indexOf(wi.StageNamePk__c);
+            dto.stageEnteredAt = wi.StageEnteredDateTime__c;
+            dto.developerId = wi.DeveloperLookup__c;
+            dto.developerName = wi.DeveloperLookup__r?.Name;
+            dto.approvedHours = wi.ClientPreApprovedHoursNumber__c;
+            byStage.get(wi.StageNamePk__c).add(dto);
+        }
+        List<InFlightItemDTO> rows = new List<InFlightItemDTO>();
+        for (String stage : orderedStages) {
+            rows.addAll(byStage.get(stage));
+        }
+        return rows;
+    }
+
+    /**
+     * @description Resolves the in-flight report's record id by DeveloperName
+     *              so the card can link to the full report. Null when the
+     *              report is absent in the org (the LWC disables the link).
+     * @return The In_Flight_Work_Items report id, or null.
+     */
+    @AuraEnabled(cacheable=true)
+    public static String getInFlightReportId() {
+        for (Report r : [
+            SELECT Id FROM Report
+            WHERE DeveloperName = :REPORT_IN_FLIGHT
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ]) {
+            return r.Id;
+        }
+        return null;
     }
 
     /**

@@ -23,6 +23,7 @@ public with sharing class DeliveryHomeVisibilityController {
         'deliveryPacingForecast'       => 'HideHomePacingForecastDateTime__c',
         'deliveryIntakeQueue'          => 'HideHomeIntakeQueueDateTime__c',
         'deliveryApprovalQueue'        => 'HideHomeApprovalQueueDateTime__c',
+        'deliveryInFlightQueue'        => 'HideHomeInFlightQueueDateTime__c',
         'deliveryApprovalSummaryCard'  => 'HideHomeApprovalSummaryCardDateTime__c',
         'deliveryFeatureCockpit'       => 'HideHomeFeatureCockpitDateTime__c',
         'deliveryClientDashboard'      => 'HideHomeClientDashboardDateTime__c',
