@@ -9,6 +9,18 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryApprovalQueue</componentName>
+                <identifier>c_deliveryApprovalQueue</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
+                <componentName>deliveryInFlightQueue</componentName>
+                <identifier>c_deliveryInFlightQueue</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryCloseOutQueue</componentName>
                 <identifier>c_deliveryCloseOutQueue_home</identifier>
             </componentInstance>
@@ -49,12 +61,6 @@
             <componentInstance>
                 <componentName>deliveryPacingForecast</componentName>
                 <identifier>c_deliveryPacingForecast</identifier>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
-                <componentName>deliveryApprovalQueue</componentName>
-                <identifier>c_deliveryApprovalQueue</identifier>
             </componentInstance>
         </itemInstances>
         <itemInstances>
