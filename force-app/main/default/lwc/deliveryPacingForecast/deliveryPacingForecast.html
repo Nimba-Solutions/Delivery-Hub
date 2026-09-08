@@ -108,6 +108,7 @@
                         <rect key={bar.key}
                               x={bar.x} y={bar.y}
                               width={bar.width} height={bar.height}
+                              fill={bar.fill}
                               class={bar.cssClass}>
                             <title>{bar.tooltip}</title>
                         </rect>
@@ -139,9 +140,16 @@
                 <span class="legend-item">
                     <span class="legend-swatch legend-swatch--over"></span>Logged (over target)
                 </span>
-                <span class="legend-item">
-                    <span class="legend-swatch legend-swatch--forecast"></span>Forecast
-                </span>
+                <template lwc:if={hasPlainForecastBars}>
+                    <span class="legend-item">
+                        <span class="legend-swatch legend-swatch--forecast"></span>Forecast
+                    </span>
+                </template>
+                <template for:each={segmentLegend} for:item="sl">
+                    <span key={sl.key} class="legend-item">
+                        <span class="legend-swatch" style={sl.swatchStyle}></span>{sl.label}
+                    </span>
+                </template>
                 <template lwc:if={hasTarget}>
                     <span class="legend-item">
                         <span class="legend-line legend-line--target"></span>Target

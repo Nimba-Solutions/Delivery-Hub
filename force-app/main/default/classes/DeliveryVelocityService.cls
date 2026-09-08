@@ -35,6 +35,12 @@ global with sharing class DeliveryVelocityService {
         @AuraEnabled public Decimal averageVelocity;
         @AuraEnabled public Integer estimatedWeeks;
         @AuraEnabled public Date projectedCompletionDate;
+        /** W5.1/F14 — true when the capacity floor (not raw history velocity)
+         *  set the projected date. See getProjectedCompletion. */
+        @AuraEnabled public Boolean capacityFloorApplied;
+        /** W5.1/F14 — items/week the configured capacity implies
+         *  (weekly capacity hours ÷ avg estimated hours per remaining item). */
+        @AuraEnabled public Decimal capacityImpliedVelocity;
     }
 
     global class CapacityResult {
@@ -133,9 +139,37 @@ global with sharing class DeliveryVelocityService {
         ProjectionResult result = new ProjectionResult();
         result.remainingItems = remaining;
         result.averageVelocity = avgVelocity;
+        result.capacityFloorApplied = false;
+        result.capacityImpliedVelocity = 0;
 
-        if (avgVelocity > 0) {
-            result.estimatedWeeks = (Integer) Math.ceil(remaining / avgVelocity);
+        // ── W5.1 / F14 — capacity floor on the projection denominator (DECISION-G3).
+        // A sparse completion window used to leave avgVelocity near zero, and dividing
+        // the backlog by that near-zero denominator exploded the projected date into
+        // absurdity (the "Velocity says 2028 while Forecast says Jul 2026" split).
+        // When the org has CONFIGURED capacity (DeveloperCapacity__mdt rows — the
+        // single capacity source of truth) and the remaining backlog carries estimates,
+        // the capacity-implied throughput (weekly capacity hours ÷ average estimated
+        // hours per remaining item) floors the denominator: a faster OBSERVED pace
+        // still pulls the date earlier, but sparse history can no longer push it past
+        // what the org is resourced to deliver. Unconfigured orgs keep the pure
+        // history behavior — no floor is fabricated from the default capacity model.
+        Decimal effectiveVelocity = avgVelocity;
+        DeliveryCapacityService.TeamCapacity teamCapacity =
+            DeliveryCapacityService.getTeamCapacity(workflowType);
+        if (teamCapacity.isConfigured == true && remaining > 0) {
+            Decimal avgItemHours = averageRemainingItemHours(workflowType, terminalStages);
+            if (avgItemHours != null && avgItemHours > 0) {
+                Decimal capacityVelocity = teamCapacity.weeklyCapacityHours / avgItemHours;
+                result.capacityImpliedVelocity = capacityVelocity.setScale(2, System.RoundingMode.HALF_UP);
+                if (capacityVelocity > effectiveVelocity) {
+                    effectiveVelocity = capacityVelocity;
+                    result.capacityFloorApplied = true;
+                }
+            }
+        }
+
+        if (effectiveVelocity > 0) {
+            result.estimatedWeeks = (Integer) Math.ceil(remaining / effectiveVelocity);
             result.projectedCompletionDate = Date.today().addDays(result.estimatedWeeks * DAYS_PER_WEEK);
         } else {
             result.estimatedWeeks = 0;
@@ -145,6 +179,31 @@ global with sharing class DeliveryVelocityService {
         return result;
     }
 
+    /**
+     * @description Average EstimatedHoursNumber__c across the remaining (non-terminal,
+     *              non-template) items of a workflow — the hours-per-item bridge that
+     *              converts configured capacity hours into an items/week floor for the
+     *              projection. Returns null when no remaining item carries a positive
+     *              estimate (no honest conversion exists → no floor is applied).
+     */
+    @SuppressWarnings('PMD.ApexCRUDViolation')
+    private static Decimal averageRemainingItemHours(String workflowType, Set<String> terminalStages) {
+        List<AggregateResult> rows = [
+            SELECT AVG(EstimatedHoursNumber__c) avgHours
+            FROM WorkItem__c
+            WHERE TemplateMarkedDateTime__c = null
+            AND StageNamePk__c NOT IN :terminalStages
+            AND WorkflowTypeTxt__c = :workflowType
+            AND EstimatedHoursNumber__c > 0
+            WITH SYSTEM_MODE
+        ];
+        if (rows.isEmpty()) {
+            return null;
+        }
+        Object avgObj = rows[0].get('avgHours');
+        return avgObj == null ? null : (Decimal) avgObj;
+    }
+
     @AuraEnabled(cacheable=true)
     @SuppressWarnings('PMD.ApexCRUDViolation')
     global static CapacityResult getCapacityUtilization(String workflowType) {
@@ -152,14 +211,9 @@ global with sharing class DeliveryVelocityService {
 
         Set<String> terminalStages = DeliveryWorkflowConfigService.getTerminalStageValues(workflowType);
 
-        // Load capacity configuration from CMT
-        List<DeveloperCapacity__mdt> capacities = [
-            SELECT DeveloperUserIdTxt__c, WeeklyCapacityHoursNumber__c,
-                   AllocationPercentNumber__c, WorkflowTypeNameTxt__c, Label
-            FROM DeveloperCapacity__mdt
-            WHERE WorkflowTypeNameTxt__c = :workflowType
-            WITH SYSTEM_MODE
-        ];
+        // Load capacity configuration from the CMT via the single shared reader
+        // (DECISION-G3) — monthly-first row resolution + one test-injection point.
+        List<DeveloperCapacity__mdt> capacities = DeliveryCapacityService.queryRows(workflowType);
 
         // Count active items per developer
         Map<String, Integer> activeCountByDev = new Map<String, Integer>();
@@ -183,7 +237,9 @@ global with sharing class DeliveryVelocityService {
         List<DeveloperUtilization> devList = new List<DeveloperUtilization>();
 
         for (DeveloperCapacity__mdt cap : capacities) {
-            Decimal weeklyHours = cap.WeeklyCapacityHoursNumber__c != null ? cap.WeeklyCapacityHoursNumber__c : 40;
+            // Monthly-first resolution (MonthlyCapacityHoursNumber__c is the canonical
+            // number per DECISION-G3); legacy weekly rows and the 40h default still work.
+            Decimal weeklyHours = DeliveryCapacityService.weeklyHoursForRow(cap);
             Decimal allocPct = cap.AllocationPercentNumber__c != null ? cap.AllocationPercentNumber__c : 100;
             Decimal allocated = weeklyHours * (allocPct / PERCENT_DIVISOR);
 

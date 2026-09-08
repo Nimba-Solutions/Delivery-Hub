@@ -33,15 +33,18 @@
                 <input
                     type="range"
                     min="1"
-                    max="6"
+                    max={maxDevs}
                     step="1"
                     value={devs}
                     onchange={handleDevs}
                     class="slds-slider__range slds-m-top_small dev-slider"
                 />
                 <div class="slds-grid slds-grid_align-spread slds-text-body_small slds-text-color_weak">
-                    <span>1 dev</span><span>6 devs</span>
+                    <span>1 dev</span><span>{maxDevsLabel}</span>
                 </div>
+                <p class="slds-text-body_small slds-text-color_weak slds-m-top_xx-small capacity-source">
+                    {capacitySourceNote}
+                </p>
 
                 <!-- View toggle + legend -->
                 <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center slds-wrap slds-m-top_medium">

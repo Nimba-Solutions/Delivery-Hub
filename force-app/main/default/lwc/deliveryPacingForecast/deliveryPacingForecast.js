@@ -31,6 +31,19 @@ const BAR_GAP_RATIO = 0.35;
 const DEFAULT_PERIODS_BACK = 6;
 const REST_OF_YEAR = "rest-of-year";
 
+// W5.3 (T6.1) — stacked commitment-tier forecast bars. The Apex DTO advertises the
+// tiers in play via segmentDefs (stack order + palette); this local map is only the
+// no-vanish fallback when a period carries segments but the defs are absent (e.g. a
+// stale LDS cache shape) so no scheduled work silently disappears from the chart.
+const SEGMENT_FALLBACK_META = {
+    greenlit: { label: "Committed", color: "#059669" },
+    predicted: { label: "Predicted", color: "#2563eb" },
+    ready: { label: "Ready to approve", color: "#d97706" },
+    recurring: { label: "Recurring intake", color: "#7c3aed" }
+};
+const SEGMENT_FALLBACK_ORDER = ["greenlit", "predicted", "ready", "recurring"];
+const SEGMENT_UNKNOWN_COLOR = "#64748b";
+
 export default class DeliveryPacingForecast extends LightningElement {
     @track pacing;
     @track errorMessage = "";
@@ -272,7 +285,12 @@ export default class DeliveryPacingForecast extends LightningElement {
     get _maxValue() {
         let max = 0;
         for (const p of this._periods) {
-            const candidate = Math.max(p.loggedHours || 0, p.forecastHours || 0, p.targetHours || 0);
+            const candidate = Math.max(
+                p.loggedHours || 0,
+                p.forecastHours || 0,
+                p.targetHours || 0,
+                this._segmentTotal(p)
+            );
             if (candidate > max) {
                 max = candidate;
             }
@@ -318,16 +336,29 @@ export default class DeliveryPacingForecast extends LightningElement {
         return (this._slotWidth - this._barWidth) / 2;
     }
 
-    // ── Bars (actual + forecast) ─────────────────────────────────
+    // ── Bars (actual + forecast; stacked tiers on forecast periods) ──
 
+    /**
+     * Flat rect list the template renders. History periods emit one logged bar.
+     * Forecast periods WITH a segments map emit one rect per commitment tier,
+     * stacked bottom-up in segmentDefs order — the same rule the buyer surface
+     * applies (bar = Σ segments; the flat forecastHours is ignored once segments
+     * are present, so the stack is exactly as tall as the flat bar it replaces).
+     * Forecast periods without segments keep the legacy flat dashed bar.
+     */
     get bars() {
         const periods = this._periods;
         const out = [];
         for (let i = 0; i < periods.length; i++) {
             const p = periods[i];
-            const value = p.isForecast ? p.forecastHours || 0 : p.loggedHours || 0;
             const slotX = this.chartLeft + i * this._slotWidth;
             const x = slotX + this._barXOffset;
+            const segments = p.isForecast ? this._segmentsFor(p) : null;
+            if (segments) {
+                this._pushStackedBars(out, p, i, x);
+                continue;
+            }
+            const value = p.isForecast ? p.forecastHours || 0 : p.loggedHours || 0;
             const yTop = this._yForValue(value);
             const height = this.chartBottom - yTop;
             out.push({
@@ -337,10 +368,141 @@ export default class DeliveryPacingForecast extends LightningElement {
                 width: this._barWidth,
                 height: height > 0 ? height : 0,
                 cssClass: this._barClass(p),
+                fill: undefined,
                 tooltip: this._buildTooltip(p)
             });
         }
         return out;
+    }
+
+    _pushStackedBars(out, p, periodIndex, x) {
+        let cumulative = 0;
+        for (const seg of this._orderedSegmentEntries(this._segmentsFor(p))) {
+            const yTop = this._yForValue(cumulative + seg.value);
+            const yBottom = this._yForValue(cumulative);
+            const height = yBottom - yTop;
+            out.push({
+                key: `bar-${periodIndex}-${seg.id}`,
+                x,
+                y: yTop,
+                width: this._barWidth,
+                height: height > 0 ? height : 0,
+                cssClass: "bar bar--segment",
+                fill: seg.color,
+                tooltip: `${p.label}: ${seg.label} ${this._formatHours(seg.value)}h forecast`
+            });
+            cumulative += seg.value;
+        }
+    }
+
+    // ── Segment (stacked-tier) helpers ───────────────────────────
+
+    _segmentsFor(p) {
+        const segs = p && p.segments;
+        if (!segs) {
+            return null;
+        }
+        const hasHours = Object.keys(segs).some((k) => segs[k] > 0);
+        return hasHours ? segs : null;
+    }
+
+    _segmentTotal(p) {
+        const segs = this._segmentsFor(p);
+        if (!segs) {
+            return 0;
+        }
+        return Object.keys(segs).reduce((total, k) => total + (segs[k] || 0), 0);
+    }
+
+    get _segmentDefs() {
+        return (this.pacing && this.pacing.segmentDefs) || [];
+    }
+
+    _segmentMeta(id) {
+        const def = this._segmentDefs.find((d) => d.id === id);
+        if (def) {
+            return { label: def.label, color: def.color };
+        }
+        const fallback = SEGMENT_FALLBACK_META[id];
+        if (fallback) {
+            return fallback;
+        }
+        return { label: id, color: SEGMENT_UNKNOWN_COLOR };
+    }
+
+    /** Segment entries of one period in stack order (defs first, then any
+     *  unknown tiers so no scheduled hours silently vanish). */
+    _orderedSegmentEntries(segs) {
+        const defs = this._segmentDefs;
+        const order = defs.length > 0 ? defs.map((d) => d.id) : SEGMENT_FALLBACK_ORDER;
+        const out = [];
+        for (const id of order) {
+            if (segs[id] > 0) {
+                const meta = this._segmentMeta(id);
+                out.push({ id, value: segs[id], label: meta.label, color: meta.color });
+            }
+        }
+        for (const id of Object.keys(segs)) {
+            if (segs[id] > 0 && !order.includes(id)) {
+                const meta = this._segmentMeta(id);
+                out.push({ id, value: segs[id], label: meta.label, color: meta.color });
+            }
+        }
+        return out;
+    }
+
+    get hasSegmentedForecast() {
+        return this._periods.some((p) => p.isForecast && this._segmentsFor(p));
+    }
+
+    get hasPlainForecastBars() {
+        return this._periods.some((p) => p.isForecast && !this._segmentsFor(p));
+    }
+
+    /** Legend rows for the commitment tiers actually in play. */
+    get segmentLegend() {
+        if (!this.hasSegmentedForecast) {
+            return [];
+        }
+        const ids = [];
+        const defs = this._segmentDefs;
+        if (defs.length > 0) {
+            defs.forEach((d) => ids.push(d.id));
+        } else {
+            const seen = new Set();
+            for (const p of this._periods) {
+                const segs = p.isForecast ? this._segmentsFor(p) : null;
+                if (segs) {
+                    Object.keys(segs).forEach((id) => {
+                        if (segs[id] > 0) {
+                            seen.add(id);
+                        }
+                    });
+                }
+            }
+            SEGMENT_FALLBACK_ORDER.forEach((id) => {
+                if (seen.has(id)) {
+                    ids.push(id);
+                }
+            });
+            seen.forEach((id) => {
+                if (!ids.includes(id)) {
+                    ids.push(id);
+                }
+            });
+        }
+        return ids.map((id) => {
+            const meta = this._segmentMeta(id);
+            return {
+                key: `legend-${id}`,
+                label: `${meta.label} (forecast)`,
+                swatchStyle: `background:${meta.color};`
+            };
+        });
+    }
+
+    get hasSegmentLegend() {
+        return this.segmentLegend.length > 0;
     }
 
     _barClass(p) {
