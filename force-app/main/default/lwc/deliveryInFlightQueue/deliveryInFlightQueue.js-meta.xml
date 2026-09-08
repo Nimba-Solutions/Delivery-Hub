@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__HomePage</target>
+        <target>lightning__AppPage</target>
+        <target>lightning__Tab</target>
+    </targets>
+    <masterLabel>Delivery In Flight</masterLabel>
+    <description>In Flight: every WorkItem between Ready for Development and Deploying, in pipeline order, with stage, developer, approved hours and time in stage. Read-only; click-through to the WorkItem and a link to the In Flight Work Items report.</description>
+</LightningComponentBundle>

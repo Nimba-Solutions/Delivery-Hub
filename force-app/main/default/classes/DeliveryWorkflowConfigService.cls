@@ -274,6 +274,31 @@ global with sharing class DeliveryWorkflowConfigService {
     public static final String STAGE_DEPLOYED_TO_PROD = 'Deployed to Prod';
 
     /**
+     * @description The in-flight band, in pipeline order: every stage from "the
+     * client said go" (Ready for Development) to "it is shipping" (Deploying).
+     * Single authority — the Home "In Flight" card and the approval agenda's
+     * approved-in-flight tile both read it, so the two surfaces agree on one
+     * number. Deployed to Prod is NOT in flight; it is pending close-out.
+     */
+    public static final List<String> IN_FLIGHT_STAGES = new List<String>{
+        'Ready for Development', 'In Development', 'Dev Clarification Requested',
+        'Providing Dev Clarification', 'Back For Development', 'Dev Blocked',
+        'Ready for Scratch Test', 'Scratch Testing', 'Ready for QA',
+        'QA In Progress', 'Ready for Internal UAT', 'Internal UAT',
+        'Ready for Client UAT', 'In Client UAT', 'Ready for UAT Sign-off',
+        'Processing Sign-off', 'Ready for Merge', 'Merging',
+        'Ready for Deployment', 'Deploying'
+    };
+
+    /**
+     * @description IN_FLIGHT_STAGES as a Set, for SOQL IN-binds.
+     * @return Set of in-flight stage ApiValues.
+     */
+    public static Set<String> getInFlightStageValues() {
+        return new Set<String>(IN_FLIGHT_STAGES);
+    }
+
+    /**
      * @description Returns the union of terminal stage ApiValues across ALL workflow
      * types, for org-wide WorkItem__c queries that cannot filter per type (dashboard
      * counts, portfolio scopes, sweeps). A value is included only when EVERY workflow

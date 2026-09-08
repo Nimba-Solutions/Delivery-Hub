@@ -30,12 +30,12 @@ describe('c-delivery-home-visibility-settings-card', () => {
         jest.clearAllMocks();
     });
 
-    it('renders all eleven Show-on-Home toggles, all on by default', async () => {
+    it('renders all thirteen Show-on-Home toggles, all on by default', async () => {
         const element = createComponent();
         await flushPromises();
 
         const toggles = element.shadowRoot.querySelectorAll('lightning-input');
-        expect(toggles.length).toBe(11);
+        expect(toggles.length).toBe(13);
         toggles.forEach((t) => expect(t.checked).toBe(true));
     });
 

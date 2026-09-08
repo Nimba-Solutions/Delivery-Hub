@@ -58,6 +58,11 @@ const COMPONENTS = [
         help: 'Offer-Sent work requests awaiting a decision.'
     },
     {
+        key: 'deliveryInFlightQueue',
+        label: 'In Flight',
+        help: 'Work between Ready for Development and Deploying: what the team is on right now (read-only).'
+    },
+    {
         key: 'deliveryApprovalSummaryCard',
         label: 'Approval Agenda',
         help: 'Hours approved, pending, and approved-in-flight tiles.'
