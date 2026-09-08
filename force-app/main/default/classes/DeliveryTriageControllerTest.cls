@@ -87,6 +87,80 @@ private class DeliveryTriageControllerTest {
         System.assert(true, 'report-id resolution did not throw');
     }
 
+    // ── In-flight feed ───────────────────────────────────────────────
+
+    @IsTest
+    static void testInFlightReturnsDevBandInPipelineOrder() {
+        WorkItem__c deploying = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'StageNamePk__c' => 'Ready for Deployment',
+            'StageEnteredDateTime__c' => Datetime.now().addDays(-1),
+            'ClientPreApprovedHoursNumber__c' => 40,
+            'DeveloperLookup__c' => UserInfo.getUserId()
+        });
+        WorkItem__c devOlder = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'StageNamePk__c' => 'In Development',
+            'StageEnteredDateTime__c' => Datetime.now().addDays(-9)
+        });
+        WorkItem__c devNewer = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'StageNamePk__c' => 'In Development',
+            'StageEnteredDateTime__c' => Datetime.now().addDays(-2)
+        });
+        WorkItem__c ready = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'StageNamePk__c' => 'Ready for Development',
+            'StageEnteredDateTime__c' => Datetime.now().addDays(-30)
+        });
+        // Noise that must NOT appear: either side of the band, archived, template.
+        TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'Deployed to Prod' });
+        TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'Backlog' });
+        TestDataFactory.createWorkItem(new Map<String, Object>{ 'StageNamePk__c' => 'Ready for Final Approval' });
+        TestDataFactory.createWorkItem(new Map<String, Object>{
+            'StageNamePk__c' => 'In Development',
+            'ArchivedDateTime__c' => Datetime.now()
+        });
+        TestDataFactory.createWorkItem(new Map<String, Object>{
+            'StageNamePk__c' => 'In Development',
+            'TemplateMarkedDateTime__c' => Datetime.now()
+        });
+
+        Test.startTest();
+        List<DeliveryTriageController.InFlightItemDTO> rows =
+            DeliveryTriageController.getInFlightItems();
+        Test.stopTest();
+
+        System.assertEquals(4, rows.size(),
+            'only the four in-band, live, non-template items are in flight');
+        System.assertEquals(ready.Id, rows[0].workItemId, 'Ready for Development leads the band');
+        System.assertEquals(devOlder.Id, rows[1].workItemId, 'older In Development row first');
+        System.assertEquals(devNewer.Id, rows[2].workItemId, 'newer In Development row second');
+        System.assertEquals(deploying.Id, rows[3].workItemId, 'Ready for Deployment closes the band');
+        System.assert(rows[0].stageRank < rows[1].stageRank && rows[1].stageRank < rows[3].stageRank,
+            'stageRank follows pipeline order');
+        System.assertEquals('Ready for Deployment', rows[3].stage, 'stage surfaced');
+        System.assertEquals(40, rows[3].approvedHours, 'approved hours surfaced');
+        System.assertEquals(UserInfo.getUserId(), rows[3].developerId, 'developer id surfaced');
+        System.assertNotEquals(null, rows[3].developerName, 'developer name surfaced');
+        System.assertEquals(null, rows[1].approvedHours, 'no approved hours comes back null, not zero');
+    }
+
+    @IsTest
+    static void testInFlightBandMatchesApprovalAgenda() {
+        Set<String> band = DeliveryWorkflowConfigService.getInFlightStageValues();
+        System.assertEquals(DeliveryWorkflowConfigService.IN_FLIGHT_STAGES.size(), band.size(),
+            'no duplicate stages in the band');
+        System.assert(band.contains('Ready for Development') && band.contains('Deploying'),
+            'band spans Ready for Development through Deploying');
+        System.assert(!band.contains(DeliveryWorkflowConfigService.STAGE_DEPLOYED_TO_PROD),
+            'Deployed to Prod is pending close-out, not in flight');
+    }
+
+    @IsTest
+    static void testInFlightReportIdShapeOnly() {
+        Test.startTest();
+        DeliveryTriageController.getInFlightReportId();
+        Test.stopTest();
+        System.assert(true, 'report-id resolution did not throw');
+    }
+
     // ── Intake feed ──────────────────────────────────────────────────
 
     @IsTest

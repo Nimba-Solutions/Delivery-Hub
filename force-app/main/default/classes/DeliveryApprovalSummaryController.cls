@@ -38,15 +38,8 @@ public with sharing class DeliveryApprovalSummaryController {
 
     /** WorkItem__c stages counted as approved-and-in-flight (dev → deploying). */
     @TestVisible
-    private static final Set<String> IN_FLIGHT_STAGES = new Set<String>{
-        'Ready for Development', 'In Development', 'Dev Clarification Requested',
-        'Providing Dev Clarification', 'Back For Development', 'Dev Blocked',
-        'Ready for Scratch Test', 'Scratch Testing', 'Ready for QA',
-        'QA In Progress', 'Ready for Internal UAT', 'Internal UAT',
-        'Ready for Client UAT', 'In Client UAT', 'Ready for UAT Sign-off',
-        'Processing Sign-off', 'Ready for Merge', 'Merging',
-        'Ready for Deployment', 'Deploying'
-    };
+    private static final Set<String> IN_FLIGHT_STAGES =
+        DeliveryWorkflowConfigService.getInFlightStageValues();
 
     /**
      * @description WorkItem__c stages excluded from the active portfolio scope.
