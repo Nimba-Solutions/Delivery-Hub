@@ -117,7 +117,7 @@ private class DeliveryHubSettingsControllerTest {
             System.assertEquals('test@example.com', dto.weeklyDigestRecipients, 'Digest recipients should be set');
             System.assertEquals('cc@example.com', dto.documentCcEmail, 'Document CC email should be set');
             System.assertEquals('invoices@example.com', dto.documentFromOrgWideEmail, 'Document From org-wide email should be set');
-            System.assertEquals('abc-123', dto.statusPageToken, 'Status page token should be set');
+            System.assertEquals('****-123', dto.statusPageToken, 'Status page token should come back masked');
             System.assertEquals('a3VRu000002ZPtdMA', dto.defaultBillingEntityId, 'Default billing entity should be set');
             System.assertEquals('In Development,Code Review', dto.stagesToAutoShare, 'Stages to auto share should be set');
             System.assertEquals('https://portal.example.com/api/webhooks/delivery', dto.webhookUrl, 'Webhook URL should be set');
@@ -242,6 +242,47 @@ private class DeliveryHubSettingsControllerTest {
             DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
             System.assert(String.isBlank(s.SlackWebhookUrlTxt__c), 'Slack webhook URL should be cleared');
         }
+    }
+
+    @isTest
+    static void testSecretsAreMaskedAndMaskedEchoDoesNotOverwrite() {
+        System.runAs(testUser) {
+            DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+            s.SlackWebhookUrlTxt__c = 'https://hooks.slack.com/services/T000/B000/secretABCD';
+            s.StatusPageTokenTxt__c = 'status-token-WXYZ';
+            update s;
+
+            Test.startTest();
+            DeliveryHubSettingsController.SettingsDTO dto = DeliveryHubSettingsController.getSettings();
+            // The UI echoes the masked values back on save.
+            DeliveryHubSettingsController.saveSlackWebhookUrl(dto.slackWebhookUrl);
+            DeliveryHubSettingsController.saveExtendedSettings(JSON.serialize(dto));
+            Test.stopTest();
+
+            System.assertEquals('****ABCD', dto.slackWebhookUrl, 'Slack webhook must come back masked');
+            System.assertEquals('****WXYZ', dto.statusPageToken, 'Status page token must come back masked');
+            DeliveryHubSettings__c after = DeliveryHubSettings__c.getOrgDefaults();
+            System.assertEquals('https://hooks.slack.com/services/T000/B000/secretABCD', after.SlackWebhookUrlTxt__c,
+                'A masked echo must not overwrite the stored webhook');
+            System.assertEquals('status-token-WXYZ', after.StatusPageTokenTxt__c,
+                'A masked echo must not overwrite the stored token');
+        }
+    }
+
+    @isTest
+    static void testNonAdminCannotSaveSettings() {
+        DeliveryAccessService.adminOverride = false;
+        Boolean denied = false;
+        Test.startTest();
+        try {
+            DeliveryHubSettingsController.saveSlackWebhookUrl('https://hooks.slack.com/evil');
+        } catch (AuraHandledException e) {
+            denied = true;
+        }
+        Test.stopTest();
+        System.assertEquals(true, denied, 'a non-admin must not be able to save settings');
+        System.assert(String.isBlank(DeliveryHubSettings__c.getOrgDefaults().SlackWebhookUrlTxt__c),
+            'nothing should have been written');
     }
 
     @isTest

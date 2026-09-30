@@ -192,6 +192,12 @@ global with sharing class DeliverySlackService {
      */
     @AuraEnabled
     global static String testWebhook(String webhookUrl) {
+        // The settings card now shows the stored webhook masked ('****' + tail);
+        // testing that masked echo means "test the stored webhook".
+        if (DeliveryHubSettingsController.isMaskedSecret(webhookUrl)) {
+            DeliveryHubSettings__c stored = DeliveryHubSettings__c.getOrgDefaults();
+            webhookUrl = stored == null ? null : stored.SlackWebhookUrlTxt__c;
+        }
         if (String.isBlank(webhookUrl)) {
             throw new AuraHandledException('Please enter a Slack Webhook URL first.');
         }

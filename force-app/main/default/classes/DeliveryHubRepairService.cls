@@ -19,6 +19,9 @@ public with sharing class DeliveryHubRepairService {
      */
     @AuraEnabled
     public static String runRepair(String repairKey) {
+        // Repairs reschedule jobs, requeue syncs and assign permission sets:
+        // admin-only (the LWC hiding the button is not a control).
+        DeliveryAccessService.requireAdmin('run Delivery Hub repairs');
         if (String.isBlank(repairKey)) {
             throw new AuraHandledException('repairKey is required');
         }
