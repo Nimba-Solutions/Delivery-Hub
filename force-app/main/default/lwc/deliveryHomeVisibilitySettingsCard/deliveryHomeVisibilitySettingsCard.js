@@ -58,6 +58,11 @@ const COMPONENTS = [
         help: 'Offer-Sent work requests awaiting a decision.'
     },
     {
+        key: 'deliveryUnapprovedHoursQueue',
+        label: 'Hours without approval',
+        help: 'Hours logged on requests nobody has approved yet (only while the Unapproved Hours Flag setting is on).'
+    },
+    {
         key: 'deliveryInFlightQueue',
         label: 'In Flight',
         help: 'Work between Ready for Development and Deploying: what the team is on right now (read-only).'

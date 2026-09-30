@@ -931,6 +931,26 @@ global with sharing class DeliveryWorkApprovalService {
      * @param note Optional decision note carried in ContextData.
      */
     public static void writeAuditRow(Id workItemId, String action, Id requestId, String note) {
+        ActivityLog__c row = buildAuditRow(workItemId, action, requestId, note);
+        try {
+            insert row;
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryWorkApprovalService.writeAuditRow] insert failed: '
+                + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Builds (no DML) the Work_Approval ActivityLog__c row that
+     *              writeAuditRow inserts, so bulk callers can batch the insert.
+     * @param workItemId WorkItem__c the decision concerns.
+     * @param action Lifecycle verb (see writeAuditRow).
+     * @param requestId The WorkRequest__c id (carried in ContextData).
+     * @param note Optional note carried in ContextData.
+     * @return The unsaved audit row.
+     */
+    public static ActivityLog__c buildAuditRow(Id workItemId, String action, Id requestId, String note) {
         Map<String, Object> ctx = new Map<String, Object>{
             'requestId' => requestId,
             'action' => action,
@@ -946,12 +966,6 @@ global with sharing class DeliveryWorkApprovalService {
             UserIdTxt__c = UserInfo.getUserId(),
             ComponentNameTxt__c = 'DeliveryWorkApprovalService'
         );
-        try {
-            insert row;
-        } catch (Exception e) {
-            System.debug(LoggingLevel.WARN,
-                '[DeliveryWorkApprovalService.writeAuditRow] insert failed: '
-                + e.getMessage());
-        }
+        return row;
     }
 }

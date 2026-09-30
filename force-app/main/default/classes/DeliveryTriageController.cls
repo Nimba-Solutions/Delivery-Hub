@@ -15,6 +15,10 @@
  *                 only surface that shows them.
  *               getInFlightItems()  — middle of pipe. WorkItems in the dev →
  *                 deploying band (read-only; the Home "In Flight" card).
+ *               getUnapprovedHours() / acknowledgeUnapprovedHours() — the Home
+ *                 "Hours without approval" card: hours logged (after the
+ *                 EnableUnapprovedHoursFlagDateTime__c cutover) on requests
+ *                 nobody approved, and the approver's one-click clear.
  *
  *               Mutations are all bulk + partial-failure-safe, mirroring
  *               DeliveryWorkApprovalService.approveMany: every id is processed,
@@ -119,6 +123,39 @@ public with sharing class DeliveryTriageController {
         @AuraEnabled public String developerName;
         @AuraEnabled public Id developerId;
         @AuraEnabled public Decimal approvedHours;
+    }
+
+    /**
+     * @description One row on the Home "Hours without approval" card: the
+     *              flagged hours on ONE request (an item can carry several
+     *              requests, so rows are per request, not per item).
+     */
+    public class UnapprovedHoursRowDTO {
+        @AuraEnabled public Id requestId;
+        @AuraEnabled public String requestStatus;
+        @AuraEnabled public Id workItemId;
+        @AuraEnabled public String workItemName;
+        @AuraEnabled public String briefDescription;
+        @AuraEnabled public Decimal hours;
+        @AuraEnabled public Integer logCount;
+        @AuraEnabled public Date firstWorkDate;
+        @AuraEnabled public Date lastWorkDate;
+        /** False when the request must be decided elsewhere (see blockedReason). */
+        @AuraEnabled public Boolean canAcknowledge;
+        @AuraEnabled public String blockedReason;
+    }
+
+    /**
+     * @description Feed for the "Hours without approval" card. enabled=false
+     *              (and no rows) while EnableUnapprovedHoursFlagDateTime__c is
+     *              null, so the card hides itself entirely.
+     */
+    public class UnapprovedHoursDTO {
+        @AuraEnabled public Boolean enabled = false;
+        @AuraEnabled public Boolean canApprove = false;
+        @AuraEnabled public Datetime cutover;
+        @AuraEnabled public Decimal totalHours = 0;
+        @AuraEnabled public List<UnapprovedHoursRowDTO> rows = new List<UnapprovedHoursRowDTO>();
     }
 
     /**
@@ -323,6 +360,175 @@ public with sharing class DeliveryTriageController {
             return r.Id;
         }
         return null;
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // Hours without approval (soft approve-before-hours gate)
+    // ────────────────────────────────────────────────────────────────────
+
+    /** Request statuses whose hours count as approved (never flagged). */
+    @TestVisible
+    private static final Set<String> APPROVED_REQUEST_STATUSES =
+        new Set<String>{ 'Accepted', 'In Progress', 'Completed' };
+
+    /** Request statuses this card must NOT flip: they are decided elsewhere. */
+    private static final Map<String, String> BLOCKED_REQUEST_STATUSES = new Map<String, String>{
+        'Offer Sent'  => 'Awaiting a decision in Pending Work Approvals. Approve it there.',
+        'Inactive'    => 'This request was declined. Re-open it before approving hours on it.',
+        'Budget Hold' => 'Over its approved budget. Approve a budget increase instead.'
+    };
+
+    private static final Integer MAX_UNAPPROVED_ROWS = 200;
+
+    /**
+     * @description Hours logged without an approved request. Only WorkLogs
+     *              created at or after the EnableUnapprovedHoursFlagDateTime__c
+     *              stamp count (the stamp doubles as the cutover, so historical
+     *              hours are never flagged), whose parent request is not
+     *              Accepted / In Progress / Completed, and that were not
+     *              Rejected. Grouped per request, biggest first.
+     * @return The card feed (enabled=false and empty while the flag is off).
+     */
+    @AuraEnabled(cacheable=true)
+    public static UnapprovedHoursDTO getUnapprovedHours() {
+        UnapprovedHoursDTO dto = new UnapprovedHoursDTO();
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        Datetime cutover = settings == null ? null : settings.EnableUnapprovedHoursFlagDateTime__c;
+        if (cutover == null) {
+            return dto;
+        }
+        dto.enabled = true;
+        dto.cutover = cutover;
+        dto.canApprove = DeliveryAccessService.isApproverOrAdmin();
+
+        Map<Id, UnapprovedHoursRowDTO> byRequest = new Map<Id, UnapprovedHoursRowDTO>();
+        for (AggregateResult ar : [
+            SELECT RequestId__c reqId, SUM(HoursLoggedNumber__c) hrs, COUNT(Id) cnt,
+                   MIN(WorkDateDate__c) firstDate, MAX(WorkDateDate__c) lastDate
+            FROM WorkLog__c
+            WHERE CreatedDate >= :cutover
+              AND RequestId__r.StatusPk__c NOT IN :APPROVED_REQUEST_STATUSES
+              AND StatusPk__c != 'Rejected'
+            WITH SYSTEM_MODE
+            GROUP BY RequestId__c
+            ORDER BY SUM(HoursLoggedNumber__c) DESC
+            LIMIT :MAX_UNAPPROVED_ROWS
+        ]) {
+            UnapprovedHoursRowDTO row = new UnapprovedHoursRowDTO();
+            row.requestId = (Id) ar.get('reqId');
+            row.hours = (Decimal) ar.get('hrs');
+            row.logCount = (Integer) ar.get('cnt');
+            row.firstWorkDate = (Date) ar.get('firstDate');
+            row.lastWorkDate = (Date) ar.get('lastDate');
+            byRequest.put(row.requestId, row);
+        }
+        if (byRequest.isEmpty()) {
+            return dto;
+        }
+        for (WorkRequest__c req : [
+            SELECT Id, StatusPk__c, WorkItemId__c, WorkItemId__r.Name,
+                   WorkItemId__r.BriefDescriptionTxt__c
+            FROM WorkRequest__c
+            WHERE Id IN :byRequest.keySet()
+            WITH SYSTEM_MODE
+        ]) {
+            UnapprovedHoursRowDTO row = byRequest.get(req.Id);
+            row.requestStatus = req.StatusPk__c;
+            row.workItemId = req.WorkItemId__c;
+            row.workItemName = req.WorkItemId__r?.Name;
+            row.briefDescription = req.WorkItemId__r?.BriefDescriptionTxt__c;
+            row.blockedReason = BLOCKED_REQUEST_STATUSES.get(req.StatusPk__c);
+            row.canAcknowledge = row.blockedReason == null;
+        }
+        for (UnapprovedHoursRowDTO row : byRequest.values()) {
+            dto.totalHours += row.hours == null ? 0 : row.hours;
+            dto.rows.add(row);
+        }
+        return dto;
+    }
+
+    /**
+     * @description "Approve hours": marks the given requests Accepted so the
+     *              hours on them stop being flagged and later hours on the item
+     *              land on an approved request. Deliberately NOT
+     *              DeliveryWorkApprovalService.approve(): that also stamps the
+     *              client cap (ClientPreApprovedHoursNumber__c /
+     *              PreApprovedHoursNumber__c) and moves the WorkItem to Ready
+     *              for Development. Here the WorkItem stage and caps are left
+     *              untouched; only the request's status, decision time and
+     *              approver change, plus one Work_Approval audit row
+     *              ('Acknowledge_Hours') per request. Requests awaiting a
+     *              decision (Offer Sent), declined (Inactive) or over budget
+     *              (Budget Hold) are refused per row. Already-approved requests
+     *              are idempotent successes. Approver or admin only.
+     * @param requestIds WorkRequest__c ids from the card.
+     * @return BulkResultDTO; succeededIds / failure ids are REQUEST ids.
+     */
+    @AuraEnabled
+    public static BulkResultDTO acknowledgeUnapprovedHours(List<Id> requestIds) {
+        DeliveryAccessService.requireApproverOrAdmin('approve hours');
+        if (requestIds == null || requestIds.isEmpty()) {
+            throw new AuraHandledException('No requests were selected.');
+        }
+        BulkResultDTO result = new BulkResultDTO();
+        Set<Id> requested = new Set<Id>(requestIds);
+        Map<Id, WorkRequest__c> found = new Map<Id, WorkRequest__c>([
+            SELECT Id, StatusPk__c, WorkItemId__c, ApproverUserLookup__c
+            FROM WorkRequest__c
+            WHERE Id IN :requested
+            WITH SYSTEM_MODE
+        ]);
+        List<WorkRequest__c> toUpdate = new List<WorkRequest__c>();
+        for (Id reqId : requested) {
+            WorkRequest__c req = found.get(reqId);
+            String refusal = acknowledgeRefusal(req);
+            if (refusal != null) {
+                result.failures.add(new FailureDTO(reqId, refusal));
+            } else if (APPROVED_REQUEST_STATUSES.contains(req.StatusPk__c)) {
+                result.succeededIds.add(reqId);
+            } else {
+                toUpdate.add(stampAcknowledged(req));
+            }
+        }
+        if (!toUpdate.isEmpty()) {
+            Database.SaveResult[] saveResults =
+                Database.update(toUpdate, false, AccessLevel.SYSTEM_MODE);
+            List<ActivityLog__c> audit = new List<ActivityLog__c>();
+            for (Integer i = 0; i < saveResults.size(); i++) {
+                WorkRequest__c req = toUpdate[i];
+                if (saveResults[i].isSuccess()) {
+                    result.succeededIds.add(req.Id);
+                    audit.add(DeliveryWorkApprovalService.buildAuditRow(
+                        found.get(req.Id).WorkItemId__c, 'Acknowledge_Hours', req.Id,
+                        'Hours approved from Home'));
+                } else {
+                    result.failures.add(new FailureDTO(req.Id, firstError(saveResults[i])));
+                }
+            }
+            // Audit is best-effort, like DeliveryWorkApprovalService.writeAuditRow.
+            Database.insert(audit, false, AccessLevel.SYSTEM_MODE);
+        }
+        finalizeCounts(result);
+        return result;
+    }
+
+    private static String acknowledgeRefusal(WorkRequest__c req) {
+        if (req == null) {
+            return 'Request not found.';
+        }
+        return BLOCKED_REQUEST_STATUSES.get(req.StatusPk__c);
+    }
+
+    private static WorkRequest__c stampAcknowledged(WorkRequest__c req) {
+        WorkRequest__c upd = new WorkRequest__c(
+            Id = req.Id,
+            StatusPk__c = 'Accepted',
+            DecisionDateTime__c = Datetime.now()
+        );
+        if (req.ApproverUserLookup__c == null) {
+            upd.ApproverUserLookup__c = UserInfo.getUserId();
+        }
+        return upd;
     }
 
     // ────────────────────────────────────────────────────────────────────
