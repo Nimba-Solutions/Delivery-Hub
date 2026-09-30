@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-    <label>SD - Ready for QA</label>
+    <label>SD - Ready for Final Approval</label>
     <protected>false</protected>
     <values>
         <field>WorkflowTypeMdt__c</field>
@@ -8,31 +8,35 @@
     </values>
     <values>
         <field>ApiValueTxt__c</field>
-        <value xsi:type="xsd:string">Ready for QA</value>
+        <value xsi:type="xsd:string">Ready for Final Approval</value>
     </values>
     <values>
         <field>SortOrderNumber__c</field>
-        <value xsi:type="xsd:double">25</value>
+        <value xsi:type="xsd:double">15</value>
     </values>
     <values>
         <field>CardColorTxt__c</field>
-        <value xsi:type="xsd:string">#E0F2FE</value>
+        <value xsi:type="xsd:string">#DBEAFE</value>
     </values>
     <values>
         <field>HeaderBgColorTxt__c</field>
-        <value xsi:type="xsd:string">rgba(219,234,254,0.5)</value>
+        <value xsi:type="xsd:string">rgba(254,243,199,0.5)</value>
     </values>
     <values>
         <field>HeaderTextColorTxt__c</field>
-        <value xsi:type="xsd:string">#1E40AF</value>
+        <value xsi:type="xsd:string">#D97706</value>
     </values>
     <values>
         <field>OwnerPersonaTxt__c</field>
-        <value xsi:type="xsd:string">QA</value>
+        <value xsi:type="xsd:string">Client</value>
     </values>
     <values>
         <field>PhaseTxt__c</field>
-        <value xsi:type="xsd:string">Testing</value>
+        <value xsi:type="xsd:string">Approval</value>
+    </values>
+    <values>
+        <field>AttentionStateDateTime__c</field>
+        <value xsi:type="xsd:dateTime">2020-01-01T00:00:00.000Z</value>
     </values>
     <values>
         <field>VisibleByDefaultDateTime__c</field>
@@ -40,14 +44,14 @@
     </values>
     <values>
         <field>AllowedForwardTransitionsTxt__c</field>
-        <value xsi:type="xsd:string">QA In Progress,Ready for Internal UAT,Ready for Client UAT</value>
+        <value xsi:type="xsd:string">Final Approving,Ready for Development</value>
     </values>
     <values>
         <field>AllowedBacktrackTransitionsTxt__c</field>
-        <value xsi:type="xsd:string">Scratch Testing,Ready for Scratch Test,In Development,Cancelled</value>
+        <value xsi:type="xsd:string">In Client Approval,Ready for Client Approval,Tech Reviewing,Cancelled</value>
     </values>
     <values>
         <field>EtaWeightNumber__c</field>
-        <value xsi:type="xsd:double">23.0</value>
+        <value xsi:type="xsd:double">14.0</value>
     </values>
 </CustomMetadata>

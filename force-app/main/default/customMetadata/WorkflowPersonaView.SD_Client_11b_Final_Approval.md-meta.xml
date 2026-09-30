@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-    <label>SD Developer - Client Approval</label>
+    <label>SD Client - Final Approval</label>
     <protected>false</protected>
     <values>
         <field>WorkflowTypeMdt__c</field>
@@ -8,22 +8,18 @@
     </values>
     <values>
         <field>PersonaNameTxt__c</field>
-        <value xsi:type="xsd:string">Developer</value>
+        <value xsi:type="xsd:string">Client</value>
     </values>
     <values>
         <field>ColumnNameTxt__c</field>
-        <value xsi:type="xsd:string">Client Approval</value>
+        <value xsi:type="xsd:string">Final Approval</value>
     </values>
     <values>
         <field>StageApiValuesTxt__c</field>
-        <value xsi:type="xsd:string">Ready for Client Approval,In Client Approval,Ready for Final Approval,Final Approving</value>
+        <value xsi:type="xsd:string">Ready for Final Approval,Final Approving</value>
     </values>
     <values>
         <field>SortOrderNumber__c</field>
-        <value xsi:type="xsd:double">11</value>
-    </values>
-    <values>
-        <field>ExtendedColumnDateTime__c</field>
-        <value xsi:type="xsd:dateTime">2020-01-01T00:00:00.000Z</value>
+        <value xsi:type="xsd:double">12</value>
     </values>
 </CustomMetadata>
