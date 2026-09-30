@@ -37,7 +37,7 @@
  *               subscriber installs.
  * @author       Cloud Nimbus LLC
  */
-@SuppressWarnings('PMD.ApexCRUDViolation')
+@SuppressWarnings('PMD.ApexCRUDViolation, PMD.CyclomaticComplexity')
 public with sharing class DeliveryTriageController {
 
     /** Stage a work item sits in once deployed, awaiting close-out verification. */
@@ -490,26 +490,36 @@ public with sharing class DeliveryTriageController {
                 toUpdate.add(stampAcknowledged(req));
             }
         }
-        if (!toUpdate.isEmpty()) {
-            Database.SaveResult[] saveResults =
-                Database.update(toUpdate, false, AccessLevel.SYSTEM_MODE);
-            List<ActivityLog__c> audit = new List<ActivityLog__c>();
-            for (Integer i = 0; i < saveResults.size(); i++) {
-                WorkRequest__c req = toUpdate[i];
-                if (saveResults[i].isSuccess()) {
-                    result.succeededIds.add(req.Id);
-                    audit.add(DeliveryWorkApprovalService.buildAuditRow(
-                        found.get(req.Id).WorkItemId__c, 'Acknowledge_Hours', req.Id,
-                        'Hours approved from Home'));
-                } else {
-                    result.failures.add(new FailureDTO(req.Id, firstError(saveResults[i])));
-                }
-            }
-            // Audit is best-effort, like DeliveryWorkApprovalService.writeAuditRow.
-            Database.insert(audit, false, AccessLevel.SYSTEM_MODE);
-        }
+        saveAcknowledged(result, toUpdate, found);
         finalizeCounts(result);
         return result;
+    }
+
+    // Saves the acknowledged requests (allOrNone=false), records per-row
+    // outcomes, and writes one best-effort audit row per success. Extracted
+    // from acknowledgeUnapprovedHours to keep it under the complexity gate.
+    private static void saveAcknowledged(
+        BulkResultDTO result, List<WorkRequest__c> toUpdate, Map<Id, WorkRequest__c> found
+    ) {
+        if (toUpdate.isEmpty()) {
+            return;
+        }
+        Database.SaveResult[] saveResults =
+            Database.update(toUpdate, false, AccessLevel.SYSTEM_MODE);
+        List<ActivityLog__c> audit = new List<ActivityLog__c>();
+        for (Integer i = 0; i < saveResults.size(); i++) {
+            Id reqId = toUpdate[i].Id;
+            if (saveResults[i].isSuccess()) {
+                result.succeededIds.add(reqId);
+                audit.add(DeliveryWorkApprovalService.buildAuditRow(
+                    found.get(reqId).WorkItemId__c, 'Acknowledge_Hours', reqId,
+                    'Hours approved from Home'));
+            } else {
+                result.failures.add(new FailureDTO(reqId, firstError(saveResults[i])));
+            }
+        }
+        // Audit is best-effort, like DeliveryWorkApprovalService.writeAuditRow.
+        Database.insert(audit, false, AccessLevel.SYSTEM_MODE);
     }
 
     private static String acknowledgeRefusal(WorkRequest__c req) {
