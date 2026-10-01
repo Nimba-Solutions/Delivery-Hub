@@ -11,12 +11,26 @@ private class DeliveryHubSyncServiceTest {
 
     private static User testUser = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
 
+    /** Every inbound request must now carry a key matching a Connected entity. */
+    private static final String SYNC_KEY = 'test-sync-key-0001';
+
     @TestSetup
     static void makeData() {
         // 1. Setup Settings
         insert new DeliveryHubSettings__c(
             EnableAutoCreateWorkRequestDateTime__c = null,
             EnableAutoSyncNetworkEntityDateTime__c = null
+        );
+
+        // 1b. The authenticated peer the test requests present X-Api-Key for.
+        // Type 'Both' with no OrgId so it never matches the Vendor/Client
+        // lookups or the ingestor's org-id auto-parenting below.
+        insert new NetworkEntity__c(
+            Name = 'Sync Key Peer',
+            StatusPk__c = 'Active',
+            EntityTypePk__c = 'Both',
+            ApiKeyTxt__c = SYNC_KEY,
+            ConnectionStatusPk__c = 'Connected'
         );
 
         // 2. Create Network Entities (Vendor & Client)
@@ -68,6 +82,7 @@ private class DeliveryHubSyncServiceTest {
     static void testHttpPostInvalidObject() {
         System.runAs(testUser) {
             RestRequest req = new RestRequest();
+            req.addHeader('X-Api-Key', SYNC_KEY);
             RestResponse res = new RestResponse();
 
             req.requestURI = '/services/apexrest/deliveryhub/v1/sync/Invalid_Object__c';
@@ -97,6 +112,7 @@ private class DeliveryHubSyncServiceTest {
 
         System.runAs(testUser) {
             RestRequest req = new RestRequest();
+            req.addHeader('X-Api-Key', SYNC_KEY);
             RestResponse res = new RestResponse();
 
             req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItem__c';
@@ -144,6 +160,7 @@ private class DeliveryHubSyncServiceTest {
         System.runAs(testUser) {
             String remoteId = 'REMOTE-WORKITEM-123';
             RestRequest req = new RestRequest();
+            req.addHeader('X-Api-Key', SYNC_KEY);
             RestResponse res = new RestResponse();
 
             req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItem__c';
@@ -182,6 +199,7 @@ private class DeliveryHubSyncServiceTest {
             };
 
             RestRequest req = new RestRequest();
+            req.addHeader('X-Api-Key', SYNC_KEY);
             RestResponse res = new RestResponse();
 
             req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItemComment__c';
@@ -214,6 +232,7 @@ private class DeliveryHubSyncServiceTest {
             NetworkEntity__c client = [SELECT Id FROM NetworkEntity__c WHERE EntityTypePk__c = 'Client' LIMIT 1];
 
             RestRequest req = new RestRequest();
+            req.addHeader('X-Api-Key', SYNC_KEY);
             RestResponse res = new RestResponse();
 
             req.requestURI = '/services/apexrest/deliveryhub/v1/sync/changes';
@@ -238,6 +257,7 @@ private class DeliveryHubSyncServiceTest {
     static void testHttpGetChangesMissingClientId() {
         System.runAs(testUser) {
             RestRequest req = new RestRequest();
+            req.addHeader('X-Api-Key', SYNC_KEY);
             RestResponse res = new RestResponse();
 
             req.requestURI = '/services/apexrest/deliveryhub/v1/sync/changes';
@@ -259,6 +279,7 @@ private class DeliveryHubSyncServiceTest {
     static void testHttpGetChangesWrongEndpoint() {
         System.runAs(testUser) {
             RestRequest req = new RestRequest();
+            req.addHeader('X-Api-Key', SYNC_KEY);
             RestResponse res = new RestResponse();
 
             req.requestURI = '/services/apexrest/deliveryhub/v1/sync/invalid_path';
@@ -292,6 +313,7 @@ private class DeliveryHubSyncServiceTest {
             insert pendingEntity;
 
             RestRequest req = new RestRequest();
+            req.addHeader('X-Api-Key', SYNC_KEY);
             RestResponse res = new RestResponse();
 
             req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItem__c';
@@ -318,6 +340,7 @@ private class DeliveryHubSyncServiceTest {
     static void testNetworkEntitySyncAllowedDuringHandshake() {
         System.runAs(testUser) {
             RestRequest req = new RestRequest();
+            req.addHeader('X-Api-Key', SYNC_KEY);
             RestResponse res = new RestResponse();
 
             req.requestURI = '/services/apexrest/deliveryhub/v1/sync/NetworkEntity__c';
@@ -367,6 +390,7 @@ private class DeliveryHubSyncServiceTest {
 
             String remoteId = 'REMOTE-WORKITEM-123';
             RestRequest req = new RestRequest();
+            req.addHeader('X-Api-Key', SYNC_KEY);
             RestResponse res = new RestResponse();
 
             req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItem__c';
@@ -392,6 +416,7 @@ private class DeliveryHubSyncServiceTest {
     static void testPostWithInvalidApiKey() {
         System.runAs(testUser) {
             RestRequest req = new RestRequest();
+            req.addHeader('X-Api-Key', SYNC_KEY);
             RestResponse res = new RestResponse();
 
             req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItem__c';
@@ -414,16 +439,15 @@ private class DeliveryHubSyncServiceTest {
     }
 
     @IsTest
-    static void testPostWithNoApiKeyBackwardCompatible() {
+    static void testPostWithNoApiKeyRejected() {
         System.runAs(testUser) {
-            // No X-Api-Key header = legacy connection, should still work
+            // The keyless "legacy connection" door is closed: no header = 401.
             String remoteId = 'REMOTE-WORKITEM-123';
             RestRequest req = new RestRequest();
             RestResponse res = new RestResponse();
 
             req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItem__c';
             req.httpMethod = 'POST';
-            // No X-Api-Key header
             req.requestBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
                 'SourceId' => remoteId,
                 'BriefDescriptionTxt__c' => 'Legacy Update'
@@ -436,7 +460,57 @@ private class DeliveryHubSyncServiceTest {
             DeliveryHubSyncService.handleIncomingSync();
             Test.stopTest();
 
-            System.assertEquals(200, res.statusCode, 'No API key should be backward compatible (200)');
+            System.assertEquals(401, res.statusCode, 'A request with no API key must be rejected');
+            WorkItem__c after = [SELECT BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
+            System.assertNotEquals('Legacy Update', after.BriefDescriptionTxt__c, 'nothing may be ingested');
+        }
+    }
+
+    @IsTest
+    static void testGetWithNoApiKeyRejected() {
+        System.runAs(testUser) {
+            NetworkEntity__c client = [SELECT Id FROM NetworkEntity__c WHERE EntityTypePk__c = 'Client' LIMIT 1];
+            RestRequest req = new RestRequest();
+            RestResponse res = new RestResponse();
+            req.requestURI = '/services/apexrest/deliveryhub/v1/sync/changes';
+            req.httpMethod = 'GET';
+            req.addParameter('clientId', client.Id);
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryHubSyncService.handleOutgoingSync();
+            Test.stopTest();
+
+            System.assertEquals(401, res.statusCode, 'A pull with no API key must be rejected');
+        }
+    }
+
+    @IsTest
+    static void testPostRefusedWhileSyncKillSwitchStamped() {
+        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+        s.DisableSyncCaptureDateTime__c = Datetime.now();
+        update s;
+        System.runAs(testUser) {
+            RestRequest req = new RestRequest();
+            req.addHeader('X-Api-Key', SYNC_KEY);
+            RestResponse res = new RestResponse();
+            req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItem__c';
+            req.httpMethod = 'POST';
+            req.requestBody = Blob.valueOf(JSON.serialize(new Map<String, Object>{
+                'SourceId' => 'REMOTE-WORKITEM-123',
+                'BriefDescriptionTxt__c' => 'Frozen Update'
+            }));
+            RestContext.request = req;
+            RestContext.response = res;
+
+            Test.startTest();
+            DeliveryHubSyncService.handleIncomingSync();
+            Test.stopTest();
+
+            System.assertEquals(503, res.statusCode, 'Inbound must be refused while sync is frozen');
+            WorkItem__c after = [SELECT BriefDescriptionTxt__c FROM WorkItem__c LIMIT 1];
+            System.assertNotEquals('Frozen Update', after.BriefDescriptionTxt__c, 'nothing may be ingested while frozen');
         }
     }
 
@@ -461,6 +535,7 @@ private class DeliveryHubSyncServiceTest {
             );
 
             RestRequest req = new RestRequest();
+            req.addHeader('X-Api-Key', SYNC_KEY);
             RestResponse res = new RestResponse();
             req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItem__c';
             req.httpMethod = 'POST';
@@ -512,6 +587,7 @@ private class DeliveryHubSyncServiceTest {
             Test.setCreatedDate(stale.Id, Datetime.now().addSeconds(-(DeliveryHubSyncService.ECHO_SUPPRESSION_WINDOW_SECONDS + 60)));
 
             RestRequest req = new RestRequest();
+            req.addHeader('X-Api-Key', SYNC_KEY);
             RestResponse res = new RestResponse();
             req.requestURI = '/services/apexrest/deliveryhub/v1/sync/WorkItem__c';
             req.httpMethod = 'POST';
@@ -542,6 +618,7 @@ private class DeliveryHubSyncServiceTest {
             NetworkEntity__c client = [SELECT Id FROM NetworkEntity__c WHERE EntityTypePk__c = 'Client' LIMIT 1];
 
             RestRequest req = new RestRequest();
+            req.addHeader('X-Api-Key', SYNC_KEY);
             RestResponse res = new RestResponse();
 
             req.requestURI = '/services/apexrest/deliveryhub/v1/sync/changes';

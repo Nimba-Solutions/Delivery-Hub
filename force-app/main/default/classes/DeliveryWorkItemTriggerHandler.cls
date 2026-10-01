@@ -134,59 +134,32 @@ public without sharing class DeliveryWorkItemTriggerHandler {
     }
 
     /**
-     * @description Checks settings and auto-creates/sends a Request if configured.
+     * @description Auto-creates one Draft WorkRequest__c per new WorkItem, ONLY
+     *              when DeliveryHubSettings__c.EnableAutoCreateWorkRequestDateTime__c
+     *              is stamped. The toggle is read directly off the typed field
+     *              (namespace-safe). The previous getPopulatedFieldsAsMap()
+     *              .containsKey('EnableAutoCreateWorkRequestDateTime__c') check
+     *              never matched (a null field is absent from the map, and in a
+     *              namespaced org the key carries the 'delivery__' prefix), so
+     *              every insert auto-created a request regardless of the setting.
+     *              Entity: oldest Active Vendor, else the item's client entity;
+     *              items with neither get no request. Hours logging no longer
+     *              depends on this bridge: ensureLogRequestId() creates the
+     *              Draft request on demand.
      * @param newWorkItems List of new work items
      */
     private static void handleNetworkEntitySync(List<WorkItem__c> newWorkItems) {
         DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
-        
-        Boolean shouldCreateRequest = true;
-        if (settings.Id != null) {
-            Map<String, Object> populatedFields = settings.getPopulatedFieldsAsMap();
-            if (populatedFields.containsKey('EnableAutoCreateWorkRequestDateTime__c')) {
-                shouldCreateRequest = settings.EnableAutoCreateWorkRequestDateTime__c != null;
-            }
-        }
-
-        if (!shouldCreateRequest) {
+        if (settings == null || settings.EnableAutoCreateWorkRequestDateTime__c == null) {
             return;
         }
 
-        // FIX: Swapped USER_MODE for SYSTEM_MODE to prevent packaging test failures.
-        // ORDER BY CreatedDate ASC LIMIT 1 mirrors the peer fix in
-        // DeliverySyncItemIngestor.cls:393-398 — without it, SF's default order is
-        // undefined and orgs with multiple Active Vendor entities get
-        // non-deterministic auto-attach.
-        List<NetworkEntity__c> vendors = [
-            SELECT Id FROM NetworkEntity__c
-            WHERE StatusPk__c = 'Active' AND EntityTypePk__c = 'Vendor'
-            WITH SYSTEM_MODE
-            ORDER BY CreatedDate ASC
-            LIMIT 1
-        ];
-
+        Id vendorId = findDefaultVendorEntityId();
         List<WorkRequest__c> newRequests = new List<WorkRequest__c>();
-
-        if (!vendors.isEmpty()) {
-            NetworkEntity__c vendor = vendors[0];
-            for (WorkItem__c t : newWorkItems) {
-                newRequests.add(new WorkRequest__c(
-                    WorkItemId__c = t.Id,
-                    DeliveryEntityLookup__c = vendor.Id,
-                    StatusPk__c = 'Draft',
-                    PreApprovedHoursNumber__c = (t.ClientPreApprovedHoursNumber__c != null) ? t.ClientPreApprovedHoursNumber__c : 0
-                ));
-            }
-        } else {
-            for (WorkItem__c t : newWorkItems) {
-                if (t.ClientNetworkEntityLookup__c != null) {
-                    newRequests.add(new WorkRequest__c(
-                        WorkItemId__c = t.Id,
-                        DeliveryEntityLookup__c = t.ClientNetworkEntityLookup__c,
-                        StatusPk__c = 'Draft',
-                        PreApprovedHoursNumber__c = (t.ClientPreApprovedHoursNumber__c != null) ? t.ClientPreApprovedHoursNumber__c : 0
-                    ));
-                }
+        for (WorkItem__c t : newWorkItems) {
+            WorkRequest__c req = buildDraftRequest(t, vendorId);
+            if (req != null) {
+                newRequests.add(req);
             }
         }
 
@@ -196,6 +169,105 @@ public without sharing class DeliveryWorkItemTriggerHandler {
 
         // Enforce CRUD/FLS on Insert but allow System Mode execution
         Database.insert(newRequests, AccessLevel.SYSTEM_MODE);
+    }
+
+    /**
+     * @description The default delivery entity for auto-created requests: the
+     *              oldest Active Vendor NetworkEntity__c. ORDER BY CreatedDate ASC
+     *              LIMIT 1 mirrors the peer fix in DeliverySyncItemIngestor;
+     *              without it, SF's default order is undefined and orgs with
+     *              multiple Active Vendor entities get non-deterministic attach.
+     * @return The vendor entity id, or null when the org has none.
+     */
+    public static Id findDefaultVendorEntityId() {
+        List<NetworkEntity__c> vendors = [
+            SELECT Id FROM NetworkEntity__c
+            WHERE StatusPk__c = 'Active' AND EntityTypePk__c = 'Vendor'
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate ASC
+            LIMIT 1
+        ];
+        return vendors.isEmpty() ? null : vendors[0].Id;
+    }
+
+    /**
+     * @description Builds (no DML) a Draft request for a work item against the
+     *              vendor when one exists, else the item's client entity.
+     * @param wi The work item (ClientNetworkEntityLookup__c and
+     *        ClientPreApprovedHoursNumber__c must be populated/queried).
+     * @param vendorId Result of findDefaultVendorEntityId() (may be null).
+     * @return The unsaved request, or null when neither entity exists.
+     */
+    private static WorkRequest__c buildDraftRequest(WorkItem__c wi, Id vendorId) {
+        Id entityId = vendorId != null ? vendorId : wi.ClientNetworkEntityLookup__c;
+        if (entityId == null) {
+            return null;
+        }
+        return new WorkRequest__c(
+            WorkItemId__c = wi.Id,
+            DeliveryEntityLookup__c = entityId,
+            StatusPk__c = 'Draft',
+            PreApprovedHoursNumber__c = wi.ClientPreApprovedHoursNumber__c != null
+                ? wi.ClientPreApprovedHoursNumber__c : 0
+        );
+    }
+
+    /**
+     * @description Resolves the WorkRequest__c a new WorkLog__c should hang off
+     *              (RequestId__c is a required master-detail). Order: newest
+     *              Accepted / In Progress request; else the newest Draft; else a
+     *              NEW Draft request is created (same entity rule as the
+     *              auto-create trigger). Never refuses just because nothing has
+     *              been approved: approve-before-hours is a soft gate, and hours
+     *              on a non-accepted request surface on the Home "Hours without
+     *              approval" card instead.
+     * @param workItemId The work item hours are being logged against.
+     * @return The request id to use.
+     */
+    public static Id ensureLogRequestId(Id workItemId) {
+        if (workItemId == null) {
+            throw new AuraHandledException('A work item is required to log hours.');
+        }
+        List<WorkRequest__c> accepted = [
+            SELECT Id FROM WorkRequest__c
+            WHERE WorkItemId__c = :workItemId
+              AND StatusPk__c IN ('Accepted', 'In Progress')
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate DESC
+            LIMIT 1
+        ];
+        if (!accepted.isEmpty()) {
+            return accepted[0].Id;
+        }
+        List<WorkRequest__c> drafts = [
+            SELECT Id FROM WorkRequest__c
+            WHERE WorkItemId__c = :workItemId
+              AND StatusPk__c = 'Draft'
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate DESC
+            LIMIT 1
+        ];
+        if (!drafts.isEmpty()) {
+            return drafts[0].Id;
+        }
+        List<WorkItem__c> items = [
+            SELECT Id, ClientNetworkEntityLookup__c, ClientPreApprovedHoursNumber__c
+            FROM WorkItem__c
+            WHERE Id = :workItemId
+            WITH SYSTEM_MODE
+            LIMIT 1
+        ];
+        if (items.isEmpty()) {
+            throw new AuraHandledException('Work item not found.');
+        }
+        WorkRequest__c req = buildDraftRequest(items[0], findDefaultVendorEntityId());
+        if (req == null) {
+            throw new AuraHandledException(
+                'Cannot log hours: there is no Active Vendor network entity and this work item '
+                + 'has no client entity. Create a Vendor entity or link the item to a client first.');
+        }
+        Database.insert(req, AccessLevel.SYSTEM_MODE);
+        return req.Id;
     }
     
     /**

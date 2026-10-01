@@ -382,7 +382,7 @@ global with sharing class DeliveryWorkApprovalService {
     /**
      * @description The discretionary gate: quoted hours must be known and at
      *              or under the per-request threshold, AND the month's running
-     *              auto-approved sum must still be under the monthly cap.
+     *              auto-approved sum PLUS this quote must fit within the monthly cap.
      *              A blank/zero threshold disables the Auto path entirely; a
      *              blank cap means only the per-request threshold gates it.
      * @param quoted Quoted hours for this request.
@@ -400,7 +400,10 @@ global with sharing class DeliveryWorkApprovalService {
         if (quoted > threshold) {
             return false;
         }
-        return monthlyCap == null || autoSumThisMonth < monthlyCap;
+        // The new quote must FIT under the cap; checking only the running sum
+        // let one request overshoot it (e.g. 38h used of 40h + an 8h quote).
+        Decimal used = autoSumThisMonth == null ? 0 : autoSumThisMonth;
+        return monthlyCap == null || used + quoted <= monthlyCap;
     }
 
     /**
@@ -819,13 +822,15 @@ global with sharing class DeliveryWorkApprovalService {
      *              an approver IS assigned, only that user — or the configured
      *              BACKUP approver (ApproverBackupUserIdTxt__c) — may decide
      *              (the @AuraEnabled surface is reachable outside the LWC);
-     *              unassigned requests may be decided by any authorised
-     *              caller, who is then stamped as the approver — PR1 leaves
-     *              approver assignment settings-optional.
+     *              unassigned requests may be decided only by the configured
+     *              approver / backup or an admin (DeliveryAccessService), who
+     *              is then stamped as the approver. Before this, ANY user with
+     *              the app could decide an unassigned request.
      * @param req The loaded pending request.
      */
     private static void assertCallerMayDecide(WorkRequest__c req) {
         if (req.ApproverUserLookup__c == null) {
+            DeliveryAccessService.requireApproverOrAdmin('decide this request');
             return;
         }
         Id caller = UserInfo.getUserId();
@@ -921,11 +926,31 @@ global with sharing class DeliveryWorkApprovalService {
      *              carries only its final decision state).
      * @param workItemId WorkItem__c the decision concerns.
      * @param action Lifecycle verb (Propose_Estimate / Auto_Approve / Approve
-     *        / Approve_Increase / Decline / Request_Increase).
+     *        / Approve_Increase / Decline / Request_Increase / Acknowledge_Hours).
      * @param requestId The WorkRequest__c id (carried in ContextData).
      * @param note Optional decision note carried in ContextData.
      */
-    private static void writeAuditRow(Id workItemId, String action, Id requestId, String note) {
+    public static void writeAuditRow(Id workItemId, String action, Id requestId, String note) {
+        ActivityLog__c row = buildAuditRow(workItemId, action, requestId, note);
+        try {
+            insert row;
+        } catch (Exception e) {
+            System.debug(LoggingLevel.WARN,
+                '[DeliveryWorkApprovalService.writeAuditRow] insert failed: '
+                + e.getMessage());
+        }
+    }
+
+    /**
+     * @description Builds (no DML) the Work_Approval ActivityLog__c row that
+     *              writeAuditRow inserts, so bulk callers can batch the insert.
+     * @param workItemId WorkItem__c the decision concerns.
+     * @param action Lifecycle verb (see writeAuditRow).
+     * @param requestId The WorkRequest__c id (carried in ContextData).
+     * @param note Optional note carried in ContextData.
+     * @return The unsaved audit row.
+     */
+    public static ActivityLog__c buildAuditRow(Id workItemId, String action, Id requestId, String note) {
         Map<String, Object> ctx = new Map<String, Object>{
             'requestId' => requestId,
             'action' => action,
@@ -941,12 +966,6 @@ global with sharing class DeliveryWorkApprovalService {
             UserIdTxt__c = UserInfo.getUserId(),
             ComponentNameTxt__c = 'DeliveryWorkApprovalService'
         );
-        try {
-            insert row;
-        } catch (Exception e) {
-            System.debug(LoggingLevel.WARN,
-                '[DeliveryWorkApprovalService.writeAuditRow] insert failed: '
-                + e.getMessage());
-        }
+        return row;
     }
 }

@@ -31,8 +31,9 @@ global without sharing class DeliveryHubSyncService {
     /**
      * @description Handles incoming HTTP POST requests containing sync payloads (The Push Flow).
      * Identifies the object type from the URL path and delegates processing to the ingestor.
-     * Supports opt-in API key validation: if the sender has an ApiKeyTxt__c configured,
-     * the X-Api-Key header must match. No key on the entity = open access (backward compatible).
+     * Requires an X-Api-Key header matching a Connected NetworkEntity's ApiKeyTxt__c
+     * (a missing key is rejected with 401), and refuses everything with 503 while
+     * the org sync kill switch (DisableSyncCaptureDateTime__c) is stamped.
      * URL Pattern Example: /services/apexrest/delivery/deliveryhub/v1/sync/WorkItem__c
      */
     @HttpPost
@@ -41,7 +42,18 @@ global without sharing class DeliveryHubSyncService {
         RestResponse res = RestContext.response;
 
         try {
-            // 0. Opt-in API Key Validation
+            // 00. Org kill switch (DisableSyncCaptureDateTime__c, the same stamp
+            // DeliverySyncEngine.captureChanges honors for outbound). While sync
+            // is frozen, inbound pushes are refused and nothing is ingested.
+            if (isSyncFrozen()) {
+                res.statusCode = 503;
+                res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, String>{
+                    'error' => 'Sync is disabled on this org.'
+                }));
+                return;
+            }
+
+            // 0. API Key Validation (required)
             if (!validateSyncApiKey(req, res)) {
                 return; // Response already set
             }
@@ -420,15 +432,26 @@ global without sharing class DeliveryHubSyncService {
         return !entities.isEmpty();
     }
 
+    /**
+     * @description True when the org-level sync kill switch is stamped.
+     * @return Whether inbound sync must be refused.
+     */
+    @TestVisible
+    private static Boolean isSyncFrozen() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        return settings != null && settings.DisableSyncCaptureDateTime__c != null;
+    }
+
     // -------------------------------------------------------------------------
-    // Opt-in API Key Validation
+    // API Key Validation
     // -------------------------------------------------------------------------
 
     /**
-     * @description Validates the X-Api-Key header if an API key is present.
-     * Backward compatible: if no X-Api-Key header is sent, allow the request
-     * (existing connections without keys continue to work). If the header IS
-     * sent, it must match a Connected NetworkEntity's ApiKeyTxt__c.
+     * @description Requires an X-Api-Key header matching a Connected
+     * NetworkEntity's ApiKeyTxt__c. A request with NO key used to be let
+     * through as a "legacy connection", which left the sync endpoint open to
+     * anyone who could reach the Site; a missing key is now a 401 like a wrong
+     * one. Re-enabling sync therefore needs keys configured on both sides.
      * @param req The incoming REST request
      * @param res The REST response (populated with error if validation fails)
      * @return true if validation passes, false if rejected
@@ -436,9 +459,12 @@ global without sharing class DeliveryHubSyncService {
     private static Boolean validateSyncApiKey(RestRequest req, RestResponse res) {
         String apiKey = req.headers.get('X-Api-Key');
 
-        // No key sent = legacy connection, allow through (backward compatible)
         if (String.isBlank(apiKey)) {
-            return true;
+            res.statusCode = 401;
+            res.responseBody = Blob.valueOf(JSON.serialize(new Map<String, String>{
+                'error' => 'Missing X-Api-Key header.'
+            }));
+            return false;
         }
 
         // Key sent = validate it against NetworkEntity records

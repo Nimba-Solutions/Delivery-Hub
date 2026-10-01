@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__HomePage</target>
+        <target>lightning__AppPage</target>
+        <target>lightning__Tab</target>
+    </targets>
+    <masterLabel>Delivery Hours Without Approval</masterLabel>
+    <description>Hours logged on requests nobody has approved (after the Unapproved Hours Flag cutover), per request, with one-click Approve hours for the approver. Hidden while the flag setting is off.</description>
+</LightningComponentBundle>

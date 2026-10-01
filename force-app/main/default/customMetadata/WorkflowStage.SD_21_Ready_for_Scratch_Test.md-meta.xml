@@ -12,7 +12,7 @@
     </values>
     <values>
         <field>SortOrderNumber__c</field>
-        <value xsi:type="xsd:double">21</value>
+        <value xsi:type="xsd:double">23</value>
     </values>
     <values>
         <field>CardColorTxt__c</field>

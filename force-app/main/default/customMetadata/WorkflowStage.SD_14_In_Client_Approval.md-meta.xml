@@ -44,7 +44,7 @@
     </values>
     <values>
         <field>AllowedForwardTransitionsTxt__c</field>
-        <value xsi:type="xsd:string">Ready for Development</value>
+        <value xsi:type="xsd:string">Ready for Final Approval,Ready for Development</value>
     </values>
     <values>
         <field>AllowedBacktrackTransitionsTxt__c</field>
