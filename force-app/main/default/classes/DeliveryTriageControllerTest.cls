@@ -286,4 +286,146 @@ private class DeliveryTriageControllerTest {
         Test.stopTest();
         System.assert(threw, 'an empty selection is rejected');
     }
+
+    // ────────────────────────────────────────────────────────────────────
+    // Hours without approval
+    // ────────────────────────────────────────────────────────────────────
+
+    private static void stampUnapprovedFlag(Datetime cutover) {
+        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+        s.EnableUnapprovedHoursFlagDateTime__c = cutover;
+        upsert s;
+    }
+
+    private static WorkLog__c logOn(WorkRequest__c req, Decimal hours, String status) {
+        WorkLog__c wl = new WorkLog__c(
+            WorkItemLookup__c = req.WorkItemId__c,
+            RequestId__c = req.Id,
+            HoursLoggedNumber__c = hours,
+            WorkDateDate__c = Date.today(),
+            StatusPk__c = status
+        );
+        insert wl;
+        return wl;
+    }
+
+    /**
+     * Seeds: Draft request with 2h + 3h after the cutover, plus one pre-cutover
+     * log and one Rejected log (both excluded); an Accepted request with 4h
+     * (not flagged); an Offer Sent request with 1h (flagged, but refused).
+     * Returns [draftReq, acceptedReq, offerReq].
+     */
+    private static List<WorkRequest__c> seedUnapprovedScenario() {
+        stampUnapprovedFlag(Datetime.now().addMinutes(-5));
+        WorkItem__c draftItem = TestDataFactory.createWorkItem(new Map<String, Object>{
+            'StageNamePk__c' => 'In Development'
+        });
+        WorkItem__c acceptedItem = TestDataFactory.createWorkItem(null);
+        WorkItem__c offerItem = TestDataFactory.createWorkItem(null);
+        WorkRequest__c draftReq = TestDataFactory.createWorkRequest(draftItem.Id,
+            new Map<String, Object>{ 'StatusPk__c' => 'Draft' });
+        WorkRequest__c acceptedReq = TestDataFactory.createWorkRequest(acceptedItem.Id,
+            new Map<String, Object>{ 'StatusPk__c' => 'Accepted' });
+        WorkRequest__c offerReq = TestDataFactory.createWorkRequest(offerItem.Id,
+            new Map<String, Object>{ 'StatusPk__c' => 'Offer Sent' });
+
+        logOn(draftReq, 2, null);
+        logOn(draftReq, 3, 'Approved');
+        WorkLog__c old = logOn(draftReq, 40, null);
+        Test.setCreatedDate(old.Id, Datetime.now().addDays(-30));
+        logOn(draftReq, 7, 'Rejected');
+        logOn(acceptedReq, 4, null);
+        logOn(offerReq, 1, null);
+        return new List<WorkRequest__c>{ draftReq, acceptedReq, offerReq };
+    }
+
+    @IsTest
+    static void unapprovedHoursDisabledWhileFlagIsNull() {
+        Test.startTest();
+        DeliveryTriageController.UnapprovedHoursDTO dto = DeliveryTriageController.getUnapprovedHours();
+        Test.stopTest();
+        System.assertEquals(false, dto.enabled, 'card is off until the flag is stamped');
+        System.assertEquals(0, dto.rows.size(), 'no rows while off');
+    }
+
+    @IsTest
+    static void unapprovedHoursCountsOnlyPostCutoverUnapprovedLogs() {
+        List<WorkRequest__c> reqs = seedUnapprovedScenario();
+        Test.startTest();
+        DeliveryTriageController.UnapprovedHoursDTO dto = DeliveryTriageController.getUnapprovedHours();
+        Test.stopTest();
+
+        System.assertEquals(true, dto.enabled, 'flag stamped = card on');
+        System.assertEquals(true, dto.canApprove, 'the org admin may approve');
+        System.assertEquals(2, dto.rows.size(), 'draft + offer-sent requests are flagged; accepted is not');
+        System.assertEquals(6, dto.totalHours, '2h + 3h on the draft + 1h on the offer; pre-cutover and rejected excluded');
+        Map<Id, DeliveryTriageController.UnapprovedHoursRowDTO> byReq =
+            new Map<Id, DeliveryTriageController.UnapprovedHoursRowDTO>();
+        for (DeliveryTriageController.UnapprovedHoursRowDTO row : dto.rows) {
+            byReq.put(row.requestId, row);
+        }
+        System.assertEquals(5, byReq.get(reqs[0].Id).hours, 'draft request carries 5 post-cutover hours');
+        System.assertEquals(2, byReq.get(reqs[0].Id).logCount, 'two post-cutover, non-rejected logs');
+        System.assertEquals(true, byReq.get(reqs[0].Id).canAcknowledge, 'a Draft can be approved from Home');
+        System.assertEquals(false, byReq.get(reqs[2].Id).canAcknowledge, 'Offer Sent is decided in Pending Work Approvals');
+        System.assertEquals(reqs[0].Id, dto.rows[0].requestId, 'biggest block of hours first');
+    }
+
+    @IsTest
+    static void acknowledgeAcceptsRequestWithoutTouchingTheItem() {
+        List<WorkRequest__c> reqs = seedUnapprovedScenario();
+        WorkItem__c before = [
+            SELECT StageNamePk__c, ClientPreApprovedHoursNumber__c FROM WorkItem__c
+            WHERE Id = :reqs[0].WorkItemId__c
+        ];
+        Id phantomRequest = Id.valueOf(
+            WorkRequest__c.SObjectType.getDescribe().getKeyPrefix() + '000000000000');
+
+        Test.startTest();
+        DeliveryTriageController.BulkResultDTO result = DeliveryTriageController.acknowledgeUnapprovedHours(
+            new List<Id>{ reqs[0].Id, reqs[1].Id, reqs[2].Id, phantomRequest });
+        Test.stopTest();
+
+        System.assertEquals(2, result.succeededCount, 'draft flipped + already-accepted is an idempotent success');
+        System.assertEquals(2, result.failedCount, 'offer-sent refused + phantom not found');
+        WorkRequest__c draftAfter = [
+            SELECT StatusPk__c, DecisionDateTime__c, ApproverUserLookup__c FROM WorkRequest__c WHERE Id = :reqs[0].Id
+        ];
+        System.assertEquals('Accepted', draftAfter.StatusPk__c, 'hours approved = request Accepted');
+        System.assertNotEquals(null, draftAfter.DecisionDateTime__c, 'decision time stamped');
+        System.assertEquals(UserInfo.getUserId(), draftAfter.ApproverUserLookup__c, 'approver stamped');
+        System.assertEquals('Offer Sent', [SELECT StatusPk__c FROM WorkRequest__c WHERE Id = :reqs[2].Id].StatusPk__c,
+            'an Offer Sent request is not pulled out of the approval queue');
+        WorkItem__c after = [
+            SELECT StageNamePk__c, ClientPreApprovedHoursNumber__c FROM WorkItem__c
+            WHERE Id = :reqs[0].WorkItemId__c
+        ];
+        System.assertEquals(before.StageNamePk__c, after.StageNamePk__c, 'the work item stage must not change');
+        System.assertEquals(before.ClientPreApprovedHoursNumber__c, after.ClientPreApprovedHoursNumber__c,
+            'the client cap must not change');
+        System.assertEquals(1, [
+            SELECT COUNT() FROM ActivityLog__c
+            WHERE ActionTypePk__c = 'Work_Approval' AND RecordIdTxt__c = :String.valueOf(reqs[0].WorkItemId__c)
+        ], 'one Work_Approval audit row for the acknowledged request');
+
+        DeliveryTriageController.UnapprovedHoursDTO dto = DeliveryTriageController.getUnapprovedHours();
+        System.assertEquals(1, dto.rows.size(), 'only the Offer Sent request is still flagged');
+    }
+
+    @IsTest
+    static void acknowledgeRequiresApproverOrAdmin() {
+        List<WorkRequest__c> reqs = seedUnapprovedScenario();
+        DeliveryAccessService.adminOverride = false;
+        Boolean threw = false;
+        Test.startTest();
+        try {
+            DeliveryTriageController.acknowledgeUnapprovedHours(new List<Id>{ reqs[0].Id });
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+        System.assert(threw, 'a non-approver, non-admin caller is refused');
+        System.assertEquals('Draft', [SELECT StatusPk__c FROM WorkRequest__c WHERE Id = :reqs[0].Id].StatusPk__c,
+            'nothing changed');
+    }
 }

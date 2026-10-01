@@ -113,6 +113,44 @@ public with sharing class DeliveryWorkLogTriggerHandler {
      */
     public static void onBeforeUpdate(List<WorkLog__c> newLogs, Map<Id, WorkLog__c> oldMap) {
         DeliveryWorkCapEnforcementService.checkUpdates(newLogs, oldMap);
+
+        // Invoiced-month lockout applies to edits too: changing the hours or
+        // the work date of a log in a locked month (or moving a log INTO or
+        // OUT OF one) would silently change an invoiced total.
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        if (settings == null) {
+            return;
+        }
+        List<WorkLog__c> changed = new List<WorkLog__c>();
+        Map<Id, Date> oldDates = new Map<Id, Date>();
+        for (WorkLog__c wl : newLogs) {
+            WorkLog__c old = oldMap.get(wl.Id);
+            if (old == null) {
+                continue;
+            }
+            if (wl.HoursLoggedNumber__c != old.HoursLoggedNumber__c
+                || wl.WorkDateDate__c != old.WorkDateDate__c) {
+                changed.add(wl);
+                oldDates.put(wl.Id, old.WorkDateDate__c);
+            }
+        }
+        if (!changed.isEmpty()) {
+            enforceLockout(changed, settings, oldDates);
+        }
+    }
+
+    /**
+     * @description Invoiced-month lockout on delete: a log dated in a locked
+     *              month cannot be deleted (it is already on an invoice).
+     *              Cascade deletes from a parent request do not fire this.
+     * @param oldLogs Trigger.old in before delete.
+     */
+    public static void onBeforeDelete(List<WorkLog__c> oldLogs) {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        if (settings == null) {
+            return;
+        }
+        enforceLockout(oldLogs, settings, null);
     }
 
     /**
@@ -184,6 +222,21 @@ public with sharing class DeliveryWorkLogTriggerHandler {
     // ── Hour lockout enforcement ────────────────────────────────────────
 
     private static void enforceLockout(List<WorkLog__c> logs, DeliveryHubSettings__c settings) {
+        enforceLockout(logs, settings, null);
+    }
+
+    /**
+     * @description Blocks rows dated in the locked prior month once the
+     *              lockout day/hour has passed (same dayGmt / hourGmt test and
+     *              Date.today()-based prior-month boundary as on insert).
+     * @param logs Rows to check (Trigger.new for insert/update, Trigger.old for delete).
+     * @param settings Org-default settings.
+     * @param priorDates For updates: each row's pre-update work date, so moving
+     *        a log OUT of a locked month is blocked too. Null otherwise.
+     */
+    private static void enforceLockout(
+        List<WorkLog__c> logs, DeliveryHubSettings__c settings, Map<Id, Date> priorDates
+    ) {
         if (settings.InvoiceHourLockoutDayNumber__c == null) {
             return;
         }
@@ -203,7 +256,10 @@ public with sharing class DeliveryWorkLogTriggerHandler {
         // After lockout: block work logs for the prior month
         Date priorMonthEnd = Date.today().toStartOfMonth().addDays(-1);
         for (WorkLog__c wl : logs) {
-            if (wl.WorkDateDate__c != null && wl.WorkDateDate__c <= priorMonthEnd) {
+            Date priorDate = priorDates == null ? null : priorDates.get(wl.Id);
+            Boolean inLockedMonth = (wl.WorkDateDate__c != null && wl.WorkDateDate__c <= priorMonthEnd)
+                || (priorDate != null && priorDate <= priorMonthEnd);
+            if (inLockedMonth) {
                 wl.addError('Hours for ' + priorMonthEnd.month() + '/' + priorMonthEnd.year()
                     + ' are locked. Entries must be submitted by day '
                     + lockoutDay + ' at ' + lockoutHour + ':00 UTC.');

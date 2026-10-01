@@ -94,29 +94,135 @@ private class DeliveryTimeLoggerControllerTest {
     }
 
     /**
-     * @description Verifies that logHours throws when no accepted request exists.
+     * @description Soft gate: with no request at all, logHours creates a Draft
+     *              request (against the Active Vendor) and saves the hours
+     *              instead of refusing.
      */
     @isTest
-    static void testLogHoursNoRequestThrows() {
+    static void testLogHoursNoRequestCreatesDraftRequest() {
         System.runAs(testUser) {
             WorkItem__c noReqWorkItem = new WorkItem__c(BriefDescriptionTxt__c = 'No Request', StageNamePk__c = 'Backlog');
             insert noReqWorkItem;
-
-            // Delete any auto-created WorkRequests (AutoCreateWorkRequest may fire in namespaced context)
-            List<WorkRequest__c> autoCreated = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :noReqWorkItem.Id];
-            if (!autoCreated.isEmpty()) {
-                delete autoCreated;
-            }
+            delete [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :noReqWorkItem.Id];
 
             Test.startTest();
-            try {
-                DeliveryTimeLoggerController.logHours(noReqWorkItem.Id, 1.0, 'Should fail', null);
-                System.assert(false, 'Should have thrown AuraHandledException');
-            } catch (AuraHandledException e) {
-                System.assert(true, 'Correctly threw when no accepted request exists');
+            DeliveryTimeLoggerController.logHours(noReqWorkItem.Id, 1.0, 'Soft gate', null);
+            Test.stopTest();
+
+            WorkLog__c log = [
+                SELECT HoursLoggedNumber__c, RequestId__r.StatusPk__c, RequestId__r.DeliveryEntityLookup__r.Name
+                FROM WorkLog__c WHERE WorkItemLookup__c = :noReqWorkItem.Id
+            ];
+            System.assertEquals(1.0, log.HoursLoggedNumber__c, 'hours must be saved even with nothing approved');
+            System.assertEquals('Draft', log.RequestId__r.StatusPk__c, 'a Draft request is created on demand');
+            System.assertEquals('Test Vendor', log.RequestId__r.DeliveryEntityLookup__r.Name,
+                'the on-demand request uses the oldest Active Vendor');
+        }
+    }
+
+    /**
+     * @description Request selection: an existing Draft is reused when nothing
+     *              is Accepted; once a request is Accepted, new logs go there.
+     */
+    @isTest
+    static void testLogHoursPrefersAcceptedThenDraft() {
+        System.runAs(testUser) {
+            NetworkEntity__c vendor = [SELECT Id FROM NetworkEntity__c WHERE Name = 'Test Vendor' LIMIT 1];
+            WorkItem__c wi = new WorkItem__c(BriefDescriptionTxt__c = 'Pick Request', StageNamePk__c = 'Backlog');
+            insert wi;
+            delete [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :wi.Id];
+            WorkRequest__c draft = new WorkRequest__c(
+                WorkItemId__c = wi.Id, DeliveryEntityLookup__c = vendor.Id, StatusPk__c = 'Draft'
+            );
+            insert draft;
+
+            Test.startTest();
+            DeliveryTimeLoggerController.logHours(wi.Id, 1.0, 'On the draft', null);
+            WorkRequest__c accepted = new WorkRequest__c(
+                WorkItemId__c = wi.Id, DeliveryEntityLookup__c = vendor.Id, StatusPk__c = 'Accepted'
+            );
+            insert accepted;
+            DeliveryTimeLoggerController.logHours(wi.Id, 2.0, 'On the accepted', null);
+            Test.stopTest();
+
+            System.assertEquals(1, [SELECT COUNT() FROM WorkLog__c WHERE RequestId__c = :draft.Id],
+                'with nothing accepted the newest Draft is reused (no new request)');
+            System.assertEquals(1, [SELECT COUNT() FROM WorkLog__c WHERE RequestId__c = :accepted.Id],
+                'an Accepted request wins once it exists');
+            System.assertEquals(2, [SELECT COUNT() FROM WorkRequest__c WHERE WorkItemId__c = :wi.Id],
+                'no extra requests were created');
+        }
+    }
+
+    /**
+     * @description Zero, negative and null hours are rejected.
+     */
+    @isTest
+    static void testLogHoursRejectsNonPositiveHours() {
+        System.runAs(testUser) {
+            WorkItem__c t = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Logger Work Item' LIMIT 1];
+            Integer rejected = 0;
+            Test.startTest();
+            for (Decimal bad : new List<Decimal>{ null, 0, -1 }) {
+                try {
+                    DeliveryTimeLoggerController.logHours(t.Id, bad, 'bad', null);
+                } catch (AuraHandledException e) {
+                    rejected++;
+                }
             }
             Test.stopTest();
+            System.assertEquals(3, rejected, 'null, 0 and negative hours must all be rejected');
+            System.assertEquals(0, [SELECT COUNT() FROM WorkLog__c WHERE WorkItemLookup__c = :t.Id],
+                'nothing is saved for invalid hours');
         }
+    }
+
+    /**
+     * @description With no Active Vendor and no client entity there is nothing
+     *              to hang a request on: logHours fails with a clear error.
+     */
+    @isTest
+    static void testLogHoursThrowsWhenNoEntityExists() {
+        System.runAs(testUser) {
+            List<NetworkEntity__c> entities = [SELECT Id FROM NetworkEntity__c];
+            for (NetworkEntity__c ne : entities) {
+                ne.StatusPk__c = 'Inactive';
+            }
+            update entities;
+            WorkItem__c orphan = new WorkItem__c(BriefDescriptionTxt__c = 'Orphan', StageNamePk__c = 'Backlog');
+            insert orphan;
+            Boolean threw = false;
+            Test.startTest();
+            try {
+                DeliveryTimeLoggerController.logHours(orphan.Id, 1.0, 'nowhere to go', null);
+            } catch (AuraHandledException e) {
+                threw = true;
+            }
+            Test.stopTest();
+            System.assertEquals(true, threw, 'no vendor and no client entity must throw');
+        }
+    }
+
+    /**
+     * @description approve/reject are approver-or-admin only.
+     */
+    @isTest
+    static void testApproveAndRejectDeniedForNonApprover() {
+        DeliveryAccessService.adminOverride = false;
+        Integer denied = 0;
+        Test.startTest();
+        try {
+            DeliveryTimeLoggerController.approveWorkLogs(new List<Id>());
+        } catch (AuraHandledException e) {
+            denied++;
+        }
+        try {
+            DeliveryTimeLoggerController.rejectWorkLogs(new List<Id>());
+        } catch (AuraHandledException e) {
+            denied++;
+        }
+        Test.stopTest();
+        System.assertEquals(2, denied, 'a non-approver, non-admin caller must be refused');
     }
 
     /**
