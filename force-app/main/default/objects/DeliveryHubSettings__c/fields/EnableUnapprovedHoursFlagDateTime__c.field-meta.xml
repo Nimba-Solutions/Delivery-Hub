@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>EnableUnapprovedHoursFlagDateTime__c</fullName>
+    <description>When non-null, the Home "Hours without approval" card is on AND this timestamp is the cutover: only WorkLogs created at or after it, whose parent request is not Accepted / In Progress / Completed, are flagged. Older hours are never flagged. Null = card hidden. Changing the stamp moves the cutover, so clearing and re-stamping it re-baselines what counts.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set to a date/time to flag hours logged from that moment on without an approved request. Leave blank to turn the card off.</inlineHelpText>
+    <label>Enable Unapproved Hours Flag</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

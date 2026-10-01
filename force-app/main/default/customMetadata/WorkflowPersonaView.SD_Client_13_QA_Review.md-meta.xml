@@ -20,7 +20,7 @@
     </values>
     <values>
         <field>SortOrderNumber__c</field>
-        <value xsi:type="xsd:double">13</value>
+        <value xsi:type="xsd:double">14</value>
     </values>
     <values>
         <field>ExtendedColumnDateTime__c</field>

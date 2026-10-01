@@ -334,15 +334,12 @@ global with sharing class DeliveryHubDashboardController {
         // stages and included unactivated/backlog, template, archived, AND Deployed-to-
         // Prod items, which made the per-phase counts diverge from every other metric.
         //
-        // CAVEAT (known gap, same root cause as the Approval bucket): these buckets sum
-        // to the active headline ONLY for stages that getStagePhaseMap maps to a phase
-        // (i.e. present in the Software_Delivery board CMT). Live StageNamePk values that
-        // are NOT in the CMT — notably "Ready for Final Approval" / "Final Approving",
-        // the real approval-queue stages the approval service writes — map to null and
-        // are dropped here while still counting in activeRequests, so the client phase
-        // card under-sums by the count of items in those unmapped stages. Closing this
-        // requires the CMT-vs-picklist remediation flagged in WorkItems_Approval, not a
-        // change here. (The Exec Items-by-Stage card groups by raw stage and always sums.)
+        // Buckets sum to the active headline only for stages getStagePhaseMap maps to a
+        // phase (i.e. present in the Software_Delivery WorkflowStage CMT). The approval
+        // service's live stages "Ready for Final Approval" / "Final Approving" used to be
+        // missing from the CMT and dropped out of the Approval bucket; they now have
+        // WorkflowStage records (Phase = Approval), so they count here and render on the
+        // board. A stage value with no CMT record still maps to null and is skipped.
         for (AggregateResult ar : [
             SELECT StageNamePk__c stage, Count(Id) cnt
             FROM WorkItem__c

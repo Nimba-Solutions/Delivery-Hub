@@ -269,6 +269,14 @@ public without sharing class DeliverySyncItemIngestor {
                 ];
                 if (!localRequests.isEmpty()) {
                     putSafe(recordToUpsert, 'RequestId__c', localRequests[0].Id);
+                } else {
+                    // Auto-create of a bridge request on WorkItem insert is now
+                    // opt-in (EnableAutoCreateWorkRequestDateTime__c), so an
+                    // inbound item may have none. RequestId__c is a required
+                    // master-detail: create the Draft bridge on demand rather
+                    // than failing the insert.
+                    putSafe(recordToUpsert, 'RequestId__c',
+                        DeliveryWorkItemTriggerHandler.ensureLogRequestId(localParentId));
                 }
 
                 // Content-based dedup FALLBACK. We only reach here when the
