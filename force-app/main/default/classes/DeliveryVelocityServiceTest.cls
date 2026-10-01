@@ -159,6 +159,128 @@ private class DeliveryVelocityServiceTest {
         }
     }
 
+    /** @description In-memory team-pool CMT row (rows can't be inserted via DML). */
+    private static DeveloperCapacity__mdt teamPoolRow(Decimal monthlyHours) {
+        return new DeveloperCapacity__mdt(
+            Label = 'Delivery Team',
+            DeveloperName = 'Delivery_Team',
+            MonthlyCapacityHoursNumber__c = monthlyHours,
+            AllocationPercentNumber__c = 100,
+            WorkflowTypeNameTxt__c = 'Software_Delivery'
+        );
+    }
+
+    /** @description Stamps an estimate on the three active setup items (trigger-safe). */
+    private static void estimateActiveItems(Decimal hours) {
+        List<WorkItem__c> actives = [
+            SELECT Id FROM WorkItem__c
+            WHERE StageNamePk__c != 'Done' AND TemplateMarkedDateTime__c = null
+        ];
+        for (WorkItem__c wi : actives) {
+            wi.EstimatedHoursNumber__c = hours;
+        }
+        DeliveryTriggerControl.disableAfterLogic();
+        update actives;
+        DeliveryTriggerControl.enableAfterLogic();
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // W5.1 / F14 — capacity floor on the projection denominator (DECISION-G3).
+    // ────────────────────────────────────────────────────────────────────
+
+    @isTest
+    static void testProjectionCapacityFloorKillsNearZeroDenominator() {
+        // Setup data: 2 completed items this week over an 8-week window → avg
+        // velocity 0.25 items/wk; 3 remaining. Pure history would project
+        // ceil(3 / 0.25) = 12 weeks out (the "2028"-style explosion in miniature).
+        // With the seeded 1000 h/mo team capacity and 20h average estimates, the
+        // capacity-implied throughput (230.77 / 20 ≈ 11.54 items/wk) floors the
+        // denominator → the backlog lands in 1 week, reconciled with the Forecast tab.
+        estimateActiveItems(20);
+        DeliveryCapacityService.capacityRowsOverride =
+            new List<DeveloperCapacity__mdt>{ teamPoolRow(1000) };
+
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryVelocityService.ProjectionResult result =
+                DeliveryVelocityService.getProjectedCompletion('Software_Delivery');
+            Test.stopTest();
+
+            System.assertEquals(true, result.capacityFloorApplied,
+                'Near-zero history velocity + configured capacity → floor applied');
+            System.assertEquals(11.54, result.capacityImpliedVelocity,
+                '230.77 weekly capacity hours ÷ 20h avg item = 11.54 items/wk');
+            System.assertEquals(1, result.estimatedWeeks,
+                'ceil(3 remaining / 11.54) = 1 week — not the history-only 12');
+            System.assertEquals(Date.today().addDays(7), result.projectedCompletionDate,
+                'Projected date derives from the floored denominator');
+            System.assertEquals(0.25, result.averageVelocity,
+                'The observed history velocity is still reported untouched');
+        }
+    }
+
+    @isTest
+    static void testProjectionNoFloorWhenCmtUnconfigured() {
+        // CMT-missing subscriber org: the projection must keep the PURE history
+        // math (no floor fabricated from the default capacity model) — the
+        // explicit-fallback contract applies to the slider, not to forecasting.
+        estimateActiveItems(20);
+        DeliveryCapacityService.capacityRowsOverride = new List<DeveloperCapacity__mdt>();
+
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryVelocityService.ProjectionResult result =
+                DeliveryVelocityService.getProjectedCompletion('Software_Delivery');
+            Test.stopTest();
+
+            System.assertEquals(false, result.capacityFloorApplied,
+                'No CMT rows → no capacity floor');
+            System.assertEquals(0, result.capacityImpliedVelocity,
+                'No configured capacity → no implied velocity');
+            System.assertEquals(12, result.estimatedWeeks,
+                'ceil(3 remaining / 0.25 observed) = 12 weeks — history-only behavior kept');
+        }
+    }
+
+    @isTest
+    static void testProjectionNoFloorWhenBacklogHasNoEstimates() {
+        // Configured capacity but the remaining items carry no estimates: there is
+        // no honest hours→items conversion, so the floor must not be applied.
+        DeliveryCapacityService.capacityRowsOverride =
+            new List<DeveloperCapacity__mdt>{ teamPoolRow(1000) };
+
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryVelocityService.ProjectionResult result =
+                DeliveryVelocityService.getProjectedCompletion('Software_Delivery');
+            Test.stopTest();
+
+            System.assertEquals(false, result.capacityFloorApplied,
+                'No estimated remaining items → no hours-to-items bridge → no floor');
+        }
+    }
+
+    @isTest
+    static void testCapacityUtilizationMonthlyFirstRowResolution() {
+        // The packaged seed row shape: monthly 1000, weekly blank → the utilization
+        // panel must read 230.77 weekly (monthly × 12 / 52), not the legacy 40 default.
+        DeliveryCapacityService.capacityRowsOverride =
+            new List<DeveloperCapacity__mdt>{ teamPoolRow(1000) };
+
+        System.runAs(testUser) {
+            Test.startTest();
+            DeliveryVelocityService.CapacityResult result =
+                DeliveryVelocityService.getCapacityUtilization('Software_Delivery');
+            Test.stopTest();
+
+            System.assertEquals(1, result.developerCount, 'One (team-pool) capacity row');
+            System.assertEquals(230.77, result.totalCapacityHours,
+                'Weekly capacity derives monthly-first: 1000 × 12 / 52 = 230.77');
+            System.assertEquals('Delivery Team', result.developers[0].developerName,
+                'Row label surfaces as the pool name');
+        }
+    }
+
     @isTest
     static void testGetCapacityUtilization() {
         System.runAs(testUser) {
