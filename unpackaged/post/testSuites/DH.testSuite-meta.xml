@@ -140,4 +140,39 @@
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryRateServiceTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityControllerTest</testClassName>
     <testClassName>%%%NAMESPACE_DOT%%%DeliveryTabVisibilityControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryAccessServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryAuditChainServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryCartServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryCryptoServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDatasetLoaderTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDepthProbeServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocApprovalServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocCertificateServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocDeferralServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocEmailServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocPaymentServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryDocQueryServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryEscalationActionExecutorTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryEscalationNotifServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryEscalationRuleEvaluatorTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryExternalNotificationServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryFeatureDepEditorControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryForecastAlertServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryForecastServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryHoursAnalyticsControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryInboundFileRedispatchTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryInvoiceGenerationQueueableTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryInvoiceWorkItemScopeTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryOverdueReminderQueueableTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryRateLimitServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliverySlackInboundHandlerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryStaleInvoiceCheckTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliverySyncDismissalServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryTriageControllerTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryTriggerControlTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWeeklyDigestQueueableTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkApprovalServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkCapEnforcementServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%DeliveryWorkItemBackfillServiceTest</testClassName>
+    <testClassName>%%%NAMESPACE_DOT%%%TestDataFactoryTest</testClassName>
 </ApexTestSuite>

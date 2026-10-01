@@ -303,7 +303,8 @@ global with sharing class DeliveryHubSettingsController {
                 : null;
             dto.openaiModel = settings.OpenAIModelTxt__c;
             dto.openAiApiTested = settings.OpenAiApiTestedDateTime__c != null;
-            dto.slackWebhookUrl = settings.SlackWebhookUrlTxt__c;
+            // Secrets are masked like the OpenAI key; save paths ignore a masked echo.
+            dto.slackWebhookUrl = maskSecret(settings.SlackWebhookUrlTxt__c);
             dto.emailNotificationsEnabled = settings.EnableEmailNotificationsDateTime__c != null;
             dto.showBoardMetrics = settings.EnableBoardMetricsDateTime__c != null;
 
@@ -346,7 +347,7 @@ global with sharing class DeliveryHubSettingsController {
             dto.weeklyDigestRecipients = settings.WeeklyDigestRecipientsTxt__c;
             dto.documentCcEmail = settings.DocumentCcEmailTxt__c;
             dto.documentFromOrgWideEmail = settings.DocumentFromOrgWideEmailTxt__c;
-            dto.statusPageToken = settings.StatusPageTokenTxt__c;
+            dto.statusPageToken = maskSecret(settings.StatusPageTokenTxt__c);
             dto.defaultBillingEntityId = settings.DefaultBillingEntityIdTxt__c;
             dto.stagesToAutoShare = settings.StagesToAutoShareWithDevTeamTxt__c;
             dto.webhookUrl = settings.WebhookUrlTxt__c;
@@ -426,6 +427,32 @@ global with sharing class DeliveryHubSettingsController {
         return dt != null ? dt.format('MMM d, yyyy h:mm a') : null;
     }
 
+    /** Prefix every masked secret starts with (matches the OpenAI key mask). */
+    private static final String SECRET_MASK = '****';
+
+    /**
+     * @description Masks a stored secret for display: '****' + last 4 chars.
+     * @param secret The stored value (may be blank).
+     * @return The masked value, or null when blank.
+     */
+    @TestVisible
+    private static String maskSecret(String secret) {
+        if (String.isBlank(secret)) {
+            return null;
+        }
+        return SECRET_MASK + secret.right(4);
+    }
+
+    /**
+     * @description True when a value coming back from the UI is the masked
+     *              echo of a stored secret, so a save must keep the stored one.
+     * @param value The submitted value.
+     * @return Whether the value is a masked placeholder.
+     */
+    public static Boolean isMaskedSecret(String value) {
+        return String.isNotBlank(value) && value.startsWith(SECRET_MASK);
+    }
+
     /**
      * @description Helper to get existing settings or create new default settings instance
      * @return DeliveryHubSettings__c settings record
@@ -463,6 +490,7 @@ global with sharing class DeliveryHubSettingsController {
         Integer activityLogRetentionDays,
         Integer escalationCooldownHours
     ) {
+        DeliveryAccessService.requireAdmin('change Delivery Hub settings');
         try {
             DeliveryHubSettings__c settings = getOrCreateSettings();
 
@@ -495,6 +523,7 @@ global with sharing class DeliveryHubSettingsController {
      */
     @AuraEnabled
     global static void saveExtendedSettings(String settingsJson) {
+        DeliveryAccessService.requireAdmin('change Delivery Hub settings');
         try {
             SettingsDTO dto = (SettingsDTO) JSON.deserialize(settingsJson, SettingsDTO.class);
             DeliveryHubSettings__c settings = getOrCreateSettings();
@@ -531,7 +560,9 @@ global with sharing class DeliveryHubSettingsController {
             settings.WeeklyDigestRecipientsTxt__c = dto.weeklyDigestRecipients;
             settings.DocumentCcEmailTxt__c = dto.documentCcEmail;
             settings.DocumentFromOrgWideEmailTxt__c = dto.documentFromOrgWideEmail;
-            settings.StatusPageTokenTxt__c = dto.statusPageToken;
+            if (!isMaskedSecret(dto.statusPageToken)) {
+                settings.StatusPageTokenTxt__c = dto.statusPageToken;
+            }
             settings.DefaultBillingEntityIdTxt__c = dto.defaultBillingEntityId;
             settings.StagesToAutoShareWithDevTeamTxt__c = dto.stagesToAutoShare;
             settings.WebhookUrlTxt__c = dto.webhookUrl;
@@ -555,6 +586,7 @@ global with sharing class DeliveryHubSettingsController {
      */
     @AuraEnabled
     global static void saveAiSettings(Boolean suggestions, Boolean descriptions, Boolean estimation) {
+        DeliveryAccessService.requireAdmin('change Delivery Hub settings');
         try {
             DeliveryHubSettings__c settings = getOrCreateSettings();
 
@@ -580,6 +612,7 @@ global with sharing class DeliveryHubSettingsController {
      */
     @AuraEnabled
     global static void saveOpenAISettings(String apiKey, String model, boolean tested) {
+        DeliveryAccessService.requireAdmin('change Delivery Hub settings');
         try {
             DeliveryHubSettings__c settings = getOrCreateSettings();
 
@@ -605,9 +638,12 @@ global with sharing class DeliveryHubSettingsController {
      */
     @AuraEnabled
     global static void saveSlackWebhookUrl(String webhookUrl) {
+        DeliveryAccessService.requireAdmin('change Delivery Hub settings');
         try {
             DeliveryHubSettings__c settings = getOrCreateSettings();
-            settings.SlackWebhookUrlTxt__c = webhookUrl;
+            if (!isMaskedSecret(webhookUrl)) {
+                settings.SlackWebhookUrlTxt__c = webhookUrl;
+            }
             SObjectAccessDecision decision = Security.stripInaccessible(
                 AccessType.UPSERTABLE, new List<DeliveryHubSettings__c>{settings});
             upsert decision.getRecords();
@@ -624,6 +660,7 @@ global with sharing class DeliveryHubSettingsController {
      */
     @AuraEnabled
     global static void saveAllAiSettings(String settingsJson) {
+        DeliveryAccessService.requireAdmin('change Delivery Hub settings');
         try {
             SettingsDTO dto = (SettingsDTO) JSON.deserialize(settingsJson, SettingsDTO.class);
             DeliveryHubSettings__c settings = getOrCreateSettings();

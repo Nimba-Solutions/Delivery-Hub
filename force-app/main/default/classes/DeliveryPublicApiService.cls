@@ -826,8 +826,9 @@ global without sharing class DeliveryPublicApiService {
         List<Object> rawIds = (List<Object>) bodyMap.get('workLogIds');
         List<Id> ids = new List<Id>();
         if (rawIds != null) { for (Object r : rawIds) { ids.add(Id.valueOf((String) r)); } }
-        if (approve) { DeliveryActivityFeedController.approveWorkLogs(ids); }
-        else { DeliveryActivityFeedController.rejectWorkLogs(ids); }
+        // API-key authenticated caller running as the site user: use the
+        // unguarded core (the approver/admin role check is for LWC callers).
+        DeliveryTimeLoggerController.decideWorkLogs(ids, approve);
         sendSuccess(new Map<String, Object>{ 'status' => approve ? 'Approved' : 'Rejected', 'count' => ids.size() });
     }
 

@@ -76,4 +76,22 @@ private class DeliveryHubRepairServiceTest {
         }
         System.assertEquals(true, threw);
     }
+
+    @IsTest
+    static void nonAdminCannotRunRepairs() {
+        DeliveryAccessService.adminOverride = false;
+        Boolean threw = false;
+        Integer before = [SELECT COUNT() FROM CronTrigger WHERE CronJobDetail.Name LIKE 'Delivery Hub Sync%'];
+        Test.startTest();
+        try {
+            DeliveryHubRepairService.runRepair('scheduleAll');
+        } catch (AuraHandledException e) {
+            threw = true;
+        }
+        Test.stopTest();
+        System.assertEquals(true, threw, 'repairs are admin-only');
+        System.assertEquals(before,
+            [SELECT COUNT() FROM CronTrigger WHERE CronJobDetail.Name LIKE 'Delivery Hub Sync%'],
+            'a denied repair must not schedule anything');
+    }
 }

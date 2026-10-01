@@ -368,6 +368,7 @@ global with sharing class DeliveryWorkflowConfigService {
         if (result.isEmpty()) {
             result.addAll(new Set<String>{
                 'Ready for Client Approval', 'In Client Approval',
+                'Ready for Final Approval', 'Final Approving',
                 'Ready for Client UAT', 'In Client UAT', 'Ready for UAT Sign-off'
             });
         }
