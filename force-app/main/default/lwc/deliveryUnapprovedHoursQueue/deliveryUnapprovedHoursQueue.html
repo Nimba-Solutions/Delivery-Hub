@@ -1,0 +1,99 @@
+<template>
+    <template lwc:if={isVisible}>
+    <div class="queue-card">
+
+        <div class="queue-header">
+            <div class="queue-header-left">
+                <lightning-icon icon-name="standard:timesheet" alternative-text="Hours without approval" size="small" class="queue-header-icon"></lightning-icon>
+                <div>
+                    <h2 class="queue-title">Hours without approval</h2>
+                    <p class="queue-subtitle">Hours logged on work nobody has approved yet. Approving marks the request approved; the work item does not move.</p>
+                </div>
+            </div>
+            <div class="queue-controls">
+                <lightning-button-icon
+                    icon-name="utility:refresh"
+                    variant="border-filled"
+                    alternative-text="Refresh"
+                    title="Refresh"
+                    onclick={handleRefresh}>
+                </lightning-button-icon>
+            </div>
+        </div>
+
+        <template lwc:if={isBusy}>
+            <div class="queue-loading">
+                <lightning-spinner alternative-text="Approving hours..." size="small"></lightning-spinner>
+            </div>
+        </template>
+
+        <template lwc:if={hasError}>
+            <div class="queue-error">
+                <lightning-icon icon-name="utility:error" size="x-small"></lightning-icon>
+                <span>{errorMessage}</span>
+            </div>
+        </template>
+
+        <template lwc:if={hasRows}>
+            <div class="queue-headline-row">
+                <span class="queue-headline"><span class="queue-total">{totalDisplay}</span> {headlineDisplay}</span>
+                <template lwc:if={showBulkButton}>
+                    <lightning-button
+                        variant="brand"
+                        label="Approve all"
+                        icon-name="utility:check"
+                        disabled={isBusy}
+                        onclick={handleApproveAll}>
+                    </lightning-button>
+                </template>
+            </div>
+
+            <ul class="queue-list">
+                <template for:each={rows} for:item="row">
+                <li key={row.key} class="queue-row">
+                    <div class="queue-row-main">
+                        <div class="queue-row-info">
+                            <button class="queue-item-link"
+                                    data-work-item-id={row.workItemId}
+                                    onclick={handleItemClick}>{row.name}</button>
+                            <template lwc:if={row.hasBrief}>
+                                <div class="queue-row-brief">{row.briefDescription}</div>
+                            </template>
+                            <div class="queue-row-meta">
+                                <span class="queue-hours-strong">{row.hoursDisplay}</span>
+                                <span class="queue-status">{row.statusDisplay}</span>
+                                <span class="queue-hours">{row.logsDisplay}</span>
+                                <span class="queue-age">{row.spanDisplay}</span>
+                            </div>
+                            <template lwc:if={row.hasBlockedReason}>
+                                <div class="queue-blocked">{row.blockedReason}</div>
+                            </template>
+                        </div>
+                        <div class="queue-row-actions">
+                            <template lwc:if={row.showButton}>
+                                <lightning-button
+                                    variant="neutral"
+                                    label="Approve hours"
+                                    data-request-id={row.requestId}
+                                    disabled={isBusy}
+                                    onclick={handleApproveRow}>
+                                </lightning-button>
+                            </template>
+                        </div>
+                    </div>
+                </li>
+                </template>
+            </ul>
+            <p class="queue-subtitle">{cutoverDisplay}</p>
+        </template>
+
+        <template lwc:if={isEmpty}>
+            <div class="queue-empty">
+                <lightning-icon icon-name="utility:success" size="medium" class="queue-empty-icon"></lightning-icon>
+                <p>Every hour logged is on approved work.</p>
+            </div>
+        </template>
+
+    </div>
+    </template>
+</template>

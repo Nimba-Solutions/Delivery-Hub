@@ -576,4 +576,95 @@ private class DeliveryWorkLogTriggerHandlerTest {
                 'Payload must carry the hours field');
         }
     }
+
+    // ── Invoiced-month lockout on update / delete ──────────────────────
+
+    /**
+     * @description Inserts one log in the prior month and one today BEFORE the
+     *              lockout is configured, then turns the lockout on with
+     *              day 1 / hour 0 so "past lockout" is true on every day of
+     *              every month (the test never depends on the CI date).
+     * @return [priorMonthLog, currentMonthLog]
+     */
+    private static List<WorkLog__c> seedLogsThenLock() {
+        WorkItem__c workItem = [SELECT Id FROM WorkItem__c WHERE BriefDescriptionTxt__c = 'Client Work Item' LIMIT 1];
+        WorkRequest__c request = [SELECT Id FROM WorkRequest__c WHERE WorkItemId__c = :workItem.Id LIMIT 1];
+        Date priorMonthDate = Date.today().toStartOfMonth().addDays(-5);
+        WorkLog__c prior = new WorkLog__c(
+            WorkItemLookup__c = workItem.Id, RequestId__c = request.Id,
+            HoursLoggedNumber__c = 2, WorkDateDate__c = priorMonthDate
+        );
+        WorkLog__c current = new WorkLog__c(
+            WorkItemLookup__c = workItem.Id, RequestId__c = request.Id,
+            HoursLoggedNumber__c = 3, WorkDateDate__c = Date.today()
+        );
+        DeliveryTriggerControl.disableAfterLogic();
+        insert new List<WorkLog__c>{ prior, current };
+        DeliveryTriggerControl.enableAfterLogic();
+
+        DeliveryHubSettings__c s = DeliveryHubSettings__c.getOrgDefaults();
+        s.InvoiceHourLockoutDayNumber__c = 1;
+        s.InvoiceHourLockoutTimeNumber__c = 0;
+        upsert s;
+        return new List<WorkLog__c>{ prior, current };
+    }
+
+    @IsTest
+    static void testLockoutBlocksHoursEditInLockedMonth() {
+        System.runAs(testUser) {
+            List<WorkLog__c> logs = seedLogsThenLock();
+            Test.startTest();
+            Database.SaveResult lockedEdit = Database.update(
+                new WorkLog__c(Id = logs[0].Id, HoursLoggedNumber__c = 9), false);
+            Database.SaveResult openEdit = Database.update(
+                new WorkLog__c(Id = logs[1].Id, HoursLoggedNumber__c = 4), false);
+            Test.stopTest();
+            System.assertEquals(false, lockedEdit.isSuccess(), 'editing hours in a locked month must be blocked');
+            System.assertEquals(true, openEdit.isSuccess(), 'editing a current-month log is still allowed');
+            System.assertEquals(2, [SELECT HoursLoggedNumber__c FROM WorkLog__c WHERE Id = :logs[0].Id].HoursLoggedNumber__c,
+                'the locked log keeps its hours');
+        }
+    }
+
+    @IsTest
+    static void testLockoutBlocksMovingLogsAcrossTheLock() {
+        System.runAs(testUser) {
+            List<WorkLog__c> logs = seedLogsThenLock();
+            Date lockedDate = Date.today().toStartOfMonth().addDays(-3);
+            Test.startTest();
+            Database.SaveResult moveIn = Database.update(
+                new WorkLog__c(Id = logs[1].Id, WorkDateDate__c = lockedDate), false);
+            Database.SaveResult moveOut = Database.update(
+                new WorkLog__c(Id = logs[0].Id, WorkDateDate__c = Date.today()), false);
+            Test.stopTest();
+            System.assertEquals(false, moveIn.isSuccess(), 'moving a log INTO a locked month must be blocked');
+            System.assertEquals(false, moveOut.isSuccess(), 'moving a log OUT OF a locked month must be blocked');
+        }
+    }
+
+    @IsTest
+    static void testLockoutBlocksDeleteInLockedMonthOnly() {
+        System.runAs(testUser) {
+            List<WorkLog__c> logs = seedLogsThenLock();
+            Test.startTest();
+            Database.DeleteResult lockedDelete = Database.delete(logs[0].Id, false);
+            Database.DeleteResult openDelete = Database.delete(logs[1].Id, false);
+            Test.stopTest();
+            System.assertEquals(false, lockedDelete.isSuccess(), 'deleting a locked-month log must be blocked');
+            System.assertEquals(true, openDelete.isSuccess(), 'deleting a current-month log is allowed');
+        }
+    }
+
+    @IsTest
+    static void testUnrelatedEditOnLockedLogIsAllowed() {
+        System.runAs(testUser) {
+            List<WorkLog__c> logs = seedLogsThenLock();
+            Test.startTest();
+            Database.SaveResult notesEdit = Database.update(
+                new WorkLog__c(Id = logs[0].Id, WorkDescriptionTxt__c = 'typo fix'), false);
+            Test.stopTest();
+            System.assertEquals(true, notesEdit.isSuccess(),
+                'only hours / work-date changes are locked; a notes edit is fine');
+        }
+    }
 }

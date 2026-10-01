@@ -12,7 +12,7 @@
     </values>
     <values>
         <field>SortOrderNumber__c</field>
-        <value xsi:type="xsd:double">15</value>
+        <value xsi:type="xsd:double">17</value>
     </values>
     <values>
         <field>CardColorTxt__c</field>
@@ -44,7 +44,7 @@
     </values>
     <values>
         <field>AllowedBacktrackTransitionsTxt__c</field>
-        <value xsi:type="xsd:string">In Client Approval,Ready for Client Approval,Tech Reviewing,Prioritizing,Cancelled</value>
+        <value xsi:type="xsd:string">Final Approving,Ready for Final Approval,In Client Approval,Ready for Client Approval,Tech Reviewing,Prioritizing,Cancelled</value>
     </values>
     <values>
         <field>EtaWeightNumber__c</field>

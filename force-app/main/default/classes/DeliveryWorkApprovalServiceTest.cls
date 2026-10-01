@@ -224,14 +224,14 @@ private class DeliveryWorkApprovalServiceTest {
 
     /**
      * @description The running Auto sum is tracked WITHIN one submit call:
-     *              with 38 of 40 cap hours consumed, the first under-threshold
-     *              item still fits (38 < 40) but the second sees the updated
-     *              sum and falls back to Pending.
+     *              with 36 of 40 cap hours consumed, the first 4h item still
+     *              fits (36 + 4 <= 40) but the second sees the updated sum
+     *              (40 + 4 > 40) and falls back to Pending.
      */
     @IsTest
     static void testMonthlyCapCountsWithinSingleSubmit() {
         configureSettings(8, 40, null);
-        seedConsumedAutoHours(38);
+        seedConsumedAutoHours(36);
         WorkItem__c first = TestDataFactory.createWorkItem(new Map<String, Object>{
             'EstimatedHoursNumber__c' => 4
         });

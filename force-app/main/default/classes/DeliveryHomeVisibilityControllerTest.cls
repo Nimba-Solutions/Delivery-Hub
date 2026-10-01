@@ -15,7 +15,7 @@ private class DeliveryHomeVisibilityControllerTest {
     private static final String KEY_APPROVAL_QUEUE = 'deliveryApprovalQueue';
 
     // Every hideable home-page component the controller is expected to map.
-    private static final Integer EXPECTED_COMPONENT_COUNT = 13;
+    private static final Integer EXPECTED_COMPONENT_COUNT = 14;
 
     @isTest
     static void defaultsToAllShown() {
@@ -35,6 +35,7 @@ private class DeliveryHomeVisibilityControllerTest {
         System.assertEquals(true, hidden.containsKey('deliveryClientDashboard'), 'Client dashboard should be a hideable component');
         System.assertEquals(true, hidden.containsKey('deliveryCloseOutQueue'), 'Close-out queue should be a hideable component');
         System.assertEquals(true, hidden.containsKey('deliveryInFlightQueue'), 'In-flight queue should be a hideable component');
+        System.assertEquals(true, hidden.containsKey('deliveryUnapprovedHoursQueue'), 'Unapproved-hours card should be a hideable component');
     }
 
     @isTest

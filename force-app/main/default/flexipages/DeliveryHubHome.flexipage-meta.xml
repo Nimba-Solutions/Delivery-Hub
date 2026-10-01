@@ -15,6 +15,12 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
+                <componentName>deliveryUnapprovedHoursQueue</componentName>
+                <identifier>c_deliveryUnapprovedHoursQueue</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>deliveryInFlightQueue</componentName>
                 <identifier>c_deliveryInFlightQueue</identifier>
             </componentInstance>
