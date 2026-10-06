@@ -120,6 +120,14 @@
                                     onclick={handleOpenChange}>
                                 </lightning-button>
                                 <lightning-button
+                                    variant="neutral"
+                                    label="Backlog"
+                                    title="Not now: move it to Backlog to revisit later"
+                                    data-request-id={row.key}
+                                    disabled={isSaving}
+                                    onclick={handleBacklog}>
+                                </lightning-button>
+                                <lightning-button
                                     variant="destructive-text"
                                     label="Decline"
                                     data-request-id={row.key}
