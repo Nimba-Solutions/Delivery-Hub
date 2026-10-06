@@ -16,6 +16,7 @@ import getPendingForApprover from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryW
 import approve from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.approve";
 import approveMany from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.approveMany";
 import decline from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.decline";
+import sendToBacklog from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.sendToBacklog";
 import getHiddenHomeComponents from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents";
 
 const HOME_PAGE_REF = { type: "standard__namedPage", attributes: { pageName: "home" } };
@@ -294,6 +295,23 @@ describe("c-delivery-approval-queue", () => {
             workRequestId: REQUEST_ONE,
             reason: "Budget exhausted for this quarter"
         });
+    });
+
+    it("backlog is one click and calls apex with no note", async () => {
+        sendToBacklog.mockResolvedValue(undefined);
+        const element = createComponent();
+        getPendingForApprover.emit(samplePending());
+        await flushPromises();
+
+        findButtonByLabel(element, "Backlog").dispatchEvent(new CustomEvent("click"));
+        await flushPromises();
+        await flushPromises();
+
+        expect(sendToBacklog).toHaveBeenCalledWith({
+            workRequestId: REQUEST_ONE,
+            note: null
+        });
+        expect(decline).not.toHaveBeenCalled();
     });
 
     it("shows the why-this-estimate toggle only on rows carrying a proposal note", async () => {
