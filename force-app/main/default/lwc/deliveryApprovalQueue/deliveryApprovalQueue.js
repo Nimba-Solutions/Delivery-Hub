@@ -28,6 +28,7 @@ import getPendingForApprover from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryW
 import approveApex from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.approve";
 import approveManyApex from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.approveMany";
 import declineApex from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.decline";
+import sendToBacklogApex from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkApprovalService.sendToBacklog";
 import getHiddenHomeComponents from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHomeVisibilityController.getHiddenHomeComponents";
 
 const MS_PER_DAY = 86400000;
@@ -322,6 +323,20 @@ export default class DeliveryApprovalQueue extends NavigationMixin(LightningElem
 
     handleOpenDecline(event) {
         this._openInline(event.currentTarget.dataset.requestId, MODE_DECLINE);
+    }
+
+    // "Not now": one click, no reason required. The item moves to Backlog
+    // (or, for a budget increase on in-flight work, only the ask stands down).
+    handleBacklog(event) {
+        const requestId = event.currentTarget.dataset.requestId;
+        if (!requestId || this.isSaving) {
+            return;
+        }
+        this._decide(
+            sendToBacklogApex({ workRequestId: requestId, note: null }),
+            "Moved to Backlog",
+            "Not now: the item is back in Backlog to revisit later."
+        );
     }
 
     handleCancelInline() {

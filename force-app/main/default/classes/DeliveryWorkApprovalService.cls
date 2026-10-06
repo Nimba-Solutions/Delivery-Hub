@@ -113,6 +113,12 @@ global with sharing class DeliveryWorkApprovalService {
     /** WorkItem__c client intention written on decline. */
     public static final String INTENT_ON_HOLD = 'On Hold';
 
+    /** WorkItem__c stage written when the approver defers an item ("not now"). */
+    public static final String STAGE_BACKLOG = 'Backlog';
+
+    /** Stand-down reason stamped on a request the approver sends to Backlog. */
+    public static final String BACKLOG_REASON = 'Moved to Backlog (not now)';
+
     /** Hard cap on rows scanned by the queue feed / monthly-cap sweep. */
     private static final Integer MAX_QUEUE_ROWS = 200;
     private static final Integer MAX_CAP_ROWS = 5000;
@@ -588,6 +594,26 @@ global with sharing class DeliveryWorkApprovalService {
      */
     @AuraEnabled
     global static void decline(Id workRequestId, String reason) {
+        standDown(workRequestId, reason, 'Decline',
+            new WorkItem__c(ClientIntentionPk__c = INTENT_ON_HOLD));
+    }
+
+    /**
+     * @description Approver-side "not now". Same stand-down as decline, but
+     *              the item moves to the Backlog stage instead of On Hold.
+     *              An item that already has approved hours stays in flight.
+     * @param workRequestId The WorkRequest__c being deferred.
+     * @param note Optional approver note, appended to the reason.
+     */
+    @AuraEnabled
+    global static void sendToBacklog(Id workRequestId, String note) {
+        String reason = String.isBlank(note) ? BACKLOG_REASON : BACKLOG_REASON + ': ' + note.trim();
+        standDown(workRequestId, reason, 'Backlog', new WorkItem__c(StageNamePk__c = STAGE_BACKLOG));
+    }
+
+    // Shared by decline and sendToBacklog: request goes Inactive with the
+    // reason; the item takes itemUpdate only when nothing was approved yet.
+    private static void standDown(Id workRequestId, String reason, String action, WorkItem__c itemUpdate) {
         WorkRequest__c req = loadPendingRequestOrThrow(workRequestId);
         assertCallerMayDecide(req);
         Decimal currentCap = req.WorkItemId__r.ClientPreApprovedHoursNumber__c;
@@ -598,17 +624,15 @@ global with sharing class DeliveryWorkApprovalService {
         try {
             update req;
             if (parkItem) {
-                update new WorkItem__c(
-                    Id = req.WorkItemId__c,
-                    ClientIntentionPk__c = INTENT_ON_HOLD
-                );
+                itemUpdate.Id = req.WorkItemId__c;
+                update itemUpdate;
             }
         } catch (Exception e) {
             System.debug(LoggingLevel.WARN,
-                '[DeliveryWorkApprovalService.decline] update failed: ' + e.getMessage());
-            throw new AuraHandledException('Unable to decline the request.');
+                '[DeliveryWorkApprovalService.' + action + '] update failed: ' + e.getMessage());
+            throw new AuraHandledException('Unable to update the request.');
         }
-        writeAuditRow(req.WorkItemId__c, 'Decline', req.Id, reason);
+        writeAuditRow(req.WorkItemId__c, action, req.Id, reason);
         // Fire-and-forget dev ping — null-safe, never throws back here.
         DeliveryNotificationService.notifyWorkApprovalDecided(req.Id, false);
     }
@@ -926,7 +950,7 @@ global with sharing class DeliveryWorkApprovalService {
      *              carries only its final decision state).
      * @param workItemId WorkItem__c the decision concerns.
      * @param action Lifecycle verb (Propose_Estimate / Auto_Approve / Approve
-     *        / Approve_Increase / Decline / Request_Increase / Acknowledge_Hours).
+     *        / Approve_Increase / Decline / Backlog / Request_Increase / Acknowledge_Hours).
      * @param requestId The WorkRequest__c id (carried in ContextData).
      * @param note Optional decision note carried in ContextData.
      */
