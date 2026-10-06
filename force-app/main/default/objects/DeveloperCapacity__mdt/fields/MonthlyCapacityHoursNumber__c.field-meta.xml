@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>MonthlyCapacityHoursNumber__c</fullName>
+    <description>Capacity in hours per month for this row (a per-developer row or a team-pool row). DECISION-G3 (2026-07-03): this is THE capacity number — the single source of truth all capacity surfaces read via DeliveryCapacityService. When set, it wins over WeeklyCapacityHoursNumber__c (weekly is derived as monthly × 12 / 52). Matches the TeamPool convention the seed row is derived from ("Delivery Team|Development|1000").</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Monthly Capacity Hours</label>
+    <precision>6</precision>
+    <scale>1</scale>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>
