@@ -567,10 +567,9 @@ public class DeliveryWorkItemTriggerHandlerTest {
             StageNamePk__c         = 'In Development'
         );
         insert wi;
-        insert new DeliveryHubSettings__c(
-            SetupOwnerId = UserInfo.getOrganizationId(),
-            AllowWorkItemHardDeleteUntilDateTime__c = System.now().addHours(1)
-        );
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        settings.AllowWorkItemHardDeleteUntilDateTime__c = System.now().addHours(1);
+        upsert settings;
 
         DeliveryWorkItemTriggerHandler.enforceHardDeleteBlockInTest = true;
         Test.startTest();
@@ -591,10 +590,9 @@ public class DeliveryWorkItemTriggerHandlerTest {
             StageNamePk__c         = 'In Development'
         );
         insert wi;
-        insert new DeliveryHubSettings__c(
-            SetupOwnerId = UserInfo.getOrganizationId(),
-            AllowWorkItemHardDeleteUntilDateTime__c = System.now().addHours(-1)
-        );
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        settings.AllowWorkItemHardDeleteUntilDateTime__c = System.now().addHours(-1);
+        upsert settings;
 
         DeliveryWorkItemTriggerHandler.enforceHardDeleteBlockInTest = true;
         Test.startTest();
