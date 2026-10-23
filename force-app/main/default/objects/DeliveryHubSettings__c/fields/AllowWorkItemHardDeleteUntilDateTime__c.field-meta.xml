@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>AllowWorkItemHardDeleteUntilDateTime__c</fullName>
+    <description>Admin hard-delete window for WorkItem__c. While this is in the future, the before-delete guard in DeliveryWorkItemTriggerHandler lets WorkItems be hard-deleted (for example clearing a sandbox board). Blank or past = deletes refused (default; zero behavior change). The window closes by itself when the time passes. Hierarchy setting: stamp it on one admin user to open it for that user only.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Set to a time in the near future to allow WorkItems to be hard-deleted until then. Leave blank to keep deletes blocked; use Deactivate instead.</inlineHelpText>
+    <label>Allow Work Item Hard Delete Until</label>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>DateTime</type>
+</CustomField>

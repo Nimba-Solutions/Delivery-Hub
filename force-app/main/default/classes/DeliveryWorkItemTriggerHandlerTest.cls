@@ -561,6 +561,55 @@ public class DeliveryWorkItemTriggerHandlerTest {
      *              and cross-org sync stays clean.
      */
     @IsTest
+    static void testHardDeleteAllowedWhileAdminWindowOpen() {
+        WorkItem__c wi = new WorkItem__c(
+            BriefDescriptionTxt__c = 'Deleted inside the admin window',
+            StageNamePk__c         = 'In Development'
+        );
+        insert wi;
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        settings.AllowWorkItemHardDeleteUntilDateTime__c = System.now().addHours(1);
+        upsert settings;
+
+        DeliveryWorkItemTriggerHandler.enforceHardDeleteBlockInTest = true;
+        Test.startTest();
+        try {
+            delete wi;
+        } finally {
+            DeliveryWorkItemTriggerHandler.enforceHardDeleteBlockInTest = false;
+        }
+        Test.stopTest();
+
+        System.assertEquals(0, [SELECT COUNT() FROM WorkItem__c WHERE Id = :wi.Id], 'An open admin window must allow the hard delete');
+    }
+
+    @IsTest
+    static void testHardDeleteRefusedAfterAdminWindowCloses() {
+        WorkItem__c wi = new WorkItem__c(
+            BriefDescriptionTxt__c = 'Window already closed',
+            StageNamePk__c         = 'In Development'
+        );
+        insert wi;
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        settings.AllowWorkItemHardDeleteUntilDateTime__c = System.now().addHours(-1);
+        upsert settings;
+
+        DeliveryWorkItemTriggerHandler.enforceHardDeleteBlockInTest = true;
+        Test.startTest();
+        Boolean refused = false;
+        try {
+            delete wi;
+        } catch (DmlException e) {
+            refused = e.getDmlMessage(0).containsIgnoreCase('Hard-deleting WorkItem');
+        } finally {
+            DeliveryWorkItemTriggerHandler.enforceHardDeleteBlockInTest = false;
+        }
+        Test.stopTest();
+
+        System.assert(refused, 'A past window must not allow the hard delete');
+    }
+
+    @IsTest
     static void testHardDeleteIsRefused() {
         WorkItem__c wi = new WorkItem__c(
             BriefDescriptionTxt__c = 'Will not be hard-deleted',
