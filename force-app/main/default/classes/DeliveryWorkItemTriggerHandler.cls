@@ -581,15 +581,35 @@ public without sharing class DeliveryWorkItemTriggerHandler {
         if (Test.isRunningTest() && !enforceHardDeleteBlockInTest) {
             return;
         }
+        if (isHardDeleteWindowOpen()) {
+            return;
+        }
         for (WorkItem__c wi : oldRecords) {
             wi.addError(
                 'Hard-deleting WorkItem records is disabled. Use Deactivate ' +
                 '(right-click on the gantt → "Deactivate") to soft-delete — ' +
                 'preserves audit history, syncs cross-org cleanly, reversible. ' +
-                'Admin scripts that genuinely need a hard delete must set ' +
+                'Admins who genuinely need a hard delete can set Delivery Hub Settings ' +
+                '"Allow Work Item Hard Delete Until" to a near-future time, or set ' +
                 'DeliveryWorkItemTriggerHandler.triggerDisabled = true before the DML.'
             );
         }
+    }
+
+    /**
+     * @description True while the admin hard-delete window on DeliveryHubSettings__c
+     *              (AllowWorkItemHardDeleteUntilDateTime__c) is in the future. Read with
+     *              getInstance so the window can be opened for a single admin user.
+     *              Subscriber orgs can't reach triggerDisabled from outside the
+     *              namespace, so this is their only hard-delete path.
+     * @return Whether WorkItem hard deletes are currently allowed.
+     */
+    @TestVisible
+    private static Boolean isHardDeleteWindowOpen() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getInstance();
+        return settings != null
+            && settings.AllowWorkItemHardDeleteUntilDateTime__c != null
+            && settings.AllowWorkItemHardDeleteUntilDateTime__c > System.now();
     }
 
     /**
