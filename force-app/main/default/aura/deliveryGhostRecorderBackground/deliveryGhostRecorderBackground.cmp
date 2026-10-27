@@ -1,0 +1,18 @@
+<!--
+    @name         Delivery Hub
+    @license      BSL 1.1 — See LICENSE.md
+    @description  Background-only Ghost Recorder. Drop it into any Lightning app's
+                  utility bar background region (Utility Items > Background) — it
+                  renders nothing and logs navigation + page duration to
+                  ActivityLog__c through the shared deliveryGhostTracker, exactly
+                  like the visible Delivery Ghost Recorder. If the bar also carries
+                  the visible recorder, the two share one tracker per tab and
+                  each page is logged once.
+                  Aura only because lightning:backgroundUtilityItem has no LWC
+                  equivalent; the logic lives in the headless LWC it hosts.
+    @author       Cloud Nimbus LLC
+-->
+<aura:component implements="lightning:backgroundUtilityItem" access="global"
+    description="Background-only Ghost Recorder: logs navigation and page duration with no visible UI.">
+    <c:deliveryGhostRecorderHeadless />
+</aura:component>
