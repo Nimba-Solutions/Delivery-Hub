@@ -1,19 +1,26 @@
 /**
  * @name         Delivery Hub
  * @license      BSL 1.1 — See LICENSE.md
- * @description  Shared Ghost Recorder activity tracker. One tracker per browser
- *               window, used by every component that records navigation:
- *                 - deliveryGhostRecorder          (visible utility / page card)
- *                 - deliveryGhostRecorderHeadless  (hosted by the Aura
- *                   deliveryGhostRecorderBackground utility-bar background item)
+ * @description  Shared Ghost Recorder activity tracker for LWC recorders (today:
+ *               deliveryGhostRecorder, the visible utility / page card). One
+ *               tracker per browser tab.
  *
  *               Each component calls attach() on connect, recordNavigation() from
- *               its CurrentPageReference wire, and detach() on disconnect. Because
- *               all state lives here (module scope, mirrored on window as a
- *               backstop), two recorders in the same tab share one session id,
- *               one debounce and one Page_Duration clock — a utility bar that
- *               carries both the visible and the background recorder logs each
- *               page once, not twice.
+ *               its CurrentPageReference wire, and detach() on disconnect. All
+ *               state lives here (module scope, mirrored on window as a
+ *               backstop), so recorders in the same tab share one session id,
+ *               one debounce and one Page_Duration clock.
+ *
+ *               Background recorder handshake: the Aura utility-bar item
+ *               deliveryGhostRecorderBackground cannot host an LWC (background
+ *               utility items are constructed but never rendered, so a child LWC
+ *               never connects). Before every log it fires PROBE_EVENT on window;
+ *               while any LWC recorder is attached this module answers
+ *               synchronously with PRESENT_EVENT and the background item stays
+ *               quiet. DOM events cross the Locker / LWS boundary; module and
+ *               window state do not. Keep the URL rules below in step with
+ *               aura/deliveryGhostRecorderBackground/...Helper.js — the parity
+ *               test in __tests__ fails if they drift.
  *
  *               Logged rows are unchanged from the original recorder:
  *                 Navigation     {browser, objectName, pageLabel, recordId, sessionId, url}
@@ -29,6 +36,8 @@ const MS_PER_SECOND = 1000;
 const HEX_RADIX = 16;
 const SESSION_ID_RANDOM_RANGE = 16;
 const WINDOW_STATE_KEY = '__deliveryGhostTrackerState';
+export const PROBE_EVENT = 'delivery:ghostrecorder:probe';
+export const PRESENT_EVENT = 'delivery:ghostrecorder:present';
 
 function freshState() {
     return {
@@ -166,6 +175,14 @@ function logPageDuration(exitType) {
     send('Page_Duration', ctx);
 }
 
+function answerProbe() {
+    try {
+        window.dispatchEvent(new CustomEvent(PRESENT_EVENT, { detail: 'lwc' }));
+    } catch (err) {
+        // Never break user experience
+    }
+}
+
 function handleVisibilityChange() {
     if (document.visibilityState === 'hidden' && state.pageArrivalTime > 0) {
         logPageDuration('tab_hidden');
@@ -186,6 +203,7 @@ export function attach(consumer) {
         state.sessionId = generateSessionId();
         state.pageArrivalTime = Date.now();
         document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener(PROBE_EVENT, answerProbe);
     }
     state.consumers.set(consumer, { seenFirstPageRef: false });
 }
@@ -201,6 +219,7 @@ export function detach(consumer) {
     }
     if (state.consumers.size === 0) {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
+        window.removeEventListener(PROBE_EVENT, answerProbe);
         const consumers = state.consumers;
         Object.assign(state, freshState(), { consumers });
     }
