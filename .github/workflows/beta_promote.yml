@@ -20,6 +20,10 @@ jobs:
       dev-hub-auth-url: ${{ secrets.DEV_HUB_AUTH_URL }}
     with:
       cumulusci-version: "3.78.0"
+      # Pin the CLI like beta_create / feature_test do. Unpinned (latest sf) fails
+      # scratch-org creation since Oct 2026 with "TypeError: 'getOwnPropertyDescriptor'
+      # on proxy: trap reported non-configurable ... 'prototype'" (run 40576687260).
+      sfdx-version: "7.209.6"
       beta-version: ${{ inputs.version_id }}
 
 permissions:
