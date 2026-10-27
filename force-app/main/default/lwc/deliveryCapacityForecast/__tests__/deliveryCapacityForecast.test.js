@@ -15,6 +15,21 @@
 import { createElement } from "lwc";
 import DeliveryCapacityForecast from "c/deliveryCapacityForecast";
 import getForecastItems from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHoursAnalyticsController.getForecastItems";
+import getTeamCapacity from "@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryCapacityService.getTeamCapacity";
+
+// A configured CMT-derived TeamCapacity (the MF-Prod seed shape: one team-pool
+// row of 1000 h/mo → 6 dev-equivalents of ~166.67 h/mo each).
+function configuredCapacity(overrides = {}) {
+    return {
+        monthlyCapacityHours: 1000,
+        weeklyCapacityHours: 230.77,
+        developerEquivalents: 6,
+        perDeveloperMonthlyHours: 166.67,
+        isConfigured: true,
+        sourceLabel: "DeveloperCapacity__mdt (1 record)",
+        ...overrides
+    };
+}
 
 function item(overrides = {}) {
     return {
@@ -46,6 +61,13 @@ function columnTotals(element) {
 }
 
 describe("c-delivery-capacity-forecast", () => {
+    beforeEach(() => {
+        // Default = unconfigured org: the slider must exercise its documented
+        // explicit fallback (3 developers × 160 h/mo). jest.clearAllMocks does
+        // not reset implementations, so re-pin the default per test.
+        getTeamCapacity.mockImplementation(() => Promise.resolve(null));
+    });
+
     afterEach(() => {
         while (document.body.firstChild) {
             document.body.removeChild(document.body.firstChild);
@@ -144,5 +166,47 @@ describe("c-delivery-capacity-forecast", () => {
 
         expect(element.shadowRoot.querySelector(".slds-text-color_error")).not.toBeNull();
         expect(element.shadowRoot.querySelector(".chart")).toBeNull();
+    });
+
+    // ── W5.2 / DECISION-G3 — CMT-driven pace ceiling ────────────────────────
+
+    it("calibrates the ceiling and slider from configured DeveloperCapacity metadata", async () => {
+        getTeamCapacity.mockResolvedValue(configuredCapacity());
+        getForecastItems.mockResolvedValue([item({ id: "a01", remaining: 500 })]);
+        const element = createComponent();
+        await flushPromises();
+
+        // 1000 h/mo team ÷ 166.67 per dev-equivalent → defaults to 6 devs · ~1000 h/mo.
+        const text = element.shadowRoot.textContent;
+        expect(text).toContain("6 developers · ~1000 h/mo");
+        expect(text).toContain("≈ today’s pace");
+        expect(text).toContain("configured team capacity");
+        // Slider range grows to devEquivalents + 2.
+        const slider = element.shadowRoot.querySelector(".dev-slider");
+        expect(slider.getAttribute("max")).toBe("8");
+    });
+
+    it("falls back to the explicit 3×160 model when the CMT is unconfigured", async () => {
+        // Default getTeamCapacity mock resolves null (unconfigured org).
+        getForecastItems.mockResolvedValue([item({ id: "a01", remaining: 300 })]);
+        const element = createComponent();
+        await flushPromises();
+
+        const text = element.shadowRoot.textContent;
+        // Exact historical behavior: 3 devs × 160 h/mo = 480 — explicit, not near-zero.
+        expect(text).toContain("3 developers · ~480 h/mo");
+        expect(text).toContain("default model (3 developers × 160 h/mo)");
+        const slider = element.shadowRoot.querySelector(".dev-slider");
+        expect(slider.getAttribute("max")).toBe("6");
+    });
+
+    it("degrades to the fallback when the capacity read fails, without killing the card", async () => {
+        getTeamCapacity.mockRejectedValue(new Error("capacity boom"));
+        getForecastItems.mockResolvedValue([item({ id: "a01", remaining: 300 })]);
+        const element = createComponent();
+        await flushPromises();
+
+        expect(element.shadowRoot.querySelector(".chart")).not.toBeNull();
+        expect(element.shadowRoot.textContent).toContain("default model (3 developers × 160 h/mo)");
     });
 });

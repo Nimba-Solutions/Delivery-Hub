@@ -1578,4 +1578,147 @@ private class DeliveryHoursAnalyticsControllerTest {
         System.assertNotEquals(null, items, 'Never null — empty list when no active items');
         System.assertEquals(0, items.size(), 'No active portfolio items → empty');
     }
+
+    // ────────────────────────────────────────────────────────────────────
+    // W5.3 (T6.1) — per-period segments on the LWC-facing DTO, so the ADMIN
+    // pacing card renders the same stacked tiers the buyer surface gets.
+    // ────────────────────────────────────────────────────────────────────
+
+    @IsTest
+    static void testDtoForecastPeriodsCarrySegmentsAndDefs() {
+        Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
+        Date spanEnd = nextMonthStart.addMonths(2).addDays(-1);
+        insertTieredWi('SegPredicted', 60, nextMonthStart, spanEnd, 'active');   // → predicted
+        insertTieredWi('SegReady', 30, nextMonthStart, spanEnd, 'proposed');     // → ready
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 4);
+        Test.stopTest();
+
+        Decimal seggedForecast = 0;
+        Decimal totalForecast = 0;
+        for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
+            if (!p.isForecast) {
+                System.assertEquals(null, p.segments,
+                    'History periods carry no segments — actuals are not tiered');
+                continue;
+            }
+            totalForecast += p.forecastHours;
+            if (p.segments != null) {
+                for (String tier : p.segments.keySet()) {
+                    seggedForecast += p.segments.get(tier);
+                }
+            }
+        }
+        System.assert(totalForecast > 0, 'Scheduled items must produce forecast bars');
+        System.assert(Math.abs(seggedForecast - totalForecast) < 0.5,
+            'Per-tier segment sums equal the flat forecast — the stacked bar is exactly '
+            + 'as tall as the bar it replaces (got ' + seggedForecast + ' vs ' + totalForecast + ')');
+
+        System.assertNotEquals(null, dto.segmentDefs, 'Tiers in play are advertised');
+        Set<String> defIds = new Set<String>();
+        for (DeliveryHoursAnalyticsController.PacingSegmentDefDTO d : dto.segmentDefs) {
+            defIds.add(d.id);
+            System.assert(String.isNotBlank(d.label) && String.isNotBlank(d.color),
+                'Each segment def carries a label + color for the legend');
+        }
+        System.assert(defIds.contains('predicted') && defIds.contains('ready'),
+            'Defs advertise exactly the tiers carrying hours, got ' + defIds);
+        System.assert(!defIds.contains('greenlit'),
+            'Tiers with no hours are not advertised');
+    }
+
+    @IsTest
+    static void testDtoSegmentsIncludeRecurringTierWhenSettingSet() {
+        DeliveryHubSettings__c settings = DeliveryHubSettings__c.getOrgDefaults();
+        settings.RecurringHoursPerMonthNumber__c = 69;
+        upsert settings;
+        Date nextMonthStart = Date.today().toStartOfMonth().addMonths(1);
+        insertTieredWi('SegRecBase', 40, nextMonthStart, nextMonthStart.addMonths(1).addDays(-1), 'active');
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        Boolean sawRecurring = false;
+        for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
+            if (p.isForecast && p.segments != null && p.segments.containsKey('recurring')) {
+                sawRecurring = true;
+                System.assertEquals(69, p.segments.get('recurring'),
+                    'Monthly recurring rate rides on forecast periods unscaled at Month granularity');
+            }
+        }
+        System.assert(sawRecurring, 'Recurring tier present on forecast periods when the org sets it');
+    }
+
+    @IsTest
+    static void testDtoNoSegmentsWhenNothingScheduled() {
+        // Logged history only — no remaining scheduled work → no segments, no defs.
+        WorkItem__c root = insertWi('SegNone', 10, Date.today().addMonths(-2), Date.today().addDays(-10), null);
+        insert buildLog(root.Id, 10, Date.today().addDays(-15));
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        for (DeliveryHoursAnalyticsController.PacingPeriodDTO p : dto.periods) {
+            System.assertEquals(null, p.segments, 'Nothing scheduled → no period segments');
+        }
+        System.assertEquals(null, dto.segmentDefs, 'Nothing scheduled → no segment defs');
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // W5.4 (F15) — "over budget" fires strictly ABOVE 100% at displayed
+    // precision; 100% (and fractional overshoot that displays as 100%) is
+    // AT budget.
+    // ────────────────────────────────────────────────────────────────────
+
+    @IsTest
+    static void testPacingExactly100PercentIsNotOverBudget() {
+        WorkItem__c root = insertWi('Boundary100', 100, Date.today().addMonths(-1), Date.today().addMonths(2), null);
+        insert buildLog(root.Id, 100, Date.today()); // logged == estimate → projected == estimate
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertEquals(100, dto.projectedFinalHours, 'Projected == estimate at the boundary');
+        System.assertEquals(false, dto.isOverBudgetTrajectory,
+            'Exactly 100% is AT budget, not over (F15)');
+    }
+
+    @IsTest
+    static void testPacingFractionallyOver100StillReadsAtBudget() {
+        // 251/250 = 100.4% — displays as "100%", so the flag must stay false: the
+        // label and the displayed number can never disagree.
+        WorkItem__c root = insertWi('Boundary100p4', 250, Date.today().addMonths(-1), Date.today().addMonths(2), null);
+        insert buildLog(root.Id, 251, Date.today());
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertEquals(251, dto.projectedFinalHours, 'Projected = logged (remaining floored)');
+        System.assertEquals(false, dto.isOverBudgetTrajectory,
+            '100.4% rounds to the displayed 100% → at budget, not over');
+    }
+
+    @IsTest
+    static void testPacingAbove100PercentIsOverBudget() {
+        WorkItem__c root = insertWi('Boundary102', 100, Date.today().addMonths(-1), Date.today().addMonths(2), null);
+        insert buildLog(root.Id, 102, Date.today());
+
+        Test.startTest();
+        DeliveryHoursAnalyticsController.PortfolioPacingDTO dto =
+            DeliveryHoursAnalyticsController.getPortfolioPacing('Month', 6, 3);
+        Test.stopTest();
+
+        System.assertEquals(true, dto.isOverBudgetTrajectory,
+            '102% is strictly over 100 → over-budget trajectory fires');
+    }
 }
