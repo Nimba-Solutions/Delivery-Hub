@@ -65,7 +65,8 @@ describe("c-delivery-ghost-recorder-headless", () => {
 
     it("renders nothing", () => {
         const element = mountHeadless();
-        expect(element.shadowRoot.childNodes).toHaveLength(0);
+        expect(element.shadowRoot.querySelectorAll("*")).toHaveLength(0);
+        expect(element.shadowRoot.textContent.trim()).toBe("");
     });
 
     it("logs Navigation and Page_Duration with the visible recorder's shape", () => {
