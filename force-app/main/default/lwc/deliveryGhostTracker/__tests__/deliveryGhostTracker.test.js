@@ -181,4 +181,57 @@ describe("ghost recorder engines", () => {
         helper.recordNavigation(cmp);
         expect(auraSent).toHaveLength(1);
     });
+
+    it("background helper logs the first page after init, timed from init", () => {
+        jest.useFakeTimers({ doNotFake: ["Date"] });
+        try {
+            const cmp = fakeComponent("bg-4");
+            helper.start(cmp);
+            helper.scheduleInitialPage(cmp);
+            now += 3000;
+            jest.advanceTimersByTime(3000);
+            expect(auraRows()).toEqual([expect.objectContaining({ actionType: "Navigation", objectName: "Home" })]);
+            now += 5000;
+            go(`/lightning/r/Account/${ACCOUNT_ID}/view`);
+            helper.recordNavigation(cmp);
+            expect(auraRows()[1]).toEqual(expect.objectContaining({ actionType: "Page_Duration", duration: 8, objectName: "Home" }));
+            helper.stop(cmp);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
+    it("background helper leaves the first page to a visible recorder that connected meanwhile", () => {
+        jest.useFakeTimers({ doNotFake: ["Date"] });
+        try {
+            const cmp = fakeComponent("bg-5");
+            helper.start(cmp);
+            helper.scheduleInitialPage(cmp);
+            const visible = {};
+            attach(visible);
+            recordNavigation(visible, PAGE_REF);
+            jest.advanceTimersByTime(3000);
+            expect(auraSent).toHaveLength(0);
+            expect(lwcRows()).toHaveLength(1);
+            detach(visible);
+            helper.stop(cmp);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
+    it("background helper skips the first-page log on the /lightning/app/ redirect", () => {
+        jest.useFakeTimers({ doNotFake: ["Date"] });
+        try {
+            go("/lightning/app/c__DeliveryHub");
+            const cmp = fakeComponent("bg-6");
+            helper.start(cmp);
+            helper.scheduleInitialPage(cmp);
+            jest.advanceTimersByTime(3000);
+            expect(auraSent).toHaveLength(0);
+            helper.stop(cmp);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
 });

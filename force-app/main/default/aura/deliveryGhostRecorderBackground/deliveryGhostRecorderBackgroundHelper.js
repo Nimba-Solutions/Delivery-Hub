@@ -17,6 +17,7 @@
  */
 ({
     NAV_LOG_DEBOUNCE_MS: 3000,
+    INITIAL_PAGE_DELAY_MS: 3000,
     PROBE_EVENT: 'delivery:ghostrecorder:probe',
     PRESENT_EVENT: 'delivery:ghostrecorder:present',
     states: {},
@@ -57,6 +58,24 @@
         window.removeEventListener(this.PRESENT_EVENT, state.onPresent);
         document.removeEventListener('visibilitychange', state.onVisibility);
         delete this.states[key];
+    },
+
+    // The app's first page usually settles before this item initialises, so
+    // its locationChange is missed. Log it shortly after init (giving an eager
+    // visible recorder time to connect and claim it), unless a navigation was
+    // already logged or LEX is still on the /lightning/app/ redirect. The page
+    // clock keeps the init time, so the first Page_Duration is not short.
+    scheduleInitialPage: function (component) {
+        var helper = this;
+        window.setTimeout($A.getCallback(function () {
+            var state = helper.states[component.getGlobalId()];
+            if (!state || state.lastLoggedUrl !== '' || window.location.href.indexOf('/lightning/app/') !== -1) {
+                return;
+            }
+            var arrival = state.pageArrivalTime;
+            helper.recordNavigation(component);
+            state.pageArrivalTime = arrival;
+        }), helper.INITIAL_PAGE_DELAY_MS);
     },
 
     recordNavigation: function (component) {

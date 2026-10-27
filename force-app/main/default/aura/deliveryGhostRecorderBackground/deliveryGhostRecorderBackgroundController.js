@@ -7,6 +7,7 @@
 ({
     onInit: function (component, event, helper) {
         helper.start(component);
+        helper.scheduleInitialPage(component);
     },
 
     onLocationChange: function (component, event, helper) {
