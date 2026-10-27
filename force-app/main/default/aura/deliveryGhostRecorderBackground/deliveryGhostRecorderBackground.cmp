@@ -1,18 +1,26 @@
 <!--
     @name         Delivery Hub
     @license      BSL 1.1 — See LICENSE.md
-    @description  Background-only Ghost Recorder. Drop it into any Lightning app's
-                  utility bar background region (Utility Items > Background) — it
-                  renders nothing and logs navigation + page duration to
-                  ActivityLog__c through the shared deliveryGhostTracker, exactly
-                  like the visible Delivery Ghost Recorder. If the bar also carries
-                  the visible recorder, the two share one tracker per tab and
-                  each page is logged once.
-                  Aura only because lightning:backgroundUtilityItem has no LWC
-                  equivalent; the logic lives in the headless LWC it hosts.
+    @description  Delivery Ghost Recorder (Background). Add it to any Lightning
+                  app's utility bar under Utility Items > Background: no button,
+                  no panel, nothing rendered. It logs Navigation and
+                  Page_Duration rows to ActivityLog__c through
+                  DeliveryGhostController.logUserActivity, in the same shape as
+                  the visible Delivery Ghost Recorder.
+
+                  Why Aura: only Aura can implement lightning:backgroundUtilityItem.
+                  Background items are constructed but never rendered, so a child
+                  LWC never connects (no wire, no connectedCallback). The logic
+                  therefore runs here, driven by aura:locationChange.
+
+                  No double-logging: if a visible recorder is live in the same
+                  tab, it answers this component's window probe and this
+                  component stays quiet (see c/deliveryGhostTracker).
     @author       Cloud Nimbus LLC
 -->
-<aura:component implements="lightning:backgroundUtilityItem" access="global"
+<aura:component implements="lightning:backgroundUtilityItem" access="global" controller="DeliveryGhostController"
     description="Background-only Ghost Recorder: logs navigation and page duration with no visible UI.">
-    <c:deliveryGhostRecorderHeadless />
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}"/>
+    <aura:handler name="destroy" value="{!this}" action="{!c.onDestroy}"/>
+    <aura:handler event="aura:locationChange" action="{!c.onLocationChange}"/>
 </aura:component>
