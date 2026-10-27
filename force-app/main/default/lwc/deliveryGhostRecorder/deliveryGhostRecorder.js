@@ -6,7 +6,9 @@
  *               automatic context capture (current URL, record ID, browser) plus voice-to-text
  *               via the Web Speech API. Mounts on UtilityBar / HomePage / AppPage / RecordPage.
  *               Optional Alt+B keyboard shortcut. Feeds DeliveryActivityDashboard analytics
- *               via DeliveryGhostController.logUserActivity.
+ *               via DeliveryGhostController.logUserActivity. The logging itself
+ *               lives in the shared c/deliveryGhostTracker module, which the
+ *               background-only recorder (deliveryGhostRecorderBackground) also uses.
  * @author       Cloud Nimbus LLC
  */
 import { LightningElement, api, track, wire } from 'lwc';
@@ -14,16 +16,13 @@ import { CurrentPageReference, NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import WORK_ITEM_OBJECT from '@salesforce/schema/WorkItem__c';
 import createWorkItem from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.createQuickRequest';
-import logActivity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryGhostController.logUserActivity';
 import getAttentionCount from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getAttentionCount';
 import getReportIds from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHubDashboardController.getReportIds';
 import linkFilesAndSync from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryWorkItemController.linkFilesAndSync';
 import userId from '@salesforce/user/Id';
+import { attach, detach, gatherContext, parseUrlContext, recordNavigation } from 'c/deliveryGhostTracker';
 
-const NAV_LOG_DEBOUNCE_MS = 3000;
 const SUBJECT_TRUNCATE_LEN = 95;
-const HEX_RADIX = 16;
-const SESSION_ID_RANDOM_RANGE = 16;
 
 export default class DeliveryGhostRecorder extends NavigationMixin(LightningElement) { // eslint-disable-line new-cap
     @api enableShortcut = false;
@@ -46,11 +45,6 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
 
     currentPageRef;
     currentUserId = userId;
-    sessionIdValue = '';
-    lastLoggedUrl = '';
-    lastLoggedTime = 0;
-    _pageArrivalTime = 0;
-    _previousContext = null;
 
     @wire(getAttentionCount)
     wiredAttentionCount;
@@ -186,43 +180,17 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
     }
 
     connectedCallback() {
-        this.sessionIdValue = DeliveryGhostRecorder.generateSessionId();
-        this._pageArrivalTime = Date.now();
+        attach(this);
         if (this.enableShortcut) {
             window.addEventListener('keydown', this.handleShortcut);
         }
-        document.addEventListener('visibilitychange', this._handleVisibilityChange);
         this._initVoiceRecognition();
     }
 
     disconnectedCallback() {
         window.removeEventListener('keydown', this.handleShortcut);
-        document.removeEventListener('visibilitychange', this._handleVisibilityChange);
+        detach(this);
         this._destroyVoiceRecognition();
-    }
-
-    _handleVisibilityChange = () => {
-        if (document.visibilityState === 'hidden' && this._pageArrivalTime > 0) {
-            this._logPageDuration('tab_hidden');
-        }
-    }
-
-    _logPageDuration(exitType) {
-        if (!this._previousContext || this._pageArrivalTime <= 0) {
-            return;
-        }
-        const durationSec = Math.round((Date.now() - this._pageArrivalTime) / 1000);
-        if (durationSec < 1) {
-            return;
-        }
-        const ctx = Object.assign({}, this._previousContext, {
-            duration: durationSec,
-            exitType: exitType
-        });
-        logActivity({
-            actionType: 'Page_Duration',
-            contextData: JSON.stringify(ctx)
-        }).catch(() => { /* silent */ });
     }
 
     /* ── Voice Recognition (Web Speech API) ── */
@@ -365,31 +333,7 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
     }
 
     handleNavigationLog() {
-        try {
-            const href = window.location.href;
-            const now = Date.now();
-            if (href === this.lastLoggedUrl && (now - this.lastLoggedTime) < NAV_LOG_DEBOUNCE_MS) {
-                return;
-            }
-
-            // Log duration of the PREVIOUS page before recording the new one
-            this._logPageDuration('navigation');
-
-            this.lastLoggedUrl = href;
-            this.lastLoggedTime = now;
-            this._pageArrivalTime = now;
-
-            const context = this.gatherContext();
-            this._previousContext = context;
-            logActivity({
-                actionType: 'Navigation',
-                contextData: JSON.stringify(context)
-            }).catch(() => {
-                // Silent — never break user experience for telemetry
-            });
-        } catch (err) {
-            // Never break user experience
-        }
+        recordNavigation(this, this.currentPageRef);
     }
 
     togglePanel() {
@@ -497,78 +441,10 @@ export default class DeliveryGhostRecorder extends NavigationMixin(LightningElem
     }
 
     gatherContext() {
-        try {
-            const parsed = this.parseUrlContext();
-            return {
-                browser: navigator.userAgent,
-                objectName: parsed.objectName,
-                pageLabel: parsed.pageLabel,
-                recordId: parsed.recordId,
-                sessionId: this.sessionIdValue,
-                url: window.location.href
-            };
-        } catch (err) {
-            return {
-                browser: '',
-                objectName: 'Unknown',
-                pageLabel: 'Unknown',
-                recordId: '',
-                sessionId: '',
-                url: window.location.href || ''
-            };
-        }
+        return gatherContext();
     }
 
     parseUrlContext() {
-        const href = window.location.href;
-        // Pattern: /lightning/r/{objectApiName}/{recordId}/view
-        const recordMatch = href.match(/\/lightning\/r\/([^/]+)\/([a-zA-Z0-9]{15,18})\/view/u);
-        if (recordMatch) {
-            return { objectName: recordMatch[1], pageLabel: recordMatch[1], recordId: recordMatch[2] };
-        }
-        // Pattern: /lightning/o/{objectApiName}/home (list view)
-        const listMatch = href.match(/\/lightning\/o\/([^/]+)\/home/u);
-        if (listMatch) {
-            return { objectName: listMatch[1], pageLabel: `${listMatch[1]} List`, recordId: '' };
-        }
-        // Pattern: /lightning/o/{objectApiName}/list
-        const listAltMatch = href.match(/\/lightning\/o\/([^/]+)\/list/u);
-        if (listAltMatch) {
-            return { objectName: listAltMatch[1], pageLabel: `${listAltMatch[1]} List`, recordId: '' };
-        }
-        // Pattern: /lightning/page/home
-        if (href.includes('/lightning/page/home')) {
-            return { objectName: 'Home', pageLabel: 'Home', recordId: '' };
-        }
-        // Pattern: /lightning/page/chatter
-        if (href.includes('/lightning/page/chatter')) {
-            return { objectName: 'Chatter', pageLabel: 'Chatter', recordId: '' };
-        }
-        // Pattern: /lightning/setup/...
-        if (href.includes('/lightning/setup/')) {
-            return { objectName: 'Setup', pageLabel: 'Setup', recordId: '' };
-        }
-        // Pattern: /lightning/r/{objectApiName}/{recordId}/related/...
-        const relatedMatch = href.match(/\/lightning\/r\/([^/]+)\/([a-zA-Z0-9]{15,18})\/related/u);
-        if (relatedMatch) {
-            return { objectName: relatedMatch[1], pageLabel: `${relatedMatch[1]} Related`, recordId: relatedMatch[2] };
-        }
-        // Fallback: try CurrentPageReference attributes
-        const attrs = this.currentPageRef?.attributes || {};
-        return {
-            objectName: attrs.objectApiName || attrs.name || 'Unknown',
-            pageLabel: attrs.objectApiName || attrs.name || 'Unknown',
-            recordId: attrs.recordId || ''
-        };
-    }
-
-    static generateSessionId() {
-        try {
-            return 'xxxxxxxx-xxxx-4xxx'.replace(/[x]/gu, () =>
-                (Math.random() * SESSION_ID_RANDOM_RANGE | 0).toString(HEX_RADIX) // eslint-disable-line no-bitwise
-            );
-        } catch (err) {
-            return 'unknown';
-        }
+        return parseUrlContext(this.currentPageRef);
     }
 }
