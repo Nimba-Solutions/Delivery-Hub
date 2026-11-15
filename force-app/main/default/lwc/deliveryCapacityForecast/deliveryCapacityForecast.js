@@ -1,15 +1,32 @@
 import { LightningElement, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 import getForecastItems from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryHoursAnalyticsController.getForecastItems';
+import getTeamCapacity from '@salesforce/apex/%%%NAMESPACE_DOT%%%DeliveryCapacityService.getTeamCapacity';
 
 // ── Scheduler constants (synthesized bands; no DH data home yet — pass two may
 //    model maintenance/run-point as real fields). Ported 1:1 from the prototype
 //    cloudnimbusllc.com/src/app/glen/mf-forecast-stack-0607/MfForecastStack0607.tsx.
 const MAINT = 90; // measured maintenance run-rate, h/mo, reserved off the top
-const HOURS_PER_DEV = 160; // ~1 developer-month
+const HOURS_PER_DEV = 160; // ~1 developer-month — the dev-equivalent modeling UNIT only
 const ORCH_START = 0.35; // run-point load as a fraction of output during spin-up
 const ORCH_FLOOR = 0.1; // steady-state run-point fraction once the team absorbs it
 const HORIZON = 18; // months drawn
+
+// ── Capacity source (DECISION-G3 / W5.2) ────────────────────────────────────
+// The pace ceiling is CMT-driven: DeliveryCapacityService.getTeamCapacity reads
+// DeveloperCapacity__mdt (the single capacity source of truth) and returns the
+// team's monthly hours + developer-equivalents. When the subscriber org has no
+// CMT rows (or the call fails), this EXPLICIT fallback reproduces the slider's
+// historical hardcoded model — 3 developers × 160 h/mo = 480 h/mo — and the card
+// labels the number as a default. Never a silent near-zero.
+const FALLBACK_DEV_EQUIVALENTS = 3;
+const FALLBACK_CAPACITY = {
+    monthlyCapacityHours: HOURS_PER_DEV * FALLBACK_DEV_EQUIVALENTS,
+    perDeveloperMonthlyHours: HOURS_PER_DEV,
+    developerEquivalents: FALLBACK_DEV_EQUIVALENTS,
+    isConfigured: false
+};
+const MIN_SLIDER_MAX = 6; // never shrink the historical 1–6 dev range
 
 const GREENLIT = 'greenlit';
 
@@ -26,7 +43,8 @@ const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 
 export default class DeliveryCapacityForecast extends NavigationMixin(LightningElement) {
     @track items = [];
-    devs = 3;
+    @track capacity = FALLBACK_CAPACITY;
+    devs = FALLBACK_DEV_EQUIVALENTS;
     cumulative = false;
     error;
     loading = true;
@@ -37,14 +55,20 @@ export default class DeliveryCapacityForecast extends NavigationMixin(LightningE
     // plain @AuraEnabled method throws "Apex methods that are to be cached must
     // be marked as @AuraEnabled(cacheable=true)" at render. Call it imperatively
     // on mount instead; the slider then reflows client-side with no further hops.
+    // getTeamCapacity loads alongside it: the CMT-derived ceiling calibrates the
+    // slider before first paint, and a failed capacity read degrades to the
+    // documented fallback model without killing the card.
     connectedCallback() {
         this.loadItems();
     }
 
     loadItems() {
         this.loading = true;
-        getForecastItems()
-            .then((data) => {
+        const capacityPromise = getTeamCapacity({ workflowType: null }).catch(() => null);
+        Promise.all([getForecastItems(), capacityPromise])
+            .then(([data, capacity]) => {
+                this.capacity = capacity || FALLBACK_CAPACITY;
+                this.devs = this.defaultDevs;
                 // Only forward work packs: drop terminal-stage items and anything
                 // with no remaining hours — they are history, not future schedule.
                 this.items = (data || [])
@@ -76,12 +100,54 @@ export default class DeliveryCapacityForecast extends NavigationMixin(LightningE
         this.cumulative = !this.cumulative;
     }
 
+    // ── Capacity-derived slider model (W5.2) ────────────────────────────────
+
+    get isFallbackCapacity() {
+        return !(this.capacity && this.capacity.isConfigured);
+    }
+
+    get perDevHours() {
+        const cap = this.capacity;
+        if (cap && cap.perDeveloperMonthlyHours > 0) {
+            return cap.perDeveloperMonthlyHours;
+        }
+        return HOURS_PER_DEV;
+    }
+
+    get devEquivalents() {
+        const cap = this.capacity;
+        if (cap && cap.developerEquivalents > 0) {
+            return cap.developerEquivalents;
+        }
+        return FALLBACK_DEV_EQUIVALENTS;
+    }
+
+    /** The slider position that equals the org's real (or fallback) capacity. */
+    get defaultDevs() {
+        return Math.min(Math.max(1, this.devEquivalents), this.maxDevs);
+    }
+
+    get maxDevs() {
+        return Math.max(MIN_SLIDER_MAX, this.devEquivalents + 2);
+    }
+
+    get maxDevsLabel() {
+        return `${this.maxDevs} devs`;
+    }
+
     get ceiling() {
-        return this.devs * HOURS_PER_DEV;
+        return this.devs * this.perDevHours;
     }
 
     get devLabel() {
-        return `${this.devs} developer${this.devs > 1 ? 's' : ''} · ~${this.ceiling} h/mo`;
+        return `${this.devs} developer${this.devs > 1 ? 's' : ''} · ~${Math.round(this.ceiling)} h/mo`;
+    }
+
+    get capacitySourceNote() {
+        if (this.isFallbackCapacity) {
+            return `Capacity source: default model (${FALLBACK_DEV_EQUIVALENTS} developers × ${HOURS_PER_DEV} h/mo) — add Developer Capacity records to calibrate.`;
+        }
+        return 'Capacity source: your configured team capacity (Developer Capacity settings).';
     }
 
     get cumulativeLabel() {
@@ -215,9 +281,12 @@ export default class DeliveryCapacityForecast extends NavigationMixin(LightningE
     }
 
     get paceHint() {
-        if (this.devs <= 2) return 'Conservative — protect cash, slower build';
-        if (this.devs === 3) return '≈ today’s pace';
-        if (this.devs <= 4) return 'Leaning in — important work pulls forward';
+        // Anchored on the CMT-derived (or fallback) capacity position, not a
+        // hardcoded "3": the default slider position IS today's real pace.
+        const base = this.defaultDevs;
+        if (this.devs < base) return 'Conservative — protect cash, slower build';
+        if (this.devs === base) return '≈ today’s pace';
+        if (this.devs === base + 1) return 'Leaning in — important work pulls forward';
         return 'Full throttle — fastest path to the milestones';
     }
 

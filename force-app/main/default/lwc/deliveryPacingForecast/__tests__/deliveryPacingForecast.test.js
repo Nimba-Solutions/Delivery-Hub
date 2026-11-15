@@ -174,6 +174,91 @@ describe("c-delivery-pacing-forecast", () => {
         expect(err).not.toBeNull();
     });
 
+    // ── W5.3 (T6.1) — stacked commitment-tier forecast bars ──────
+    it("renders stacked per-tier rects for forecast periods that carry segments", async () => {
+        const element = createComponent();
+        getPortfolioPacing.emit(
+            samplePacing({
+                segmentDefs: [
+                    { id: "greenlit", label: "Committed", color: "#059669", style: "solid" },
+                    { id: "ready", label: "Ready to approve", color: "#d97706", style: "dotted" }
+                ],
+                periods: [
+                    { label: "Apr 26", loggedHours: 12, targetHours: 8, forecastHours: 0, isForecast: false, overTarget: true },
+                    { label: "May 26", loggedHours: 6, targetHours: 8, forecastHours: 0, isForecast: false, overTarget: false },
+                    {
+                        label: "Jun 26",
+                        loggedHours: 0,
+                        targetHours: 8,
+                        forecastHours: 10,
+                        isForecast: true,
+                        overTarget: false,
+                        segments: { greenlit: 6, ready: 4 }
+                    }
+                ]
+            })
+        );
+        await flushPromises();
+
+        // The forecast period renders one rect per tier — no flat dashed bar.
+        const segmentRects = element.shadowRoot.querySelectorAll("rect.bar--segment");
+        expect(segmentRects.length).toBe(2);
+        const fills = Array.from(segmentRects).map((r) => r.getAttribute("fill"));
+        expect(fills).toContain("#059669");
+        expect(fills).toContain("#d97706");
+        expect(element.shadowRoot.querySelector("rect.bar--forecast")).toBeNull();
+
+        // Stack height equals the flat bar it replaces: Σ segments (6+4) = forecast (10).
+        const stackHeight = Array.from(segmentRects).reduce(
+            (total, r) => total + parseFloat(r.getAttribute("height")),
+            0
+        );
+        const historyBar = Array.from(element.shadowRoot.querySelectorAll("rect.bar")).find((r) =>
+            r.getAttribute("class").includes("bar--over")
+        );
+        // Logged 12 vs stacked 10 → stacked height ≈ (10/12) of the logged bar.
+        const expected = (parseFloat(historyBar.getAttribute("height")) * 10) / 12;
+        expect(Math.abs(stackHeight - expected)).toBeLessThan(1.5);
+
+        // The tier legend advertises the tiers in play.
+        const legendText = element.shadowRoot.textContent;
+        expect(legendText).toContain("Committed (forecast)");
+        expect(legendText).toContain("Ready to approve (forecast)");
+    });
+
+    it("keeps flat forecast bars for periods without segments (backward compat)", async () => {
+        const element = createComponent();
+        getPortfolioPacing.emit(samplePacing());
+        await flushPromises();
+
+        expect(element.shadowRoot.querySelectorAll("rect.bar--segment").length).toBe(0);
+        const forecastBar = element.shadowRoot.querySelector("rect.bar--forecast");
+        expect(forecastBar).not.toBeNull();
+        // Legacy "Forecast" legend swatch still shows for flat bars.
+        expect(element.shadowRoot.textContent).toContain("Forecast");
+    });
+
+    // ── W5.4 (F15) — 100% pacing is AT budget, not over ──────────
+    it("pairs a 100% pacing readout with the on-track label, never over-budget", async () => {
+        const element = createComponent();
+        // Apex now rounds to displayed precision before flagging: projected 247.2 of
+        // 247 estimated displays 100% and arrives with isOverBudgetTrajectory=false.
+        getPortfolioPacing.emit(
+            samplePacing({
+                totalEstimatedHours: 247,
+                projectedFinalHours: 247.2,
+                isOverBudgetTrajectory: false
+            })
+        );
+        await flushPromises();
+
+        const text = element.shadowRoot.textContent;
+        expect(text).toContain("100%");
+        expect(text).toContain("On track at current pace");
+        expect(text).not.toContain("Over budget at current pace");
+        expect(element.shadowRoot.querySelector(".summary-variance--over")).toBeNull();
+    });
+
     // ── Home-page visibility ─────────────────────────────────────
     it("renders the card on Home when not hidden in Settings", async () => {
         const element = createComponent();

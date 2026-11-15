@@ -443,6 +443,22 @@ global with sharing class DeliveryHoursAnalyticsController {
         @AuraEnabled global Decimal forecastHours;
         @AuraEnabled global Boolean isForecast;
         @AuraEnabled global Boolean overTarget;
+        /** W5.3 (T6.1) — per-tier forecast split (segment id → hours) so the ADMIN
+         *  pacing card renders the same stacked commitment-tier bars the buyer
+         *  surface already renders. Null for history periods and for forecast
+         *  periods with nothing scheduled; the tier sums (+ the synthetic
+         *  recurring tier when the org sets it) equal the bucket forecast, so a
+         *  stacked bar is exactly as tall as the flat bar it replaces. */
+        @AuraEnabled global Map<String, Decimal> segments;
+    }
+
+    /** @description One stacked-forecast tier definition (legend + palette) in stack
+     *               order — the LWC-facing mirror of NG's PacingSegment contract. */
+    global class PacingSegmentDefDTO {
+        @AuraEnabled global String id;
+        @AuraEnabled global String label;
+        @AuraEnabled global String color;
+        @AuraEnabled global String style;
     }
 
     /** @description Portfolio-level pacing + forecast headline returned to the LWC. */
@@ -460,6 +476,9 @@ global with sharing class DeliveryHoursAnalyticsController {
         @AuraEnabled global Date earliestStart;
         @AuraEnabled global Date latestEnd;
         @AuraEnabled global List<PacingPeriodDTO> periods;
+        /** W5.3 — tier definitions (stack order) for only the tiers that carry hours
+         *  across the returned periods; null when no period has segments. */
+        @AuraEnabled global List<PacingSegmentDefDTO> segmentDefs;
     }
 
     /**
@@ -504,6 +523,7 @@ global with sharing class DeliveryHoursAnalyticsController {
             applyPortfolioForecast(periods, dto, back);
 
             dto.periods = periods;
+            applyPeriodSegments(dto);
             dto.blendedRate = DeliveryRateService.resolveBlendedRate();
             return dto;
         } catch (AuraHandledException ahe) {
@@ -817,6 +837,61 @@ global with sharing class DeliveryHoursAnalyticsController {
             items.add(item);
         }
         return items;
+    }
+
+    /**
+     * @description W5.3 (T6.1) — mirrors the per-bucket commitment-tier split onto the
+     *              LWC-facing PortfolioPacingDTO so the ADMIN pacing card
+     *              (deliveryPacingForecast) can render the same STACKED forecast bars
+     *              the buyer surface already gets via getPacing/toPacingData. Ports the
+     *              buyer-side rule verbatim: a bucket's bar = Σ segments once segments
+     *              are present (the flat `forecastHours` is ignored for stacked bars),
+     *              the synthetic recurring tier rides on forecast buckets when the org
+     *              sets RecurringHoursPerMonthNumber__c, and only tiers that actually
+     *              carry hours are advertised in segmentDefs (stack order). History
+     *              periods carry no segments — actuals aren't tiered. Must run AFTER
+     *              applyPortfolioForecast (it reads the same forecastItemsByPeriod
+     *              accumulator buildBucketSegments uses).
+     * @param dto The pacing DTO whose periods get their segments populated.
+     */
+    private static void applyPeriodSegments(PortfolioPacingDTO dto) {
+        if (dto.periods == null || dto.periods.isEmpty()) {
+            return;
+        }
+        String g = (dto.granularity != null) ? dto.granularity.toLowerCase() : 'month';
+        String bucketSize = g.startsWith('week') ? 'week' : (g.startsWith('quart') ? 'quarter' : 'month');
+        Decimal recurring = resolveRecurringHoursPerPeriod(bucketSize);
+
+        Set<String> tiersWithHours = new Set<String>();
+        for (Integer i = 0; i < dto.periods.size(); i++) {
+            PacingPeriodDTO p = dto.periods[i];
+            Map<String, Decimal> segs = buildBucketSegments(i);
+            if (p.isForecast == true && recurring > 0) {
+                segs.put('recurring', recurring);
+            }
+            if (!segs.isEmpty()) {
+                p.segments = segs;
+                tiersWithHours.addAll(segs.keySet());
+            }
+        }
+        if (tiersWithHours.isEmpty()) {
+            return;
+        }
+        List<PacingSegmentDefDTO> defs = new List<PacingSegmentDefDTO>();
+        for (String t : TIER_ORDER) {
+            if (tiersWithHours.contains(t) && SEGMENT_DEFS.containsKey(t)) {
+                Map<String, Object> def = SEGMENT_DEFS.get(t);
+                PacingSegmentDefDTO d = new PacingSegmentDefDTO();
+                d.id = (String) def.get('id');
+                d.label = (String) def.get('label');
+                d.color = (String) def.get('color');
+                d.style = (String) def.get('style');
+                defs.add(d);
+            }
+        }
+        if (!defs.isEmpty()) {
+            dto.segmentDefs = defs;
+        }
     }
 
     /**
@@ -1372,7 +1447,16 @@ global with sharing class DeliveryHoursAnalyticsController {
         dto.projectedFinalHours = (dto.totalLoggedHours + remainingAll)
             .setScale(2, System.RoundingMode.HALF_UP);
         if (dto.hasEstimate) {
-            dto.isOverBudgetTrajectory = dto.projectedFinalHours > dto.totalEstimatedHours;
+            // W5.4 (F15) — "over budget" fires only STRICTLY ABOVE 100% at the same
+            // whole-percent precision the card displays. The raw projected-vs-estimate
+            // comparison could flip the flag on a fractional overshoot that still
+            // DISPLAYS as "PACING 100%" (the audited 247h == 247h case), pairing an
+            // at-budget number with an over-budget label. Rounding the percentage to
+            // the displayed precision first means the label and the number can never
+            // disagree: 100.4% reads (and is flagged) as at-budget, 101% as over.
+            Decimal pacingPct = (dto.projectedFinalHours / dto.totalEstimatedHours) * 100;
+            dto.isOverBudgetTrajectory =
+                pacingPct.setScale(0, System.RoundingMode.HALF_UP) > 100;
         }
     }
 
