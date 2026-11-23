@@ -4,7 +4,11 @@
  * @description  Trigger for WorkItemDependency__c. Delegates all logic to DeliveryDependencyTriggerHandler.
  * @author Cloud Nimbus LLC
  */
-trigger DeliveryDependencyTrigger on WorkItemDependency__c (after insert, after update, before delete) { //NOPMD - AvoidLogicInTrigger: trivial guards + handler delegation only
+trigger DeliveryDependencyTrigger on WorkItemDependency__c (before insert, after insert, after update, before delete) { //NOPMD - AvoidLogicInTrigger: trivial guards + handler delegation only
+    if (Trigger.isBefore && Trigger.isInsert) {
+        // Subscriber orgs keep deprecated-but-required legacy lookups; back-fill them.
+        DeliveryLegacyFieldFiller.fill(Trigger.new);
+    }
     if (Trigger.isAfter && Trigger.isInsert) {
         DeliveryDependencyTriggerHandler.onAfterInsert(Trigger.new);
     }

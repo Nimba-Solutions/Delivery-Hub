@@ -508,8 +508,13 @@ private class DeliveryEscalationRuleEvaluatorTest {
     // -- Helpers ---------------------------------------------------------------
 
     private static String getNamespace() {
-        String ns = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
-        return String.isBlank(ns) ? '' : ns + '__';
+        // Derive the prefix from the package's own SObject type, NOT from the Organization
+        // row: Organization.NamespacePrefix is only set in a namespaced packaging/scratch
+        // org. In a subscriber org (e.g. MF-Prod) it is null while the package's fields are
+        // still delivery__-prefixed, so an Organization-based prefix silently produces
+        // un-prefixed JSON keys that JSON.deserialize drops.
+        String fullName = WorkflowEscalationRule__mdt.SObjectType.getDescribe().getName();
+        return fullName.substringBefore('WorkflowEscalationRule__mdt');
     }
 
     @SuppressWarnings('PMD.ExcessiveParameterList')

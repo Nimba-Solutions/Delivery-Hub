@@ -209,8 +209,22 @@ private class DeliveryHubInstallHandlerTest {
             // has been persisted; either way the From address must remain blank.
             Boolean blankFrom = settings == null
                 || String.isBlank(settings.DocumentFromOrgWideEmailTxt__c);
-            System.assert(blankFrom,
-                'OWEA seed must be a no-op (blank From) when no OrgWideEmailAddress exists');
+            // Subscriber orgs (e.g. MF-Prod) DO have verified OrgWideEmailAddress rows, and
+            // those are visible to tests, so the seed legitimately fills the From address.
+            // Only assert "blank" when the org truly has none; otherwise assert the seed
+            // never invents an address that is not a real OWEA.
+            Set<String> oweaAddresses = new Set<String>();
+            for (OrgWideEmailAddress owea : [SELECT Address FROM OrgWideEmailAddress]) {
+                oweaAddresses.add(owea.Address.toLowerCase());
+            }
+            if (oweaAddresses.isEmpty()) {
+                System.assert(blankFrom,
+                    'OWEA seed must be a no-op (blank From) when no OrgWideEmailAddress exists');
+            } else {
+                System.assert(blankFrom
+                    || oweaAddresses.contains(settings.DocumentFromOrgWideEmailTxt__c.toLowerCase()),
+                    'OWEA seed must only ever use an address from OrgWideEmailAddress');
+            }
         }
     }
 
